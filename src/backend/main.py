@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from livekit import api
 import os
 
-from src.backend import database, models
+from database import Base, engine, get_db
+import models
 
-database.Base.metadata.create_all(bind=database.engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Smart Meeting AI API")
 
@@ -43,7 +44,7 @@ def read_root():
 
 
 @app.post("/api/meetings/", response_model=MeetingResponse)
-def create_meeting(meeting: MeetingCreate, db: Session = Depends(database.get_db)):
+def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
     # Rào chắn quy trình (Process): Kiểm tra agenda
     if not meeting.agenda or len(meeting.agenda.strip()) < 20:
         raise HTTPException(
@@ -59,7 +60,7 @@ def create_meeting(meeting: MeetingCreate, db: Session = Depends(database.get_db
 
 
 @app.get("/api/meetings/", response_model=List[MeetingResponse])
-def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     meetings = db.query(models.Meeting).offset(skip).limit(limit).all()
     return meetings
 

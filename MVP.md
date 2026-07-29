@@ -36,11 +36,13 @@ Solve the problem of fragmented and inefficient internal enterprise meetings. Ax
 
 ---
 
-## 🏆 3. Evaluation Criteria (10/10 Path)
+## 🏆 3. OLP 2026 Judging Criteria Alignment (10/10 Path)
 
-To win the first prize at the Olympics, Axiom must demonstrate:
+To win the first prize at the Olympics, Axiom must strictly satisfy the official OLP 2026 Hackathon rules:
 
-1. **Feasibility:** Must work end-to-end flawlessly on a local machine.
-2. **Discipline:** Must strictly follow TDD and UI/UX TasteSkill guidelines.
-3. **Breakthrough:** The concept of an "Agenda Gate" and an On-Premise AI workflow showcases deep understanding of Enterprise needs (DX-OS).
-4. **Professionalism:** Monorepo architecture imitating the 2025 champion's repository structure.
+1. **Open Source Quality (Kho mã nguồn mở):** 
+   - All source code is hosted on an open repository (GitHub) adhering to standard Open Source compliance (MIT License, clean commit history, Issue/PR templates).
+   - Code formatting and linting strictness (Prettier, CI/CD).
+2. **DX-OS Theme Relevance:** The concept of an "Agenda Gate" and an On-Premise AI workflow showcases deep understanding of the "Digital Enterprise Operating System (DX-OS)" theme.
+3. **Live Demonstration (Trình diễn trực tiếp):** The MVP must work end-to-end flawlessly on a local machine for the final presentation, proving the feasibility of the H-P-D-I architecture.
+4. **Professionalism:** Monorepo architecture, comprehensive documentation (README, ARCHITECTURE, DEPLOYMENT), and high-end B2B UI/UX.

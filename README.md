@@ -6,8 +6,8 @@
 
 # ⚡ Axiom: Enterprise Meeting Protocol
 
-**Digital Enterprise Operating System (DX-OS) - High Security On-Premise Meeting Protocol** <br />
-_Developed for the 2026 Open Source Software Olympics_
+**Digital Enterprise Operating System (DX-OS)** <br />
+_Developed for the 2026 Open Source Software Olympics (OLP 2026 - Hackathon)_
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
@@ -21,12 +21,19 @@ _Developed for the 2026 Open Source Software Olympics_
 
 ## 📖 Introduction
 
-**Axiom** is not just another video calling application. It is a **Digital Enterprise Operating System (DX-OS)** designed around the **H-P-D-I** 4-layer architecture:
+**Axiom** is designed to strictly follow the OLP 2026 Hackathon theme: **"Xây dựng hệ điều hành doanh nghiệp số (DX-OS)"**. It is an open-source Enterprise Meeting Protocol designed around the **H-P-D-I** architecture:
 
 - 🧑‍💻 **H (Human):** A focused, distraction-free interface. Native LiveKit WebRTC integration.
 - ⚙️ **P (Process):** Process gates that enforce discipline (e.g., forcing a detailed agenda before allowing a meeting).
 - 🔒 **D (Data):** On-Premise database ensuring absolute data sovereignty for enterprises.
-- 🧠 **I (Intelligence):** Real-time audio transcription via Whisper & meeting summarization via Llama-3.
+- 🧠 **I (Intelligence):** Ready for real-time audio transcription (Whisper) & meeting summarization (Llama-3).
+
+## 🏆 OLP 2026 Open Source Compliance
+To strictly meet the judging criteria of the OLP 2026 Hackathon:
+- ✅ **Fully Open Source**: The entire repository is published under the MIT License.
+- ✅ **Standardized Documentation**: Comprehensive `.md` files covering architecture, deployment, and contribution guidelines.
+- ✅ **Clean Code**: High-quality, formatted code via Prettier, ESLint, and strict typing.
+- ✅ **CI/CD & Git Workflow**: Automated testing and hooks (Husky, Lint-staged, GitHub Actions).
 
 ## ✨ Key Features
 
