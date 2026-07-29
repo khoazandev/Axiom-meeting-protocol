@@ -1,76 +1,117 @@
-# Deployment Guide
+﻿# Deployment Guide
 
-This document provides instructions for setting up and operating the Axiom system in both Local (Development) and Production environments.
+This guide covers how to run Axiom locally for development and how to prepare it for a production environment.
 
-## 1. Local Development Environment
+Axiom relies on three core pillars:
 
-### Prerequisites
-
-- **Node.js** >= 18.x (For Frontend)
-- **Python** >= 3.10 (For Backend)
-- **Git**
-- **uv** (Python package manager)
-- **just** (Command runner)
-
-### Step 1: Install Dependencies
-
-Open a terminal at the project root and run:
-
-```bash
-# This will setup uv, install backend dependencies, and install NPM dependencies
-just install
-```
-
-### Step 2: Start the Backend (FastAPI)
-
-In the root terminal:
-
-```bash
-just backend-dev
-```
-
-Your API will be running at: `http://localhost:8000`
-
-### Step 3: Start the Frontend (Next.js)
-
-Open a new terminal (keep the backend running) and run:
-
-```bash
-just frontend-dev
-```
-
-Your Web interface will be running at: `http://localhost:3000`
+1. **Frontend:** Next.js
+2. **Backend:** FastAPI + PostgreSQL/SQLite
+3. **Real-time Comms:** LiveKit Server
 
 ---
 
-## 2. Production Environment - Quick Guide
+## 1. Local Development (The Easy Way)
 
-For a real-world enterprise environment, this system is designed to be deployed **On-Premise**.
+For local development, we use SQLite for the database and connect to a local LiveKit instance.
 
-### Backend Deployment (Docker)
+### Prerequisites
 
-It is recommended to use Docker and Gunicorn to run FastAPI:
+- Node.js v20+
+- Python v3.12+
+- uv (Fast Python package manager)
+- Docker (for LiveKit)
 
-```bash
-# Reference command
-docker build -t axiom-api -f Dockerfile.backend .
-docker run -d -p 8000:8000 axiom-api
-```
+### Step 1: Start LiveKit Server (Local)
 
-### LiveKit Server (WebRTC)
+The easiest way to run LiveKit locally is via Docker:
 
-The system uses LiveKit for real-time video/audio conferencing.
-To run this in production, you have two options:
+`ash
+docker run -d --name livekit \
+  -p 7880:7880 \
+  -p 7881:7881 \
+  -p 7882:7882/udp \
+  livekit/livekit-server \
+  --dev \
+  --keys "devkey:secret"
+`
+This spins up a LiveKit server at ws://localhost:7880 with the API key devkey and secret secret.
 
-1. **LiveKit Cloud:** The easiest way to get started. Sign up for a free account at [LiveKit Cloud](https://cloud.livekit.io/) and get your keys.
-2. **Self-Hosted:** Deploy a LiveKit server instance using Docker. Reference the [LiveKit Deployment Guide](https://docs.livekit.io/realtime/self-hosting/local/).
+### Step 2: Configure Environment Variables
 
-You must provide the following environment variables to the backend and frontend:
+**Backend (src/backend/.env):**
+`env
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+LIVEKIT_URL=ws://localhost:7880
+DATABASE_URL=sqlite:///./sql_app.db
+`
 
-- `LIVEKIT_API_KEY`
-- `LIVEKIT_API_SECRET`
-- `NEXT_PUBLIC_LIVEKIT_URL` (For frontend to connect)
+**Frontend (src/frontend/.env.local):**
+`env
+NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
+`
 
-### Frontend Deployment (Vercel or Nginx)
+### Step 3: Run the Stack
 
-- The frontend can be built statically (`cd src/frontend && npm run build`) and hosted on any web server like Nginx, or deployed to platforms like Vercel if an absolute internal network restriction is not required.
+`ash
+
+# Terminal 1: Backend
+
+cd src/backend
+uv sync
+uv run uvicorn main:app --reload
+
+# Terminal 2: Frontend
+
+cd src/frontend
+npm ci
+npm run dev
+`
+
+---
+
+## 2. Production Deployment (Dockerized On-Premise)
+
+For production, Axiom is designed to be fully containerized via docker-compose. This ensures absolute data sovereignty within your enterprise VPC.
+
+### Architecture
+
+- **PostgreSQL:** Primary relational database.
+- **Redis:** Used by LiveKit for distributed state.
+- **FastAPI Container:** Exposes port 8000.
+- **Next.js Container:** Exposes port 3000.
+- **LiveKit Server Container:** Exposes WebRTC ports.
+- **LiveKit Ingress/Egress/AI Workers:** (Advanced configurations).
+
+### Environment Configuration (.env.prod)
+
+You must generate secure keys for production:
+`ash
+
+# Generate LiveKit Keys
+
+docker run --rm -it livekit/livekit-cli generate-keys
+`
+
+Update your production environment variables:
+`env
+
+# Backend
+
+LIVEKIT_API_KEY=APIXXXXXXXXXXXXX
+LIVEKIT_API_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+LIVEKIT_URL=wss://livekit.yourdomain.com
+DATABASE_URL=postgresql://user:password@db:5432/axiom
+
+# Frontend
+
+NEXT_PUBLIC_LIVEKIT_URL=wss://livekit.yourdomain.com
+`
+
+### Docker Compose
+
+_(Note: A complete docker-compose.yml will be provided in a future release. Currently, manual deployment of containers behind a Reverse Proxy like Nginx/Traefik is recommended)._
+
+### SSL / TLS Configuration
+
+WebRTC **strictly requires** HTTPS/WSS in production browsers. You must put your LiveKit server and Next.js frontend behind a reverse proxy with valid SSL certificates (e.g., Let's Encrypt).

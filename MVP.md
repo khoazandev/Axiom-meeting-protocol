@@ -1,48 +1,65 @@
-# Minimum Viable Product (MVP) - Axiom (DX-OS)
+﻿# Axiom Product Requirements Document (MVP)
 
-**Project:** Axiom Meeting Protocol
-**Topic:** Digital Enterprise Operating System (DX-OS)
-**Product Category:** Smart Meeting AI (Core internal communication system for enterprises).
+This document outlines the Minimum Viable Product (MVP) requirements for Axiom: The Enterprise Meeting Protocol.
 
 ---
 
-## 🎯 1. Core Goal (The "Why")
+## 1. Problem Statement
 
-Solve the problem of fragmented and inefficient internal enterprise meetings. Axiom acts as an integrated operating system specifically for meetings, forcing users to comply with organizational discipline (having clear agendas), while keeping data 100% on-premise for absolute security, and utilizing AI to minimize post-meeting reporting tasks.
+Corporate meetings are often unstructured, lack clear objectives, and generate untracked action items. Companies waste thousands of hours annually on meetings that could have been an email, simply because there is no protocol enforcing meeting discipline. Furthermore, using public cloud services for sensitive strategic meetings poses a severe data privacy risk.
 
-## 🧱 2. MVP Scope (H-P-D-I Architecture)
+**Axiom solves this by:**
 
-### 🧑‍💻 H (Human - Interface Layer)
-
-- **Design Standard:** B2B Enterprise SaaS (Taste Skill UI guidelines).
-- **Core Feature:**
-  - Modern, minimalist meeting dashboard.
-  - Native integration with LiveKit Components for seamless, secure WebRTC video calling within the browser without requiring external application installations.
-
-### ⚙️ P (Process - Business Logic & Discipline)
-
-- **Agenda Gate:** A strict protocol that prevents the creation of a meeting room if the user fails to provide a detailed agenda (minimum 20 characters).
-- **Quality Assurance:** Ensured via TDD (Test-Driven Development) methodology.
-
-### 🔒 D (Data - Storage & Sovereignty)
-
-- **Data Sovereignty:** Uses SQLite for MVP (easily scalable to PostgreSQL). All data is stored locally within the enterprise's server, completely decoupled from public clouds.
-- **Data Schema:** Robust schema tracking meetings, transcripts, and action items.
-
-### 🧠 I (Intelligence - AI Layer) _[Upcoming Phase 3]_
-
-- **Audio Transcription:** Offline voice-to-text processing (Whisper).
-- **Summarization & Action Items:** Post-meeting automated summarization (LLaMA-3).
+1. Forcing discipline via strict process gates (e.g., Mandatory Agendas).
+2. Hosting everything On-Premise via self-hosted WebRTC (LiveKit).
+3. Automating post-meeting busywork (transcription and summaries) via Local AI (Whisper + Llama).
 
 ---
 
-## 🏆 3. Project Goals (10/10 Path)
+## 2. User Personas
 
-To succeed as a reliable enterprise tool, Axiom must strictly satisfy these goals:
+1. **The Organizer (Manager/Lead):** Needs to schedule structured meetings, ensure participants know the agenda, and easily extract action items afterward.
+2. **The Participant (Employee):** Needs a seamless, distraction-free interface to join the meeting, without downloading third-party applications.
+3. **The IT Admin:** Needs to deploy the solution entirely within the company's VPC (Virtual Private Cloud) to guarantee absolute data security.
 
-1. **Open Source Quality:**
-   - All source code is hosted on an open repository (GitHub) adhering to standard Open Source compliance (MIT License, clean commit history, Issue/PR templates).
-   - Code formatting and linting strictness (Prettier, CI/CD).
-2. **DX-OS Theme Relevance:** The concept of an "Agenda Gate" and an On-Premise AI workflow showcases deep understanding of the "Digital Enterprise Operating System (DX-OS)" theme.
-3. **Robustness:** The MVP must work end-to-end flawlessly on a local machine, proving the feasibility of the H-P-D-I architecture.
-4. **Professionalism:** Monorepo architecture, comprehensive documentation (README, ARCHITECTURE, DEPLOYMENT), and high-end B2B UI/UX.
+---
+
+## 3. Core Requirements (In Scope for MVP)
+
+### Phase 1: Core Discipline Protocol (Foundation)
+
+- **Feature:** A dashboard listing active and upcoming meetings.
+- **Feature:** "Create Meeting" process gate.
+  - _Requirement:_ Users MUST enter a detailed Agenda (>20 characters) to create a meeting.
+  - _Validation:_ Enforced strongly on the Backend (FastAPI).
+- **Architecture:** SQLite database for rapid local development.
+
+### Phase 2: WebRTC Integration (The Room)
+
+- **Feature:** Real-time Video/Audio conference interface inside the browser.
+- **Technology:** Integration with LiveKit Server.
+- **UI:** Minimalist meeting room highlighting the validated Agenda on the sidebar.
+
+### Phase 3: AI Intelligence Pipeline (The Brain)
+
+- **Feature:** Automated Transcription.
+  - _Technology:_ LiveKit AI Agents streaming audio to Local Whisper model.
+- **Feature:** Automated Summarization.
+  - _Technology:_ Passing the final transcript to LLaMA-3 (via Ollama) to generate a summary and action items.
+
+---
+
+## 4. Out of Scope (For MVP)
+
+- Complex user roles (Admin vs Regular User). MVP will assume all logged-in users have standard permissions.
+- Calendar integrations (Google Calendar, Outlook).
+- Screen sharing annotations (Screen sharing itself is supported by LiveKit, but drawing/annotating is out of scope).
+- Email notifications.
+
+---
+
+## 5. Success Metrics
+
+- **Zero Data Leakage:** Can the entire system (Frontend, Backend, WebRTC, AI) run on a disconnected local network?
+- **Discipline Enforcement:** Does the system successfully block 100% of attempts to create a meeting without a valid agenda?
+- **Reliability:** Do backend API tests (pytest) cover >90% of the core business logic?
