@@ -4,16 +4,16 @@
   <br />
   <br />
 
-  # ⚡ Axiom: Enterprise Meeting Protocol
+# ⚡ Axiom: Enterprise Meeting Protocol
 
-  **Hệ Điều Hành Doanh Nghiệp Số (DX-OS) - Giao thức họp On-Premise bảo mật cao** <br />
-  *Được phát triển cho Olympic Phần mềm Nguồn mở (PMNM) 2026*
+**Hệ Điều Hành Doanh Nghiệp Số (DX-OS) - Giao thức họp On-Premise bảo mật cao** <br />
+_Được phát triển cho Olympic Phần mềm Nguồn mở (PMNM) 2026_
 
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
-  [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
-  [![Status](https://img.shields.io/badge/Status-Active_Development-success)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
+[![Status](https://img.shields.io/badge/Status-Active_Development-success)](<>)
 
 </div>
 
@@ -74,6 +74,7 @@
 Vui lòng tham khảo hướng dẫn chi tiết tại tài liệu [DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
 ### 1. Khởi động Backend (FastAPI)
+
 ```bash
 cd backend
 pip install -r requirements.txt # (Nếu đã tạo) hoặc cài fastapi uvicorn sqlalchemy pytest
@@ -82,6 +83,7 @@ uvicorn main:app --reload
 ```
 
 ### 2. Khởi động Frontend (Next.js)
+
 ```bash
 cd frontend
 npm install
@@ -92,6 +94,7 @@ npm run dev
 ---
 
 ## 📚 Tài Liệu Hướng Dẫn
+
 - [Kiến trúc Hệ thống (ARCHITECTURE.md)](./docs/ARCHITECTURE.md)
 - [Quy định Đóng góp (CONTRIBUTING.md)](./docs/CONTRIBUTING.md)
 - [Phạm vi Dự án (MVP.md)](./MVP.md)

@@ -11,6 +11,7 @@ Chúng tôi không chấp nhận mã nguồn (Backend) không có test. Xin hãy
 3. **Refactor:** Tối ưu hóa lại đoạn code vừa viết cho sạch đẹp (Clean code), nhưng vẫn đảm bảo test luôn Pass.
 
 **Lệnh chạy test:**
+
 ```bash
 cd backend
 pytest -v
@@ -21,7 +22,7 @@ pytest -v
 Giao diện (Frontend) không được code tùy tiện. Dự án này phục vụ khối khách hàng doanh nghiệp B2B (Enterprise), do đó:
 
 - **Tuyệt đối không dùng:** Các màu sắc mặc định của AI (tím lịm tìm sim, gradient quá lòe loẹt), các cấu trúc giao diện cẩu thả.
-- **Bắt buộc dùng:** 
+- **Bắt buộc dùng:**
   - Phông chữ **Geist** (Geist Sans).
   - Bảng màu **Electric Blue** làm điểm nhấn (`oklch(0.546 0.245 262.881)`).
   - Sử dụng các components của **Shadcn UI** thay vì viết CSS chay (trừ khi thật sự cần thiết).
@@ -29,5 +30,6 @@ Giao diện (Frontend) không được code tùy tiện. Dự án này phục v�
 - Dữ liệu rỗng (Empty states) phải có giải thích rõ ràng và Call-to-Action (Nút hành động).
 
 ## 3. Quy Trình Pull Request (PR)
+
 - Code Frontend và Backend phải được tách bạch rõ ràng, không gộp chung vào 1 commit trừ khi là thay đổi tài liệu.
 - Viết Commit message rõ ràng: `[Frontend] Thêm nút tạo cuộc họp` hoặc `[Backend] Thêm API update meeting`.
