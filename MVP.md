@@ -63,3 +63,18 @@ Corporate meetings are often unstructured, lack clear objectives, and generate u
 - **Zero Data Leakage:** Can the entire system (Frontend, Backend, WebRTC, AI) run on a disconnected local network?
 - **Discipline Enforcement:** Does the system successfully block 100% of attempts to create a meeting without a valid agenda?
 - **Reliability:** Do backend API tests (pytest) cover >90% of the core business logic?
+
+---
+
+## 6. Quality Standard & Evaluation Targets
+
+To ensure Axiom maintains world-class Open Source standards, its development aligns with the strict evaluation criteria typical of top-tier Open Source Software competitions (such as the VFOSSA OLP PMNM):
+
+1. **Creativity & Practicality:** The solution must directly solve real-world enterprise pain points (wasted meeting hours and data privacy risks) with a unique architectural approach (DX-OS Process Gates).
+2. **Open Source Tech Stack:** 100% reliance on Open Source technologies (FastAPI, Next.js, LiveKit, Whisper, LLaMA) with no vendor lock-in.
+3. **Architecture & Deployment:** The H-P-D-I architecture must be clearly documented. The deployment model must support fully isolated On-Premise environments (Dockerized).
+4. **Project Management & Discipline:**
+   - Strict adherence to TDD (superpowers_tdd.md).
+   - High-quality B2B UI/UX design ( asteskill.md).
+   - Clean git history with Conventional Commits.
+5. **Community Contribution:** High-quality Markdown documentation (README, CONTRIBUTING, ARCHITECTURE, DEPLOYMENT) making it effortless for new developers to onboard and contribute.
