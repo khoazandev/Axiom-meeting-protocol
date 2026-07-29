@@ -1,6 +1,6 @@
 # Minimum Viable Product (MVP) - Axiom (DX-OS)
 
-**Competition Project:** 2026 Open Source Software Olympics
+**Project:** Axiom Meeting Protocol
 **Topic:** Digital Enterprise Operating System (DX-OS)
 **Product Category:** Smart Meeting AI (Core internal communication system for enterprises).
 
@@ -36,13 +36,13 @@ Solve the problem of fragmented and inefficient internal enterprise meetings. Ax
 
 ---
 
-## 🏆 3. OLP 2026 Judging Criteria Alignment (10/10 Path)
+## 🏆 3. Project Goals (10/10 Path)
 
-To win the first prize at the Olympics, Axiom must strictly satisfy the official OLP 2026 Hackathon rules:
+To succeed as a reliable enterprise tool, Axiom must strictly satisfy these goals:
 
-1. **Open Source Quality (Kho mã nguồn mở):** 
+1. **Open Source Quality:**
    - All source code is hosted on an open repository (GitHub) adhering to standard Open Source compliance (MIT License, clean commit history, Issue/PR templates).
    - Code formatting and linting strictness (Prettier, CI/CD).
 2. **DX-OS Theme Relevance:** The concept of an "Agenda Gate" and an On-Premise AI workflow showcases deep understanding of the "Digital Enterprise Operating System (DX-OS)" theme.
-3. **Live Demonstration (Trình diễn trực tiếp):** The MVP must work end-to-end flawlessly on a local machine for the final presentation, proving the feasibility of the H-P-D-I architecture.
+3. **Robustness:** The MVP must work end-to-end flawlessly on a local machine, proving the feasibility of the H-P-D-I architecture.
 4. **Professionalism:** Monorepo architecture, comprehensive documentation (README, ARCHITECTURE, DEPLOYMENT), and high-end B2B UI/UX.

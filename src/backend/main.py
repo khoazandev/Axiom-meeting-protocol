@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from livekit import api
 import os
 
-from database import Base, engine, get_db
-import models
+from src.backend.database import Base, engine, get_db
+from src.backend import models
 
 Base.metadata.create_all(bind=engine)
 

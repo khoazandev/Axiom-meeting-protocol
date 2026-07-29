@@ -3,7 +3,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.backend.main import app, database, models
+from src.backend.main import app
+from src.backend import database, models
 
 # Cấu hình test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
