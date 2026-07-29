@@ -1,105 +1,105 @@
 <div align="center">
-  <img src="frontend/public/hero_dashboard.jpg" alt="Axiom Hero" width="800" style="border-radius: 12px;"/>
+  <img src="src/frontend/public/hero_dashboard.jpg" alt="Axiom Hero" width="800" style="border-radius: 12px;"/>
 
   <br />
   <br />
 
-# ⚡ Axiom: Enterprise Meeting Protocol
+  # ⚡ Axiom: Enterprise Meeting Protocol
 
-**Hệ Điều Hành Doanh Nghiệp Số (DX-OS) - Giao thức họp On-Premise bảo mật cao** <br />
-_Được phát triển cho Olympic Phần mềm Nguồn mở (PMNM) 2026_
+  **Digital Enterprise Operating System (DX-OS) - High Security On-Premise Meeting Protocol** <br />
+  *Developed for the 2026 Open Source Software Olympics*
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
-[![Status](https://img.shields.io/badge/Status-Active_Development-success)](<>)
+  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
+  [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
+  [![Status](https://img.shields.io/badge/Status-Active_Development-success)]()
 
 </div>
 
 ---
 
-## 📖 Giới Thiệu
+## 📖 Introduction
 
-**Axiom** không chỉ là một ứng dụng gọi video thông thường. Đây là một **Hệ Điều Hành Doanh Nghiệp Số (DX-OS)** được thiết kế dựa trên kiến trúc 4 lớp **H-P-D-I**:
+**Axiom** is not just another video calling application. It is a **Digital Enterprise Operating System (DX-OS)** designed around the **H-P-D-I** 4-layer architecture:
 
-- 🧑‍💻 **H (Human - Con Người):** Giao diện tập trung, loại bỏ sự xao nhãng. Tích hợp Jitsi Meet trực tiếp.
-- ⚙️ **P (Process - Quy Trình):** Các "Rào chắn" (Gates) như ép buộc phải có Agenda chi tiết trước khi họp.
-- 🔒 **D (Data - Dữ Liệu):** Cơ sở dữ liệu On-Premise, đảm bảo chủ quyền dữ liệu tuyệt đối cho doanh nghiệp.
-- 🧠 **I (Intelligence - Trí Tuệ):** Whisper bóc băng ghi âm theo thời gian thực & Llama-3 tóm tắt nội dung cuộc họp.
+- 🧑‍💻 **H (Human):** A focused, distraction-free interface. Native Jitsi Meet integration.
+- ⚙️ **P (Process):** Process gates that enforce discipline (e.g., forcing a detailed agenda before allowing a meeting).
+- 🔒 **D (Data):** On-Premise database ensuring absolute data sovereignty for enterprises.
+- 🧠 **I (Intelligence):** Real-time audio transcription via Whisper & meeting summarization via Llama-3.
 
-## ✨ Tính Năng Nổi Bật
+## ✨ Key Features
 
-- **Agenda Gate (Rào chắn Agenda):** Bắt buộc nhập chương trình họp rõ ràng, minh bạch (Backend kiểm tra nghiêm ngặt).
-- **Jitsi Native IFrame:** Gọi video ngay trên trình duyệt, hạ tầng sẵn sàng cho tự lưu trữ (Self-hosted).
-- **Thiết Kế Taste Skill:** Giao diện B2B Enterprise SaaS với tông màu Electric Blue và font chữ Geist cao cấp.
-- **TDD Workflow:** Quy trình phát triển mã nguồn siêu cường (Superpowers TDD: Red-Green-Refactor) đảm bảo độ tin cậy của API lên đến 99.9%.
+- **Agenda Gate:** Enforces clear, transparent meeting agendas (strictly validated by Backend).
+- **Jitsi Native IFrame:** Browser-based video calling with self-hosted infrastructure readiness.
+- **Taste Skill Design:** B2B Enterprise SaaS aesthetic with Electric Blue accents and premium Geist typography.
+- **TDD Workflow:** Hyper-disciplined Test-Driven Development (Red-Green-Refactor) ensuring 99.9% API reliability.
 
 ---
 
-## 📂 Cấu Trúc Thư Mục Chuẩn
+## 📂 Standard Monorepo Structure
 
 ```text
-📦 Smart_Meeting_AI
- ┣ 📂 backend                 # Backend API (Python / FastAPI)
- ┃ ┣ 📜 main.py               # Entry point & API Routes
- ┃ ┣ 📜 models.py             # SQLAlchemy Models (CSDL)
- ┃ ┣ 📜 database.py           # Thiết lập kết nối SQLite/PostgreSQL
- ┃ ┣ 📜 test_main.py          # Bộ Test TDD (Pytest)
- ┃ ┗ 📜 requirements.txt      # Dependencies cho Backend
- ┣ 📂 frontend                # Frontend Web (Next.js 14 / React 19)
- ┃ ┣ 📂 public                # Tài nguyên tĩnh (Hình ảnh, Icon)
- ┃ ┣ 📂 src
- ┃ ┃ ┣ 📂 app                 # App Router (Next.js)
- ┃ ┃ ┃ ┣ 📂 meetings          # Bảng điều khiển cuộc họp (Dashboard)
- ┃ ┃ ┃ ┣ 📜 layout.tsx        # Base layout (Geist font, Metadata)
- ┃ ┃ ┃ ┣ 📜 page.tsx          # Trang chủ Landing Page (Split Layout)
- ┃ ┃ ┃ ┗ 📜 globals.css       # Cấu hình màu sắc chuẩn TasteSkill
- ┃ ┃ ┣ 📂 components          # React Components (Shadcn UI)
- ┃ ┃ ┗ 📂 lib                 # Utils (Tailwind merge)
- ┃ ┣ 📜 tailwind.config.ts    # Cấu hình Tailwind CSS
- ┃ ┗ 📜 package.json          # Dependencies cho Frontend
- ┣ 📂 docs                    # Tài liệu kỹ thuật dự án
- ┃ ┣ 📜 ARCHITECTURE.md       # Kiến trúc H-P-D-I chi tiết
- ┃ ┣ 📜 CONTRIBUTING.md       # Hướng dẫn đóng góp (TDD & TasteSkill)
- ┃ ┗ 📜 DEPLOYMENT.md         # Hướng dẫn triển khai (Dev & Prod)
- ┣ 📜 MVP.md                  # Định nghĩa phạm vi Minimum Viable Product
- ┗ 📜 README.md               # File thông tin tổng quan (Bạn đang đọc file này)
+📦 Axiom_Meeting_Protocol
+ ┣ 📂 src
+ ┃ ┣ 📂 backend               # Backend API (Python / FastAPI)
+ ┃ ┃ ┣ 📜 main.py             # Entry point & API Routes
+ ┃ ┃ ┣ 📜 models.py           # SQLAlchemy Models (Database schema)
+ ┃ ┃ ┣ 📜 database.py         # SQLite/PostgreSQL connection setup
+ ┃ ┃ ┗ 📜 test_main.py        # TDD Test Suite (Pytest)
+ ┃ ┗ 📂 frontend              # Frontend Web (Next.js 14 / React 19)
+ ┃   ┣ 📂 public              # Static assets (Images, Icons)
+ ┃   ┣ 📂 src
+ ┃   ┃ ┣ 📂 app               # Next.js App Router
+ ┃   ┃ ┃ ┣ 📂 meetings        # Meeting Dashboard
+ ┃   ┃ ┃ ┣ 📜 layout.tsx      # Base layout (Geist font, Metadata)
+ ┃   ┃ ┃ ┣ 📜 page.tsx        # Landing Page
+ ┃   ┃ ┃ ┗ 📜 globals.css     # TasteSkill standard colors
+ ┃   ┃ ┣ 📂 components        # React Components (Shadcn UI)
+ ┃   ┃ ┗ 📂 lib               # Utils
+ ┃   ┣ 📜 tailwind.config.ts  # Tailwind CSS configuration
+ ┃   ┗ 📜 package.json        # Frontend Dependencies
+ ┣ 📂 docs                    # Technical Documentation
+ ┃ ┣ 📜 ARCHITECTURE.md       # Detailed H-P-D-I Architecture
+ ┃ ┣ 📜 CONTRIBUTING.md       # Contribution Guidelines (TDD & TasteSkill)
+ ┃ ┗ 📜 DEPLOYMENT.md         # Deployment Guide (Dev & Prod)
+ ┣ 📜 pyproject.toml          # Python dependencies (managed by uv)
+ ┣ 📜 package.json            # Root dependencies (Husky, Prettier, Lint-staged)
+ ┣ 📜 .justfile               # Automation scripts (Task runner)
+ ┣ 📜 .pre-commit-config.yaml # Git hooks configuration
+ ┣ 📜 MVP.md                  # Minimum Viable Product Scope Definition
+ ┗ 📜 README.md               # Project Overview (You are reading this)
 ```
 
 ---
 
-## 🚀 Khởi Chạy Môi Trường Phát Triển (Local)
+## 🚀 Quick Start (Local Development)
 
-Vui lòng tham khảo hướng dẫn chi tiết tại tài liệu [DEPLOYMENT.md](./docs/DEPLOYMENT.md).
-
-### 1. Khởi động Backend (FastAPI)
+Please refer to the detailed guide in [DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
 ```bash
-cd backend
-pip install -r requirements.txt # (Nếu đã tạo) hoặc cài fastapi uvicorn sqlalchemy pytest
-uvicorn main:app --reload
-# API Server chạy tại: http://localhost:8000
-```
+# 1. Install all dependencies (Frontend, Backend via uv, and git hooks)
+just install
 
-### 2. Khởi động Frontend (Next.js)
+# 2. Run Database/Services (if Docker is configured)
+# just dev
 
-```bash
-cd frontend
-npm install
-npm run dev
-# Web Server chạy tại: http://localhost:3000
+# 3. Start Backend Server (runs on localhost:8000)
+just backend-dev
+
+# 4. Start Frontend Server (runs on localhost:3000)
+# In a new terminal:
+just frontend-dev
 ```
 
 ---
 
-## 📚 Tài Liệu Hướng Dẫn
-
-- [Kiến trúc Hệ thống (ARCHITECTURE.md)](./docs/ARCHITECTURE.md)
-- [Quy định Đóng góp (CONTRIBUTING.md)](./docs/CONTRIBUTING.md)
-- [Phạm vi Dự án (MVP.md)](./MVP.md)
+## 📚 Documentation
+- [System Architecture (ARCHITECTURE.md)](./docs/ARCHITECTURE.md)
+- [Contributing Guidelines (CONTRIBUTING.md)](./docs/CONTRIBUTING.md)
+- [Project Scope (MVP.md)](./MVP.md)
 
 <div align="center">
   <br/>
-  <i>Được xây dựng với 🩵 cho Olympic PMNM 2026. Bền vững. Bảo mật. Kỷ luật.</i>
+  <i>Built with 🩵 for the 2026 Open Source Software Olympics. Resilient. Secure. Disciplined.</i>
 </div>

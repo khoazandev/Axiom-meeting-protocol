@@ -1,35 +1,33 @@
-# Hướng Dẫn Đóng Góp (Contributing Guidelines)
+# Contributing Guidelines
 
-Dự án này được xây dựng với mục tiêu tham gia **Olympic Phần mềm Nguồn mở 2026**. Do đó, mã nguồn phải đạt chuẩn công nghiệp cao nhất. Bất kỳ kỹ sư nào tham gia dự án cũng **phải tuân thủ nghiêm ngặt** hai bộ quy tắc sau:
+This project was built with the goal of competing in the **2026 Open Source Software Olympics**. Therefore, the codebase must meet the highest industry standards. Any engineer joining this project **must strictly adhere** to the following two rule sets:
 
-## 1. Phát Triển Dựa Trên Kiểm Thử (Superpowers TDD)
+## 1. Test-Driven Development (Superpowers TDD)
 
-Chúng tôi không chấp nhận mã nguồn (Backend) không có test. Xin hãy tuân thủ chu trình **Red-Green-Refactor**:
+We do not accept backend code without tests. Please strictly follow the **Red-Green-Refactor** cycle:
 
-1. **Red:** Viết một bài test cho tính năng bạn muốn làm trước khi viết code thật. Chạy test và chứng kiến nó thất bại (Red).
-2. **Green:** Viết đoạn code ngắn nhất, đơn giản nhất (chỉ vừa đủ) để làm cho bài test đó Pass (Green).
-3. **Refactor:** Tối ưu hóa lại đoạn code vừa viết cho sạch đẹp (Clean code), nhưng vẫn đảm bảo test luôn Pass.
+1. **Red:** Write a test for the feature you want to build before writing the actual code. Run the test and watch it fail (Red).
+2. **Green:** Write the shortest, simplest code possible just to make that test pass (Green).
+3. **Refactor:** Optimize the code you just wrote to make it clean, while ensuring the test continues to pass.
 
-**Lệnh chạy test:**
-
+**Run tests via just:**
 ```bash
-cd backend
-pytest -v
+just backend-test
 ```
 
-## 2. Kỷ Luật Thiết Kế (Taste Skill)
+## 2. Design Discipline (Taste Skill)
 
-Giao diện (Frontend) không được code tùy tiện. Dự án này phục vụ khối khách hàng doanh nghiệp B2B (Enterprise), do đó:
+The frontend interface must not be coded carelessly. This project serves B2B Enterprise clients, therefore:
 
-- **Tuyệt đối không dùng:** Các màu sắc mặc định của AI (tím lịm tìm sim, gradient quá lòe loẹt), các cấu trúc giao diện cẩu thả.
-- **Bắt buộc dùng:**
-  - Phông chữ **Geist** (Geist Sans).
-  - Bảng màu **Electric Blue** làm điểm nhấn (`oklch(0.546 0.245 262.881)`).
-  - Sử dụng các components của **Shadcn UI** thay vì viết CSS chay (trừ khi thật sự cần thiết).
-  - Duy trì các không gian trắng (Whitespace) rõ ràng, sử dụng đường viền tinh tế (`border-border/40`).
-- Dữ liệu rỗng (Empty states) phải có giải thích rõ ràng và Call-to-Action (Nút hành động).
+- **Absolutely DO NOT use:** Default AI colors (e.g., flashy purples, excessive gradients) or sloppy layout structures.
+- **MANDATORY to use:** 
+  - Typography: **Geist** (Geist Sans).
+  - Primary Accent Color: **Electric Blue** (`oklch(0.546 0.245 262.881)`).
+  - Use **Shadcn UI** components instead of writing custom CSS (unless absolutely necessary).
+  - Maintain clear Whitespace and use subtle borders (`border-border/40`).
+- Empty states must have clear explanations and Call-to-Action buttons.
 
-## 3. Quy Trình Pull Request (PR)
-
-- Code Frontend và Backend phải được tách bạch rõ ràng, không gộp chung vào 1 commit trừ khi là thay đổi tài liệu.
-- Viết Commit message rõ ràng: `[Frontend] Thêm nút tạo cuộc họp` hoặc `[Backend] Thêm API update meeting`.
+## 3. Pull Request (PR) Process
+- Frontend and Backend code should be separated cleanly; do not bundle them into a single commit unless it is a documentation change.
+- Write clear commit messages: `[Frontend] Add create meeting button` or `[Backend] Add meeting update API`.
+- **Pre-commit hooks** (`husky`, `lint-staged`) will automatically format your code when you commit. Do not bypass them.

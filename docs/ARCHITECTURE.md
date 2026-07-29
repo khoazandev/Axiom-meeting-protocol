@@ -1,64 +1,55 @@
-# Kiến Trúc Hệ Thống (Architecture)
+# System Architecture (ARCHITECTURE)
 
-Tài liệu này mô tả chi tiết về mặt kỹ thuật cho dự án Axiom, được xây dựng dựa trên lõi kiến trúc DX-OS (Hệ Điều Hành Doanh Nghiệp Số).
+This document provides a detailed technical overview of the Axiom project, built upon the core principles of the DX-OS (Digital Enterprise Operating System) architecture.
 
-## 1. Mô Hình Tổng Quan H-P-D-I
+## 1. H-P-D-I Overview
 
-Smart Meeting AI không thiết kế các tính năng một cách ngẫu nhiên. Mọi đoạn code và Component đều phải trả lời được câu hỏi: Nó phục vụ cho Lớp (Layer) nào trong DX-OS?
+Axiom does not implement features randomly. Every line of code and every component must answer the question: Which layer of the DX-OS architecture does it serve?
 
-### 🧑‍💻 Lớp H (Human - Con Người)
+### 🧑‍💻 H (Human - Interface Layer)
+The layer interacting directly with the user, focusing on Clean UI/UX.
+- **Technologies:** Next.js 14 (App Router), React 19, Tailwind CSS v4, Shadcn UI.
+- **Design Standard:** B2B Enterprise SaaS (Taste Skill), Focus Mode, Electric Blue (#2563eb).
+- **Core Implementation:** `src/frontend/src/app/`
 
-Lớp tương tác trực tiếp với người dùng, tập trung vào UX/UI sạch sẽ (Clean UI).
+### ⚙️ P (Process - Business Logic Gates)
+The layer enforcing organizational discipline (e.g., No Agenda = No Meeting).
+- **Technologies:** FastAPI, Pydantic (Data Validation).
+- **Code Standard:** TDD (Test-Driven Development) defending these gates via `pytest`.
+- **Core Implementation:** `src/backend/main.py` and `src/backend/test_main.py`
 
-- **Công nghệ:** Next.js 14 (App Router), React 19, Tailwind CSS v4, Shadcn UI.
-- **Quy chuẩn Design:** B2B Enterprise SaaS (Taste Skill), Focus Mode, màu Electric Blue (#2563eb).
-- **Thực thi chính:** `frontend/src/app/`
+### 🧠 I (Intelligence - AI Assistants)
+The digital assistant layer, operating via background tasks.
+- **Technologies:** OpenAI Whisper (Offline transcription), Llama-3 (Offline summarization).
+- **Workflow:** Upon meeting conclusion, a FastAPI Background Worker processes the Jitsi audio recording using local AI models.
 
-### ⚙️ Lớp P (Process - Rào chắn Quy trình)
-
-Lớp Business Logic ép buộc người dùng phải tuân thủ kỷ luật (VD: Không có Agenda thì không được họp).
-
-- **Công nghệ:** FastAPI, Pydantic (Data Validation).
-- **Quy chuẩn Code:** TDD (Test-Driven Development) bảo vệ các rào chắn này qua `pytest`.
-- **Thực thi chính:** `backend/main.py` và `backend/test_main.py`
-
-### 🧠 Lớp I (Intelligence - Trí Tuệ AI)
-
-Lớp trợ lý số, hoạt động ngầm (Background Task).
-
-- **Công nghệ:** OpenAI Whisper (Bóc băng offline), Llama-3 (Tóm tắt offline/on-premise).
-- **Quy trình:** Khi cuộc họp kết thúc, Background Worker của FastAPI sẽ gọi AI Models xử lý file âm thanh Jitsi xuất ra.
-
-### 🔒 Lớp D (Data - Dữ Liệu Sự Thật)
-
-Lớp lưu trữ tập trung, bảo mật cao nhất, cấm rò rỉ ra public cloud.
-
-- **Công nghệ:** SQLite (Dev) -> PostgreSQL (Prod), SQLAlchemy ORM.
-- **Thực thi chính:** `backend/models.py`, `backend/database.py`
+### 🔒 D (Data - Single Source of Truth)
+The centralized storage layer, designed for absolute security. It explicitly prevents data leakage to public clouds.
+- **Technologies:** SQLite (Dev) -> PostgreSQL (Prod), SQLAlchemy ORM.
+- **Core Implementation:** `src/backend/models.py`, `src/backend/database.py`
 
 ---
 
-## 2. Sơ Đồ Hệ Thống (System Flow)
+## 2. System Flow (Mermaid)
 
 ```mermaid
 graph TD
-    User([Người dùng]) -->|Tương tác UI| Frontend[Next.js Frontend]
+    User([User]) -->|UI Interaction| Frontend[Next.js Frontend]
     Frontend -->|POST /api/meetings/| Backend[FastAPI Backend]
-
+    
     Backend -->|Validate Agenda (Process Gate)| DB[(Database: SQLite/PostgreSQL)]
-
-    User -->|Vào phòng họp| Jitsi[Jitsi Meet IFrame]
+    
+    User -->|Enter Meeting Room| Jitsi[Jitsi Meet IFrame]
     Jitsi -->|Streaming Audio/Video| JitsiServer[Jitsi Server On-Premise]
-
+    
     JitsiServer -->|Recordings| AI_Worker[AI Background Task]
-    AI_Worker -->|Whisper| Transcript(Văn bản thô)
-    Transcript -->|LLaMA 3| Summary(Tóm tắt & Action Items)
-
+    AI_Worker -->|Whisper| Transcript(Raw Transcript)
+    Transcript -->|LLaMA 3| Summary(Summary & Action Items)
+    
     Summary --> DB
 ```
 
-## 3. Lý Do Chọn Công Nghệ
-
-- **Next.js + Tailwind:** Tốc độ phát triển cực nhanh, hỗ trợ Server Components tối ưu SEO (nếu cần) và bảo mật mã nguồn tĩnh.
-- **FastAPI:** Hiệu năng cao (Async), tự động sinh tài liệu Swagger (OpenAPI), tích hợp cực tốt với các mô hình AI Python.
-- **Jitsi Meet:** Mã nguồn mở, hỗ trợ self-hosting hoàn toàn 100% để đảm bảo yếu tố "Data Sovereign" (Chủ quyền dữ liệu) cho doanh nghiệp.
+## 3. Technology Rationale
+- **Next.js + Tailwind:** Ultra-fast development speed, SEO optimization via Server Components, and static source code security.
+- **FastAPI:** High performance (Async), auto-generated Swagger documentation (OpenAPI), seamless integration with Python AI models.
+- **Jitsi Meet:** 100% Open-source, self-hosted friendly infrastructure ensuring total Data Sovereignty for enterprises.

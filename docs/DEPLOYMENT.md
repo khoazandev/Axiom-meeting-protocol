@@ -1,73 +1,54 @@
-# Hướng Dẫn Triển Khai (Deployment)
+# Deployment Guide
 
-Tài liệu hướng dẫn cài đặt và vận hành hệ thống Axiom trên môi trường Local (Phát triển) và Production (Thực tế).
+This document provides instructions for setting up and operating the Axiom system in both Local (Development) and Production environments.
 
-## 1. Môi Trường Phát Triển (Local / Dev)
+## 1. Local Development Environment
 
-### Yêu Cầu Cài Đặt (Prerequisites)
-
-- **Node.js** >= 18.x (Cho Frontend)
-- **Python** >= 3.10 (Cho Backend)
+### Prerequisites
+- **Node.js** >= 18.x (For Frontend)
+- **Python** >= 3.10 (For Backend)
 - **Git**
+- **uv** (Python package manager)
+- **just** (Command runner)
 
-### Bước 1: Khởi Động Backend (FastAPI)
-
-Mở một Terminal mới:
-
+### Step 1: Install Dependencies
+Open a terminal at the project root and run:
 ```bash
-cd backend
-
-# (Tùy chọn) Tạo môi trường ảo
-python -m venv venv
-source venv/bin/activate  # Trên Linux/Mac
-venv\Scripts\activate     # Trên Windows
-
-# Cài đặt thư viện
-pip install -r requirements.txt
-
-# Khởi động server
-uvicorn main:app --reload
+# This will setup uv, install backend dependencies, and install NPM dependencies
+just install
 ```
 
-API của bạn sẽ chạy tại: `http://localhost:8000`
-
-### Bước 2: Khởi Động Frontend (Next.js)
-
-Mở một Terminal mới (Giữ nguyên terminal Backend đang chạy):
-
+### Step 2: Start the Backend (FastAPI)
+In the root terminal:
 ```bash
-cd frontend
-
-# Cài đặt thư viện Node
-npm install
-
-# Khởi động giao diện web
-npm run dev
+just backend-dev
 ```
+Your API will be running at: `http://localhost:8000`
 
-Trang web của bạn sẽ chạy tại: `http://localhost:3000`
+### Step 3: Start the Frontend (Next.js)
+Open a new terminal (keep the backend running) and run:
+```bash
+just frontend-dev
+```
+Your Web interface will be running at: `http://localhost:3000`
 
 ---
 
-## 2. Môi Trường Sản Xuất (Production) - Hướng Dẫn Nhanh
+## 2. Production Environment - Quick Guide
 
-Trong môi trường thực tế dành cho Doanh nghiệp, hệ thống này thiết kế để triển khai **On-Premise (Nội bộ)**.
+For a real-world enterprise environment, this system is designed to be deployed **On-Premise**.
 
 ### Backend Deployment (Docker)
-
-Khuyến nghị sử dụng Docker và Gunicorn để chạy FastAPI:
-
+It is recommended to use Docker and Gunicorn to run FastAPI:
 ```bash
-# Lệnh tham khảo
-docker build -t smart-meeting-api ./backend
-docker run -d -p 8000:8000 smart-meeting-api
+# Reference command
+docker build -t axiom-api -f Dockerfile.backend .
+docker run -d -p 8000:8000 axiom-api
 ```
 
-### Frontend Deployment (Vercel hoặc Nginx)
+### Frontend Deployment (Vercel or Nginx)
+- The frontend can be built statically (`cd src/frontend && npm run build`) and hosted on any web server like Nginx, or deployed to platforms like Vercel if an absolute internal network restriction is not required.
 
-- Frontend có thể build tĩnh (`npm run build`) và host trên bất kỳ web server nào như Nginx, hoặc sử dụng hệ sinh thái như Vercel/Netlify nếu không có yêu cầu chặn mạng nội bộ tuyệt đối.
-
-### Jitsi Meet Server
-
-Trong code MVP hiện tại (tại `[id]/page.tsx`), hệ thống đang sử dụng domain public `meet.jit.si`.
-Khi triển khai cho doanh nghiệp, bạn cần tự host một máy chủ Jitsi (Tham khảo: [Jitsi Meet Handbook](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-quickstart)) và trỏ domain trong mã nguồn Next.js về máy chủ đó để đảm bảo tính riêng tư dữ liệu 100%.
+### Jitsi Meet Server 
+In the current MVP code (at `src/app/meetings/[id]/page.tsx`), the system uses the public domain `meet.jit.si`. 
+When deploying for an enterprise, you must self-host a Jitsi server (Reference: [Jitsi Meet Handbook](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-quickstart)) and point the domain in the Next.js source code to that server to guarantee 100% data privacy.
