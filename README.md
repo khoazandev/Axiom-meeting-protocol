@@ -4,16 +4,16 @@
   <br />
   <br />
 
-  # ⚡ Axiom: Enterprise Meeting Protocol
+# ⚡ Axiom: Enterprise Meeting Protocol
 
-  **Digital Enterprise Operating System (DX-OS) - High Security On-Premise Meeting Protocol** <br />
-  *Developed for the 2026 Open Source Software Olympics*
+**Digital Enterprise Operating System (DX-OS) - High Security On-Premise Meeting Protocol** <br />
+_Developed for the 2026 Open Source Software Olympics_
 
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
-  [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
-  [![Status](https://img.shields.io/badge/Status-Active_Development-success)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
+[![Status](https://img.shields.io/badge/Status-Active_Development-success)](<>)
 
 </div>
 
@@ -95,6 +95,7 @@ just frontend-dev
 ---
 
 ## 📚 Documentation
+
 - [System Architecture (ARCHITECTURE.md)](./docs/ARCHITECTURE.md)
 - [Contributing Guidelines (CONTRIBUTING.md)](./docs/CONTRIBUTING.md)
 - [Project Scope (MVP.md)](./MVP.md)

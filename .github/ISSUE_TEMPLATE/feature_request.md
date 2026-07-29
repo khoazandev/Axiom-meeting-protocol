@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: Suggest an idea for Axiom DX-OS
-title: "[FEAT] "
+title: '[FEAT] '
 labels: enhancement
 assignees: ''
 ---
