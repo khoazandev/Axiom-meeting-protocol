@@ -27,7 +27,7 @@ The layer enforcing organizational discipline (e.g., No Agenda = No Meeting).
 The digital assistant layer, operating via background tasks.
 
 - **Technologies:** OpenAI Whisper (Offline transcription), Llama-3 (Offline summarization).
-- **Workflow:** Upon meeting conclusion, a FastAPI Background Worker processes the Jitsi audio recording using local AI models.
+- **Workflow:** Upon meeting conclusion, a FastAPI Background Worker processes the LiveKit audio recording using local AI models.
 
 ### 🔒 D (Data - Single Source of Truth)
 

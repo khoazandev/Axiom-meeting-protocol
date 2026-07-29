@@ -65,7 +65,7 @@ doc.add_paragraph('Module 4 - Dashboard & Báo cáo: Báo cáo thời lượng h
 # 4. Kiến trúc công nghệ nguồn mở
 doc.add_heading('4. Kiến trúc & Công nghệ nguồn mở (Open Source Stack)', level=1)
 doc.add_paragraph('Để đáp ứng tiêu chí cao nhất của giải thưởng, dự án cam kết 100% sử dụng mã nguồn mở:')
-doc.add_paragraph('Lõi Video/Voice: Jitsi Meet (hoặc LiveKit).', style='List Bullet')
+doc.add_paragraph('Lõi Video/Voice: LiveKit Server WebRTC.', style='List Bullet')
 doc.add_paragraph('AI Nhận diện giọng nói (STT): OpenAI Whisper (Bản Open Source tự host) hoặc PhoWhisper.', style='List Bullet')
 doc.add_paragraph('AI Tóm tắt văn bản (LLM): Ollama kết hợp với model Llama 3 hoặc Qwen-2.', style='List Bullet')
 doc.add_paragraph('Backend & Logic: Python (FastAPI) để xử lý mượt mà luồng AI, kết hợp Node.js (tùy chọn).', style='List Bullet')
@@ -77,7 +77,7 @@ doc.add_heading('5. Đề xuất Phân công nhiệm vụ (Nhóm 3 người)', l
 
 p1 = doc.add_paragraph()
 p1.add_run('Thành viên 1 (Frontend & UI/UX): ').bold = True
-p1.add_run('Thiết kế giao diện, code Frontend (Next.js/React). Tích hợp giao diện phòng họp (Nhúng Jitsi iframe hoặc LiveKit SDK). Xây dựng Dashboard.')
+p1.add_run('Thiết kế giao diện, code Frontend (Next.js/React). Tích hợp giao diện phòng họp (LiveKit SDK). Xây dựng Dashboard.')
 
 p2 = doc.add_paragraph()
 p2.add_run('Thành viên 2 (Backend & AI Integration): ').bold = True
@@ -90,7 +90,7 @@ p3.add_run('Thiết kế CSDL (PostgreSQL). Đóng gói Docker. Phụ trách lu�
 # 6. Lộ trình thực hiện
 doc.add_heading('6. Lộ trình thực hiện (Roadmap)', level=1)
 doc.add_paragraph('Giai đoạn 1 (Tuần 1-2): Dựng khung dự án, thiết kế Database, setup môi trường Frontend và Backend.', style='List Bullet')
-doc.add_paragraph('Giai đoạn 2 (Tuần 3-4): Tích hợp phòng họp Video (Jitsi) và làm tính năng Đặt lịch họp theo quy trình.', style='List Bullet')
+doc.add_paragraph('Giai đoạn 2 (Tuần 3-4): Tích hợp phòng họp Video (LiveKit) và làm tính năng Đặt lịch họp theo quy trình.', style='List Bullet')
 doc.add_paragraph('Giai đoạn 3 (Tuần 5-6): Xử lý phần "Xương" nhất: Tích hợp AI bóc băng và tóm tắt (Whisper + Ollama).', style='List Bullet')
 doc.add_paragraph('Giai đoạn 4 (Tuần 7-8): Hoàn thiện Dashboard, fix bug, tối ưu UI/UX, đóng gói Docker và làm Slide.', style='List Bullet')
 
