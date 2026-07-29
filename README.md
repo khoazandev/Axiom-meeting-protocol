@@ -23,7 +23,7 @@ _Developed for the 2026 Open Source Software Olympics_
 
 **Axiom** is not just another video calling application. It is a **Digital Enterprise Operating System (DX-OS)** designed around the **H-P-D-I** 4-layer architecture:
 
-- 🧑‍💻 **H (Human):** A focused, distraction-free interface. Native Jitsi Meet integration.
+- 🧑‍💻 **H (Human):** A focused, distraction-free interface. Native LiveKit WebRTC integration.
 - ⚙️ **P (Process):** Process gates that enforce discipline (e.g., forcing a detailed agenda before allowing a meeting).
 - 🔒 **D (Data):** On-Premise database ensuring absolute data sovereignty for enterprises.
 - 🧠 **I (Intelligence):** Real-time audio transcription via Whisper & meeting summarization via Llama-3.
@@ -31,7 +31,7 @@ _Developed for the 2026 Open Source Software Olympics_
 ## ✨ Key Features
 
 - **Agenda Gate:** Enforces clear, transparent meeting agendas (strictly validated by Backend).
-- **Jitsi Native IFrame:** Browser-based video calling with self-hosted infrastructure readiness.
+- **LiveKit WebRTC:** Browser-based video calling powered by LiveKit Server, optimized for real-time AI agents.
 - **Taste Skill Design:** B2B Enterprise SaaS aesthetic with Electric Blue accents and premium Geist typography.
 - **TDD Workflow:** Hyper-disciplined Test-Driven Development (Red-Green-Refactor) ensuring 99.9% API reliability.
 

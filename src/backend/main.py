@@ -4,6 +4,8 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from livekit import api
+import os
 
 from src.backend import database, models
 
@@ -60,3 +62,21 @@ def create_meeting(meeting: MeetingCreate, db: Session = Depends(database.get_db
 def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     meetings = db.query(models.Meeting).offset(skip).limit(limit).all()
     return meetings
+
+
+@app.get("/api/meetings/{meeting_id}/token")
+def get_meeting_token(meeting_id: str, participant_name: str):
+    api_key = os.getenv("LIVEKIT_API_KEY", "devkey")
+    api_secret = os.getenv("LIVEKIT_API_SECRET", "secret")
+
+    token = api.AccessToken(api_key, api_secret)
+    token.with_identity(participant_name)
+    token.with_name(participant_name)
+    token.with_grants(
+        api.VideoGrants(
+            room_join=True,
+            room=f"meeting-{meeting_id}",
+        )
+    )
+
+    return {"token": token.to_jwt()}

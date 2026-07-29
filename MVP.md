@@ -17,7 +17,7 @@ Solve the problem of fragmented and inefficient internal enterprise meetings. Ax
 - **Design Standard:** B2B Enterprise SaaS (Taste Skill UI guidelines).
 - **Core Feature:**
   - Modern, minimalist meeting dashboard.
-  - Native integration with Jitsi Meet for seamless, secure video calling within the browser without requiring external application installations.
+  - Native integration with LiveKit Components for seamless, secure WebRTC video calling within the browser without requiring external application installations.
 
 ### ⚙️ P (Process - Business Logic & Discipline)
 

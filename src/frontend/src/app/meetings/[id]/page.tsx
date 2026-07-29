@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Script from 'next/script';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Calendar, Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
+import '@livekit/components-styles';
 
 interface Meeting {
   id: number;
@@ -23,58 +24,47 @@ export default function MeetingRoomPage() {
   const meetingId = params.id as string;
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
+  const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState('');
+
+  // Fixed participant name for MVP
+  const participantName = `User-${Math.floor(Math.random() * 1000)}`;
 
   useEffect(() => {
+    // 1. Fetch meeting details
     fetch(`http://localhost:8000/api/meetings/`)
       .then((res) => res.json())
       .then((data: Meeting[]) => {
         const currentMeeting = data.find((m) => m.id.toString() === meetingId);
         if (currentMeeting) {
           setMeeting(currentMeeting);
+
+          // 2. Fetch LiveKit Token
+          return fetch(
+            `http://localhost:8000/api/meetings/${currentMeeting.id}/token?participant_name=${participantName}`
+          );
+        } else {
+          throw new Error('Meeting not found');
+        }
+      })
+      .then((res) => {
+        if (!res) return;
+        if (!res.ok) throw new Error('Failed to fetch token');
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.token) {
+          setToken(data.token);
         }
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
+        setError(err.message);
         setLoading(false);
       });
   }, [meetingId]);
-
-  const initJitsi = () => {
-    if (!window.JitsiMeetExternalAPI || !jitsiContainerRef.current || !meeting) return;
-
-    // Remove any existing iframes just in case
-    jitsiContainerRef.current.innerHTML = '';
-
-    const domain = 'meet.jit.si';
-    const options = {
-      roomName: `DX-OS-SmartMeeting-${meeting.id}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '')}`,
-      width: '100%',
-      height: '100%',
-      parentNode: jitsiContainerRef.current,
-      configOverwrite: {
-        startWithAudioMuted: true,
-        startWithVideoMuted: true,
-      },
-      interfaceConfigOverwrite: {
-        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-      },
-    };
-
-    const api = new window.JitsiMeetExternalAPI(domain, options);
-
-    // Add event listeners for DX-OS tracking if needed
-    api.addEventListeners({
-      videoConferenceJoined: () => {
-        console.log('Joined meeting in DX-OS space');
-      },
-      videoConferenceLeft: () => {
-        router.push('/meetings');
-      },
-    });
-  };
 
   if (loading) {
     return (
@@ -84,10 +74,11 @@ export default function MeetingRoomPage() {
     );
   }
 
-  if (!meeting) {
+  if (error || !meeting) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4">
-        <h1 className="text-2xl font-semibold">Meeting not found</h1>
+        <h1 className="text-2xl font-semibold">Error joining meeting</h1>
+        <p className="text-muted-foreground">{error || 'Meeting not found'}</p>
         <Link href="/meetings">
           <Button>Return to Dashboard</Button>
         </Link>
@@ -95,10 +86,10 @@ export default function MeetingRoomPage() {
     );
   }
 
+  const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
+
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden selection:bg-primary/20">
-      <Script src="https://meet.jit.si/external_api.js" strategy="lazyOnload" onLoad={initJitsi} />
-
       <header className="h-16 px-6 border-b border-border/40 flex items-center justify-between shrink-0 bg-background z-10">
         <div className="flex items-center gap-4">
           <Link href="/meetings">
@@ -121,15 +112,33 @@ export default function MeetingRoomPage() {
         <div className="flex items-center gap-2">
           <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium border border-primary/20 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            DX-OS Protocol Active
+            DX-OS LiveKit Active
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Side: Jitsi Meet (The Conference) */}
-        <div className="flex-1 bg-black relative">
-          <div ref={jitsiContainerRef} className="absolute inset-0 w-full h-full" />
+        {/* Left Side: LiveKit Meet (The Conference) */}
+        <div className="flex-1 bg-black relative flex items-center justify-center">
+          {token === '' ? (
+            <div className="text-muted-foreground flex flex-col items-center gap-2">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <p>Connecting to LiveKit server...</p>
+            </div>
+          ) : (
+            <LiveKitRoom
+              video={false}
+              audio={false}
+              token={token}
+              serverUrl={livekitUrl}
+              data-lk-theme="default"
+              style={{ height: '100%', width: '100%' }}
+              onDisconnected={() => router.push('/meetings')}
+            >
+              <VideoConference />
+              <RoomAudioRenderer />
+            </LiveKitRoom>
+          )}
         </div>
 
         {/* Right Side: Agenda & Intelligence (Process & Data layer of DX-OS) */}
@@ -167,14 +176,14 @@ export default function MeetingRoomPage() {
                   Intelligence (AI)
                 </h3>
                 <span className="text-xs font-medium px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" /> Listening
+                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" /> LiveKit AI
                 </span>
               </div>
               <Card className="border-border/50 shadow-none bg-background">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 h-32">
-                  <p className="text-sm font-medium">Whisper Transcription Active</p>
+                  <p className="text-sm font-medium">Whisper Transcription Pending</p>
                   <p className="text-xs text-muted-foreground">
-                    Real-time transcripts and action items will be generated when the meeting ends.
+                    LiveKit agents can connect to this room and perform real-time speech-to-text.
                   </p>
                 </CardContent>
               </Card>

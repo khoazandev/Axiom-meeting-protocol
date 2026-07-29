@@ -43,3 +43,12 @@ def test_create_meeting_rejects_agenda_under_20_characters():
     )
     assert response.status_code == 400
     assert "Quy trình lỗi" in response.json()["detail"]
+
+
+def test_get_meeting_token():
+    response = client.get("/api/meetings/1/token?participant_name=Alice")
+    assert response.status_code == 200
+    assert "token" in response.json()
+    # verify jwt
+    token = response.json()["token"]
+    assert len(token.split(".")) == 3

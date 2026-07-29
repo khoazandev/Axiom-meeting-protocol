@@ -47,10 +47,10 @@ graph TD
 
     Backend -->|Validate Agenda (Process Gate)| DB[(Database: SQLite/PostgreSQL)]
 
-    User -->|Enter Meeting Room| Jitsi[Jitsi Meet IFrame]
-    Jitsi -->|Streaming Audio/Video| JitsiServer[Jitsi Server On-Premise]
+    User -->|Enter Meeting Room| LiveKit[LiveKit Components]
+    LiveKit -->|WebRTC Audio/Video| LiveKitServer[LiveKit Server]
 
-    JitsiServer -->|Recordings| AI_Worker[AI Background Task]
+    LiveKitServer -->|Webhooks/Audio Streams| AI_Worker[LiveKit AI Agent]
     AI_Worker -->|Whisper| Transcript(Raw Transcript)
     Transcript -->|LLaMA 3| Summary(Summary & Action Items)
 
@@ -60,5 +60,5 @@ graph TD
 ## 3. Technology Rationale
 
 - **Next.js + Tailwind:** Ultra-fast development speed, SEO optimization via Server Components, and static source code security.
-- **FastAPI:** High performance (Async), auto-generated Swagger documentation (OpenAPI), seamless integration with Python AI models.
-- **Jitsi Meet:** 100% Open-source, self-hosted friendly infrastructure ensuring total Data Sovereignty for enterprises.
+- **FastAPI:** High performance (Async), auto-generated Swagger documentation (OpenAPI), seamless integration with Python AI models and LiveKit Server SDK.
+- **LiveKit:** Modern WebRTC infrastructure, optimized for real-time AI Agents, self-hosted friendly infrastructure ensuring total Data Sovereignty for enterprises.

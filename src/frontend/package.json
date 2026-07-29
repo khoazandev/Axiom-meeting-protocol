@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@livekit/components-react": "^2.9.23",
+    "@livekit/components-styles": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "livekit-client": "^2.21.0",
     "lucide-react": "^1.27.0",
     "next": "16.2.12",
     "react": "19.2.4",
