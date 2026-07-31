@@ -86,7 +86,6 @@ export function SplitText({
               display: 'inline-block',
               opacity: 0,
               transform: `translateY(${y}px)`,
-              willChange: 'transform, opacity',
             }}
           >
             {item}

@@ -79,6 +79,12 @@ export function ClickSpark({
       ref={containerRef}
       className={className}
       onClick={createSpark}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          createSpark(e as unknown as React.MouseEvent);
+        }
+      }}
+      role="presentation"
       style={{ position: 'relative', overflow: 'hidden' }}
     >
       {children}

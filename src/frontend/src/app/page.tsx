@@ -107,7 +107,7 @@ export default function Home() {
           <Link href="/meetings/create">
             <Button
               size="sm"
-              className="rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer shadow-sm"
+              className="rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm"
             >
               New Meeting
             </Button>
@@ -151,7 +151,7 @@ export default function Home() {
                   <ClickSpark sparkColor="var(--accent)">
                     <Button
                       size="lg"
-                      className="rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer shadow-md shadow-accent/20 group"
+                      className="rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-md shadow-accent/20 group"
                     >
                       Deploy Meeting
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -162,7 +162,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="lg"
-                    className="rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-all cursor-pointer"
+                    className="rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer"
                   >
                     View Dashboard
                   </Button>
@@ -261,7 +261,7 @@ export default function Home() {
 
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Feature Card 1 */}
-            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-all duration-500 cursor-default">
+            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                 <Video className="h-5 w-5" />
               </div>
@@ -280,7 +280,7 @@ export default function Home() {
             </StaggerItem>
 
             {/* Feature Card 2 */}
-            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-all duration-500 cursor-default">
+            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                 <FileText className="h-5 w-5" />
               </div>
@@ -299,7 +299,7 @@ export default function Home() {
             </StaggerItem>
 
             {/* Feature Card 3 */}
-            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-all duration-500 cursor-default">
+            <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                 <Lock className="h-5 w-5" />
               </div>
@@ -430,7 +430,7 @@ export default function Home() {
                 ].map((badge) => (
                   <div
                     key={badge.title}
-                    className="bg-card p-6 rounded-2xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-all duration-500"
+                    className="bg-card p-6 rounded-2xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-colors duration-500"
                   >
                     <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mx-auto">
                       <badge.icon className="h-5 w-5" />
@@ -464,7 +464,7 @@ export default function Home() {
                   <ClickSpark sparkColor="#ffffff">
                     <Button
                       size="lg"
-                      className="rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-all cursor-pointer shadow-lg group"
+                      className="rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-colors cursor-pointer shadow-lg group"
                     >
                       Deploy Meeting
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -478,7 +478,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="lg"
-                    className="rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-all cursor-pointer"
+                    className="rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-colors cursor-pointer"
                   >
                     View on GitHub
                   </Button>

@@ -62,7 +62,7 @@ export default function MeetingsDashboard() {
         <Link href="/meetings/create">
           <Button
             size="sm"
-            className="rounded-full px-5 font-semibold gap-2 bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer shadow-sm"
+            className="rounded-full px-5 font-semibold gap-2 bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" />
             New Meeting
@@ -120,7 +120,7 @@ export default function MeetingsDashboard() {
                   </p>
                 </div>
                 <Link href="/meetings/create">
-                  <Button className="mt-2 rounded-full bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer">
+                  <Button className="mt-2 rounded-full bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer">
                     Schedule First Meeting
                   </Button>
                 </Link>
@@ -130,7 +130,7 @@ export default function MeetingsDashboard() {
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {meetings.map((meeting) => (
                 <StaggerItem key={meeting.id}>
-                  <Card className="h-full flex flex-col border-border/50 shadow-sm rounded-2xl overflow-hidden hover:shadow-lg hover:border-accent/20 transition-all duration-500 bg-card">
+                  <Card className="h-full flex flex-col border-border/50 shadow-sm rounded-2xl overflow-hidden hover:shadow-lg hover:border-accent/20 transition-colors duration-500 bg-card">
                     <CardHeader className="p-6 pb-4">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">
@@ -164,7 +164,7 @@ export default function MeetingsDashboard() {
                       </div>
                       <Link href={`/meetings/${meeting.id}`} className="block mt-4">
                         <Button
-                          className="w-full rounded-xl font-semibold transition-all duration-300 h-11 bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
+                          className="w-full rounded-xl font-semibold transition-colors duration-300 h-11 bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
                         >
                           <Video className="w-4 h-4 mr-2" />
                           Join Conference

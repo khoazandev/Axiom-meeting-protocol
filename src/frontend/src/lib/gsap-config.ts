@@ -25,14 +25,14 @@ export const DURATION = {
 } as const;
 
 // ─── Scroll Trigger Defaults ─────────────────────────────────
-export const scrollTriggerDefaults = {
+const scrollTriggerDefaults = {
   start: 'top 85%',
   end: 'bottom 20%',
   toggleActions: 'play none none none',
 } as const;
 
 // ─── Reusable Animation Factories ────────────────────────────
-export function createFadeUp(
+function createFadeUp(
   element: gsap.TweenTarget,
   options?: { delay?: number; duration?: number; y?: number }
 ) {
@@ -45,7 +45,7 @@ export function createFadeUp(
   });
 }
 
-export function createStagger(
+function createStagger(
   elements: gsap.TweenTarget,
   options?: { stagger?: number; duration?: number; y?: number }
 ) {

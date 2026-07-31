@@ -70,7 +70,7 @@ export function FadeContent({
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'none' : translateMap[direction],
         transition: `opacity ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-        willChange: 'opacity, transform',
+        ...(isVisible ? {} : { willChange: 'opacity, transform' }),
       }}
     >
       {children}

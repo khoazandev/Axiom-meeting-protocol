@@ -34,7 +34,10 @@ export default function MeetingRoomPage() {
   useEffect(() => {
     // 1. Fetch meeting details
     fetch(`/api/meetings/`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch meetings');
+        return res.json();
+      })
       .then((data: Meeting[]) => {
         const currentMeeting = data.find((m) => m.id.toString() === meetingId);
         if (currentMeeting) {
