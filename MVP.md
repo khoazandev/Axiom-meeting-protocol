@@ -1,4 +1,4 @@
-﻿# Axiom Product Requirements Document (MVP)
+# Axiom Product Requirements Document (MVP)
 
 This document outlines the Minimum Viable Product (MVP) requirements for Axiom: The Enterprise Meeting Protocol.
 
@@ -75,6 +75,6 @@ To ensure Axiom maintains world-class Open Source standards, its development ali
 3. **Architecture & Deployment:** The H-P-D-I architecture must be clearly documented. The deployment model must support fully isolated On-Premise environments (Dockerized).
 4. **Project Management & Discipline:**
    - Strict adherence to TDD (superpowers_tdd.md).
-   - High-quality B2B UI/UX design ( asteskill.md).
+   - High-quality B2B UI/UX design (UI/UX Pro Max — Trust & Authority guidelines).
    - Clean git history with Conventional Commits.
 5. **Community Contribution:** High-quality Markdown documentation (README, CONTRIBUTING, ARCHITECTURE, DEPLOYMENT) making it effortless for new developers to onboard and contribute.

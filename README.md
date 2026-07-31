@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="src/frontend/public/logo.jpg" alt="Axiom Logo" width="120" style="border-radius: 20px;"/>
   <br/>
   <h1>⚡ Axiom: Enterprise Meeting Protocol</h1>
@@ -12,7 +12,7 @@ _A High Security On-Premise Meeting Protocol for the Modern Enterprise_
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![LiveKit](https://img.shields.io/badge/WebRTC-LiveKit-ff4081)](https://livekit.io/)
-[![Design](https://img.shields.io/badge/Design-TasteSkill-2563eb)](https://tasteskill.dev)
+[![Design](https://img.shields.io/badge/Design-UI_UX_Pro_Max-0369A1)]()
 [![Code Style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://prettier.io/)
 </div>
 
@@ -33,7 +33,7 @@ _A High Security On-Premise Meeting Protocol for the Modern Enterprise_
 
 - **🚀 LiveKit WebRTC:** Browser-based, high-performance video calling powered by LiveKit Server, optimized for real-time AI agents. No external software required.
 - **🛡️ Agenda Gate (Discipline Protocol):** Enforces clear, transparent meeting agendas. You cannot create a meeting without a detailed >20-character agenda strictly validated by the Backend.
-- **🎨 Premium B2B Aesthetic:** World-class UI/UX following Taste Skill guidelines. High contrast, minimalist layouts, Electric Blue accents, and premium typography (Geist, Outfit).
+- **🎨 Premium B2B Aesthetic:** World-class UI/UX following UI/UX Pro Max Trust & Authority guidelines. Navy + Trust Blue palette, professional typography (Plus Jakarta Sans), GSAP scroll animations, and React Bits interactive components.
 - **🔐 Absolute Data Sovereignty:** Run it in your own VPC. SQLite (Dev) and PostgreSQL (Prod) support keeps meeting metadata and transcriptions 100% internal.
 - **🧪 TDD Tested:** Hyper-disciplined Test-Driven Development (Red-Green-Refactor) ensuring highly reliable APIs.
 

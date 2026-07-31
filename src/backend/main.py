@@ -1,5 +1,5 @@
 from typing import List
-
+from datetime import datetime
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -33,6 +33,7 @@ class MeetingCreate(BaseModel):
 class MeetingResponse(MeetingCreate):
     id: int
     is_active: bool
+    start_time: datetime
 
     class Config:
         orm_mode = True

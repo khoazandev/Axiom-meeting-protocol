@@ -1,4 +1,4 @@
-﻿# Deployment Guide
+# Deployment Guide
 
 This guide covers how to run Axiom locally for development and how to prepare it for a production environment.
 
@@ -115,3 +115,34 @@ _(Note: A complete docker-compose.yml will be provided in a future release. Curr
 ### SSL / TLS Configuration
 
 WebRTC **strictly requires** HTTPS/WSS in production browsers. You must put your LiveKit server and Next.js frontend behind a reverse proxy with valid SSL certificates (e.g., Let's Encrypt).
+
+---
+
+## 3. Free Public Tunnel & Free Domain Hosting (Local PC Hosting)
+
+If you want to host Axiom directly on your local machine and expose it to the internet with a **free HTTPS domain** for testing across different networks (e.g., 4G, remote participants):
+
+### Option A: Cloudflare Tunnel (Recommended - 100% Free Forever)
+
+Cloudflare Tunnel (`cloudflared`) creates a secure, encrypted HTTPS tunnel from your local PC to Cloudflare's global edge network without opening router ports.
+
+1. **Quick Temporary Tunnel (No account needed):**
+   ```bash
+   npx cloudflared tunnel --url http://localhost:3000
+   ```
+   This generates a free HTTPS link such as `https://<random-name>.trycloudflare.com`.
+
+2. **Permanent Free Custom Subdomain:**
+   - Create a free Cloudflare account.
+   - Use `cloudflared tunnel create axiom-tunnel`.
+   - Map your custom domain/subdomain (e.g., `meeting.yourdomain.com` or a free `.duckdns.org` domain) directly to `http://localhost:3000`.
+
+### Option B: Ngrok Free Static Domain
+
+1. Register a free account at [ngrok.com](https://ngrok.com).
+2. Claim your 1 permanent free static domain (e.g., `your-name.ngrok-free.app`).
+3. Run:
+   ```bash
+   ngrok http 3000 --url=https://your-name.ngrok-free.app
+   ```
+

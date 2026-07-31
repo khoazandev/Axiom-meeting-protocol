@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Loader2, Plus, Calendar, Clock, Video, AlertCircle } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/ui/stagger-container';
+import { FadeContent } from '@/components/ui/reactbits/fade-content';
 
 interface Meeting {
   id: number;
@@ -23,7 +24,7 @@ export default function MeetingsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/meetings/')
+    fetch('/api/meetings/')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch meetings');
         return res.json();
@@ -42,8 +43,8 @@ export default function MeetingsDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-foreground selection:text-background">
-      <header className="h-16 px-6 md:px-12 border-b border-border/40 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-md z-10">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-accent/20">
+      <header className="h-16 px-6 md:px-12 border-b border-border/50 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-xl z-10">
         <div className="flex items-center gap-3">
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer group">
@@ -52,16 +53,16 @@ export default function MeetingsDashboard() {
                 alt="Axiom Logo"
                 width={32}
                 height={32}
-                className="rounded-md transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+                className="rounded-lg transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
               />
-              <span className="font-semibold tracking-tight text-sm">Axiom Dashboard</span>
+              <span className="font-bold tracking-tight text-sm">Axiom Dashboard</span>
             </div>
           </Link>
         </div>
         <Link href="/meetings/create">
           <Button
             size="sm"
-            className="rounded-full px-4 font-medium gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all"
+            className="rounded-full px-5 font-semibold gap-2 bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" />
             New Meeting
@@ -71,65 +72,73 @@ export default function MeetingsDashboard() {
 
       <main className="flex-1 p-6 md:p-12 max-w-[1400px] w-full mx-auto relative">
         <div className="space-y-12">
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">Active Meetings</h1>
-            <p className="text-lg text-muted-foreground mt-3 font-medium">
-              Manage your structured communications.
-            </p>
-          </div>
+          <FadeContent duration={0.8}>
+            <div>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-[-0.03em]">
+                Active Meetings
+              </h1>
+              <p className="text-lg text-muted-foreground mt-3 font-medium">
+                Manage your structured communications.
+              </p>
+            </div>
+          </FadeContent>
 
           {loading ? (
-            <div className="flex items-center justify-center h-64 border border-border/40 rounded-3xl bg-muted/20">
+            <div className="flex items-center justify-center h-64 border border-border/50 rounded-2xl bg-secondary/30">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center h-64 border border-destructive/20 rounded-3xl text-center space-y-4 bg-destructive/5 animate-in fade-in duration-700">
-              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-destructive" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg text-destructive">Connection Error</h3>
-                <p className="text-destructive/80 text-sm max-w-md mt-1 font-medium">{error}</p>
-              </div>
-              <Button
-                variant="outline"
-                className="mt-2 rounded-full border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => window.location.reload()}
-              >
-                Retry Connection
-              </Button>
-            </div>
-          ) : meetings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 border border-border/40 border-dashed rounded-3xl text-center space-y-4 bg-muted/10 animate-in fade-in duration-700">
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">No meetings scheduled</h3>
-                <p className="text-muted-foreground text-sm max-w-sm mt-1 font-medium">
-                  Deploy a new meeting to enforce structured process gates and capture
-                  organizational intelligence.
-                </p>
-              </div>
-              <Link href="/meetings/create">
-                <Button className="mt-2 rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all">
-                  Schedule First Meeting
+            <FadeContent duration={0.5}>
+              <div className="flex flex-col items-center justify-center h-64 border border-destructive/20 rounded-2xl text-center space-y-4 bg-destructive/5">
+                <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-destructive">Connection Error</h3>
+                  <p className="text-destructive/80 text-sm max-w-md mt-1 font-medium">{error}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="mt-2 rounded-full border-destructive/20 text-destructive hover:bg-destructive hover:text-white cursor-pointer"
+                  onClick={() => window.location.reload()}
+                >
+                  Retry Connection
                 </Button>
-              </Link>
-            </div>
+              </div>
+            </FadeContent>
+          ) : meetings.length === 0 ? (
+            <FadeContent duration={0.5}>
+              <div className="flex flex-col items-center justify-center h-64 border border-border/50 border-dashed rounded-2xl text-center space-y-4 bg-secondary/20">
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">No meetings scheduled</h3>
+                  <p className="text-muted-foreground text-sm max-w-sm mt-1 font-medium">
+                    Deploy a new meeting to enforce structured process gates and capture
+                    organizational intelligence.
+                  </p>
+                </div>
+                <Link href="/meetings/create">
+                  <Button className="mt-2 rounded-full bg-accent text-accent-foreground hover:bg-accent/90 transition-all cursor-pointer">
+                    Schedule First Meeting
+                  </Button>
+                </Link>
+              </div>
+            </FadeContent>
           ) : (
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {meetings.map((meeting) => (
                 <StaggerItem key={meeting.id}>
-                  <Card className="h-full flex flex-col border-border/40 shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-shadow duration-500 bg-background">
+                  <Card className="h-full flex flex-col border-border/50 shadow-sm rounded-2xl overflow-hidden hover:shadow-lg hover:border-accent/20 transition-all duration-500 bg-card">
                     <CardHeader className="p-6 pb-4">
                       <div className="flex items-start justify-between">
-                        <CardTitle className="text-xl font-semibold tracking-tight line-clamp-1">
+                        <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">
                           {meeting.title}
                         </CardTitle>
                         {meeting.is_active && (
-                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-500/10 px-2.5 py-1 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse" />
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-accent uppercase tracking-widest bg-accent/10 px-2.5 py-1 rounded-full border border-accent/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                             Active
                           </span>
                         )}
@@ -155,8 +164,7 @@ export default function MeetingsDashboard() {
                       </div>
                       <Link href={`/meetings/${meeting.id}`} className="block mt-4">
                         <Button
-                          className="w-full rounded-xl font-medium group-hover:bg-foreground group-hover:text-background transition-colors duration-300 h-11"
-                          variant="secondary"
+                          className="w-full rounded-xl font-semibold transition-all duration-300 h-11 bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
                         >
                           <Video className="w-4 h-4 mr-2" />
                           Join Conference
