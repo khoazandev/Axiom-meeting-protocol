@@ -74,7 +74,7 @@ export function SplitText({
     >
       {items.map((item, i) => (
         <span
-          key={i}
+          key={`${item}-${i}`}
           style={{
             display: 'inline-block',
             overflow: 'hidden',

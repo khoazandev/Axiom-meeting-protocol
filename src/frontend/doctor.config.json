@@ -1,0 +1,6 @@
+{
+  "$schema": "https://react.doctor/schema.json",
+  "rules": {
+    "react-doctor/no-set-state-after-await-in-effect": "off"
+  }
+}

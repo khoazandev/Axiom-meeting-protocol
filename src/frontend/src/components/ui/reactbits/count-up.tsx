@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 
 interface CountUpProps {
   end: number;
@@ -21,11 +21,10 @@ export function CountUp({
   className = '',
   decimals = 0,
 }: CountUpProps) {
-  const [count, setCount] = useState(start);
   const ref = useRef<HTMLSpanElement>(null);
   const hasAnimated = useRef(false);
 
-  useEffect(() => {
+  const animate = useCallback(() => {
     if (!ref.current || hasAnimated.current) return;
 
     const prefersReducedMotion = window.matchMedia(
@@ -33,33 +32,44 @@ export function CountUp({
     ).matches;
 
     if (prefersReducedMotion) {
-      setCount(end);
+      if (ref.current) {
+        ref.current.textContent = `${prefix}${end.toFixed(decimals)}${suffix}`;
+      }
       return;
     }
 
+    hasAnimated.current = true;
+    const startTime = performance.now();
+    const range = end - start;
+    const el = ref.current;
+
+    function step(currentTime: number) {
+      const elapsed = (currentTime - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease out cubic
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const currentValue = start + range * easedProgress;
+
+      if (el) {
+        el.textContent = `${prefix}${Number(currentValue.toFixed(decimals))}${suffix}`;
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }, [end, start, duration, decimals, prefix, suffix]);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const startTime = performance.now();
-          const range = end - start;
-
-          function animate(currentTime: number) {
-            const elapsed = (currentTime - startTime) / 1000;
-            const progress = Math.min(elapsed / duration, 1);
-
-            // Ease out cubic
-            const easedProgress = 1 - Math.pow(1 - progress, 3);
-            const currentValue = start + range * easedProgress;
-
-            setCount(Number(currentValue.toFixed(decimals)));
-
-            if (progress < 1) {
-              requestAnimationFrame(animate);
-            }
-          }
-
-          requestAnimationFrame(animate);
+        if (entry.isIntersecting) {
+          animate();
         }
       },
       { threshold: 0.3 }
@@ -67,12 +77,12 @@ export function CountUp({
 
     observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [end, start, duration, decimals]);
+  }, [animate]);
 
   return (
     <span ref={ref} className={className} style={{ fontVariantNumeric: 'tabular-nums' }}>
       {prefix}
-      {count}
+      {start.toFixed(decimals)}
       {suffix}
     </span>
   );
