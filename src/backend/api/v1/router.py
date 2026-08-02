@@ -5,6 +5,7 @@ V1 API router — aggregates all v1 endpoint routers.
 from fastapi import APIRouter
 
 from src.backend.api.v1.auth import router as auth_router
+from src.backend.api.v1.files import router as files_router
 from src.backend.api.v1.health import router as health_router
 from src.backend.api.v1.invitations import router as invitations_router
 from src.backend.api.v1.meetings import router as meetings_router
@@ -27,3 +28,4 @@ api_v1_router.include_router(tasks_router)
 api_v1_router.include_router(webhooks_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(invitations_router)
+api_v1_router.include_router(files_router)
