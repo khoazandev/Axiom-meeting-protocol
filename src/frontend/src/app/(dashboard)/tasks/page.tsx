@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckSquare,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Video,
+  Loader2,
 } from 'lucide-react';
 
 interface Task {
@@ -21,8 +22,8 @@ interface Task {
   meetingTitle: string;
   meetingId: string;
   assignee: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'todo' | 'in_progress' | 'in_review' | 'completed';
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED';
   dueDate: string;
 }
 
@@ -33,8 +34,8 @@ const INITIAL_TASKS: Task[] = [
     meetingTitle: 'Phase 2 Architecture Alignment',
     meetingId: '1',
     assignee: 'Principal Architect',
-    priority: 'High',
-    status: 'in_progress',
+    priority: 'HIGH',
+    status: 'IN_PROGRESS',
     dueDate: 'Today',
   },
   {
@@ -43,8 +44,8 @@ const INITIAL_TASKS: Task[] = [
     meetingTitle: 'Security & Auth Sync',
     meetingId: '2',
     assignee: 'Frontend Engineer',
-    priority: 'High',
-    status: 'completed',
+    priority: 'HIGH',
+    status: 'COMPLETED',
     dueDate: 'Yesterday',
   },
   {
@@ -53,8 +54,8 @@ const INITIAL_TASKS: Task[] = [
     meetingTitle: 'Frontend Redesign Sprint',
     meetingId: '3',
     assignee: 'UI/UX Specialist',
-    priority: 'Medium',
-    status: 'todo',
+    priority: 'MEDIUM',
+    status: 'TODO',
     dueDate: 'Tomorrow',
   },
   {
@@ -63,8 +64,8 @@ const INITIAL_TASKS: Task[] = [
     meetingTitle: 'AI Intelligence Pipeline Prep',
     meetingId: '4',
     assignee: 'AI Engineer',
-    priority: 'High',
-    status: 'todo',
+    priority: 'HIGH',
+    status: 'TODO',
     dueDate: 'Aug 5',
   },
 ];
@@ -73,12 +74,58 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('token');
+        const activeWorkspaceId = localStorage.getItem('active_workspace_id');
+
+        if (!token || !activeWorkspaceId) {
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await fetch('/api/v1/tasks', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-Workspace-ID': activeWorkspaceId,
+          },
+        });
+
+        if (res.ok) {
+          const remoteTasks = await res.json();
+          if (Array.isArray(remoteTasks) && remoteTasks.length > 0) {
+            const mapped: Task[] = remoteTasks.map((t: any) => ({
+              id: t.id.substring(0, 8),
+              title: t.title,
+              meetingTitle: t.meeting_id ? `Meeting #${t.meeting_id}` : 'General Workspace Task',
+              meetingId: t.meeting_id ? String(t.meeting_id) : '',
+              assignee: t.assignee_id ? t.assignee_id.substring(0, 8) : 'Unassigned',
+              priority: t.priority,
+              status: t.status,
+              dueDate: t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No Due Date',
+            }));
+            setTasks(mapped);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load tasks from API:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadTasks();
+  }, []);
 
   const columns = [
-    { id: 'todo', title: 'To Do', color: 'border-slate-700/60 text-slate-300' },
-    { id: 'in_progress', title: 'In Progress', color: 'border-blue-500/40 text-blue-400' },
-    { id: 'in_review', title: 'In Review', color: 'border-amber-500/40 text-amber-400' },
-    { id: 'completed', title: 'Completed', color: 'border-emerald-500/40 text-emerald-400' },
+    { id: 'TODO', title: 'To Do', color: 'border-slate-700/60 text-slate-300' },
+    { id: 'IN_PROGRESS', title: 'In Progress', color: 'border-blue-500/40 text-blue-400' },
+    { id: 'IN_REVIEW', title: 'In Review', color: 'border-amber-500/40 text-amber-400' },
+    { id: 'COMPLETED', title: 'Completed', color: 'border-emerald-500/40 text-emerald-400' },
   ];
 
   const filteredTasks = tasks.filter((t) =>
@@ -93,6 +140,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-blue-400" />
             <h1 className="text-2xl font-bold text-white tracking-tight">Tasks & Action Items</h1>
+            {isLoading && <Loader2 className="w-4 h-4 text-blue-400 animate-spin ml-2" />}
           </div>
           <p className="text-xs text-slate-400 mt-1">
             Jira-style action items automatically extracted from meetings and process gate logs.
@@ -169,9 +217,9 @@ export default function TasksPage() {
                         <span className="text-[10px] font-mono text-blue-400 font-semibold">{task.id}</span>
                         <span
                           className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            task.priority === 'High'
+                            task.priority === 'HIGH'
                               ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              : task.priority === 'Medium'
+                              : task.priority === 'MEDIUM'
                               ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                               : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                           }`}
@@ -230,7 +278,7 @@ export default function TasksPage() {
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        task.priority === 'High'
+                        task.priority === 'HIGH'
                           ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                           : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                       }`}
