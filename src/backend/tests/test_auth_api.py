@@ -1,38 +1,7 @@
 import pytest
-from fastapi.testclient import TestClient
-
-from src.backend.main import app
-from src.backend import database
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_auth_api.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[database.get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    database.Base.metadata.create_all(bind=engine)
-    yield
-    database.Base.metadata.drop_all(bind=engine)
-
-
-client = TestClient(app)
-
-
-def test_register_user_success():
+def test_register_user_success(client):
     response = client.post(
         "/api/v1/auth/register",
         json={"email": "alice@test.com", "password": "Password123!", "full_name": "Alice Test"},
@@ -44,7 +13,7 @@ def test_register_user_success():
     assert "id" in data
 
 
-def test_register_user_duplicate_email_fails():
+def test_register_user_duplicate_email_fails(client):
     client.post(
         "/api/v1/auth/register",
         json={"email": "alice@test.com", "password": "Password123!", "full_name": "Alice Test"},
@@ -57,7 +26,7 @@ def test_register_user_duplicate_email_fails():
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
-def test_login_user_success():
+def test_login_user_success(client):
     client.post(
         "/api/v1/auth/register",
         json={"email": "bob@test.com", "password": "Password123!", "full_name": "Bob Test"},
@@ -73,7 +42,7 @@ def test_login_user_success():
     assert data["token_type"] == "bearer"
 
 
-def test_login_user_wrong_password_fails():
+def test_login_user_wrong_password_fails(client):
     client.post(
         "/api/v1/auth/register",
         json={"email": "bob@test.com", "password": "Password123!", "full_name": "Bob Test"},
@@ -86,7 +55,7 @@ def test_login_user_wrong_password_fails():
     assert response.json()["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_get_me_success():
+def test_get_me_success(client):
     register = client.post(
         "/api/v1/auth/register",
         json={"email": "carol@test.com", "password": "Password123!", "full_name": "Carol Test"},
