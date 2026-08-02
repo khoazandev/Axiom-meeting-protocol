@@ -20,6 +20,38 @@ class RoleEnum(str, enum.Enum):
     MEMBER = "MEMBER"
 
 
+class MeetingStatusEnum(str, enum.Enum):
+    SCHEDULED = "SCHEDULED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class TaskPriorityEnum(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+class TaskStatusEnum(str, enum.Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    IN_REVIEW = "IN_REVIEW"
+    COMPLETED = "COMPLETED"
+
+
+class InvitationRoleEnum(str, enum.Enum):
+    ATTENDEE = "ATTENDEE"
+    PRESENTER = "PRESENTER"
+    MODERATOR = "MODERATOR"
+
+
+class InvitationStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+
+
 class User(database.Base):
     __tablename__ = "users"
 
@@ -51,6 +83,7 @@ class Workspace(database.Base):
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
     departments = relationship("Department", back_populates="workspace", cascade="all, delete-orphan")
     meetings = relationship("Meeting", back_populates="workspace", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="workspace", cascade="all, delete-orphan")
 
 
 class WorkspaceMember(database.Base):
@@ -112,6 +145,12 @@ class Meeting(database.Base):
     transcript = Column(String, default="")
     summary = Column(String, default="")
 
+    # Phase 3 Real-time & Post-meeting fields
+    status = Column(Enum(MeetingStatusEnum), default=MeetingStatusEnum.SCHEDULED, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    ended_at = Column(DateTime, nullable=True)
+    recording_url = Column(String, nullable=True)
+
     # Multi-tenant fields
     workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=True, index=True)
     department_id = Column(String, ForeignKey("departments.id"), nullable=True)
@@ -121,6 +160,60 @@ class Meeting(database.Base):
     department = relationship("Department", back_populates="meetings")
     created_by = relationship("User", back_populates="created_meetings", foreign_keys=[created_by_id])
     action_items = relationship("ActionItem", back_populates="meeting", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="meeting", cascade="all, delete-orphan")
+    invitations = relationship("MeetingInvitation", back_populates="meeting", cascade="all, delete-orphan")
+    files = relationship("MeetingFile", back_populates="meeting", cascade="all, delete-orphan")
+
+
+class Task(database.Base):
+    __tablename__ = "tasks"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=True, index=True)
+    created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    assignee_id = Column(String, ForeignKey("users.id"), nullable=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    priority = Column(Enum(TaskPriorityEnum), default=TaskPriorityEnum.MEDIUM, nullable=False)
+    status = Column(Enum(TaskStatusEnum), default=TaskStatusEnum.TODO, nullable=False)
+    due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    workspace = relationship("Workspace", back_populates="tasks")
+    meeting = relationship("Meeting", back_populates="tasks")
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    assignee = relationship("User", foreign_keys=[assignee_id])
+
+
+class MeetingInvitation(database.Base):
+    __tablename__ = "meeting_invitations"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False, index=True)
+    email = Column(String, nullable=False, index=True)
+    role = Column(Enum(InvitationRoleEnum), default=InvitationRoleEnum.ATTENDEE, nullable=False)
+    token = Column(String, unique=True, index=True, nullable=False)
+    status = Column(Enum(InvitationStatusEnum), default=InvitationStatusEnum.PENDING, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    meeting = relationship("Meeting", back_populates="invitations")
+
+
+class MeetingFile(database.Base):
+    __tablename__ = "meeting_files"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False, index=True)
+    uploaded_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    file_size = Column(Integer, nullable=False)
+    content_type = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    meeting = relationship("Meeting", back_populates="files")
+    uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
 
 
 class ActionItem(database.Base):
