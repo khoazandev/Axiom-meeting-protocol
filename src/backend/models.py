@@ -84,6 +84,7 @@ class Workspace(database.Base):
     departments = relationship("Department", back_populates="workspace", cascade="all, delete-orphan")
     meetings = relationship("Meeting", back_populates="workspace", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="workspace", cascade="all, delete-orphan")
+    knowledge_documents = relationship("KnowledgeDocument", back_populates="workspace", cascade="all, delete-orphan")
 
 
 class WorkspaceMember(database.Base):
@@ -145,7 +146,7 @@ class Meeting(database.Base):
     transcript = Column(String, default="")
     summary = Column(String, default="")
 
-    # Phase 3 Real-time & Post-meeting fields
+    # Real-time & Post-meeting fields
     status = Column(Enum(MeetingStatusEnum), default=MeetingStatusEnum.SCHEDULED, nullable=False)
     started_at = Column(DateTime, nullable=True)
     ended_at = Column(DateTime, nullable=True)
@@ -163,6 +164,7 @@ class Meeting(database.Base):
     tasks = relationship("Task", back_populates="meeting", cascade="all, delete-orphan")
     invitations = relationship("MeetingInvitation", back_populates="meeting", cascade="all, delete-orphan")
     files = relationship("MeetingFile", back_populates="meeting", cascade="all, delete-orphan")
+    bookmarks = relationship("MeetingBookmark", back_populates="meeting", cascade="all, delete-orphan")
 
 
 class Task(database.Base):
@@ -213,6 +215,37 @@ class MeetingFile(database.Base):
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
     meeting = relationship("Meeting", back_populates="files")
+    uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
+
+
+class MeetingBookmark(database.Base):
+    __tablename__ = "meeting_bookmarks"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    timestamp_seconds = Column(Integer, nullable=False)
+    note = Column(String, nullable=False)
+    is_action_item = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    meeting = relationship("Meeting", back_populates="bookmarks")
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class KnowledgeDocument(database.Base):
+    __tablename__ = "knowledge_documents"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    uploaded_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    file_size = Column(Integer, nullable=False)
+    vector_status = Column(String, default="READY")
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    workspace = relationship("Workspace", back_populates="knowledge_documents")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
 
 
