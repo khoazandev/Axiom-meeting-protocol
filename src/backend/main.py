@@ -8,9 +8,10 @@ are assembled here. Business logic lives in api/v1/ and core/.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.backend.api.v1.router import v1_router, api_v1_router
+from src.backend.api.v1.router import api_v1_router, v1_router
 from src.backend.core.config import get_settings
 from src.backend.core.exceptions import register_exception_handlers
+from src.backend.core.metrics import setup_metrics_router
 from src.backend.database import Base, engine
 
 
@@ -19,6 +20,9 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     application = FastAPI(title=settings.app_title)
+
+    # ── Prometheus Metrics ──────────────────────────────
+    setup_metrics_router(application)
 
     # ── CORS ──────────────────────────────────────────────
     application.add_middleware(
@@ -40,8 +44,8 @@ def create_app() -> FastAPI:
 
     # ── Legacy route compatibility ────────────────────────
     # Keep /api/meetings/ working for existing frontend until migration
-    from src.backend.api.v1 import meetings as meetings_module
     from fastapi import APIRouter
+    from src.backend.api.v1 import meetings as meetings_module
 
     legacy_router = APIRouter(prefix="/api/meetings", tags=["meetings-legacy"])
     legacy_router.add_api_route("/", meetings_module.create_meeting, methods=["POST"])
