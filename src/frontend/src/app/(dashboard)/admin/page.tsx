@@ -25,7 +25,7 @@ interface AdminStats {
 }
 
 interface AuditLogItem {
-  id: str;
+  id: string;
   action: string;
   resource: string;
   user_id: string | null;
@@ -40,7 +40,7 @@ interface OutboundWebhookItem {
   target_url: string;
   events: string;
   secret_key: string;
-  is_active: bool;
+  is_active: boolean;
   created_at: string;
 }
 
