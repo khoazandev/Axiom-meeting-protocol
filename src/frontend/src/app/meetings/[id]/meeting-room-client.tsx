@@ -8,15 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
-
-interface Meeting {
-  id: number;
-  title: string;
-  agenda: string;
-  start_time: string;
-  duration_minutes: number;
-  is_active: boolean;
-}
+import { meetingsApi, type Meeting, ApiRequestError } from '@/lib/api';
 
 export function MeetingRoomClient() {
   const params = useParams();
@@ -34,22 +26,10 @@ export function MeetingRoomClient() {
   useEffect(() => {
     const controller = new AbortController();
     const run = async () => {
-      const meetingsRes = await fetch('/api/meetings/', {
-        signal: controller.signal,
-      });
-      if (!meetingsRes.ok) throw new Error('Failed to fetch meetings');
-      const meetings: Meeting[] = await meetingsRes.json();
-
-      const currentMeeting = meetings.find((m) => m.id.toString() === meetingId);
-      if (!currentMeeting) throw new Error('Meeting not found');
+      const currentMeeting = await meetingsApi.get(meetingId, controller.signal);
       if (!controller.signal.aborted) setMeeting(currentMeeting);
 
-      const tokenRes = await fetch(
-        `/api/meetings/${currentMeeting.id}/token?participant_name=${participantName}`,
-        { signal: controller.signal }
-      );
-      if (!tokenRes.ok) throw new Error('Failed to fetch token');
-      const tokenData = await tokenRes.json();
+      const tokenData = await meetingsApi.getToken(currentMeeting.id, participantName, controller.signal);
       if (!controller.signal.aborted && tokenData?.token) setToken(tokenData.token);
       if (!controller.signal.aborted) setLoading(false);
     };
@@ -57,7 +37,7 @@ export function MeetingRoomClient() {
       if (!controller.signal.aborted) {
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error(err);
-          setError(err.message);
+          setError(err instanceof ApiRequestError ? err.message : err.message);
         }
         setLoading(false);
       }

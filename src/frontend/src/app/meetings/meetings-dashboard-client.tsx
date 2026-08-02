@@ -7,15 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Loader2, Calendar, Clock, Video, AlertCircle } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/ui/stagger-container';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
-
-interface Meeting {
-  id: number;
-  title: string;
-  agenda: string;
-  start_time: string;
-  duration_minutes: number;
-  is_active: boolean;
-}
+import { meetingsApi, type Meeting, ApiRequestError } from '@/lib/api';
 
 export function MeetingsDashboardClient() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -27,11 +19,7 @@ export function MeetingsDashboardClient() {
 
     async function loadMeetings() {
       try {
-        const res = await fetch('/api/meetings/', {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error('Failed to fetch meetings');
-        const data = await res.json();
+        const data = await meetingsApi.list(0, 100, controller.signal);
         if (!controller.signal.aborted) {
           setMeetings(data);
           setError(null);
@@ -39,9 +27,13 @@ export function MeetingsDashboardClient() {
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error(err);
-          setError(
-            'Could not connect to Axiom Engine. Please ensure backend services are running.'
-          );
+          if (err instanceof ApiRequestError) {
+            setError(err.message);
+          } else {
+            setError(
+              'Could not connect to Axiom Engine. Please ensure backend services are running.'
+            );
+          }
         }
       } finally {
         if (!controller.signal.aborted) {

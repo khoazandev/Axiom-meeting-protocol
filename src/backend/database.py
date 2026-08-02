@@ -1,17 +1,34 @@
+"""
+Database engine and session configuration.
+
+Supports both SQLite (development) and PostgreSQL (production)
+via the DATABASE_URL environment variable.
+"""
+
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+from src.backend.core.config import get_settings
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+settings = get_settings()
+
+# SQLite requires check_same_thread=False; PostgreSQL does not.
+connect_args = (
+    {"check_same_thread": False}
+    if settings.database_url.startswith("sqlite")
+    else {}
+)
+
+engine = create_engine(settings.database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 def get_db():
+    """Yield a database session, ensuring it is closed after use."""
     db = SessionLocal()
     try:
         yield db

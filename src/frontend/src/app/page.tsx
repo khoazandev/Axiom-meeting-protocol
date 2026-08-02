@@ -9,7 +9,7 @@ import {
   SecuritySection,
   CtaSection,
   Footer,
-} from './landing-sections';
+} from './(marketing)/_sections';
 
 export default function Home() {
   return (

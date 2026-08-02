@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -12,9 +13,9 @@ class Meeting(database.Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     agenda = Column(Text, nullable=False)
-    start_time = Column(DateTime, default=datetime.datetime.utcnow)
+    start_time = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     duration_minutes = Column(Integer, default=60)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
     transcript = Column(String, default="")
     summary = Column(String, default="")

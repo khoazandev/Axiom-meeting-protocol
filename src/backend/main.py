@@ -1,84 +1,61 @@
-from typing import List
-from datetime import datetime
-from fastapi import Depends, FastAPI, HTTPException
+"""
+Axiom — Enterprise Meeting Protocol API.
+
+This is the application factory. All routes, middleware, and configuration
+are assembled here. Business logic lives in api/v1/ and core/.
+"""
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from livekit import api
-import os
 
-from src.backend.database import Base, engine, get_db
-from src.backend import models
-
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Smart Meeting AI API")
-
-# Setup CORS cho Next.js Frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from src.backend.api.v1.router import v1_router, api_v1_router
+from src.backend.core.config import get_settings
+from src.backend.core.exceptions import register_exception_handlers
+from src.backend.database import Base, engine
 
 
-class MeetingCreate(BaseModel):
-    title: str
-    agenda: str
-    duration_minutes: int
+def create_app() -> FastAPI:
+    """Application factory — creates and configures the FastAPI instance."""
+    settings = get_settings()
 
+    application = FastAPI(title=settings.app_title)
 
-class MeetingResponse(MeetingCreate):
-    id: int
-    is_active: bool
-    start_time: datetime
-
-    class Config:
-        orm_mode = True
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to Smart Meeting AI Backend (DX-OS)"}
-
-
-@app.post("/api/meetings/", response_model=MeetingResponse)
-def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
-    # Rào chắn quy trình (Process): Kiểm tra agenda
-    if not meeting.agenda or len(meeting.agenda.strip()) < 20:
-        raise HTTPException(
-            status_code=400,
-            detail="Quy trình lỗi: Bắt buộc phải có Agenda chi tiết (ít nhất 20 ký tự) để tạo lịch họp.",
-        )
-
-    db_meeting = models.Meeting(**meeting.dict())
-    db.add(db_meeting)
-    db.commit()
-    db.refresh(db_meeting)
-    return db_meeting
-
-
-@app.get("/api/meetings/", response_model=List[MeetingResponse])
-def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    meetings = db.query(models.Meeting).offset(skip).limit(limit).all()
-    return meetings
-
-
-@app.get("/api/meetings/{meeting_id}/token")
-def get_meeting_token(meeting_id: str, participant_name: str):
-    api_key = os.getenv("LIVEKIT_API_KEY", "devkey")
-    api_secret = os.getenv("LIVEKIT_API_SECRET", "secret")
-
-    token = api.AccessToken(api_key, api_secret)
-    token.with_identity(participant_name)
-    token.with_name(participant_name)
-    token.with_grants(
-        api.VideoGrants(
-            room_join=True,
-            room=f"meeting-{meeting_id}",
-        )
+    # ── CORS ──────────────────────────────────────────────
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
-    return {"token": token.to_jwt()}
+    # ── Exception Handlers ────────────────────────────────
+    register_exception_handlers(application)
+
+    # ── Routes ────────────────────────────────────────────
+    # Root-level routes (/, /health)
+    application.include_router(v1_router)
+    # API v1 routes (/api/v1/...)
+    application.include_router(api_v1_router)
+
+    # ── Legacy route compatibility ────────────────────────
+    # Keep /api/meetings/ working for existing frontend until migration
+    from src.backend.api.v1 import meetings as meetings_module
+    from fastapi import APIRouter
+
+    legacy_router = APIRouter(prefix="/api/meetings", tags=["meetings-legacy"])
+    legacy_router.add_api_route("/", meetings_module.create_meeting, methods=["POST"])
+    legacy_router.add_api_route("/", meetings_module.read_meetings, methods=["GET"])
+    legacy_router.add_api_route("/{meeting_id}", meetings_module.read_meeting, methods=["GET"])
+    legacy_router.add_api_route("/{meeting_id}", meetings_module.delete_meeting, methods=["DELETE"])
+    legacy_router.add_api_route("/{meeting_id}/token", meetings_module.get_meeting_token, methods=["GET"])
+    application.include_router(legacy_router)
+
+    return application
+
+
+# ── Database initialization (will be replaced by Alembic in this Phase) ──
+Base.metadata.create_all(bind=engine)
+
+# ── App instance for uvicorn ──
+app = create_app()

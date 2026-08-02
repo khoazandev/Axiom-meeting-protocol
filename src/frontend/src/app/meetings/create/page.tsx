@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
+import { meetingsApi, ApiRequestError } from '@/lib/api';
 
 export default function CreateMeetingPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function CreateMeetingPage() {
     setLoading(true);
     setError(null);
 
-    // B2B Process check
+    // B2B Process check (client-side validation mirrors backend)
     if (formData.agenda.trim().length < 20) {
       setError('Agenda must be at least 20 characters to ensure structured meetings.');
       setLoading(false);
@@ -35,23 +36,14 @@ export default function CreateMeetingPage() {
     }
 
     try {
-      const res = await fetch('/api/meetings/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || 'Failed to create meeting');
-      }
-
-      // Success
+      await meetingsApi.create(formData);
       router.push('/meetings');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (err instanceof ApiRequestError) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     } finally {
       setLoading(false);
     }
