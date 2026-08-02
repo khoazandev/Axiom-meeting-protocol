@@ -12,7 +12,7 @@ _A High Security On-Premise Meeting Protocol for the Modern Enterprise_
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=next.js)](https://nextjs.org/)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![LiveKit](https://img.shields.io/badge/WebRTC-LiveKit-ff4081)](https://livekit.io/)
-[![Design](https://img.shields.io/badge/Design-UI_UX_Pro_Max-0369A1)]()
+[![Design](https://img.shields.io/badge/Design-UI_UX_Pro_Max-0369A1)](<>)
 [![Code Style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://prettier.io/)
 </div>
 

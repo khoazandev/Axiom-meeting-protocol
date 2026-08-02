@@ -127,9 +127,11 @@ If you want to host Axiom directly on your local machine and expose it to the in
 Cloudflare Tunnel (`cloudflared`) creates a secure, encrypted HTTPS tunnel from your local PC to Cloudflare's global edge network without opening router ports.
 
 1. **Quick Temporary Tunnel (No account needed):**
+
    ```bash
    npx cloudflared tunnel --url http://localhost:3000
    ```
+
    This generates a free HTTPS link such as `https://<random-name>.trycloudflare.com`.
 
 2. **Permanent Free Custom Subdomain:**
@@ -145,4 +147,3 @@ Cloudflare Tunnel (`cloudflared`) creates a secure, encrypted HTTPS tunnel from 
    ```bash
    ngrok http 3000 --url=https://your-name.ngrok-free.app
    ```
-

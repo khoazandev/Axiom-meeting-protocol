@@ -58,4 +58,4 @@ function createStagger(
   });
 }
 
-export { gsap, ScrollTrigger };
+export { gsap, ScrollTrigger, scrollTriggerDefaults, createFadeUp, createStagger };

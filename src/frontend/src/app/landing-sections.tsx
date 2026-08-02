@@ -89,7 +89,10 @@ export function Navbar() {
           <Link href="#features" className="hover:text-foreground transition-colors duration-200">
             Features
           </Link>
-          <Link href="#how-it-works" className="hover:text-foreground transition-colors duration-200">
+          <Link
+            href="#how-it-works"
+            className="hover:text-foreground transition-colors duration-200"
+          >
             Process
           </Link>
           <Link href="#security" className="hover:text-foreground transition-colors duration-200">
@@ -135,9 +138,8 @@ export function HeroSection() {
 
           <FadeContent delay={0.6} duration={0.8}>
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-[48ch] font-medium">
-              On-premise video conferencing with native AI intelligence.
-              Enforce agendas, transcribe securely, and capture structural
-              data — zero external cloud dependency.
+              On-premise video conferencing with native AI intelligence. Enforce agendas, transcribe
+              securely, and capture structural data — zero external cloud dependency.
             </p>
           </FadeContent>
         </div>
@@ -245,8 +247,8 @@ export function FeaturesSection() {
             Structured by design.
           </h2>
           <p className="text-lg text-muted-foreground font-medium leading-relaxed">
-            Every meeting follows the H-P-D-I architectural pattern —
-            ensuring alignment before anyone joins the call.
+            Every meeting follows the H-P-D-I architectural pattern — ensuring alignment before
+            anyone joins the call.
           </p>
         </div>
       </FadeContent>
@@ -259,8 +261,8 @@ export function FeaturesSection() {
           <div className="space-y-3">
             <h3 className="text-xl font-bold tracking-tight">Axiom Media Engine</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Integrated WebRTC video conferencing powered by LiveKit that
-              runs entirely on your infrastructure with ultra-low latency.
+              Integrated WebRTC video conferencing powered by LiveKit that runs entirely on your
+              infrastructure with ultra-low latency.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -275,8 +277,8 @@ export function FeaturesSection() {
           <div className="space-y-3">
             <h3 className="text-xl font-bold tracking-tight">AI Transcription</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Local Whisper models capture every word. Llama-3 distills
-              action items and decisions automatically.
+              Local Whisper models capture every word. Llama-3 distills action items and decisions
+              automatically.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -291,8 +293,8 @@ export function FeaturesSection() {
           <div className="space-y-3">
             <h3 className="text-xl font-bold tracking-tight">Data Sovereign</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Your intellectual property never leaves your servers. True
-              On-Premise security for enterprise data.
+              Your intellectual property never leaves your servers. True On-Premise security for
+              enterprise data.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -307,7 +309,10 @@ export function FeaturesSection() {
 /* ─── How It Works ──────────────────────────────────────────── */
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="px-6 md:px-12 py-24 md:py-32 bg-secondary/40 border-y border-border/50">
+    <section
+      id="how-it-works"
+      className="px-6 md:px-12 py-24 md:py-32 bg-secondary/40 border-y border-border/50"
+    >
       <div className="max-w-[1400px] mx-auto">
         <FadeContent>
           <div className="max-w-2xl space-y-4 mb-16">
@@ -316,8 +321,7 @@ export function HowItWorksSection() {
               Three steps to disciplined meetings.
             </h2>
             <p className="text-lg text-muted-foreground font-medium leading-relaxed">
-              The H-P-D-I protocol ensures every meeting creates
-              measurable organizational value.
+              The H-P-D-I protocol ensures every meeting creates measurable organizational value.
             </p>
           </div>
         </FadeContent>
@@ -361,9 +365,8 @@ export function SecuritySection() {
               Absolute data sovereignty.
             </h2>
             <p className="text-lg text-muted-foreground font-medium leading-relaxed">
-              Axiom runs entirely within your infrastructure. Meeting data,
-              transcriptions, and AI models — everything stays inside your
-              network perimeter.
+              Axiom runs entirely within your infrastructure. Meeting data, transcriptions, and AI
+              models — everything stays inside your network perimeter.
             </p>
             <div className="space-y-4 pt-4">
               {SECURITY_ITEMS.map((item) => (
@@ -409,8 +412,8 @@ export function CtaSection() {
             Ready to enforce meeting discipline?
           </h2>
           <p className="text-lg text-primary-foreground/70 font-medium leading-relaxed max-w-[50ch] mx-auto">
-            Deploy Axiom on your infrastructure and transform how your
-            organization conducts meetings.
+            Deploy Axiom on your infrastructure and transform how your organization conducts
+            meetings.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link href="/meetings/create">
@@ -424,10 +427,7 @@ export function CtaSection() {
                 </Button>
               </ClickSpark>
             </Link>
-            <Link
-              href="https://github.com/khoazandev/Axiom-meeting-protocol"
-              target="_blank"
-            >
+            <Link href="https://github.com/khoazandev/Axiom-meeting-protocol" target="_blank">
               <Button
                 variant="outline"
                 size="lg"
@@ -532,9 +532,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground font-medium">
             © 2026 Axiom. Built for Olympic PMNM. MIT License.
           </p>
-          <p className="text-xs text-muted-foreground/60 font-medium">
-            DX-OS Enterprise Standard
-          </p>
+          <p className="text-xs text-muted-foreground/60 font-medium">DX-OS Enterprise Standard</p>
         </div>
       </div>
     </footer>

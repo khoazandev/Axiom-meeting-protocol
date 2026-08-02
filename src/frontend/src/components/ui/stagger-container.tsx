@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, type ReactNode } from 'react';
-import { gsap, ScrollTrigger } from '@/lib/gsap-config';
+import { useRef, type ReactNode } from 'react';
+import { gsap } from '@/lib/gsap-config';
 import { useGSAP } from '@gsap/react';
 
 export function StaggerContainer({
@@ -23,9 +23,7 @@ export function StaggerContainer({
     () => {
       if (!containerRef.current) return;
 
-      const prefersReducedMotion = window.matchMedia(
-        '(prefers-reduced-motion: reduce)'
-      ).matches;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (prefersReducedMotion) return;
 

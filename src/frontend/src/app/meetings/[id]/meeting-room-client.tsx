@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Calendar, Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
@@ -28,11 +28,8 @@ export function MeetingRoomClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Stabilize participantName so it doesn't change on re-render
-  const participantName = useMemo(
-    () => `User-${Math.floor(Math.random() * 1000)}`,
-    []
-  );
+  // Fixed participant name for MVP (lazy state initializer)
+  const [participantName] = useState(() => `User-${Math.floor(Math.random() * 1000)}`);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,9 +40,7 @@ export function MeetingRoomClient() {
       if (!meetingsRes.ok) throw new Error('Failed to fetch meetings');
       const meetings: Meeting[] = await meetingsRes.json();
 
-      const currentMeeting = meetings.find(
-        (m) => m.id.toString() === meetingId
-      );
+      const currentMeeting = meetings.find((m) => m.id.toString() === meetingId);
       if (!currentMeeting) throw new Error('Meeting not found');
       if (!controller.signal.aborted) setMeeting(currentMeeting);
 

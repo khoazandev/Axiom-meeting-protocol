@@ -7,11 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
 
@@ -54,8 +50,8 @@ export default function CreateMeetingPage() {
 
       // Success
       router.push('/meetings');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -111,11 +107,15 @@ export default function CreateMeetingPage() {
                       <Label htmlFor="agenda" className="text-sm font-semibold">
                         Agenda (Process Gate)
                       </Label>
-                      <span className="text-xs text-muted-foreground font-medium">Min 20 chars</span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Min 20 chars
+                      </span>
                     </div>
                     <Textarea
                       id="agenda"
-                      placeholder={"1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate resources"}
+                      placeholder={
+                        '1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate resources'
+                      }
                       required
                       value={formData.agenda}
                       onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
@@ -139,7 +139,10 @@ export default function CreateMeetingPage() {
                       required
                       value={formData.duration_minutes}
                       onChange={(e) =>
-                        setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 60 })
+                        setFormData({
+                          ...formData,
+                          duration_minutes: parseInt(e.target.value) || 60,
+                        })
                       }
                       className="h-11 rounded-xl"
                     />

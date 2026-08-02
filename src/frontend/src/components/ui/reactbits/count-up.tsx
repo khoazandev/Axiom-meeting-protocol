@@ -27,9 +27,7 @@ export function CountUp({
   const animate = useCallback(() => {
     if (!ref.current || hasAnimated.current) return;
 
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
       if (ref.current) {

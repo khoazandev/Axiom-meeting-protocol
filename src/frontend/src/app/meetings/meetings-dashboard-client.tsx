@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Loader2, Plus, Calendar, Clock, Video, AlertCircle } from 'lucide-react';
+import { Loader2, Calendar, Clock, Video, AlertCircle } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/ui/stagger-container';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
 
@@ -39,7 +39,9 @@ export function MeetingsDashboardClient() {
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error(err);
-          setError('Could not connect to Axiom Engine. Please ensure backend services are running.');
+          setError(
+            'Could not connect to Axiom Engine. Please ensure backend services are running.'
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -93,8 +95,8 @@ export function MeetingsDashboardClient() {
           <div>
             <h3 className="font-bold text-lg">No meetings scheduled</h3>
             <p className="text-muted-foreground text-sm max-w-sm mt-1 font-medium">
-              Deploy a new meeting to enforce structured process gates and capture
-              organizational intelligence.
+              Deploy a new meeting to enforce structured process gates and capture organizational
+              intelligence.
             </p>
           </div>
           <Link href="/meetings/create">
@@ -144,9 +146,7 @@ export function MeetingsDashboardClient() {
                 </p>
               </div>
               <Link href={`/meetings/${meeting.id}`} className="block mt-4">
-                <Button
-                  className="w-full rounded-xl font-semibold transition-colors duration-300 h-11 bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
-                >
+                <Button className="w-full rounded-xl font-semibold transition-colors duration-300 h-11 bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer">
                   <Video className="w-4 h-4 mr-2" />
                   Join Conference
                 </Button>

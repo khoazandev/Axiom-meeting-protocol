@@ -30,9 +30,7 @@ export function SplitText({
   useEffect(() => {
     if (!containerRef.current || hasAnimated.current) return;
 
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
       // Show text immediately without animation
