@@ -12,6 +12,8 @@ dependencies = [
     "livekit-api>=1.2.0",
     "pydantic-settings>=2.14.2",
     "alembic>=1.18.5",
+    "pyjwt>=2.13.0",
+    "passlib[bcrypt]>=1.7.4",
 ]
 
 [project.optional-dependencies]
