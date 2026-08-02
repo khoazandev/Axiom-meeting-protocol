@@ -1,4 +1,29 @@
-Always follow TDD Red-Green-Refactor for backend (FastAPI/Pytest).
-Use Next.js 14 App Router, Tailwind CSS, and Shadcn UI for frontend.
-Strictly use the 'UI/UX Pro Max' design system (Trust & Authority B2B standard, Plus Jakarta Sans font, Deep Navy & Trust Blue palette).
-All documentation must be in English.
+# Axiom Development Rules
+# Reference: MASTER_PROJECT_PLAN.md (§14-16)
+
+# ── TDD ───────────────────────────────────────────────────
+# Follow Red-Green-Refactor for all backend code (superpowers_tdd.md).
+# No production code without a failing test first.
+
+# ── Backend ───────────────────────────────────────────────
+# Framework: FastAPI + Pydantic V2 + SQLAlchemy + Alembic.
+# main.py is a slim app factory — no business logic.
+# New endpoints go in src/backend/api/v1/ with versioned prefix.
+# All errors use structured format from core/exceptions.py.
+# Config via core/config.py (Pydantic Settings), not os.getenv().
+# Run: uv run uvicorn src.backend.main:app --reload
+
+# ── Frontend ──────────────────────────────────────────────
+# Framework: Next.js 16 App Router, React 19, Tailwind CSS v4, Shadcn UI.
+# Design: B2B Enterprise aesthetic (Plus Jakarta Sans, Electric Blue accents).
+# API calls go through src/frontend/src/lib/api.ts — never raw fetch().
+# Components use (marketing)/_sections/ pattern for landing page sections.
+
+# ── Git ───────────────────────────────────────────────────
+# Conventional Commits: feat(scope): description
+# Branch: feat/name, bugfix/name, docs/name
+# Pre-commit hooks: Prettier + ESLint via Husky.
+
+# ── Docs ──────────────────────────────────────────────────
+# Source of truth: MASTER_PROJECT_PLAN.md
+# All documentation in English.
