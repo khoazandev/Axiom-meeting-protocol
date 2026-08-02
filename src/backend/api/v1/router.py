@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from src.backend.api.v1.auth import router as auth_router
 from src.backend.api.v1.health import router as health_router
+from src.backend.api.v1.invitations import router as invitations_router
 from src.backend.api.v1.meetings import router as meetings_router
 from src.backend.api.v1.notifications import router as notifications_router
 from src.backend.api.v1.tasks import router as tasks_router
@@ -25,3 +26,4 @@ api_v1_router.include_router(meetings_router)
 api_v1_router.include_router(tasks_router)
 api_v1_router.include_router(webhooks_router)
 api_v1_router.include_router(notifications_router)
+api_v1_router.include_router(invitations_router)
