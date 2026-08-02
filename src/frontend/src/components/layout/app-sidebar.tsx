@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Building,
   Plus,
-  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -31,6 +31,7 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
     { label: 'Tasks & Actions', href: '/tasks', icon: CheckSquare, badge: 'New' },
     { label: 'Calendar', href: '/calendar', icon: Calendar, badge: null },
     { label: 'Knowledge Hub', href: '/knowledge', icon: BookOpen, badge: 'AI' },
+    { label: 'Admin Console', href: '/admin', icon: ShieldCheck, badge: 'Gov' },
     { label: 'Settings', href: '/settings', icon: Settings, badge: null },
   ];
 
