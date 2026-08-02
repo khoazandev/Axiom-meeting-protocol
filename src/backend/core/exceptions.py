@@ -64,6 +64,30 @@ class ProcessGateException(AppException):
         )
 
 
+class AuthenticationException(AppException):
+    """Authentication required or invalid credentials (401)."""
+
+    def __init__(self, message: str = "Authentication required", detail: str | None = None):
+        super().__init__(
+            status_code=401,
+            code="UNAUTHORIZED",
+            message=message,
+            detail=detail,
+        )
+
+
+class ForbiddenException(AppException):
+    """Permission denied (403)."""
+
+    def __init__(self, message: str = "Permission denied", detail: str | None = None):
+        super().__init__(
+            status_code=403,
+            code="FORBIDDEN",
+            message=message,
+            detail=detail,
+        )
+
+
 def _error_response(status_code: int, code: str, message: str, detail: str | None = None) -> JSONResponse:
     """Build a consistent error JSON response."""
     return JSONResponse(
