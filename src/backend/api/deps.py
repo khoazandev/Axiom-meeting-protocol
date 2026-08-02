@@ -1,52 +1,49 @@
-from typing import Generator
-from fastapi import Depends, Header, Path
+from typing import List, Union
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from src.backend.core.exceptions import AuthenticationException, ForbiddenException, NotFoundException
+from src.backend import models
+from src.backend.core.exceptions import AuthenticationException, ForbiddenException
 from src.backend.core.security import decode_token
 from src.backend.database import get_db
 from src.backend.models import RoleEnum, User, WorkspaceMember
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    """Validate Bearer token and return current authenticated User."""
-    if not credentials:
-        raise AuthenticationException("Authentication credentials were not provided")
     token = credentials.credentials
-    try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise AuthenticationException("Invalid token type")
-        user_id: str = payload.get("sub")
-        if not user_id:
-            raise AuthenticationException("Invalid token payload")
-    except Exception as e:
-        raise AuthenticationException(f"Invalid authentication token: {str(e)}")
+    payload = decode_token(token)
+    if not payload:
+        raise AuthenticationException("Could not validate credentials")
 
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    user_id: str = payload.get("sub")
+    if not user_id:
+        raise AuthenticationException("Token missing user identity")
+
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise NotFoundException("User")
+        raise AuthenticationException("User no longer exists")
+
+    if not user.is_active:
+        raise ForbiddenException("User account is inactive")
+
     return user
 
 
 def get_current_workspace_member(
-    workspace_id: str | None = Header(None, alias="X-Workspace-ID"),
-    current_user: User = Depends(get_current_user),
+    workspace_id: str = Header(..., alias="X-Workspace-ID"),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> WorkspaceMember:
-    """Verify user membership in the requested Workspace (via X-Workspace-ID header)."""
-    if not workspace_id:
-        raise ForbiddenException("X-Workspace-ID header is required for workspace endpoints")
-
+    user = get_current_user(credentials, db)
     member = (
         db.query(WorkspaceMember)
-        .filter(WorkspaceMember.workspace_id == workspace_id, WorkspaceMember.user_id == current_user.id)
+        .filter(WorkspaceMember.workspace_id == workspace_id, WorkspaceMember.user_id == user.id)
         .first()
     )
     if not member:
@@ -74,12 +71,14 @@ def get_optional_workspace_member(
         return None
 
 
-def require_role(allowed_roles: list[RoleEnum]):
+def require_role(allowed_roles: Union[RoleEnum, List[RoleEnum]]):
     """FastAPI dependency factory enforcing RBAC roles."""
+    roles = [allowed_roles] if isinstance(allowed_roles, RoleEnum) else allowed_roles
 
     def role_checker(member: WorkspaceMember = Depends(get_current_workspace_member)) -> WorkspaceMember:
-        if member.role not in allowed_roles:
-            raise ForbiddenException(f"Required role: {', '.join(r.value for r in allowed_roles)}")
+        if member.role not in roles:
+            role_names = [r.value if isinstance(r, RoleEnum) else str(r) for r in roles]
+            raise ForbiddenException(f"Required role: {', '.join(role_names)}")
         return member
 
     return role_checker
