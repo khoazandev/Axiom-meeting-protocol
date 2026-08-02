@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axiom-backend
+  labels:
+    app: axiom-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: axiom-backend
+  template:
+    metadata:
+      labels:
+        app: axiom-backend
+    spec:
+      containers:
+      - name: backend
+        image: axiom-backend:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1024Mi"
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: database_url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/0"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: ClusterIP
+  selector:
+    app: axiom-backend
+  ports:
+  - port: 8000
+    targetPort: 8000

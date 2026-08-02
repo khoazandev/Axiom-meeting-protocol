@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axiom-frontend
+  labels:
+    app: axiom-frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: axiom-frontend
+  template:
+    metadata:
+      labels:
+        app: axiom-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: axiom-frontend:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://backend-service:8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: axiom-frontend
+  ports:
+  - port: 80
+    targetPort: 3000
