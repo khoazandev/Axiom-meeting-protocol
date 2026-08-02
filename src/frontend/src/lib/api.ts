@@ -2,14 +2,10 @@
  * Axiom API Client
  *
  * Centralized API layer for all backend communication.
- * Replaces scattered fetch() calls across components.
- *
- * Features:
- * - Typed request/response functions
- * - Consistent error handling
- * - Base URL from environment
- * - Prepared for JWT header injection (Phase 2)
+ * Auto-injects Authorization JWT token and X-Workspace-ID header.
  */
+
+import { useAuthStore } from './store/useAuthStore';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -20,12 +16,36 @@ export interface Meeting {
   start_time: string;
   duration_minutes: number;
   is_active: boolean;
+  workspace_id?: string | null;
 }
 
 export interface MeetingCreate {
   title: string;
   agenda: string;
   duration_minutes: number;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string | null;
+  provider: string;
+  is_active: boolean;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  owner_id: string;
+}
+
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
 export interface ApiError {
@@ -61,11 +81,23 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
-  // Future: inject JWT token here
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options?.headers,
+    ...(options?.headers as Record<string, string>),
   };
+
+  // Inject token and active workspace header from localStorage / Zustand store
+  if (typeof window !== 'undefined') {
+    const token = useAuthStore.getState().token || localStorage.getItem('axiom_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const activeWorkspace = useAuthStore.getState().activeWorkspace;
+    if (activeWorkspace?.id) {
+      headers['X-Workspace-ID'] = activeWorkspace.id;
+    }
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -99,22 +131,63 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
+// ── Auth API ─────────────────────────────────────────────
+
+export const authApi = {
+  register(email: string, password: string, full_name: string): Promise<User> {
+    return apiFetch<User>('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, full_name }),
+    });
+  },
+
+  login(email: string, password: string): Promise<AuthTokens> {
+    return apiFetch<AuthTokens>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  me(): Promise<User> {
+    return apiFetch<User>('/api/v1/auth/me');
+  },
+};
+
+// ── Workspace API ────────────────────────────────────────
+
+export const workspaceApi = {
+  create(name: string, slug: string): Promise<Workspace> {
+    return apiFetch<Workspace>('/api/v1/workspaces/', {
+      method: 'POST',
+      body: JSON.stringify({ name, slug }),
+    });
+  },
+
+  list(): Promise<Workspace[]> {
+    return apiFetch<Workspace[]>('/api/v1/workspaces/');
+  },
+
+  get(workspaceId: string): Promise<Workspace> {
+    return apiFetch<Workspace>(`/api/v1/workspaces/${workspaceId}`);
+  },
+};
+
 // ── Meeting API ──────────────────────────────────────────
 
 export const meetingsApi = {
   /** List all meetings with optional pagination. */
   list(skip = 0, limit = 100, signal?: AbortSignal): Promise<Meeting[]> {
-    return apiFetch<Meeting[]>(`/api/meetings/?skip=${skip}&limit=${limit}`, { signal });
+    return apiFetch<Meeting[]>(`/api/v1/meetings/?skip=${skip}&limit=${limit}`, { signal });
   },
 
   /** Get a single meeting by ID. */
   get(id: number | string, signal?: AbortSignal): Promise<Meeting> {
-    return apiFetch<Meeting>(`/api/meetings/${id}`, { signal });
+    return apiFetch<Meeting>(`/api/v1/meetings/${id}`, { signal });
   },
 
   /** Create a new meeting. */
   create(data: MeetingCreate): Promise<Meeting> {
-    return apiFetch<Meeting>('/api/meetings/', {
+    return apiFetch<Meeting>('/api/v1/meetings/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -122,7 +195,7 @@ export const meetingsApi = {
 
   /** Delete a meeting by ID. */
   delete(id: number | string): Promise<{ message: string }> {
-    return apiFetch<{ message: string }>(`/api/meetings/${id}`, {
+    return apiFetch<{ message: string }>(`/api/v1/meetings/${id}`, {
       method: 'DELETE',
     });
   },
@@ -130,7 +203,7 @@ export const meetingsApi = {
   /** Get a LiveKit token for a meeting room. */
   getToken(meetingId: number | string, participantName: string, signal?: AbortSignal): Promise<TokenResponse> {
     return apiFetch<TokenResponse>(
-      `/api/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
+      `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
       { signal }
     );
   },
