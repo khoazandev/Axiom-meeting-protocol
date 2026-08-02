@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: 'Axiom — Enterprise Meeting Protocol',
   description:
     'On-premise video conferencing with AI intelligence. Enforce agendas, transcribe securely, and capture structural data — zero external cloud dependency.',
+  manifest: '/manifest.json',
   keywords: [
     'enterprise meeting',
     'on-premise video conferencing',
@@ -50,6 +51,19 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <ErrorBoundary>{children}</ErrorBoundary>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('SW registration failed: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
