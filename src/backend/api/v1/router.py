@@ -9,6 +9,7 @@ from src.backend.api.v1.auth import router as auth_router
 from src.backend.api.v1.files import router as files_router
 from src.backend.api.v1.health import router as health_router
 from src.backend.api.v1.invitations import router as invitations_router
+from src.backend.api.v1.knowledge import router as knowledge_router
 from src.backend.api.v1.meetings import router as meetings_router
 from src.backend.api.v1.mom import router as mom_router
 from src.backend.api.v1.notifications import router as notifications_router
@@ -33,3 +34,4 @@ api_v1_router.include_router(invitations_router)
 api_v1_router.include_router(files_router)
 api_v1_router.include_router(ai_hooks_router)
 api_v1_router.include_router(mom_router)
+api_v1_router.include_router(knowledge_router)
