@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.api import deps
 from src.backend.database import get_db
-from src.backend.models import AuditLog, RoleEnum, User, WorkspaceMember
+from src.backend.models import AuditLog, OutboundWebhook, RoleEnum, User, WorkspaceMember
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -24,6 +25,25 @@ class AuditLogResponse(BaseModel):
     created_at: datetime.datetime
 
 
+class OutboundWebhookCreate(BaseModel):
+    name: str
+    target_url: str
+    events: Optional[str] = "all"
+
+
+class OutboundWebhookResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    workspace_id: str
+    name: str
+    target_url: str
+    events: str
+    secret_key: str
+    is_active: bool
+    created_at: datetime.datetime
+
+
 @router.get("/audit-logs", response_model=List[AuditLogResponse])
 def list_audit_logs(
     member: WorkspaceMember = Depends(deps.require_role([RoleEnum.OWNER, RoleEnum.ADMIN])),
@@ -35,3 +55,55 @@ def list_audit_logs(
         .order_by(AuditLog.created_at.desc())
         .all()
     )
+
+
+@router.post("/webhooks", response_model=OutboundWebhookResponse, status_code=status.HTTP_201_CREATED)
+def create_outbound_webhook(
+    data: OutboundWebhookCreate,
+    member: WorkspaceMember = Depends(deps.require_role([RoleEnum.OWNER, RoleEnum.ADMIN])),
+    db: Session = Depends(get_db),
+):
+    webhook = OutboundWebhook(
+        workspace_id=member.workspace_id,
+        name=data.name,
+        target_url=data.target_url,
+        events=data.events or "all",
+        secret_key=f"sec_{uuid.uuid4().hex[:12]}",
+        is_active=True,
+    )
+    db.add(webhook)
+    db.commit()
+    db.refresh(webhook)
+    return webhook
+
+
+@router.get("/webhooks", response_model=List[OutboundWebhookResponse])
+def list_outbound_webhooks(
+    member: WorkspaceMember = Depends(deps.require_role([RoleEnum.OWNER, RoleEnum.ADMIN])),
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(OutboundWebhook)
+        .filter(OutboundWebhook.workspace_id == member.workspace_id)
+        .order_by(OutboundWebhook.created_at.desc())
+        .all()
+    )
+
+
+@router.delete("/webhooks/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_outbound_webhook(
+    webhook_id: str,
+    member: WorkspaceMember = Depends(deps.require_role([RoleEnum.OWNER, RoleEnum.ADMIN])),
+    db: Session = Depends(get_db),
+):
+    webhook = (
+        db.query(OutboundWebhook)
+        .filter(OutboundWebhook.id == webhook_id, OutboundWebhook.workspace_id == member.workspace_id)
+        .first()
+    )
+    if not webhook:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook not found")
+
+    db.delete(webhook)
+    db.commit()
+    return None
