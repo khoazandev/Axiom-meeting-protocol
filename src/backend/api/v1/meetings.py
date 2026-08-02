@@ -10,16 +10,21 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.backend import models
-from src.backend.api.deps import get_db
+from src.backend.api.deps import get_db, get_optional_workspace_member
 from src.backend.core.config import get_settings
 from src.backend.core.exceptions import NotFoundException, ProcessGateException
+from src.backend.models import WorkspaceMember
 from src.backend.schemas.meeting import MeetingCreate, MeetingResponse, MessageResponse, TokenResponse
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
 
 @router.post("/", response_model=MeetingResponse)
-def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
+def create_meeting(
+    meeting: MeetingCreate,
+    member: WorkspaceMember | None = Depends(get_optional_workspace_member),
+    db: Session = Depends(get_db),
+):
     """Create a new meeting with Process Gate validation.
 
     The agenda must be at least 20 characters (after trimming whitespace).
@@ -31,7 +36,12 @@ def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
             detail="Process Gate: Detailed agendas are required to enforce meeting discipline.",
         )
 
-    db_meeting = models.Meeting(**meeting.model_dump())
+    meeting_data = meeting.model_dump()
+    if member:
+        meeting_data["workspace_id"] = member.workspace_id
+        meeting_data["created_by_id"] = member.user_id
+
+    db_meeting = models.Meeting(**meeting_data)
     db.add(db_meeting)
     db.commit()
     db.refresh(db_meeting)
@@ -39,25 +49,47 @@ def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[MeetingResponse])
-def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """List all meetings with pagination support."""
-    meetings = db.query(models.Meeting).offset(skip).limit(limit).all()
+def read_meetings(
+    skip: int = 0,
+    limit: int = 100,
+    member: WorkspaceMember | None = Depends(get_optional_workspace_member),
+    db: Session = Depends(get_db),
+):
+    """List meetings with pagination and tenant isolation support."""
+    query = db.query(models.Meeting)
+    if member:
+        query = query.filter(models.Meeting.workspace_id == member.workspace_id)
+    meetings = query.offset(skip).limit(limit).all()
     return meetings
 
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)
-def read_meeting(meeting_id: int, db: Session = Depends(get_db)):
-    """Get a single meeting by ID."""
-    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+def read_meeting(
+    meeting_id: int,
+    member: WorkspaceMember | None = Depends(get_optional_workspace_member),
+    db: Session = Depends(get_db),
+):
+    """Get a single meeting by ID with tenant isolation."""
+    query = db.query(models.Meeting).filter(models.Meeting.id == meeting_id)
+    if member:
+        query = query.filter(models.Meeting.workspace_id == member.workspace_id)
+    meeting = query.first()
     if meeting is None:
         raise NotFoundException(resource="Meeting")
     return meeting
 
 
 @router.delete("/{meeting_id}", response_model=MessageResponse)
-def delete_meeting(meeting_id: int, db: Session = Depends(get_db)):
-    """Delete a meeting by ID."""
-    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+def delete_meeting(
+    meeting_id: int,
+    member: WorkspaceMember | None = Depends(get_optional_workspace_member),
+    db: Session = Depends(get_db),
+):
+    """Delete a meeting by ID with tenant isolation."""
+    query = db.query(models.Meeting).filter(models.Meeting.id == meeting_id)
+    if member:
+        query = query.filter(models.Meeting.workspace_id == member.workspace_id)
+    meeting = query.first()
     if meeting is None:
         raise NotFoundException(resource="Meeting")
     db.delete(meeting)
@@ -67,10 +99,7 @@ def delete_meeting(meeting_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
 def get_meeting_token(meeting_id: str, participant_name: str):
-    """Generate a LiveKit access token for a meeting room.
-
-    Note: In Phase 2, this will require authentication.
-    """
+    """Generate a LiveKit access token for a meeting room."""
     settings = get_settings()
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     token.with_identity(participant_name)

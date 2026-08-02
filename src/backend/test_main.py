@@ -22,30 +22,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.backend.main import app
-from src.backend import database
+from src.backend import database, models  # noqa: F401 - register all models on Base.metadata
 
-# ── Test database configuration ──
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Test database setup managed by src/backend/tests/conftest.py
 
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[database.get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    database.Base.metadata.create_all(bind=engine)
-    yield
-    database.Base.metadata.drop_all(bind=engine)
 
 
 client = TestClient(app)

@@ -8,14 +8,16 @@ from src.backend.core.security import decode_token
 from src.backend.database import get_db
 from src.backend.models import RoleEnum, User, WorkspaceMember
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
     """Validate Bearer token and return current authenticated User."""
+    if not credentials:
+        raise AuthenticationException("Authentication credentials were not provided")
     token = credentials.credentials
     try:
         payload = decode_token(token)
@@ -51,6 +53,25 @@ def get_current_workspace_member(
         raise ForbiddenException("User is not a member of this workspace")
 
     return member
+
+
+def get_optional_workspace_member(
+    workspace_id: str | None = Header(None, alias="X-Workspace-ID"),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+) -> WorkspaceMember | None:
+    """Optional workspace member guard: returns member if headers provided, else None."""
+    if not workspace_id or not credentials:
+        return None
+    try:
+        user = get_current_user(credentials, db)
+        return (
+            db.query(WorkspaceMember)
+            .filter(WorkspaceMember.workspace_id == workspace_id, WorkspaceMember.user_id == user.id)
+            .first()
+        )
+    except Exception:
+        return None
 
 
 def require_role(allowed_roles: list[RoleEnum]):
