@@ -85,6 +85,8 @@ class Workspace(database.Base):
     meetings = relationship("Meeting", back_populates="workspace", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="workspace", cascade="all, delete-orphan")
     knowledge_documents = relationship("KnowledgeDocument", back_populates="workspace", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="workspace", cascade="all, delete-orphan")
+    outbound_webhooks = relationship("OutboundWebhook", back_populates="workspace", cascade="all, delete-orphan")
 
 
 class WorkspaceMember(database.Base):
@@ -247,6 +249,37 @@ class KnowledgeDocument(database.Base):
 
     workspace = relationship("Workspace", back_populates="knowledge_documents")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
+
+
+class AuditLog(database.Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    action = Column(String, nullable=False)
+    resource = Column(String, nullable=False)
+    ip_address = Column(String, nullable=True)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    workspace = relationship("Workspace", back_populates="audit_logs")
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class OutboundWebhook(database.Base):
+    __tablename__ = "outbound_webhooks"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    target_url = Column(String, nullable=False)
+    events = Column(String, default="all")
+    secret_key = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    workspace = relationship("Workspace", back_populates="outbound_webhooks")
 
 
 class ActionItem(database.Base):
