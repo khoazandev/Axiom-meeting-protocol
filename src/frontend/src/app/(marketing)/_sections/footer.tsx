@@ -20,16 +20,14 @@ export function Footer() {
               <span className="font-bold tracking-tight text-sm">Axiom</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Enterprise Meeting Protocol.
+              Nền tảng họp thông minh.
               <br />
               Built for resilience, security, and discipline.
             </p>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Architecture
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Architecture</h4>
             <div className="space-y-2.5">
               {['H (Human)', 'P (Process)', 'D (Data)', 'I (Intelligence)'].map((item) => (
                 <p
@@ -43,9 +41,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Resources
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Resources</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'Documentation', href: '#' },
@@ -65,9 +61,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Open Source
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Open Source</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'GitHub', href: 'https://github.com/khoazandev/Axiom-meeting-protocol' },
@@ -91,7 +85,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground font-medium">
             © 2026 Axiom. Built for Olympic PMNM. MIT License.
           </p>
-          <p className="text-xs text-muted-foreground/60 font-medium">DX-OS Enterprise Standard</p>
+          <p className="text-xs text-muted-foreground/60 font-medium">Axiom</p>
         </div>
       </div>
     </footer>

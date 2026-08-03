@@ -52,12 +52,14 @@ The frontend interface must maintain a premium B2B Enterprise aesthetic.
 ### Local Environment Setup
 
 1. **Fork & Clone:**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/Axiom-meeting-protocol.git
    cd Axiom-meeting-protocol
    ```
 
 2. **Install Dependencies:**
+
    ```bash
    # Backend (Python)
    uv sync --all-extras
@@ -69,6 +71,7 @@ The frontend interface must maintain a premium B2B Enterprise aesthetic.
 3. **Environment Variables:**
 
    Copy `.env.example` files and configure your local LiveKit details:
+
    ```bash
    # Backend
    cp src/backend/.env.example src/backend/.env
@@ -78,11 +81,13 @@ The frontend interface must maintain a premium B2B Enterprise aesthetic.
    ```
 
 4. **Run Database Migrations:**
+
    ```bash
    uv run alembic upgrade head
    ```
 
 5. **Start the Servers:**
+
    ```bash
    # Terminal 1: Backend
    uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
@@ -143,10 +148,10 @@ Examples:
 
 All project documentation follows this structure:
 
-| Document | Purpose |
-|:---|:---|
+| Document                                              | Purpose                                      |
+| :---------------------------------------------------- | :------------------------------------------- |
 | [`MASTER_PROJECT_PLAN.md`](../MASTER_PROJECT_PLAN.md) | Source of truth — roadmap, vision, standards |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System architecture, diagrams, ADRs |
-| [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Local dev & production deployment |
-| [`superpowers_tdd.md`](../superpowers_tdd.md) | TDD methodology rules |
-| `CONTRIBUTING.md` | This file — how to contribute |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md)                | System architecture, diagrams, ADRs          |
+| [`DEPLOYMENT.md`](./DEPLOYMENT.md)                    | Local dev & production deployment            |
+| [`superpowers_tdd.md`](../superpowers_tdd.md)         | TDD methodology rules                        |
+| `CONTRIBUTING.md`                                     | This file — how to contribute                |

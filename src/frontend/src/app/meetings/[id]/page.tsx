@@ -3,45 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { MeetingRoomClient } from './meeting-room-client';
-import {
-  FileText,
-  Video,
-  Sparkles,
-  CheckCircle2,
-  Users,
-  Zap,
-  CheckSquare,
-  Clock,
-  ArrowRight,
-} from 'lucide-react';
-
-interface MoMData {
-  summary: string;
-  key_decisions: string[];
-  speaker_stats: { speaker: string; percentage: number }[];
-  action_items: string[];
-}
+import { Sparkles, CheckCircle2, Users, Zap, CheckSquare, Video } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/api';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 export default function MeetingRoomPage() {
   const params = useParams();
   const meetingId = params.id as string;
+  const { t } = useLanguageStore();
+
   const [activeTab, setActiveTab] = useState<'room' | 'mom'>('room');
-  const [mom, setMom] = useState<MoMData | null>(null);
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [mom, setMom] = useState<any>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadMoM() {
       try {
-        const token = localStorage.getItem('token');
-        const activeWorkspaceId = localStorage.getItem('active_workspace_id');
-        if (!token || !activeWorkspaceId) return;
+        const headers = getAuthHeaders();
+        if (!headers['Authorization']) return;
 
         const res = await fetch(`/api/v1/meetings/${meetingId}/mom`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'X-Workspace-ID': activeWorkspaceId,
-          },
+          headers,
         });
 
         if (res.ok) {
@@ -61,76 +44,71 @@ export default function MeetingRoomPage() {
   const handleSyncToJira = async () => {
     try {
       setIsSyncing(true);
-      const token = localStorage.getItem('token');
-      const activeWorkspaceId = localStorage.getItem('active_workspace_id');
-      if (!token || !activeWorkspaceId) {
+      const headers = getAuthHeaders();
+      if (!headers['Authorization']) {
         setIsSyncing(false);
         return;
       }
 
       const res = await fetch(`/api/v1/meetings/${meetingId}/sync-tasks`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-Workspace-ID': activeWorkspaceId,
-        },
+        headers,
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setSyncFeedback(data.message || 'Synced to Jira Tasks!');
-        setTimeout(() => setSyncFeedback(null), 4000);
+        setSyncFeedback('✅ Đã đồng bộ công việc');
+        setTimeout(() => setSyncFeedback(null), 3000);
       }
     } catch (err) {
-      console.error('Task sync failed:', err);
+      console.error(err);
     } finally {
       setIsSyncing(false);
     }
   };
 
   return (
-    <div className="h-screen bg-[#0B0F19] text-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-bg-base text-text-primary flex flex-col overflow-hidden">
       {/* Top Tab Bar Navigation */}
-      <div className="bg-[#0E1526] border-b border-blue-950/60 px-6 py-2 flex items-center justify-between z-30 shrink-0">
-        <div className="flex items-center gap-2 bg-[#131B2E] border border-blue-950 p-1 rounded-xl">
+      <div className="bg-bg-card border-b border-border px-6 py-2 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-2 bg-bg-card border border-border p-1 rounded-xl">
           <button
             onClick={() => setActiveTab('room')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
               activeTab === 'room'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-accent text-accent-foreground shadow-md'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             <Video className="w-3.5 h-3.5" />
-            <span>Live Call Room</span>
+            <span>Phòng họp trực tuyến (LiveKit)</span>
           </button>
           <button
             onClick={() => setActiveTab('mom')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
               activeTab === 'mom'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-accent text-accent-foreground shadow-md'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Minutes of Meeting (MoM)</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Biên bản họp tự động (MoM)</span>
           </button>
         </div>
 
         {activeTab === 'mom' && (
           <div className="flex items-center gap-3">
             {syncFeedback && (
-              <span className="text-xs text-emerald-400 font-semibold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <span className="text-xs text-success font-semibold px-3 py-1 bg-success/10 border border-success/20 rounded-full">
                 {syncFeedback}
               </span>
             )}
             <button
               onClick={handleSyncToJira}
               disabled={isSyncing}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-success hover:bg-success/90 text-accent-foreground text-xs font-medium flex items-center gap-2 transition-all disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5" />
-              <span>{isSyncing ? 'Syncing...' : '1-Click Sync to Jira Board'}</span>
+              <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ công việc'}</span>
             </button>
           </div>
         )}
@@ -144,38 +122,46 @@ export default function MeetingRoomPage() {
           <div className="h-full p-8 overflow-y-auto max-w-5xl mx-auto space-y-6">
             {/* Header */}
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Auto Minutes of Meeting (MoM)</h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Automated executive summary, decision log, and action items compiled from live meeting telemetry.
+              <h1 className="text-lg font-semibold text-text-primary">
+                Biên bản cuộc họp tự động (MoM)
+              </h1>
+              <p className="text-sm text-text-secondary mt-1">
+                Tóm tắt điều hành, nhật ký quyết định và công việc được tổng hợp tự động.
               </p>
             </div>
 
             {/* Executive Summary Card */}
-            <div className="p-6 rounded-2xl bg-[#131B2E] border border-blue-950 space-y-3 shadow-xl">
-              <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
+            <div className="p-6 rounded-xl bg-bg-card border border-border space-y-3 shadow-xl">
+              <div className="flex items-center gap-2 text-accent text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
-                <span>Executive Summary</span>
+                <span>Tóm tắt điều hành</span>
               </div>
-              <p className="text-sm text-slate-200 leading-relaxed font-normal">
-                {mom?.summary || 'Executive Summary: Meeting completed successfully with active participation.'}
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {mom?.summary ||
+                  'Biên bản cuộc họp đã được tạo thành công với sự tham gia của các thành viên.'}
               </p>
             </div>
 
             {/* Grid: Key Decisions & Speaker Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Key Decisions */}
-              <div className="p-6 rounded-2xl bg-[#131B2E] border border-blue-950 space-y-4 shadow-xl">
-                <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4 shadow-xl">
+                <div className="flex items-center gap-2 text-success text-sm font-medium">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Key Decisions Reached</span>
+                  <span>Quyết định chính</span>
                 </div>
                 <div className="space-y-3">
-                  {(mom?.key_decisions || [
-                    'Architecture and Phase 4 implementation plan approved.',
-                    'Multi-tenant database schema validated.',
-                  ]).map((dec, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-[#0B0F19] border border-blue-950 flex items-start gap-2.5 text-xs text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  {(
+                    mom?.key_decisions || [
+                      'Thông qua kế hoạch kiến trúc ứng dụng.',
+                      'Xác nhận schema cơ sở dữ liệu multi-tenant.',
+                    ]
+                  ).map((dec: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-lg bg-bg-elevated border border-border flex items-start gap-2.5 text-sm text-text-secondary"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                       <span>{dec}</span>
                     </div>
                   ))}
@@ -183,25 +169,29 @@ export default function MeetingRoomPage() {
               </div>
 
               {/* Speaker Talk-Time Breakdown */}
-              <div className="p-6 rounded-2xl bg-[#131B2E] border border-blue-950 space-y-4 shadow-xl">
-                <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-wider">
+              <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4 shadow-xl">
+                <div className="flex items-center gap-2 text-accent text-sm font-medium">
                   <Users className="w-4 h-4" />
-                  <span>Speaker Talk-Time Breakdown</span>
+                  <span>Thời lượng phát biểu</span>
                 </div>
                 <div className="space-y-4 pt-1">
-                  {(mom?.speaker_stats || [
-                    { speaker: 'Alice (Principal Architect)', percentage: 50 },
-                    { speaker: 'Bob (Frontend Engineer)', percentage: 30 },
-                    { speaker: 'Charlie (AI Partner)', percentage: 20 },
-                  ]).map((sp, idx) => (
+                  {(
+                    mom?.speaker_stats || [
+                      { speaker: 'Alice (Principal Architect)', percentage: 50 },
+                      { speaker: 'Bob (Frontend Engineer)', percentage: 30 },
+                      { speaker: 'Charlie (AI Partner)', percentage: 20 },
+                    ]
+                  ).map((sp: { speaker: string; percentage: number }, idx: number) => (
                     <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between text-xs text-slate-300 font-medium">
+                      <div className="flex justify-between text-xs text-text-secondary font-medium">
                         <span>{sp.speaker}</span>
-                        <span className="font-mono text-blue-400 font-semibold">{sp.percentage}%</span>
+                        <span className="font-mono text-accent font-semibold">
+                          {sp.percentage}%
+                        </span>
                       </div>
-                      <div className="h-2 w-full bg-[#0B0F19] rounded-full overflow-hidden border border-blue-950">
+                      <div className="h-2 w-full bg-bg-elevated rounded-full overflow-hidden border border-border">
                         <div
-                          className="h-full bg-blue-500 rounded-full transition-all"
+                          className="h-full bg-accent rounded-full transition-all"
                           style={{ width: `${sp.percentage}%` }}
                         />
                       </div>
@@ -212,23 +202,27 @@ export default function MeetingRoomPage() {
             </div>
 
             {/* Extracted Action Items Box */}
-            <div className="p-6 rounded-2xl bg-[#131B2E] border border-blue-950 space-y-4 shadow-xl">
+            <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-wider">
-                  <CheckSquare className="w-4 h-4 text-blue-400" />
-                  <span>Extracted Action Items ({mom?.action_items?.length || 1})</span>
+                <div className="flex items-center gap-2 text-accent text-sm font-medium">
+                  <CheckSquare className="w-4 h-4 text-accent" />
+                  <span>Danh sách công việc trích xuất ({mom?.action_items?.length || 2})</span>
                 </div>
-                <span className="text-[10px] text-slate-400">Ready for Jira Sync</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(mom?.action_items || [
-                  'Finalize LiveKit Webhook Receiver for automated status tracking',
-                  'Deploy Knowledge Hub document vectorization pipeline',
-                ]).map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-[#0B0F19] border border-blue-950 flex items-start gap-3 text-xs">
-                    <CheckSquare className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-200 font-medium">{item}</span>
+                {(
+                  mom?.action_items || [
+                    'Hoàn thiện LiveKit Webhook Receiver',
+                    'Triển khai pipeline trích xuất tài liệu',
+                  ]
+                ).map((item: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-lg bg-bg-elevated border border-border flex items-start gap-3 text-sm"
+                  >
+                    <CheckSquare className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <span className="text-text-secondary font-medium">{item}</span>
                   </div>
                 ))}
               </div>

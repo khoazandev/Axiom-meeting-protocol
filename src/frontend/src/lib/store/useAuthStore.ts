@@ -22,7 +22,12 @@ interface AuthState {
   token: string | null;
   activeWorkspace: Workspace | null;
   workspaces: Workspace[];
-  setAuth: (user: User, token: string, workspaces: Workspace[], activeWorkspace?: Workspace) => void;
+  setAuth: (
+    user: User,
+    token: string,
+    workspaces: Workspace[],
+    activeWorkspace?: Workspace
+  ) => void;
   setActiveWorkspace: (workspace: Workspace) => void;
   setWorkspaces: (workspaces: Workspace[]) => void;
   logout: () => void;
@@ -31,7 +36,10 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null,
-  activeWorkspace: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('axiom_workspace') || 'null') : null,
+  activeWorkspace:
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('axiom_workspace') || 'null')
+      : null,
   workspaces: [],
   setAuth: (user, token, workspaces, activeWorkspace) => {
     if (typeof window !== 'undefined') {

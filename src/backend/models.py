@@ -6,7 +6,7 @@ from datetime import timezone
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from src.backend import database
+from . import database
 
 
 def generate_uuid():

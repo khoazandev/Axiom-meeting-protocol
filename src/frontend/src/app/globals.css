@@ -5,118 +5,129 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* ── Axiom Design Tokens ── */
+  --color-bg-base: var(--bg-base);
+  --color-bg-card: var(--bg-card);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-placeholder: var(--text-placeholder);
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-focus-ring: var(--focus-ring);
+  --color-disabled: var(--disabled);
+  --color-disabled-text: var(--disabled-text);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  /* ── shadcn/ui compatibility ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ─── Trust & Authority — Light Mode ────────────────────────── */
+/* ─── Light Mode (default) ─────────────────────────────────── */
 :root {
-  --background: oklch(0.98 0.002 250);       /* #F8FAFC slate-50 */
-  --foreground: oklch(0.13 0.02 260);         /* #020617 slate-950 */
-  --card: oklch(1 0 0);                        /* #FFFFFF */
-  --card-foreground: oklch(0.13 0.02 260);    /* #020617 */
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.02 260);
-  --primary: oklch(0.21 0.04 265);            /* #0F172A Navy */
-  --primary-foreground: oklch(0.985 0 0);     /* #FFFFFF */
-  --secondary: oklch(0.96 0.003 250);         /* #F1F5F9 slate-100 */
-  --secondary-foreground: oklch(0.21 0.04 265);
-  --muted: oklch(0.93 0.005 250);             /* #E8ECF1 */
-  --muted-foreground: oklch(0.50 0.015 260);  /* #64748B slate-500 */
-  --accent: oklch(0.45 0.16 240);             /* #0369A1 Trust Blue */
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.55 0.22 25);         /* #DC2626 */
-  --border: oklch(0.90 0.005 250);            /* #E2E8F0 slate-200 */
-  --input: oklch(0.90 0.005 250);
-  --ring: oklch(0.45 0.16 240);               /* Trust Blue */
-  --chart-1: oklch(0.45 0.16 240);
-  --chart-2: oklch(0.55 0.12 250);
-  --chart-3: oklch(0.40 0.08 260);
-  --chart-4: oklch(0.35 0.05 265);
-  --chart-5: oklch(0.25 0.04 265);
+  --bg-base: #ffffff;
+  --bg-card: #f4f4f5;
+  --bg-elevated: #e4e4e7;
+  --border: #d4d4d8;
+  --border-subtle: #e4e4e7;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --text-placeholder: #71717a;
+  --accent: #2563eb;
+  --accent-muted: rgba(37, 99, 235, 0.10);
+  --accent-foreground: #ffffff;
+  --focus-ring: rgba(37, 99, 235, 0.5);
+  --disabled: #d4d4d8;
+  --disabled-text: #a1a1aa;
+  --success: #16a34a;
+  --warning: #b45309;
+  --danger: #dc2626;
+
+  /* shadcn compat */
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--bg-elevated);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-elevated);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--focus-ring);
   --radius: 0.625rem;
-  --sidebar: oklch(0.98 0.002 250);
-  --sidebar-foreground: oklch(0.13 0.02 260);
-  --sidebar-primary: oklch(0.45 0.16 240);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.96 0.003 250);
-  --sidebar-accent-foreground: oklch(0.21 0.04 265);
-  --sidebar-border: oklch(0.90 0.005 250);
-  --sidebar-ring: oklch(0.45 0.16 240);
 }
 
-/* ─── Trust & Authority — Dark Mode ─────────────────────────── */
+/* ─── Dark Mode ────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.14 0.02 255);         /* #0B1120 deep navy */
-  --foreground: oklch(0.96 0.003 250);        /* #F1F5F9 */
-  --card: oklch(0.18 0.025 258);              /* #111827 */
-  --card-foreground: oklch(0.96 0.003 250);
-  --popover: oklch(0.18 0.025 258);
-  --popover-foreground: oklch(0.96 0.003 250);
-  --primary: oklch(0.55 0.18 240);            /* Brighter Trust Blue for dark */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.22 0.03 260);          /* #1E293B slate-800 */
-  --secondary-foreground: oklch(0.96 0.003 250);
-  --muted: oklch(0.22 0.03 260);
-  --muted-foreground: oklch(0.68 0.01 250);   /* #94A3B8 slate-400 */
-  --accent: oklch(0.58 0.18 240);             /* Bright Trust Blue */
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.65 0.20 25);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.55 0.18 240);
-  --chart-1: oklch(0.55 0.18 240);
-  --chart-2: oklch(0.60 0.12 250);
-  --chart-3: oklch(0.45 0.08 260);
-  --chart-4: oklch(0.35 0.05 265);
-  --chart-5: oklch(0.25 0.04 265);
-  --sidebar: oklch(0.16 0.025 258);
-  --sidebar-foreground: oklch(0.96 0.003 250);
-  --sidebar-primary: oklch(0.55 0.18 240);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.22 0.03 260);
-  --sidebar-accent-foreground: oklch(0.96 0.003 250);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.55 0.18 240);
+  --bg-base: #09090b;
+  --bg-card: #18181b;
+  --bg-elevated: #27272a;
+  --border: #3f3f46;
+  --border-subtle: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-placeholder: #a1a1aa;
+  --accent: #3b82f6;
+  --accent-muted: rgba(59, 130, 246, 0.15);
+  --accent-foreground: #ffffff;
+  --focus-ring: rgba(59, 130, 246, 0.5);
+  --disabled: #3f3f46;
+  --disabled-text: #52525b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* shadcn compat */
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--bg-elevated);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-elevated);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--focus-ring);
 }
 
 @layer base {
@@ -141,4 +152,100 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+@keyframes wave-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-3.5px);
+    opacity: 1;
+  }
+}
+
+.animate-wave-bounce {
+  animation: wave-bounce 1.1s infinite ease-in-out;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Cinema-Style Bilingual Subtitle Overlay
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes subtitle-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes subtitle-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(99, 102, 241, 0.15),
+      0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(99, 102, 241, 0.3),
+      0 8px 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes subtitle-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.subtitle-overlay-container {
+  animation: subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.subtitle-overlay-container.is-streaming {
+  animation:
+    subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both,
+    subtitle-glow 2s ease-in-out infinite;
+}
+
+/* Typewriter cursor: clean on/off blink, no fade */
+@keyframes typewriter-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Subtle Wave Animation for processing state */
+@keyframes wave-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.75;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.processing-wave-dot {
+  display: inline-block;
+  animation: wave-bounce 1.2s infinite ease-in-out;
+}
+
+.subtitle-en-text {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.subtitle-vi-text {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }

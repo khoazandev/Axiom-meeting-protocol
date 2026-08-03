@@ -16,12 +16,14 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
 ### 2.1 Database Models (`src/backend/models.py`)
 
 #### 1. Updated `Meeting` Model
+
 - `status`: Enum (`SCHEDULED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`) — Default `SCHEDULED`.
 - `started_at`: Optional ISO timestamp of actual meeting start.
 - `ended_at`: Optional ISO timestamp of actual meeting end.
 - `recording_url`: Optional string for LiveKit Egress recording URL.
 
 #### 2. New `Task` Model (Action Items)
+
 - `id`: String (UUID PK).
 - `workspace_id`: String (FK -> `workspaces.id`, `nullable=False`, indexed).
 - `meeting_id`: String (FK -> `meetings.id`, `nullable=True`, indexed).
@@ -34,6 +36,7 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
 - `due_date`: Optional ISO timestamp.
 
 #### 3. New `MeetingInvitation` Model
+
 - `id`: String (UUID PK).
 - `meeting_id`: String (FK -> `meetings.id`, `nullable=False`, indexed).
 - `email`: String (lowercase, indexed).
@@ -42,6 +45,7 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
 - `status`: Enum (`PENDING`, `ACCEPTED`, `DECLINED`).
 
 #### 4. New `MeetingFile` Model
+
 - `id`: String (UUID PK).
 - `meeting_id`: String (FK -> `meetings.id`, `nullable=False`, indexed).
 - `uploaded_by_id`: String (FK -> `users.id`, `nullable=False`).
@@ -55,6 +59,7 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
 ## 3. Backend API Specification (`src/backend/api/v1/`)
 
 ### 3.1 LiveKit Webhook Handler (`/api/v1/webhooks/livekit`)
+
 - `POST /api/v1/webhooks/livekit`
   - Validates LiveKit HMAC Authorization header.
   - Event Handlers:
@@ -63,6 +68,7 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
     - `participant_joined` / `participant_left`: Tracks room active participant count.
 
 ### 3.2 Real-Time SSE Notification Engine (`/api/v1/notifications/stream`)
+
 - `GET /api/v1/notifications/stream`
   - Auth: `get_current_user` (Bearer Token).
   - Streams Server-Sent Events (`text/event-stream`) for:
@@ -71,6 +77,7 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
     - `INVITATION_RECEIVED`
 
 ### 3.3 Task / Action Item Management (`/api/v1/tasks`)
+
 - `GET /api/v1/tasks`: Lists tasks isolated by active `workspace_id`. Optional filters: `meeting_id`, `status`, `assignee_id`.
 - `POST /api/v1/tasks`: Creates a new task.
 - `GET /api/v1/tasks/{id}`: Fetches single task details.
@@ -78,15 +85,18 @@ Phase 3 builds the core **Platform Infrastructure and Real-Time Control System**
 - `DELETE /api/v1/tasks/{id}`: Deletes a task.
 
 ### 3.4 Meeting Invitations (`/api/v1/meetings/{id}/invitations`)
+
 - `POST /api/v1/meetings/{id}/invitations`: Invites email addresses with a specific role.
 - `GET /api/v1/invitations/verify/{token}`: Verifies invitation token and returns meeting details.
 - `POST /api/v1/invitations/respond`: Accepts or declines invitation.
 
 ### 3.5 File Upload Service (`/api/v1/meetings/{id}/files`)
+
 - `POST /api/v1/meetings/{id}/files`: Uploads multipart document (`.pdf`, `.docx`, `.txt`, `.png`).
 - `GET /api/v1/meetings/{id}/files`: Lists all uploaded files for a meeting.
 
 ### 3.6 External AI Partner Integration Ingestion Hooks
+
 - `POST /api/v1/meetings/{id}/transcript`: Ingests speech-to-text segments from AI partner service.
 - `POST /api/v1/meetings/{id}/summary`: Ingests generated Minutes of Meeting (MoM) summary.
 

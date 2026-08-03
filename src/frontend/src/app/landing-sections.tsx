@@ -37,7 +37,7 @@ const STEPS = [
     number: '01',
     title: 'Define Agenda',
     description:
-      'Enforce structured meeting discipline. Every meeting requires a detailed agenda validated by the Process Gate before creation.',
+      'Enforce structured meeting discipline. Every meeting requires a detailed agenda validated by the  before creation.',
     icon: FileText,
   },
   {
@@ -123,13 +123,8 @@ export function HeroSection() {
     <section className="px-6 md:px-12 pt-20 pb-24 md:pt-28 md:pb-32 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 items-center min-h-[calc(100vh-64px)]">
       <div className="space-y-8 max-w-xl relative z-10">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-xs font-semibold tracking-wide border border-accent/20">
-            <Zap className="w-3.5 h-3.5" />
-            Olympic PMNM 2026 · DX-OS Standard
-          </div>
-
           <SplitText
-            text="The enterprise meeting protocol."
+            text="Nền tảng họp thông minh."
             className="text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-extrabold tracking-[-0.035em] leading-[1.08] text-foreground"
             stagger={0.04}
             duration={0.7}
@@ -195,16 +190,16 @@ export function HeroSection() {
       </div>
 
       <FadeContent direction="right" distance={60} delay={0.4} duration={1}>
-        <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 bg-secondary shadow-2xl shadow-black/8 group">
+        <div className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border/50 bg-secondary shadow-lg shadow-black/8 group">
           <Image
             src="/hero_enterprise.png"
-            alt="Enterprise Meeting Room with AI-powered video conferencing"
+            alt="Phòng họp trực tuyến"
             fill
             className="object-cover transition-transform duration-[2s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
           />
-          <div className="absolute inset-0 ring-1 ring-inset ring-foreground/5 rounded-2xl pointer-events-none" />
+          <div className="absolute inset-0 ring-1 ring-inset ring-foreground/5 rounded-xl pointer-events-none" />
         </div>
       </FadeContent>
     </section>
@@ -218,7 +213,7 @@ export function TrustedBySection() {
       <FadeContent>
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-8">
-            Trusted by leading enterprises
+            Được tin dùng
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
             {TRUSTED_BY.map((name) => (
@@ -254,7 +249,7 @@ export function FeaturesSection() {
       </FadeContent>
 
       <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <Video className="h-5 w-5" />
           </div>
@@ -270,7 +265,7 @@ export function FeaturesSection() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <FileText className="h-5 w-5" />
           </div>
@@ -286,15 +281,15 @@ export function FeaturesSection() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <Lock className="h-5 w-5" />
           </div>
           <div className="space-y-3">
             <h3 className="text-xl font-bold tracking-tight">Data Sovereign</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Your intellectual property never leaves your servers. True On-Premise security for
-              enterprise data.
+              Your intellectual property never leaves your servers. True On-Premise security for dữ
+              liệu của bạn.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -329,7 +324,7 @@ export function HowItWorksSection() {
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {STEPS.map((step) => (
             <StaggerItem key={step.number} className="relative">
-              <div className="bg-card p-8 rounded-2xl border border-border/50 space-y-6 h-full shadow-sm">
+              <div className="bg-card p-8 rounded-xl border border-border/50 space-y-6 h-full shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-5xl font-extrabold text-accent/15 tracking-tighter">
                     {step.number}
@@ -384,7 +379,7 @@ export function SecuritySection() {
             {SECURITY_BADGES.map((badge) => (
               <div
                 key={badge.title}
-                className="bg-card p-6 rounded-2xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-colors duration-500"
+                className="bg-card p-6 rounded-xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-colors duration-500"
               >
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mx-auto">
                   <badge.icon className="h-5 w-5" />
@@ -461,16 +456,14 @@ export function Footer() {
               <span className="font-bold tracking-tight text-sm">Axiom</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Enterprise Meeting Protocol.
+              Nền tảng họp thông minh.
               <br />
               Built for resilience, security, and discipline.
             </p>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Architecture
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Architecture</h4>
             <div className="space-y-2.5">
               {['H (Human)', 'P (Process)', 'D (Data)', 'I (Intelligence)'].map((item) => (
                 <p
@@ -484,9 +477,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Resources
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Resources</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'Documentation', href: '#' },
@@ -506,9 +497,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Open Source
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Open Source</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'GitHub', href: 'https://github.com/khoazandev/Axiom-meeting-protocol' },
@@ -532,7 +521,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground font-medium">
             © 2026 Axiom. Built for Olympic PMNM. MIT License.
           </p>
-          <p className="text-xs text-muted-foreground/60 font-medium">DX-OS Enterprise Standard</p>
+          <p className="text-xs text-muted-foreground/60 font-medium">Axiom</p>
         </div>
       </div>
     </footer>

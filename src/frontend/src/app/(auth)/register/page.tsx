@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi, workspaceApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { t } = useLanguageStore();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,7 +37,10 @@ export default function RegisterPage() {
       // 3. Create initial workspace if workspaceName provided
       let initialWs = null;
       if (workspaceName.trim()) {
-        const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = workspaceName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
         initialWs = await workspaceApi.create(workspaceName.trim(), slug || 'workspace');
       }
 
@@ -51,26 +56,26 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white p-4">
-      <div className="w-full max-w-md bg-[#131B2E] border border-blue-950/60 rounded-2xl p-8 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-primary p-4">
+      <div className="w-full max-w-md bg-bg-card border border-border rounded-xl p-8 shadow-lg">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600/20 text-blue-500 font-bold text-xl mb-3">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-accent/20 text-accent font-bold text-xl mb-3">
             🚀
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Get Started with Axiom</h1>
-          <p className="text-slate-400 text-sm mt-1">Create your Enterprise Account & Workspace</p>
+          <h1 className="text-lg font-semibold text-text-primary">{t.auth.registerTitle}</h1>
+          <p className="text-text-secondary text-sm mt-1">{t.auth.registerSubtitle}</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          <div className="mb-6 p-4 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Full Name
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              {t.auth.fullName}
             </label>
             <input
               type="text"
@@ -78,13 +83,13 @@ export default function RegisterPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Sarah Connor"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Work Email
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              {t.auth.email}
             </label>
             <input
               type="email"
@@ -92,13 +97,13 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="sarah@company.com"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Password
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              {t.auth.password}
             </label>
             <input
               type="password"
@@ -106,37 +111,37 @@ export default function RegisterPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder={t.auth.passwordHint}
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Organization / Company Name
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              {t.auth.orgName}
             </label>
             <input
               type="text"
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
-              placeholder="Acme Corp (Optional)"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder={t.auth.orgPlaceholder}
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 mt-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg shadow-blue-600/25 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-4 mt-2 rounded-lg bg-accent hover:bg-accent/90 text-accent-foreground font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating Account...' : 'Create Account & Workspace'}
+            {loading ? t.auth.registerLoading : t.auth.registerBtn}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm text-slate-400">
-          Already have an account?{' '}
-          <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium">
-            Sign In
+        <div className="mt-8 text-center text-sm text-text-secondary">
+          {t.auth.hasAccount}{' '}
+          <Link href="/login" className="text-accent hover:underline font-medium">
+            {t.auth.signIn}
           </Link>
         </div>
       </div>

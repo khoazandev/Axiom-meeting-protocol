@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import {
   Video,
   CheckSquare,
@@ -25,14 +26,15 @@ interface SidebarProps {
 export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { user, activeWorkspace, workspaces, setActiveWorkspace } = useAuthStore();
+  const { t } = useLanguageStore();
 
   const navItems = [
-    { label: 'Meetings', href: '/meetings', icon: Video, badge: null },
-    { label: 'Tasks & Actions', href: '/tasks', icon: CheckSquare, badge: 'New' },
-    { label: 'Calendar', href: '/calendar', icon: Calendar, badge: null },
-    { label: 'Knowledge Hub', href: '/knowledge', icon: BookOpen, badge: 'AI' },
-    { label: 'Admin Console', href: '/admin', icon: ShieldCheck, badge: 'Gov' },
-    { label: 'Settings', href: '/settings', icon: Settings, badge: null },
+    { label: t.nav.meetings, href: '/meetings', icon: Video, badge: null },
+    { label: t.nav.tasks, href: '/tasks', icon: CheckSquare, badge: 'New' },
+    { label: t.nav.calendar, href: '/calendar', icon: Calendar, badge: null },
+    { label: t.nav.knowledge, href: '/knowledge', icon: BookOpen, badge: 'AI' },
+    { label: t.nav.admin, href: '/admin', icon: ShieldCheck, badge: 'Gov' },
+    { label: t.nav.settings, href: '/settings', icon: Settings, badge: null },
   ];
 
   return (
@@ -63,7 +65,7 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
               ))}
               {workspaces.length === 0 && (
                 <option value="" className="bg-[#131B2E] text-slate-400">
-                  Default Workspace
+                  {t.nav.defaultWorkspace}
                 </option>
               )}
             </select>
@@ -84,10 +86,10 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
           className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg shadow-blue-600/20 transition-all ${
             collapsed ? 'px-0' : 'px-4'
           }`}
-          title="New Meeting"
+          title={t.nav.newMeeting}
         >
           <Plus className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm font-semibold">New Meeting</span>}
+          {!collapsed && <span className="text-sm font-semibold">{t.nav.newMeeting}</span>}
         </Link>
       </div>
 
@@ -95,7 +97,7 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
       <div className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto">
         {!collapsed && (
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-            Workspace Shell
+            {t.nav.workspaceShell}
           </div>
         )}
 
@@ -115,7 +117,9 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
               title={item.label}
             >
               <div className="flex items-center gap-3">
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+                <Icon
+                  className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
+                />
                 {!collapsed && <span>{item.label}</span>}
               </div>
               {!collapsed && item.badge && (
@@ -133,14 +137,20 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {user?.full_name ? user.full_name[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'U'}
+              {user?.full_name
+                ? user.full_name[0].toUpperCase()
+                : user?.email
+                  ? user.email[0].toUpperCase()
+                  : 'U'}
             </div>
             {!collapsed && (
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-white truncate">
                   {user?.full_name || 'Enterprise User'}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate">{user?.email || 'user@company.com'}</div>
+                <div className="text-[10px] text-slate-400 truncate">
+                  {user?.email || 'user@company.com'}
+                </div>
               </div>
             )}
           </div>

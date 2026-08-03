@@ -7,6 +7,7 @@
 ## Task 1: Redis Caching Service & Graceful Fallback (`src/backend/core/redis_cache.py`)
 
 ### Files
+
 - **New Module:** [redis_cache.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/core/redis_cache.py)
 - **New Test:** [test_redis_cache.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_redis_cache.py)
 
@@ -34,6 +35,7 @@
 ## Task 2: Database Connection Pooling & Tuning (`src/backend/database.py`)
 
 ### Files
+
 - **Modify:** [database.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/database.py)
 
 ### Step-by-Step Instructions
@@ -48,6 +50,7 @@
 ## Task 3: Prometheus Observability Metrics Endpoint (`/metrics`)
 
 ### Files
+
 - **New Module:** [metrics.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/core/metrics.py)
 - **Modify Router:** [main.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/main.py)
 - **New Test:** [test_metrics_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_metrics_api.py)
@@ -71,6 +74,7 @@
 ## Task 4: High-Load Locust Load Test Suite (`scripts/load_test_locust.py`)
 
 ### Files
+
 - **New Script:** [load_test_locust.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/scripts/load_test_locust.py)
 
 ### Step-by-Step Instructions
@@ -88,6 +92,7 @@
 ## Task 5: Production Multi-Stage Backend Dockerfile (`Dockerfile.backend`)
 
 ### Files
+
 - **New Dockerfile:** [Dockerfile.backend](file:///c:/Users/Admin/Desktop/Smart_metting_AI/Dockerfile.backend)
 
 ### Step-by-Step Instructions
@@ -105,6 +110,7 @@
 ## Task 6: Production Next.js Frontend Dockerfile & Docker Compose
 
 ### Files
+
 - **New Dockerfile:** [Dockerfile](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/Dockerfile)
 - **New Compose:** [docker-compose.prod.yml](file:///c:/Users/Admin/Desktop/Smart_metting_AI/docker-compose.prod.yml)
 
@@ -121,6 +127,7 @@
 ## Task 7: Kubernetes Deployments & Horizontal Pod Autoscaler (`k8s/`)
 
 ### Files
+
 - **New Manifest:** [backend-deployment.yaml](file:///c:/Users/Admin/Desktop/Smart_metting_AI/k8s/backend-deployment.yaml)
 - **New Manifest:** [frontend-deployment.yaml](file:///c:/Users/Admin/Desktop/Smart_metting_AI/k8s/frontend-deployment.yaml)
 - **New Manifest:** [hpa.yaml](file:///c:/Users/Admin/Desktop/Smart_metting_AI/k8s/hpa.yaml)

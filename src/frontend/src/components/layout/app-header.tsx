@@ -63,8 +63,12 @@ export function AppHeader() {
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-[#131B2E] border border-blue-900/50 rounded-2xl p-4 shadow-2xl z-50">
               <div className="flex items-center justify-between mb-3 border-b border-blue-950 pb-2">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Notifications</span>
-                <span className="text-[10px] text-blue-400 hover:underline cursor-pointer">Mark all read</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  {t.header.notifications}
+                </span>
+                <span className="text-[10px] text-blue-400 hover:underline cursor-pointer">
+                  {t.header.markAllRead}
+                </span>
               </div>
               <div className="space-y-2 text-xs text-slate-300">
                 <div className="p-2.5 rounded-xl bg-[#0B0F19] border border-blue-950">
@@ -93,7 +97,11 @@ export function AppHeader() {
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl bg-[#131B2E] border border-blue-950/80 hover:border-blue-800/60 transition-all"
           >
             <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center">
-              {user?.full_name ? user.full_name[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'U'}
+              {user?.full_name
+                ? user.full_name[0].toUpperCase()
+                : user?.email
+                  ? user.email[0].toUpperCase()
+                  : 'U'}
             </div>
             <span className="text-xs font-semibold text-white hidden md:inline">
               {user?.full_name?.split(' ')[0] || 'User'}
@@ -103,7 +111,9 @@ export function AppHeader() {
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-56 bg-[#131B2E] border border-blue-900/50 rounded-2xl p-2 shadow-2xl z-50">
               <div className="px-3 py-2 border-b border-blue-950">
-                <div className="text-xs font-bold text-white">{user?.full_name || 'Enterprise Account'}</div>
+                <div className="text-xs font-bold text-white">
+                  {user?.full_name || 'Enterprise Account'}
+                </div>
                 <div className="text-[10px] text-slate-400 truncate">{user?.email}</div>
               </div>
               <Link
@@ -111,14 +121,14 @@ export function AppHeader() {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-blue-950/40 transition-colors mt-1"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Account Settings</span>
+                <span>{t.header.accountSettings}</span>
               </Link>
               <button
                 onClick={logout}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors mt-1 text-left"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
+                <span>{t.header.signOut}</span>
               </button>
             </div>
           )}

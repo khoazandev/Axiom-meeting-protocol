@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi, workspaceApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { t } = useLanguageStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,48 +23,40 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. Authenticate & obtain tokens
       const tokens = await authApi.login(email, password);
-
-      // Temporarily store token for user profile fetch
       localStorage.setItem('axiom_token', tokens.access_token);
-
-      // 2. Fetch user profile & user workspaces
       const user = await authApi.me();
       const workspaces = await workspaceApi.list();
-
       setAuth(user, tokens.access_token, workspaces, workspaces[0]);
-
-      // 3. Redirect to meeting dashboard or workspace setup
       router.push('/meetings');
     } catch (err: any) {
-      setError(err?.message || 'Invalid email or password. Please try again.');
+      setError(err?.message || t.auth.loginError);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white p-4">
-      <div className="w-full max-w-md bg-[#131B2E] border border-blue-950/60 rounded-2xl p-8 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-primary p-4">
+      <div className="w-full max-w-md bg-bg-card border border-border rounded-xl p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600/20 text-blue-500 font-bold text-xl mb-3">
-            ⚡
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent text-accent-foreground font-bold text-sm mb-3">
+            A
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Sign in to Axiom</h1>
-          <p className="text-slate-400 text-sm mt-1">Enterprise Meeting Protocol (DX-OS)</p>
+          <h1 className="text-lg font-semibold text-text-primary">{t.auth.loginTitle}</h1>
+          <p className="text-sm text-text-muted mt-1">{t.auth.loginSubtitle}</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          <div className="mb-6 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Corporate Email
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              {t.auth.email}
             </label>
             <input
               type="email"
@@ -70,13 +64,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@company.com"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary placeholder-text-placeholder text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Password
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              {t.auth.password}
             </label>
             <input
               type="password"
@@ -84,23 +78,23 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary placeholder-text-placeholder text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg shadow-blue-600/25 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-lg bg-accent hover:bg-accent/90 text-accent-foreground font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Authenticating...' : 'Sign In'}
+            {loading ? t.auth.loginLoading : t.auth.loginBtn}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm text-slate-400">
-          Don't have an account?{' '}
-          <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium">
-            Create an Account
+        <div className="mt-8 text-center text-sm text-text-muted">
+          {t.auth.noAccount}{' '}
+          <Link href="/register" className="text-accent hover:underline font-medium">
+            {t.auth.createAccount}
           </Link>
         </div>
       </div>
