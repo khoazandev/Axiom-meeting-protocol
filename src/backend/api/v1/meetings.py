@@ -19,6 +19,7 @@ from src.backend.schemas.meeting import MeetingCreate, MeetingResponse, MessageR
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
 
+@router.post("", response_model=MeetingResponse)
 @router.post("/", response_model=MeetingResponse)
 def create_meeting(
     meeting: MeetingCreate,
@@ -48,6 +49,7 @@ def create_meeting(
     return db_meeting
 
 
+@router.get("", response_model=list[MeetingResponse])
 @router.get("/", response_model=list[MeetingResponse])
 def read_meetings(
     skip: int = 0,

@@ -21,7 +21,7 @@ export function FeaturesSection() {
       </FadeContent>
 
       <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <Video className="h-5 w-5" />
           </div>
@@ -37,7 +37,7 @@ export function FeaturesSection() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <FileText className="h-5 w-5" />
           </div>
@@ -53,7 +53,7 @@ export function FeaturesSection() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="group bg-card p-8 rounded-2xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
+        <StaggerItem className="group bg-card p-8 rounded-xl border border-border/50 space-y-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-colors duration-500 cursor-default">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
             <Lock className="h-5 w-5" />
           </div>
@@ -61,7 +61,7 @@ export function FeaturesSection() {
             <h3 className="text-xl font-bold tracking-tight">Data Sovereign</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
               Your intellectual property never leaves your servers. True On-Premise security for
-              enterprise data.
+              dữ liệu của bạn.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">

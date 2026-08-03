@@ -22,6 +22,11 @@ export const useLanguageStore = create<LanguageState>()(
     }),
     {
       name: 'axiom-language-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.t = translations[state.language] || translations['vi'];
+        }
+      },
     }
   )
 );

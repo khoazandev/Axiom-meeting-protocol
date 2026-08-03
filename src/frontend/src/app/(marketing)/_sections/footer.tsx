@@ -20,14 +20,14 @@ export function Footer() {
               <span className="font-bold tracking-tight text-sm">Axiom</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Enterprise Meeting Protocol.
+              Nền tảng họp thông minh.
               <br />
               Built for resilience, security, and discipline.
             </p>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            <h4 className="text-xs font-bold text-muted-foreground st">
               Architecture
             </h4>
             <div className="space-y-2.5">
@@ -43,7 +43,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            <h4 className="text-xs font-bold text-muted-foreground st">
               Resources
             </h4>
             <div className="space-y-2.5">
@@ -65,7 +65,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            <h4 className="text-xs font-bold text-muted-foreground st">
               Open Source
             </h4>
             <div className="space-y-2.5">
@@ -91,7 +91,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground font-medium">
             © 2026 Axiom. Built for Olympic PMNM. MIT License.
           </p>
-          <p className="text-xs text-muted-foreground/60 font-medium">DX-OS Enterprise Standard</p>
+          <p className="text-xs text-muted-foreground/60 font-medium">Axiom</p>
         </div>
       </div>
     </footer>

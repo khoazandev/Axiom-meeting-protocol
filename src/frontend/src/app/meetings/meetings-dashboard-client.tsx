@@ -48,7 +48,7 @@ export function MeetingsDashboardClient() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 border border-border/50 rounded-2xl bg-secondary/30">
+      <div className="flex items-center justify-center h-64 border border-border/50 rounded-xl bg-secondary/30">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -57,7 +57,7 @@ export function MeetingsDashboardClient() {
   if (error) {
     return (
       <FadeContent duration={0.5}>
-        <div className="flex flex-col items-center justify-center h-64 border border-destructive/20 rounded-2xl text-center space-y-4 bg-destructive/5">
+        <div className="flex flex-col items-center justify-center h-64 border border-destructive/20 rounded-xl text-center space-y-4 bg-destructive/5">
           <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
             <AlertCircle className="w-6 h-6 text-destructive" />
           </div>
@@ -67,7 +67,7 @@ export function MeetingsDashboardClient() {
           </div>
           <Button
             variant="outline"
-            className="mt-2 rounded-full border-destructive/20 text-destructive hover:bg-destructive hover:text-white cursor-pointer"
+            className="mt-2 rounded-full border-destructive/20 text-destructive hover:bg-destructive hover:text-text-primary cursor-pointer"
             onClick={() => window.location.reload()}
           >
             Retry Connection
@@ -80,7 +80,7 @@ export function MeetingsDashboardClient() {
   if (meetings.length === 0) {
     return (
       <FadeContent duration={0.5}>
-        <div className="flex flex-col items-center justify-center h-64 border border-border/50 border-dashed rounded-2xl text-center space-y-4 bg-secondary/20">
+        <div className="flex flex-col items-center justify-center h-64 border border-border/50 border-dashed rounded-xl text-center space-y-4 bg-secondary/20">
           <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
             <Calendar className="w-5 h-5 text-muted-foreground" />
           </div>
@@ -105,20 +105,20 @@ export function MeetingsDashboardClient() {
     <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {meetings.map((meeting) => (
         <StaggerItem key={meeting.id}>
-          <Card className="h-full flex flex-col border-border/50 shadow-sm rounded-2xl overflow-hidden hover:shadow-lg hover:border-accent/20 transition-colors duration-500 bg-card">
+          <Card className="h-full flex flex-col border-border/50 shadow-sm rounded-xl overflow-hidden hover:shadow-lg hover:border-accent/20 transition-colors duration-500 bg-card">
             <CardHeader className="p-6 pb-4">
               <div className="flex items-start justify-between">
                 <CardTitle className="text-xl font-bold tracking-tight line-clamp-1">
                   {meeting.title}
                 </CardTitle>
                 {meeting.is_active && (
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-accent uppercase tracking-widest bg-accent/10 px-2.5 py-1 rounded-full border border-accent/20">
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-accent st bg-accent/10 px-2.5 py-1 rounded-full border border-accent/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                     Active
                   </span>
                 )}
               </div>
-              <CardDescription className="flex items-center gap-4 mt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <CardDescription className="flex items-center gap-4 mt-3 text-xs font-medium  text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />{' '}
                   {new Date(meeting.start_time).toLocaleDateString()}
@@ -130,7 +130,7 @@ export function MeetingsDashboardClient() {
             </CardHeader>
             <CardContent className="p-6 pt-0 space-y-6 flex-1 flex flex-col justify-between">
               <div className="space-y-3">
-                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-muted-foreground/70 st">
                   Agenda Preview
                 </p>
                 <p className="text-sm text-foreground/80 line-clamp-3 leading-relaxed font-medium">

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Script from 'next/script';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Calendar, Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -112,10 +112,10 @@ export default function MeetingRoomPage() {
   }, [startViTypewriter]);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/meetings/`)
+    fetch(`http://127.0.0.1:8000/api/v1/meetings/`)
       .then((res) => res.json())
       .then((data: Meeting[]) => {
-        const currentMeeting = data.find((m) => m.id.toString() === meetingId);
+        const currentMeeting = Array.isArray(data) ? data.find((m) => m.id.toString() === meetingId) : null;
         if (currentMeeting) {
           setMeeting(currentMeeting);
         }
@@ -128,8 +128,6 @@ export default function MeetingRoomPage() {
   }, [meetingId]);
 
   const initJitsi = async () => {
-    // Xin quyền camera & mic ở top-level trước để Jitsi (iframe) không bị lỗi
-    // Nếu camera bị chiếm bởi app khác, vẫn cho phép Jitsi chạy với audio-only
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       stream.getTracks().forEach((track) => track.stop());
@@ -145,12 +143,11 @@ export default function MeetingRoomPage() {
 
     if (!window.JitsiMeetExternalAPI || !jitsiContainerRef.current || !meeting) return;
 
-    // Remove any existing iframes just in case
     jitsiContainerRef.current.innerHTML = '';
 
     const domain = 'meet.jit.si';
     const options = {
-      roomName: `DX-OS-SmartMeeting-${meeting.id}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '')}`,
+      roomName: `Axiom-SmartMeeting-${meeting.id}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '')}`,
       width: '100%',
       height: '100%',
       parentNode: jitsiContainerRef.current,
@@ -165,10 +162,9 @@ export default function MeetingRoomPage() {
 
     const api = new window.JitsiMeetExternalAPI(domain, options);
 
-    // Add event listeners for DX-OS tracking & audio mute sync
     api.addEventListeners({
       videoConferenceJoined: () => {
-        console.log('Joined meeting in DX-OS space');
+        console.log('Joined meeting in Axiom space');
       },
       videoConferenceLeft: () => {
         router.push('/meetings');
@@ -182,60 +178,60 @@ export default function MeetingRoomPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-primary">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
       </div>
     );
   }
 
   if (!meeting) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4">
-        <h1 className="text-2xl font-semibold">Meeting not found</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base text-text-primary space-y-4">
+        <h1 className="text-lg font-semibold">Cuộc họp không tồn tại</h1>
         <Link href="/meetings">
-          <Button>Return to Dashboard</Button>
+          <Button variant="outline">Quay lại danh sách</Button>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden selection:bg-primary/20">
+    <div className="h-screen bg-bg-base text-text-primary flex flex-col overflow-hidden">
       <Script src="https://meet.jit.si/external_api.js" strategy="lazyOnload" onLoad={initJitsi} />
 
-      <header className="h-16 px-6 border-b border-border/40 flex items-center justify-between shrink-0 bg-background z-10">
+      <header className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0 bg-bg-base z-10">
         <div className="flex items-center gap-4">
           <Link href="/meetings">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-text-muted hover:text-text-primary">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div>
-            <h1 className="font-semibold text-sm tracking-tight">{meeting.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <h1 className="font-semibold text-sm text-text-primary">{meeting.title}</h1>
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> {new Date(meeting.start_time).toLocaleDateString()}
+                <Calendar className="w-3 h-3 text-accent" /> {new Date(meeting.start_time).toLocaleDateString('vi-VN')}
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {meeting.duration_minutes} min
+                <Clock className="w-3 h-3 text-accent" /> {meeting.duration_minutes} phút
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium border border-primary/20 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            DX-OS Protocol Active
+          <div className="px-3 py-1 bg-success/10 text-success rounded-md text-xs font-medium border border-success/20 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+            Live
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Side: Jitsi Meet (The Conference Video) */}
+        {/* Left Side: Jitsi Meet */}
         <div className="flex-1 bg-black relative overflow-hidden">
           <div ref={jitsiContainerRef} className="absolute inset-0 w-full h-full" />
 
-          {/* Cinema-Style Bilingual Subtitles Overlay — Typewriter + Zero Re-render */}
+          {/* Cinema-Style Bilingual Subtitles Overlay */}
           {subtitleVisible && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-[95%] max-w-[90vw] flex justify-center transition-all duration-300">
               <div
@@ -247,7 +243,7 @@ export default function MeetingRoomPage() {
                   backdropFilter: 'blur(8px)',
                 }}
               >
-                {/* English — Primary subtitle (ref-driven, no React re-render on streaming) */}
+                {/* English — Primary subtitle */}
                 <p 
                   className="subtitle-en-text font-sans font-black italic tracking-wide leading-snug break-words"
                   style={{
@@ -272,7 +268,7 @@ export default function MeetingRoomPage() {
                   </span>
                   <span ref={enTextRef} />
                 </p>
-                {/* Vietnamese — Secondary subtitle (ref-driven typewriter streaming) */}
+                {/* Vietnamese — Secondary subtitle */}
                 <p 
                   ref={viTextRef}
                   className="subtitle-vi-text font-sans font-black italic tracking-wide leading-snug break-words mt-2"
@@ -287,27 +283,27 @@ export default function MeetingRoomPage() {
           )}
         </div>
 
-        {/* Right Side: Agenda & Intelligence (Process & Data layer of DX-OS) */}
-        <div className="w-full lg:w-[400px] xl:w-[450px] bg-muted/30 border-l border-border/40 flex flex-col shrink-0 overflow-y-auto">
+        {/* Right Side: Agenda & Intelligence */}
+        <div className="w-full lg:w-[400px] xl:w-[450px] bg-bg-card border-l border-border flex flex-col shrink-0 overflow-y-auto">
           <div className="p-6 space-y-6">
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Meeting Agenda
+                <h3 className="text-xs font-semibold text-text-secondary">
+                  Chương trình họp
                 </h3>
-                <span className="text-xs font-medium px-2 py-0.5 bg-green-500/10 text-green-600 rounded">
-                  Validated
+                <span className="text-xs font-medium px-2 py-0.5 bg-success/10 text-success rounded-md border border-success/20">
+                  Đã xác thực
                 </span>
               </div>
-              <Card className="border-border/50 shadow-none bg-background">
+              <Card className="border-border shadow-none bg-bg-elevated">
                 <CardContent className="p-4">
                   <div className="prose prose-sm dark:prose-invert">
                     {meeting.agenda.split('\n').map((line, i) => (
                       <p
                         key={i}
-                        className="flex items-start gap-2 text-sm leading-relaxed mb-2 last:mb-0"
+                        className="flex items-start gap-2 text-sm leading-relaxed mb-2 last:mb-0 text-text-secondary"
                       >
-                        <CheckCircle2 className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 mt-0.5 text-accent shrink-0" />
                         <span>{line}</span>
                       </p>
                     ))}
@@ -316,10 +312,10 @@ export default function MeetingRoomPage() {
               </Card>
             </section>
 
-            <section className="space-y-3 pt-4 border-t border-border/40 flex-1 flex flex-col min-h-0">
+            <section className="space-y-3 pt-4 border-t border-border flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Real-time Intelligence & STT Translation
+                <h3 className="text-xs font-semibold text-text-secondary">
+                  Phụ đề & Dịch thuật trực tiếp
                 </h3>
               </div>
               <div className="flex-1 min-h-[400px]">

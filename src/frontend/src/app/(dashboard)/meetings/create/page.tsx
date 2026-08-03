@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { ArrowLeft, Loader2, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function CreateMeetingPage() {
   const router = useRouter();
+  const { t } = useLanguageStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ export default function CreateMeetingPage() {
     setError(null);
 
     if (!isGateValid) {
-      setError('Process Gate Violation: Agenda must be at least 20 characters.');
+      setError(t.createMeeting.gateError);
       setLoading(false);
       return;
     }
@@ -50,63 +52,63 @@ export default function CreateMeetingPage() {
       {/* Header Back Button */}
       <Link
         href="/meetings"
-        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to Meetings</span>
+        <span>{t.createMeeting.backLink}</span>
       </Link>
 
-      <div className="bg-[#131B2E] border border-blue-950/80 rounded-3xl p-8 shadow-2xl space-y-6">
-        <div className="border-b border-blue-950/60 pb-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
+      <div className="bg-bg-card border border-border rounded-xl p-8 shadow-lg space-y-6">
+        <div className="border-b border-border pb-5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-muted border border-accent/30 text-accent text-xs font-semibold  mb-2">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Process Gate Enforcement</span>
+            <span>{t.createMeeting.badge}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Deploy New Meeting</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Configure a structured meeting with mandatory agenda validation for automated AI post-meeting analytics.
+          <h1 className="text-lg font-semibold text-text-primary">{t.createMeeting.title}</h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {t.createMeeting.subTitle}
           </p>
         </div>
 
         {error && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+          <div className="p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-medium flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Meeting Title
+            <label className="block text-xs font-semibold  text-text-secondary mb-2">
+              {t.createMeeting.meetingTitleLabel}
             </label>
             <input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g. Q3 Architecture Review & Security Gate"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder={t.createMeeting.meetingTitlePlaceholder}
+              className="w-full px-4 py-3 rounded-xl bg-bg-base border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Agenda (Process Gate)
+              <label className="block text-xs font-semibold  text-text-secondary">
+                {t.createMeeting.agendaLabel}
               </label>
               <div
                 className={`text-xs font-mono font-semibold flex items-center gap-1.5 ${
-                  isGateValid ? 'text-emerald-400' : 'text-amber-400'
+                  isGateValid ? 'text-success' : 'text-warning'
                 }`}
               >
                 {isGateValid ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Gate Validated ({charCount}/20 min)</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                    <span>{t.createMeeting.gateValidated} ({charCount}/20)</span>
                   </>
                 ) : (
-                  <span>{charCount} / 20 characters required</span>
+                  <span>{charCount} / 20 {t.createMeeting.gateRequired}</span>
                 )}
               </div>
             </div>
@@ -115,17 +117,17 @@ export default function CreateMeetingPage() {
               rows={4}
               value={formData.agenda}
               onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-              placeholder="1. Review Q2 metrics&#10;2. Discuss Q3 roadmap&#10;3. Allocate engineering resources"
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
+              placeholder={t.createMeeting.agendaPlaceholder}
+              className="w-full px-4 py-3 rounded-xl bg-bg-base border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors leading-relaxed"
             />
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              Backend enforces a minimum 20-character agenda to guarantee structured meeting records.
+            <p className="text-[11px] text-text-secondary mt-1.5">
+              {t.createMeeting.backendHelpText}
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Estimated Duration (Minutes)
+            <label className="block text-xs font-semibold  text-text-secondary mb-2">
+              {t.createMeeting.durationLabel}
             </label>
             <input
               type="number"
@@ -139,22 +141,22 @@ export default function CreateMeetingPage() {
                   duration_minutes: parseInt(e.target.value) || 60,
                 })
               }
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-bg-base border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || !isGateValid}
-            className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 px-4 rounded-xl bg-accent hover:bg-accent/90 text-text-primary font-medium text-sm shadow-lg  transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Deploying Meeting...</span>
+                <span>{t.createMeeting.deployingBtn}</span>
               </>
             ) : (
-              'Deploy & Open Conference'
+              t.createMeeting.deployBtn
             )}
           </button>
         </form>

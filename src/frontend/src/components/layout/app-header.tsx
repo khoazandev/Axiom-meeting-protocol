@@ -63,8 +63,8 @@ export function AppHeader() {
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-[#131B2E] border border-blue-900/50 rounded-2xl p-4 shadow-2xl z-50">
               <div className="flex items-center justify-between mb-3 border-b border-blue-950 pb-2">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Notifications</span>
-                <span className="text-[10px] text-blue-400 hover:underline cursor-pointer">Mark all read</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">{t.header.notifications}</span>
+                <span className="text-[10px] text-blue-400 hover:underline cursor-pointer">{t.header.markAllRead}</span>
               </div>
               <div className="space-y-2 text-xs text-slate-300">
                 <div className="p-2.5 rounded-xl bg-[#0B0F19] border border-blue-950">
@@ -111,14 +111,14 @@ export function AppHeader() {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-blue-950/40 transition-colors mt-1"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Account Settings</span>
+                <span>{t.header.accountSettings}</span>
               </Link>
               <button
                 onClick={logout}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors mt-1 text-left"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
+                <span>{t.header.signOut}</span>
               </button>
             </div>
           )}

@@ -7,20 +7,15 @@ import { SplitText } from '@/components/ui/reactbits/split-text';
 import { CountUp } from '@/components/ui/reactbits/count-up';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
 import { ClickSpark } from '@/components/ui/reactbits/click-spark';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export function HeroSection() {
   return (
     <section className="px-6 md:px-12 pt-20 pb-24 md:pt-28 md:pb-32 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 items-center min-h-[calc(100vh-64px)]">
       <div className="space-y-8 max-w-xl relative z-10">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-xs font-semibold tracking-wide border border-accent/20">
-            <Zap className="w-3.5 h-3.5" />
-            Olympic PMNM 2026 · DX-OS Standard
-          </div>
-
           <SplitText
-            text="The enterprise meeting protocol."
+            text="Nền tảng họp thông minh."
             className="text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-extrabold tracking-[-0.035em] leading-[1.08] text-foreground"
             stagger={0.04}
             duration={0.7}
@@ -86,16 +81,16 @@ export function HeroSection() {
       </div>
 
       <FadeContent direction="right" distance={60} delay={0.4} duration={1}>
-        <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 bg-secondary shadow-2xl shadow-black/8 group">
+        <div className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border/50 bg-secondary shadow-lg shadow-black/8 group">
           <Image
             src="/hero_enterprise.png"
-            alt="Enterprise Meeting Room with AI-powered video conferencing"
+            alt="Phòng họp trực tuyến"
             fill
             className="object-cover transition-transform duration-[2s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
           />
-          <div className="absolute inset-0 ring-1 ring-inset ring-foreground/5 rounded-2xl pointer-events-none" />
+          <div className="absolute inset-0 ring-1 ring-inset ring-foreground/5 rounded-xl pointer-events-none" />
         </div>
       </FadeContent>
     </section>

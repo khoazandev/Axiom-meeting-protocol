@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getAuthHeaders } from '@/lib/api';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import {
   CheckSquare,
   Plus,
@@ -14,6 +16,7 @@ import {
   CheckCircle2,
   Video,
   Loader2,
+  Calendar,
 } from 'lucide-react';
 
 interface Task {
@@ -27,51 +30,11 @@ interface Task {
   dueDate: string;
 }
 
-const INITIAL_TASKS: Task[] = [
-  {
-    id: 'TASK-101',
-    title: 'Finalize Multi-Tenant Alembic batch mode migration',
-    meetingTitle: 'Phase 2 Architecture Alignment',
-    meetingId: '1',
-    assignee: 'Principal Architect',
-    priority: 'HIGH',
-    status: 'IN_PROGRESS',
-    dueDate: 'Today',
-  },
-  {
-    id: 'TASK-102',
-    title: 'Configure JWT Auth & Workspace header injection in API client',
-    meetingTitle: 'Security & Auth Sync',
-    meetingId: '2',
-    assignee: 'Frontend Engineer',
-    priority: 'HIGH',
-    status: 'COMPLETED',
-    dueDate: 'Yesterday',
-  },
-  {
-    id: 'TASK-103',
-    title: 'Deploy Google Meet WebRTC control dock interface',
-    meetingTitle: 'Frontend Redesign Sprint',
-    meetingId: '3',
-    assignee: 'UI/UX Specialist',
-    priority: 'MEDIUM',
-    status: 'TODO',
-    dueDate: 'Tomorrow',
-  },
-  {
-    id: 'TASK-104',
-    title: 'Integrate Whisper STT streaming agent on-premise',
-    meetingTitle: 'AI Intelligence Pipeline Prep',
-    meetingId: '4',
-    assignee: 'AI Engineer',
-    priority: 'HIGH',
-    status: 'TODO',
-    dueDate: 'Aug 5',
-  },
-];
+
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const { t } = useLanguageStore();
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,20 +43,13 @@ export default function TasksPage() {
     async function loadTasks() {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem('token');
-        const activeWorkspaceId = localStorage.getItem('active_workspace_id');
-
-        if (!token || !activeWorkspaceId) {
+        const headers = getAuthHeaders();
+        if (!headers['Authorization']) {
           setIsLoading(false);
           return;
         }
 
-        const res = await fetch('/api/v1/tasks', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'X-Workspace-ID': activeWorkspaceId,
-          },
-        });
+        const res = await fetch('/api/v1/tasks', { headers });
 
         if (res.ok) {
           const remoteTasks = await res.json();
@@ -122,10 +78,10 @@ export default function TasksPage() {
   }, []);
 
   const columns = [
-    { id: 'TODO', title: 'To Do', color: 'border-slate-700/60 text-slate-300' },
-    { id: 'IN_PROGRESS', title: 'In Progress', color: 'border-blue-500/40 text-blue-400' },
-    { id: 'IN_REVIEW', title: 'In Review', color: 'border-amber-500/40 text-amber-400' },
-    { id: 'COMPLETED', title: 'Completed', color: 'border-emerald-500/40 text-emerald-400' },
+    { id: 'TODO', title: t.tasks.todo, color: 'border-border text-text-secondary' },
+    { id: 'IN_PROGRESS', title: t.tasks.inProgress, color: 'border-accent/40 text-accent' },
+    { id: 'IN_REVIEW', title: t.tasks.inReview, color: 'border-warning/40 text-warning' },
+    { id: 'COMPLETED', title: t.tasks.completed, color: 'border-success/40 text-success' },
   ];
 
   const filteredTasks = tasks.filter((t) =>
@@ -135,42 +91,42 @@ export default function TasksPage() {
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-blue-950/60 pb-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-blue-400" />
-            <h1 className="text-2xl font-bold text-white tracking-tight">Tasks & Action Items</h1>
-            {isLoading && <Loader2 className="w-4 h-4 text-blue-400 animate-spin ml-2" />}
+            <CheckSquare className="w-5 h-5 text-accent" />
+            <h1 className="text-lg font-semibold text-text-primary">{t.tasks.title}</h1>
+            {isLoading && <Loader2 className="w-4 h-4 text-accent animate-spin ml-2" />}
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Jira-style action items automatically extracted from meetings and process gate logs.
+          <p className="text-sm text-text-secondary mt-1">
+            {t.tasks.subTitle}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-[#131B2E] border border-blue-950 p-1 rounded-xl">
+          <div className="flex items-center bg-bg-card border border-border p-1 rounded-xl">
             <button
               onClick={() => setViewMode('kanban')}
               className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'kanban'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-accent text-text-primary shadow-md '
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Board</span>
+              <span className="hidden sm:inline">{t.tasks.board}</span>
             </button>
             <button
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'list'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-accent text-text-primary shadow-md '
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">List</span>
+              <span className="hidden sm:inline">{t.tasks.list}</span>
             </button>
           </div>
         </div>
@@ -183,14 +139,25 @@ export default function TasksPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter tasks by title..."
-            className="w-full pl-4 pr-4 py-2 rounded-xl bg-[#131B2E] border border-blue-950/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+            placeholder={t.tasks.searchPlaceholder}
+            className="w-full pl-4 pr-4 py-2.5 rounded-lg bg-bg-elevated border border-border text-sm text-text-primary placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
           />
         </div>
       </div>
 
+      {/* Empty State */}
+      {!isLoading && filteredTasks.length === 0 && (
+        <div className="p-12 rounded-xl bg-bg-card border border-border text-center space-y-3">
+          <Calendar className="w-8 h-8 text-text-muted mx-auto" />
+          <div className="text-sm font-semibold text-text-primary">{t.tasks.emptyTitle}</div>
+          <p className="text-sm text-text-secondary max-w-sm mx-auto">
+            {t.tasks.emptySub}
+          </p>
+        </div>
+      )}
+
       {/* Kanban Board View */}
-      {viewMode === 'kanban' && (
+      {viewMode === 'kanban' && filteredTasks.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
           {columns.map((col) => {
             const colTasks = filteredTasks.filter((t) => t.status === col.id);
@@ -198,11 +165,11 @@ export default function TasksPage() {
             return (
               <div
                 key={col.id}
-                className="bg-[#131B2E]/60 border border-blue-950/80 rounded-2xl p-4 flex flex-col min-h-[480px]"
+                className="bg-bg-card/60 border border-border rounded-xl p-4 flex flex-col min-h-[480px]"
               >
-                <div className={`flex items-center justify-between pb-3 border-b border-blue-950/60 mb-4 ${col.color}`}>
-                  <span className="text-xs font-bold uppercase tracking-wider">{col.title}</span>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-950/80 text-slate-300 border border-blue-900/40">
+                <div className={`flex items-center justify-between pb-3 border-b border-border mb-4 ${col.color}`}>
+                  <span className="text-xs font-bold ">{col.title}</span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-border text-text-secondary border border-border">
                     {colTasks.length}
                   </span>
                 </div>
@@ -211,37 +178,37 @@ export default function TasksPage() {
                   {colTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="p-4 rounded-xl bg-[#131B2E] border border-blue-950/80 shadow-md hover:border-blue-500/40 transition-all space-y-3"
+                      className="p-4 rounded-xl bg-bg-card border border-border shadow-md hover:border-blue-500/40 transition-all space-y-3"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-blue-400 font-semibold">{task.id}</span>
+                        <span className="text-[10px] font-mono text-accent font-semibold">{task.id}</span>
                         <span
-                          className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          className={`text-[9px] font-bold  px-2 py-0.5 rounded-full ${
                             task.priority === 'HIGH'
-                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              ? 'bg-red-500/20 text-danger border border-red-500/30'
                               : task.priority === 'MEDIUM'
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                              : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                              ? 'bg-warning/10 text-warning border border-amber-500/30'
+                              : 'bg-slate-500/20 text-text-secondary border border-slate-500/30'
                           }`}
                         >
                           {task.priority}
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-semibold text-white leading-relaxed">{task.title}</h4>
+                      <h4 className="text-xs font-semibold text-text-primary leading-relaxed">{task.title}</h4>
 
-                      <div className="p-2 rounded-lg bg-[#0B0F19] border border-blue-950 flex items-center gap-1.5 text-[10px] text-slate-400">
-                        <Video className="w-3 h-3 text-blue-400 shrink-0" />
+                      <div className="p-2 rounded-lg bg-bg-base border border-border flex items-center gap-1.5 text-[10px] text-text-secondary">
+                        <Video className="w-3 h-3 text-accent shrink-0" />
                         <span className="truncate">{task.meetingTitle}</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                      <div className="flex items-center justify-between text-[11px] text-text-secondary pt-1">
                         <span className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-slate-500" />
+                          <User className="w-3 h-3 text-text-muted" />
                           <span className="truncate max-w-[100px]">{task.assignee}</span>
                         </span>
                         <span className="flex items-center gap-1 font-mono text-[10px]">
-                          <Clock className="w-3 h-3 text-slate-500" />
+                          <Clock className="w-3 h-3 text-text-muted" />
                           {task.dueDate}
                         </span>
                       </div>
@@ -255,38 +222,38 @@ export default function TasksPage() {
       )}
 
       {/* List Table View */}
-      {viewMode === 'list' && (
-        <div className="bg-[#131B2E] border border-blue-950/80 rounded-2xl overflow-hidden shadow-xl">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-[#0E1526] text-slate-400 text-[10px] font-bold uppercase tracking-wider border-b border-blue-950">
+      {viewMode === 'list' && filteredTasks.length > 0 && (
+        <div className="bg-bg-card border border-border rounded-xl overflow-hidden shadow-xl">
+          <table className="w-full text-left text-xs text-text-secondary">
+            <thead className="bg-bg-card text-text-secondary text-[10px] font-bold  border-b border-border">
               <tr>
-                <th className="px-4 py-3">Key</th>
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Meeting Origin</th>
-                <th className="px-4 py-3">Assignee</th>
-                <th className="px-4 py-3">Priority</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">{t.tasks.colTitle}</th>
+                <th className="px-4 py-3">{t.tasks.colMeeting}</th>
+                <th className="px-4 py-3">{t.tasks.colAssignee}</th>
+                <th className="px-4 py-3">{t.tasks.colPriority}</th>
+                <th className="px-4 py-3">{t.tasks.colStatus}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-blue-950/60">
+            <tbody className="divide-y divide-border-subtle">
               {filteredTasks.map((task) => (
-                <tr key={task.id} className="hover:bg-blue-950/20 transition-colors">
-                  <td className="px-4 py-3 font-mono font-semibold text-blue-400">{task.id}</td>
-                  <td className="px-4 py-3 font-semibold text-white">{task.title}</td>
-                  <td className="px-4 py-3 text-slate-400">{task.meetingTitle}</td>
-                  <td className="px-4 py-3 text-slate-300">{task.assignee}</td>
+                <tr key={task.id} className="hover:bg-border/20 transition-colors">
+                  <td className="px-4 py-3 font-mono font-semibold text-accent">{task.id}</td>
+                  <td className="px-4 py-3 font-semibold text-text-primary">{task.title}</td>
+                  <td className="px-4 py-3 text-text-secondary">{task.meetingTitle}</td>
+                  <td className="px-4 py-3 text-text-secondary">{task.assignee}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold  ${
                         task.priority === 'HIGH'
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          ? 'bg-red-500/20 text-danger border border-red-500/30'
+                          : 'bg-warning/10 text-warning border border-amber-500/30'
                       }`}
                     >
                       {task.priority}
                     </span>
                   </td>
-                  <td className="px-4 py-3 uppercase tracking-wider text-[10px] font-bold text-blue-300">
+                  <td className="px-4 py-3  text-[10px] font-bold text-accent">
                     {task.status.replace('_', ' ')}
                   </td>
                 </tr>
