@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
+import { cn } from '@/lib/utils';
 import { SplitText } from '@/components/ui/reactbits/split-text';
 import { CountUp } from '@/components/ui/reactbits/count-up';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
@@ -32,25 +34,20 @@ export function HeroSection() {
 
         <FadeContent delay={0.9} duration={0.7}>
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Link href="/meetings/create">
-              <ClickSpark sparkColor="var(--accent)">
-                <Button
-                  size="lg"
-                  className="rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-md shadow-accent/20 group"
-                >
-                  Deploy Meeting
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </ClickSpark>
-            </Link>
-            <Link href="/meetings">
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer"
+            <ClickSpark sparkColor="var(--accent)">
+              <Link 
+                href="/meetings/create"
+                className={cn(buttonVariants({ size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-md shadow-accent/20 group" }))}
               >
-                View Dashboard
-              </Button>
+                Deploy Meeting
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </ClickSpark>
+            <Link 
+              href="/meetings"
+              className={cn(buttonVariants({ variant: "outline", size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer" }))}
+            >
+              View Dashboard
             </Link>
           </div>
         </FadeContent>

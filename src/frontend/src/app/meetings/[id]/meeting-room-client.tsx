@@ -253,17 +253,16 @@ export function MeetingRoomClient() {
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden">
         {/* Left Side: LiveKit Video Canvas + Subtitle Overlay (Google Meet Style) */}
-        <div className="flex-1 bg-black relative flex flex-col justify-between overflow-hidden">
-          <div className="flex-1 relative flex items-center justify-center">
+        <div className="flex-1 bg-black relative overflow-hidden">
+          {/* LiveKit fills the entire video area */}
+          <div className="absolute inset-0">
             {token === '' ? (
-              <div className="text-text-secondary flex flex-col items-center gap-3">
+              <div className="w-full h-full flex flex-col items-center justify-center text-text-secondary gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-accent" />
                 <p className="text-xs font-medium">Connecting to LiveKit WebRTC Server...</p>
               </div>
             ) : (
               <LiveKitRoom
-                video={false}
-                audio={false}
                 token={token}
                 serverUrl={livekitUrl}
                 data-lk-theme="default"
@@ -291,10 +290,10 @@ export function MeetingRoomClient() {
             </div>
           )}
 
-          {/* Live Subtitle Overlay Bar (Google Meet Style) */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4 z-30">
-            <div className="p-3.5 rounded-xl bg-bg-base/90 border border-border backdrop-blur-md shadow-lg flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-accent/30 border border-blue-500/40 flex items-center justify-center shrink-0">
+          {/* Live Subtitle Overlay — positioned above the LiveKit control bar */}
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 max-w-xl w-full px-4 z-30 pointer-events-none">
+            <div className="p-3.5 rounded-2xl bg-bg-base/90 border border-border backdrop-blur-md shadow-2xl flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent/30 border border-accent/40 flex items-center justify-center shrink-0">
                 <User className="w-4 h-4 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
@@ -309,6 +308,7 @@ export function MeetingRoomClient() {
             </div>
           </div>
         </div>
+
 
         {/* Right Side: Collapsible Drawers (Agenda, Public Chat, AI Assistant, Tasks) */}
         {sidebarOpen && (
