@@ -10,31 +10,29 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Axiom — Enterprise Meeting Protocol',
+  title: 'Axiom — Họp thông minh',
   description:
-    'On-premise video conferencing with AI intelligence. Enforce agendas, transcribe securely, and capture structural data — zero external cloud dependency.',
+    'Họp video trực tuyến với AI ghi chú tự động, phụ đề thời gian thực và biên bản họp tự động. Không phụ thuộc cloud bên ngoài.',
   manifest: '/manifest.json',
   keywords: [
-    'enterprise meeting',
-    'on-premise video conferencing',
-    'AI transcription',
-    'meeting protocol',
+    'họp trực tuyến',
+    'video conferencing',
+    'AI ghi chú',
+    'biên bản họp',
     'LiveKit',
     'WebRTC',
   ],
   openGraph: {
-    title: 'Axiom — Enterprise Meeting Protocol',
-    description:
-      'On-premise video conferencing with AI intelligence. Zero external cloud dependency.',
+    title: 'Axiom — Họp thông minh',
+    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
     type: 'website',
-    locale: 'en_US',
+    locale: 'vi_VN',
     siteName: 'Axiom',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Axiom — Enterprise Meeting Protocol',
-    description:
-      'On-premise video conferencing with AI intelligence. Zero external cloud dependency.',
+    title: 'Axiom — Họp thông minh',
+    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
   },
   robots: {
     index: true,
@@ -48,8 +46,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    <html lang="vi" className={`${plusJakarta.variable} h-full antialiased dark`}>
+      <head>
+        {/* Anti-FOUC: set theme class before React hydrates */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('axiom_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='dark'||!t)document.documentElement.classList.add('dark');else if(t==='system'){if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-bg-base text-text-primary">
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>

@@ -34,7 +34,7 @@ export function SecuritySection() {
             {SECURITY_BADGES.map((badge) => (
               <div
                 key={badge.title}
-                className="bg-card p-6 rounded-2xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-colors duration-500"
+                className="bg-card p-6 rounded-xl border border-border/50 text-center space-y-3 shadow-sm hover:shadow-md hover:border-accent/20 transition-colors duration-500"
               >
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mx-auto">
                   <badge.icon className="h-5 w-5" />

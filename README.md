@@ -44,14 +44,14 @@ For the comprehensive engineering roadmap and full project vision, see [`MASTER_
 
 ## 🛠️ Technology Stack
 
-| Category            | Technology                                                   | Purpose                                                          |
-| :------------------ | :----------------------------------------------------------- | :--------------------------------------------------------------- |
-| **Frontend**        | [Next.js 16](https://nextjs.org/) / React 19                 | Server-side rendering, routing, static UI delivery.              |
-| **Styling**         | [Tailwind CSS v4](https://tailwindcss.com/) / Shadcn UI      | Utility-first rapid styling and accessible component primitives. |
-| **Backend**         | [FastAPI](https://fastapi.tiangolo.com/) / Pydantic V2       | High performance async Python API with strict data validation.   |
-| **Real-time Comms** | [LiveKit](https://livekit.io/)                               | Enterprise WebRTC infrastructure (self-hosted).                  |
-| **Database**        | [SQLAlchemy](https://www.sqlalchemy.org/) / SQLite            | Relational ORM for strictly-typed data modeling.                 |
-| **Migrations**      | [Alembic](https://alembic.sqlalchemy.org/)                   | Database schema version control.                                 |
+| Category            | Technology                                                  | Purpose                                                          |
+| :------------------ | :---------------------------------------------------------- | :--------------------------------------------------------------- |
+| **Frontend**        | [Next.js 16](https://nextjs.org/) / React 19                | Server-side rendering, routing, static UI delivery.              |
+| **Styling**         | [Tailwind CSS v4](https://tailwindcss.com/) / Shadcn UI     | Utility-first rapid styling and accessible component primitives. |
+| **Backend**         | [FastAPI](https://fastapi.tiangolo.com/) / Pydantic V2      | High performance async Python API with strict data validation.   |
+| **Real-time Comms** | [LiveKit](https://livekit.io/)                              | Enterprise WebRTC infrastructure (self-hosted).                  |
+| **Database**        | [SQLAlchemy](https://www.sqlalchemy.org/) / SQLite          | Relational ORM for strictly-typed data modeling.                 |
+| **Migrations**      | [Alembic](https://alembic.sqlalchemy.org/)                  | Database schema version control.                                 |
 | **Package Manager** | [uv](https://github.com/astral-sh/uv) (Python) / npm (Node) | Extremely fast, reliable dependency resolution.                  |
 
 ---
@@ -76,6 +76,7 @@ cd src/frontend && npm ci && cd ../..
 ### 2. Configure Environment
 
 **Backend** — create `src/backend/.env`:
+
 ```env
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
@@ -84,6 +85,7 @@ DATABASE_URL=sqlite:///./sql_app.db
 ```
 
 **Frontend** — create `src/frontend/.env.local`:
+
 ```env
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
 ```
@@ -97,11 +99,13 @@ uv run alembic upgrade head
 ### 4. Start the Servers
 
 **Terminal 1 (Backend):**
+
 ```bash
 uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 (Frontend):**
+
 ```bash
 cd src/frontend && npm run dev
 ```

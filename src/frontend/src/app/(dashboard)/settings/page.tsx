@@ -1,36 +1,38 @@
 'use client';
 
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import { Settings, ShieldCheck, Building, User } from 'lucide-react';
+import { Settings, Building, User } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { t } = useLanguageStore();
   const { user, activeWorkspace } = useAuthStore();
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-2 border-b border-blue-950/60 pb-5">
-        <Settings className="w-5 h-5 text-blue-400" />
-        <h1 className="text-2xl font-bold text-white tracking-tight">Workspace & Account Settings</h1>
+      <div className="flex items-center gap-2 border-b border-border pb-5">
+        <Settings className="w-5 h-5 text-accent" />
+        <h1 className="text-lg font-semibold text-text-primary">{t.settings.title}</h1>
       </div>
 
       <div className="space-y-6">
         {/* User Settings */}
-        <div className="bg-[#131B2E] border border-blue-950/80 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-white uppercase tracking-wider border-b border-blue-950/60 pb-3">
-            <User className="w-4 h-4 text-blue-400" />
-            <span>User Profile</span>
+        <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary border-b border-border pb-3">
+            <User className="w-4 h-4 text-accent" />
+            <span>{t.settings.profile}</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <label className="block text-slate-400 mb-1">Full Name</label>
-              <div className="p-3 rounded-xl bg-[#0B0F19] border border-blue-950 text-white font-medium">
+              <label className="block text-text-secondary mb-1">{t.settings.name}</label>
+              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
                 {user?.full_name || 'N/A'}
               </div>
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Email Address</label>
-              <div className="p-3 rounded-xl bg-[#0B0F19] border border-blue-950 text-white font-medium">
+              <label className="block text-text-secondary mb-1">{t.settings.email}</label>
+              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
                 {user?.email || 'N/A'}
               </div>
             </div>
@@ -38,22 +40,22 @@ export default function SettingsPage() {
         </div>
 
         {/* Workspace Settings */}
-        <div className="bg-[#131B2E] border border-blue-950/80 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-white uppercase tracking-wider border-b border-blue-950/60 pb-3">
-            <Building className="w-4 h-4 text-blue-400" />
-            <span>Active Tenant Workspace</span>
+        <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary border-b border-border pb-3">
+            <Building className="w-4 h-4 text-accent" />
+            <span>{t.settings.workspace}</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <label className="block text-slate-400 mb-1">Workspace Name</label>
-              <div className="p-3 rounded-xl bg-[#0B0F19] border border-blue-950 text-white font-medium">
-                {activeWorkspace?.name || 'Default Workspace'}
+              <label className="block text-text-secondary mb-1">{t.settings.workspaceName}</label>
+              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
+                {activeWorkspace?.name || t.nav.defaultWorkspace}
               </div>
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Workspace Slug ID</label>
-              <div className="p-3 rounded-xl bg-[#0B0F19] border border-blue-950 text-white font-mono text-blue-400">
+              <label className="block text-text-secondary mb-1">{t.settings.workspaceSlug}</label>
+              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-mono text-accent">
                 {activeWorkspace?.slug || 'default'}
               </div>
             </div>

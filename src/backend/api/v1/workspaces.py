@@ -10,6 +10,7 @@ from src.backend.schemas.workspace import WorkspaceCreate, WorkspaceMemberRespon
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
 
+@router.post("", response_model=WorkspaceResponse)
 @router.post("/", response_model=WorkspaceResponse)
 def create_workspace(
     payload: WorkspaceCreate,
@@ -41,6 +42,7 @@ def create_workspace(
     return workspace
 
 
+@router.get("", response_model=list[WorkspaceResponse])
 @router.get("/", response_model=list[WorkspaceResponse])
 def list_user_workspaces(
     current_user: User = Depends(get_current_user),

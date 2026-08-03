@@ -26,7 +26,7 @@ export function HowItWorksSection() {
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {STEPS.map((step) => (
             <StaggerItem key={step.number} className="relative">
-              <div className="bg-card p-8 rounded-2xl border border-border/50 space-y-6 h-full shadow-sm">
+              <div className="bg-card p-8 rounded-xl border border-border/50 space-y-6 h-full shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-5xl font-extrabold text-accent/15 tracking-tighter">
                     {step.number}

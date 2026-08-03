@@ -7,6 +7,7 @@
 ## Task 1: Database Models & Alembic Migration for Phase 4
 
 ### Files
+
 - **Modify:** [models.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/models.py)
 - **New Migration:** [b2c3d4e5f6a7_add_phase4_tables.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/alembic/versions/b2c3d4e5f6a7_add_phase4_tables.py)
 - **New Test:** [test_models_phase4.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_models_phase4.py)
@@ -41,6 +42,7 @@
 ## Task 2: Smart Bookmarks API (`/api/v1/meetings/{id}/bookmarks`)
 
 ### Files
+
 - **New Router:** [mom.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/mom.py)
 - **Modify Router:** [router.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/router.py)
 - **New Test:** [test_bookmarks_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_bookmarks_api.py)
@@ -73,6 +75,7 @@
 ## Task 3: Auto MoM & 1-Click Jira Task Sync API (`/api/v1/meetings/{id}/mom` & `/sync-tasks`)
 
 ### Files
+
 - **Modify Router:** [mom.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/mom.py)
 - **New Test:** [test_mom_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_mom_api.py)
 
@@ -101,6 +104,7 @@
 ## Task 4: Enterprise Knowledge Hub API (`/api/v1/knowledge/documents` & `/query`)
 
 ### Files
+
 - **New Router:** [knowledge.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/knowledge.py)
 - **Modify Router:** [router.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/router.py)
 - **New Test:** [test_knowledge_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_knowledge_api.py)
@@ -133,9 +137,11 @@
 ## Task 5: Frontend Live Subtitle Overlay & Dual-Chat Panel
 
 ### Files
+
 - **Modify Component:** [meeting-room-client.tsx](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/meetings/[id]/meeting-room-client.tsx)
 
 ### Step-by-Step Instructions
+
 1. Upgrade `meeting-room-client.tsx`:
    - Add live scrolling subtitle overlay at bottom of video canvas with speaker avatar.
    - Add Dual Chat tabs (`Public Chat` vs `AI Assistant`) in right panel.
@@ -147,9 +153,11 @@
 ## Task 6: Frontend Auto MoM Dashboard Tab
 
 ### Files
+
 - **Modify Page:** [page.tsx](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/meetings/[id]/page.tsx)
 
 ### Step-by-Step Instructions
+
 1. Upgrade `/meetings/[id]` page with top Tab navigation:
    - `Tab 1: Live Call Room`
    - `Tab 2: Minutes of Meeting (MoM)`
@@ -164,9 +172,11 @@
 ## Task 7: Frontend Knowledge Hub Page
 
 ### Files
-- **Modify Page:** [page.tsx](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/(dashboard)/knowledge/page.tsx)
+
+- **Modify Page:** [page.tsx](<file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/(dashboard)/knowledge/page.tsx>)
 
 ### Step-by-Step Instructions
+
 1. Upgrade `/knowledge` page:
    - Drag-and-drop file upload zone for PDF, DOCX, TXT calling `/api/v1/knowledge/documents`.
    - Grid cards of uploaded documents with `Vectorized` status badges.
@@ -177,6 +187,7 @@
 ## Task 8: End-to-End System Verification
 
 ### Step-by-Step Instructions
+
 1. Run complete Pytest test suite: `uv run pytest src/backend/ -v`.
 2. Run Next.js production build: `npm run build` in `src/frontend`.
 3. Verify zero errors.

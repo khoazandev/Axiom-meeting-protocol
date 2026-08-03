@@ -12,6 +12,7 @@
 Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace management, and Role-Based Access Control (RBAC) to the Axiom platform.
 
 ### Core Architecture Capabilities
+
 1. **Multi-Tenant Workspace Model:** Users can create new Workspaces (becoming Owner/Admin) or join existing Workspaces via invitation links/codes.
 2. **Self-Registration & SSO:** Supports local Email/Password registration as well as Google OAuth2 SSO.
 3. **Role-Based Access Control (RBAC):**
@@ -65,6 +66,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ### 2.2 Entity Schema Definitions
 
 #### `users`
+
 - `id`: Primary Key (UUID)
 - `email`: String (Unique, Indexed)
 - `password_hash`: String (Nullable for OAuth users)
@@ -75,6 +77,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `created_at`: DateTime (UTC)
 
 #### `workspaces`
+
 - `id`: Primary Key (UUID)
 - `name`: String
 - `slug`: String (Unique, Indexed)
@@ -83,14 +86,16 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `created_at`: DateTime (UTC)
 
 #### `workspace_members`
+
 - `id`: Primary Key (UUID)
 - `workspace_id`: Foreign Key (`workspaces.id`, Indexed)
 - `user_id`: Foreign Key (`users.id`, Indexed)
 - `role`: Enum ("OWNER", "ADMIN", "MANAGER", "MEMBER")
 - `joined_at`: DateTime (UTC)
-- *Unique Constraint:* (`workspace_id`, `user_id`)
+- _Unique Constraint:_ (`workspace_id`, `user_id`)
 
 #### `departments`
+
 - `id`: Primary Key (UUID)
 - `workspace_id`: Foreign Key (`workspaces.id`, Indexed)
 - `name`: String
@@ -98,11 +103,13 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `created_at`: DateTime (UTC)
 
 #### `department_members`
+
 - `department_id`: Foreign Key (`departments.id`)
 - `user_id`: Foreign Key (`users.id`)
-- *Primary Key:* (`department_id`, `user_id`)
+- _Primary Key:_ (`department_id`, `user_id`)
 
 #### `invitations`
+
 - `id`: Primary Key (UUID)
 - `workspace_id`: Foreign Key (`workspaces.id`)
 - `email`: String
@@ -111,6 +118,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `expires_at`: DateTime (UTC)
 
 #### Updated `meetings` Table
+
 - `workspace_id`: Foreign Key (`workspaces.id`, Indexed, Mandatory)
 - `department_id`: Foreign Key (`departments.id`, Nullable)
 - `created_by_id`: Foreign Key (`users.id`, Mandatory)
@@ -120,12 +128,14 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ## 3. Backend Architecture & API Specifications
 
 ### 3.1 Security & Auth Utilities (`src/backend/core/security.py`)
+
 - Password Hashing: `passlib` with `bcrypt` / `argon2`
 - JWT Management:
   - Access Token: Expires in 15 minutes, payload includes `sub` (user_id).
   - Refresh Token: Expires in 7 days, stored in HttpOnly Cookie or DB Session.
 
 ### 3.2 FastAPI Dependency Injection (`src/backend/api/deps.py`)
+
 - `get_current_user`: Validates JWT Bearer token and returns active `User` model.
 - `get_current_workspace_member`: Validates user membership in the requested `workspace_id` (via `X-Workspace-ID` header or path parameter).
 - `require_role(allowed_roles: List[Role])`: Verifies that the member's role satisfies access requirements.
@@ -133,6 +143,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ### 3.3 Endpoints
 
 #### Authentication (`/api/v1/auth`)
+
 - `POST /api/v1/auth/register`: Register new user account.
 - `POST /api/v1/auth/login`: Authenticate email/password, return access_token & set refresh_token cookie.
 - `POST /api/v1/auth/refresh`: Refresh access token using refresh_token.
@@ -140,6 +151,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `GET /api/v1/auth/me`: Get current authenticated user profile.
 
 #### Workspaces (`/api/v1/workspaces`)
+
 - `POST /api/v1/workspaces`: Create a new Workspace (creator becomes `OWNER`).
 - `GET /api/v1/workspaces`: List user's joined Workspaces.
 - `GET /api/v1/workspaces/{workspace_id}`: Get workspace details & members.
@@ -147,6 +159,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `POST /api/v1/workspaces/join/{token}`: Accept invitation and join workspace.
 
 #### Departments (`/api/v1/departments`)
+
 - `POST /api/v1/departments`: Create a new Department within current active Workspace (`ADMIN` / `OWNER` only).
 - `GET /api/v1/departments`: List departments in active Workspace.
 - `POST /api/v1/departments/{department_id}/members`: Assign user to department.
@@ -156,10 +169,12 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ## 4. Frontend Architecture & UI Design
 
 ### 4.1 State Management (`Zustand` + `React Query`)
+
 - `useAuthStore`: Holds current `user`, `activeWorkspaceId`, `userWorkspaces`.
 - `useQuery` / `useMutation`: Handles API caching and synchronization.
 
 ### 4.2 New Pages & Components
+
 - `/login`: Clean enterprise login page with Google OAuth2 button.
 - `/register`: Account creation page.
 - `/invite/[token]`: Invite acceptance page.
@@ -167,6 +182,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 - `/settings/workspace`: Workspace settings, member list, role management, and invite modal.
 
 ### 4.3 Route Protection (`middleware.ts`)
+
 - Unauthenticated requests to `/meetings`, `/settings` redirect to `/login`.
 - Public routes: `/`, `/login`, `/register`, `/invite/[token]`.
 
@@ -175,6 +191,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ## 5. Verification & TDD Plan
 
 ### 5.1 Automated Unit & Integration Tests (`src/backend/test_auth.py`, `src/backend/test_workspaces.py`)
+
 1. **User Registration & Login:** Validates hashing, token generation, duplicate email rejection.
 2. **Workspace Creation:** Verifies creator is assigned `OWNER` role.
 3. **Tenant Isolation Enforcement:** Ensures User A in Workspace X receives `403 Forbidden` / `404 Not Found` when trying to fetch Workspace Y's meetings or departments.
@@ -183,6 +200,7 @@ Phase 2 introduces enterprise-grade Multi-Tenant Authentication, Workspace manag
 ---
 
 ## 6. Definition of Done
+
 - All backend models, schemas, and endpoints implemented following TDD (Red-Green-Refactor).
 - Alembic migration generated and applied cleanly.
 - Frontend Auth pages, Workspace switcher, and Protected routes implemented.

@@ -21,11 +21,13 @@
 ### Task 1: Security Utilities & JWT Core
 
 **Files:**
+
 - Create: `src/backend/core/security.py`
 - Modify: `src/backend/core/config.py`
 - Test: `src/backend/tests/test_security.py`
 
 **Interfaces:**
+
 - Consumes: `Settings` from `src/backend/core/config.py`
 - Produces: `hash_password`, `verify_password`, `create_access_token`, `create_refresh_token`, `decode_token`
 
@@ -65,6 +67,7 @@ Expected: FAIL with ModuleNotFoundError / ImportError
 - [ ] **Step 3: Implement security utilities**
 
 Update `src/backend/core/config.py` to include JWT settings:
+
 ```python
 # Added to Settings class in src/backend/core/config.py
 jwt_secret: str = "dev-secret-key-change-in-production-32bytesmin"
@@ -74,6 +77,7 @@ refresh_token_expire_days: int = 7
 ```
 
 Create `src/backend/core/security.py`:
+
 ```python
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -126,11 +130,13 @@ git commit -m "feat(auth): add security utilities for password hashing and JWT m
 ### Task 2: Multi-Tenant Database Models & Alembic Migration
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 - Create: `src/backend/alembic/versions/*_add_phase2_multi_tenant_schema.py`
 - Test: `src/backend/tests/test_models.py`
 
 **Interfaces:**
+
 - Consumes: SQLAlchemy Base from `src/backend/database.py`
 - Produces: `User`, `Workspace`, `WorkspaceMember`, `Department`, `DepartmentMember`, `Invitation` models
 
@@ -192,12 +198,14 @@ git commit -m "feat(db): add multi-tenant schema models and alembic migration"
 ### Task 3: Authentication API Endpoints (`/api/v1/auth`)
 
 **Files:**
+
 - Create: `src/backend/schemas/auth.py`
 - Create: `src/backend/api/v1/auth.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_auth_api.py`
 
 **Interfaces:**
+
 - Consumes: Security functions, SQLAlchemy Session, Auth schemas
 - Produces: `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/me`
 
@@ -256,12 +264,14 @@ git commit -m "feat(api): add authentication endpoints (/api/v1/auth)"
 ### Task 4: Multi-Tenant Workspace API & Dependency Guards
 
 **Files:**
+
 - Create: `src/backend/schemas/workspace.py`
 - Create: `src/backend/api/v1/workspaces.py`
 - Modify: `src/backend/api/deps.py`
 - Test: `src/backend/tests/test_workspaces_api.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_user`, `get_db`
 - Produces: `get_current_workspace_member`, `require_role`, `/api/v1/workspaces` endpoints
 
@@ -291,6 +301,7 @@ Expected: FAIL
 - [ ] **Step 3: Implement Workspace endpoints & Dependency Guards**
 
 Create `src/backend/api/deps.py` with:
+
 - `get_current_user`
 - `get_current_workspace_member` (checks `X-Workspace-ID` header and verifies membership)
 - `require_role(roles: list[RoleEnum])`
@@ -314,10 +325,12 @@ git commit -m "feat(api): add multi-tenant workspace endpoints and role-based gu
 ### Task 5: Updated Meetings API with Multi-Tenant Isolation
 
 **Files:**
+
 - Modify: `src/backend/api/v1/meetings.py`
 - Modify: `src/backend/test_main.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_workspace_member`
 - Produces: Multi-tenant isolated `/api/v1/meetings/`
 
@@ -352,6 +365,7 @@ git commit -m "refactor(meetings): enforce tenant isolation via workspace_id on 
 ### Task 6: Frontend Auth Client & State Management
 
 **Files:**
+
 - Create: `src/frontend/src/lib/store/useAuthStore.ts`
 - Modify: `src/frontend/src/lib/api.ts`
 - Test: Build check via `npx next build`
@@ -416,6 +430,7 @@ git commit -m "feat(frontend): add Zustand auth store and auto-inject auth/tenan
 ### Task 7: Frontend Auth Pages, Workspace Switcher & Route Protection
 
 **Files:**
+
 - Create: `src/frontend/src/app/(auth)/login/page.tsx`
 - Create: `src/frontend/src/app/(auth)/register/page.tsx`
 - Create: `src/frontend/src/app/(auth)/invite/[token]/page.tsx`
@@ -439,6 +454,7 @@ Protect `/meetings` routes: redirect to `/login` if no auth cookie/token present
 ```bash
 cd src/frontend && npx next build
 ```
+
 Expected: Build SUCCESS with static and dynamic routes compiled cleanly.
 
 - [ ] **Step 5: Commit**

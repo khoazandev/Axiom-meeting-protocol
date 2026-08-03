@@ -9,7 +9,7 @@ export function TrustedBySection() {
       <FadeContent>
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-8">
-            Trusted by leading enterprises
+            Được tin dùng
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
             {TRUSTED_BY.map((name) => (

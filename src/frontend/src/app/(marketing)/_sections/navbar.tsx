@@ -46,7 +46,10 @@ export function Navbar() {
           <Link href="#features" className="hover:text-foreground transition-colors duration-200">
             Features
           </Link>
-          <Link href="#how-it-works" className="hover:text-foreground transition-colors duration-200">
+          <Link
+            href="#how-it-works"
+            className="hover:text-foreground transition-colors duration-200"
+          >
             Process
           </Link>
           <Link href="/meetings" className="hover:text-foreground transition-colors duration-200">
@@ -86,7 +89,7 @@ export function Navbar() {
             <Link href="/register">
               <Button
                 size="sm"
-                className="rounded-full px-4 font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer shadow-sm text-xs"
+                className="rounded-full px-4 font-semibold bg-accent hover:bg-accent/90 text-text-primary transition-colors cursor-pointer shadow-sm text-xs"
               >
                 Get Started
               </Button>

@@ -7,7 +7,7 @@ Tài liệu này tập trung **100% vào Kiến trúc Backend**, giải thích c
 ## 📐 1. Sơ Đồ Kiến Trúc & Luồng Dữ Liệu Backend (Backend Data Flow)
 
 ```
-[1. Audio Input Stream] 
+[1. Audio Input Stream]
        │ (16kHz Mono PCM Bytes / Chunks ~500ms)
        ▼
 [2. Silero VAD v5 Engine] ───► (Speech Prob < 0.4) ───► [Lọc bỏ im lặng / Reset Buffer]
@@ -34,31 +34,37 @@ Tài liệu này tập trung **100% vào Kiến trúc Backend**, giải thích c
 ## 🔍 2. Chi Tiết Các Bước Trong Luồng Xử Lý Backend (6 Bước Core)
 
 ### Bước 1: Audio Ingestion & Buffer Management
+
 - Backend tiếp nhận luồng âm thanh dạng **16kHz Mono PCM int16/float32** (qua WebSocket binary message hoặc gRPC stream).
 - Âm thanh được tích lũy vào một `audio_buffer` float32 theo khung thời gian (thường từ 1.0s đến 2.0s).
 
 ### Bước 2: Silero VAD v5 (Lọc im lặng cấp độ AI)
+
 - Sử dụng mô hình **Silero VAD v5** (PyTorch tensor) thay vì đo âm lượng RMS đơn thuần.
 - Tính toán xác suất giọng nói `speech_prob`. Nếu `speech_prob < 0.4`, Backend bỏ qua gói tin âm thanh để tiết kiệm chi phí tính toán GPU/CPU.
 
 ### Bước 3: Faster-Whisper STT Inference
+
 - Gọi mô hình `WhisperModel(STT_MODEL_SIZE)` giải mã âm thanh thành văn bản thô.
 - Cấu hình `language=None` để Whisper tự động nhận diện ngôn ngữ gốc (Tiếng Việt, Tiếng Anh, hoặc Đa ngôn ngữ).
 
 ### Bước 4: Khử lặp từ & Cụm từ N-Gram (Regex & Rule-based Filter)
+
 - **Lặp từ đơn**: Regex `r'\b(\w+)(?:\s+\1\b)+'` ➔ Lọc `"tôi tôi"` thành `"tôi"`.
 - **Lặp cụm từ N-gram (2-8 từ)**: Regex `r'\b(\w+(?:\s+\w+){1,7})\s+\1\b'` ➔ Lọc `"chúng ta sẽ chúng ta sẽ"` thành `"chúng ta sẽ"`.
-- **Xử lý ngập ngừng tự sửa câu**: Regex lọc vế câu lặp ngập ngừng (*"có kiến thức sẽ có thêm kiến thức"* ➔ *"sẽ có thêm kiến thức"*).
+- **Xử lý ngập ngừng tự sửa câu**: Regex lọc vế câu lặp ngập ngừng (_"có kiến thức sẽ có thêm kiến thức"_ ➔ _"sẽ có thêm kiến thức"_).
 
 ### Bước 5: Hậu xử lý & Kiểm tra Ngữ nghĩa 2 Giai đoạn (LLM Core)
-1. **Làm mượt (Polishing)**: LLM xóa từ ngập ngừng (*"ừm", "à"*), viết hoa đầu câu và chèn dấu chấm phẩy.
-2. **Phân tích ngữ cảnh trước dịch (Pre-Translation Check)**: Trích xuất danh sách thuật ngữ chuyên ngành (Tech Terms: *WebSocket, API, VAD, Pipeline, LLM, React...*).
+
+1. **Làm mượt (Polishing)**: LLM xóa từ ngập ngừng (_"ừm", "à"_), viết hoa đầu câu và chèn dấu chấm phẩy.
+2. **Phân tích ngữ cảnh trước dịch (Pre-Translation Check)**: Trích xuất danh sách thuật ngữ chuyên ngành (Tech Terms: _WebSocket, API, VAD, Pipeline, LLM, React..._).
 3. **Dịch thuật bảo tồn thuật ngữ (Smart Translation)**:
    - Tiếng Việt ➔ Tiếng Anh: Dịch mượt theo chuẩn meeting chuyên nghiệp.
    - Tiếng Anh ➔ Tiếng Việt: Giữ nguyên các từ thuật ngữ công nghệ trong Tiếng Anh.
 4. **Đối chiếu ngữ nghĩa sau dịch (Post-Translation Audit)**: Kiểm tra lại xem bản dịch có làm sai lệch ý nghĩa ban đầu không.
 
 ### Bước 6: Emitter / JSON Output Payload
+
 Backend đóng gói toàn bộ kết quả thành JSON chuẩn và phát tới client / downstream services.
 
 ---
@@ -114,7 +120,7 @@ def clean_stutter_and_spelling(text):
     cleaned = re.sub(r'\b(\w+(?:\s+\w+){1,7})\s+\1\b', r'\1', cleaned, flags=re.IGNORECASE)
     # 3. Khử lặp câu tự sửa ngập ngừng
     cleaned = re.sub(r'\bcó kiến thức\s+sẽ có thêm kiến thức\b', 'sẽ có thêm kiến thức', cleaned, flags=re.IGNORECASE)
-    
+
     typo_map = {
         r'\blói ngọng\b': 'nói ngọng',
         r'\blói\b': 'nói',
@@ -151,7 +157,7 @@ Input Speech: {pre_cleaned}"""
 def analyze_pre_translation_semantics(text):
     if not text.strip():
         return {"language_detected": "unknown", "technical_terms": [], "context_summary": ""}
-        
+
     prompt = f"""Analyze the spoken transcript before translation:
 1. Detect primary language composition (Vietnamese, English, or Mixed VI+EN).
 2. Extract any technical/domain terms (API, WebSocket, VAD, Pipeline, Backend, Frontend, LLM).
@@ -171,7 +177,7 @@ Text: {text}"""
 def smart_adaptive_translate(text, target_lang="English", technical_terms=[]):
     if not text.strip(): return ""
     terms_hint = f"PRESERVE IN ENGLISH: {', '.join(technical_terms)}" if technical_terms else "Keep software/AI terms in original English."
-    
+
     prompt = f"""Translate accurately into natural {target_lang}.
 Rules:
 1. DO NOT translate technical software/AI terms (WebSocket, VAD, API, Pipeline, Backend, Frontend, Whisper, LLM, Server). Keep them in ENGLISH.
@@ -190,7 +196,7 @@ Source Text: {text}"""
 def validate_post_translation_semantics(original_text, translation, target_lang):
     if not translation or translation.startswith("["):
         return {"is_valid": True, "notes": "Fallback translation applied"}
-        
+
     prompt = f"""Compare original spoken text with translated text:
 Original: "{original_text}"
 Translation ({target_lang}): "{translation}"
@@ -215,7 +221,7 @@ def process_full_translation_pipeline(raw_text):
     # Step B: Pre-Translation Semantic Analysis
     pre_sem = analyze_pre_translation_semantics(polished)
     tech_terms = pre_sem.get("technical_terms", [])
-    
+
     # Step C: Smart Technical Term Preserving Translation
     en_trans = smart_adaptive_translate(polished, target_lang="English", technical_terms=tech_terms)
     vi_trans = smart_adaptive_translate(polished, target_lang="Vietnamese", technical_terms=tech_terms)
@@ -293,10 +299,7 @@ Khi Backend xử lý xong một đoạn âm thanh/văn bản, nó phát ra một
   "polished_text": "Chúng tôi đang thử nghiệm WebSocket và Silero VAD.",
   "detected_lang": "VI+EN",
   "context_summary": "Thử nghiệm kiến trúc thời gian thực",
-  "technical_terms": [
-    "WebSocket",
-    "Silero VAD"
-  ],
+  "technical_terms": ["WebSocket", "Silero VAD"],
   "en_text": "We are testing WebSocket and Silero VAD.",
   "vi_text": "Chúng tôi đang thử nghiệm WebSocket and Silero VAD.",
   "validation_notes": "EN: Context & technical terms verified | VI: Context & technical terms verified"

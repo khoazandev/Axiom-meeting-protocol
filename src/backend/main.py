@@ -9,6 +9,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.backend import database, models
+from src.backend.api.v1.router import api_v1_router, v1_router
+from src.backend.core.exceptions import register_exception_handlers
+from src.backend.core.metrics import setup_metrics_router
 from src.backend.realtime_stt import (
     SAMPLE_RATE,
     clean_and_analyze,
@@ -25,7 +28,6 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Preload MarianMT models in background on startup
     preload_models(vi_en=True, en_vi=True)
     yield
 
@@ -36,6 +38,12 @@ app = FastAPI(title="Smart Meeting AI API", lifespan=lifespan)
 app.include_router(v1_router)
 app.include_router(api_v1_router)
 register_exception_handlers(app)
+
+# Register exception handlers, metrics, and V1 API routers
+register_exception_handlers(app)
+setup_metrics_router(app)
+app.include_router(v1_router)
+app.include_router(api_v1_router)
 
 # Setup CORS cho Next.js Frontend
 app.add_middleware(
@@ -83,7 +91,6 @@ def stt_status():
 
 @app.post("/api/meetings/", response_model=MeetingResponse)
 def create_meeting(meeting: MeetingCreate, db: Session = Depends(database.get_db)):
-    # Rào chắn quy trình (Process): Kiểm tra agenda
     if not meeting.agenda or len(meeting.agenda.strip()) < 20:
         raise HTTPException(
             status_code=400,
@@ -127,7 +134,6 @@ async def websocket_realtime_stt(websocket: WebSocket):
             if message.get("type") == "websocket.disconnect":
                 break
 
-            # Text message (JSON string)
             if "text" in message and message["text"]:
                 try:
                     data = json.loads(message["text"])
@@ -145,27 +151,22 @@ async def websocket_realtime_stt(websocket: WebSocket):
                     except Exception:
                         break
 
-            # Binary audio message (PCM 16kHz int16 or float32)
             elif "bytes" in message and message["bytes"]:
                 raw_bytes = message["bytes"]
                 try:
                     chunk = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0
                     audio_buffer = np.append(audio_buffer, chunk)
 
-                    # When buffer reaches ~2 seconds of audio at 16kHz
                     if len(audio_buffer) >= SAMPLE_RATE * 2:
                         speech_detected, energy = is_speech(audio_buffer)
                         if speech_detected:
                             whisper = get_whisper_model()
                             if whisper is not None:
-                                # ── Whisper does BOTH transcribe + translate in 1 model ──
-                                # 1) Transcribe → Vietnamese text
                                 vi_segs, _ = whisper.transcribe(
                                     audio_buffer, beam_size=1, language="vi", task="transcribe"
                                 )
                                 vi_text = " ".join([s.text for s in vi_segs]).strip()
 
-                                # 2) Translate → English text (built-in Whisper feature)
                                 en_segs, _ = whisper.transcribe(
                                     audio_buffer, beam_size=1, language="vi", task="translate"
                                 )
@@ -173,13 +174,11 @@ async def websocket_realtime_stt(websocket: WebSocket):
 
                                 if vi_text or en_text:
                                     import uuid
-                                    # Apply text cleaning to Vietnamese
                                     analysis = clean_and_analyze(vi_text) if vi_text else {}
                                     polished_vi = analysis.get("polished_text", vi_text)
                                     tech_terms = analysis.get("technical_terms", [])
                                     lang = analysis.get("language_detected", "Vietnamese")
 
-                                    # Send bilingual result directly — no LLM needed!
                                     await websocket.send_json({
                                         "type": "bilingual_translation_stream",
                                         "id": str(uuid.uuid4())[:8],
@@ -212,4 +211,3 @@ async def websocket_realtime_stt(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
-

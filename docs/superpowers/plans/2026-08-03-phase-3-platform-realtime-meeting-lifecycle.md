@@ -20,11 +20,13 @@
 ### Task 1: Database Models & Alembic Migration for Phase 3
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 - Create: `src/backend/alembic/versions/a1b2c3d4e5f6_add_phase3_tables.py`
 - Test: `src/backend/tests/test_models_phase3.py`
 
 **Interfaces:**
+
 - Consumes: `Base`, `User`, `Workspace`, `Meeting` from `src/backend/models.py`.
 - Produces: `Task`, `TaskStatusEnum`, `TaskPriorityEnum`, `MeetingInvitation`, `InvitationRoleEnum`, `InvitationStatusEnum`, `MeetingFile`, updated `MeetingStatusEnum`.
 
@@ -98,12 +100,14 @@ git commit -m "feat(db): add Phase 3 Task, MeetingInvitation, MeetingFile models
 ### Task 2: Action Items & Task Management API (`/api/v1/tasks`)
 
 **Files:**
+
 - Create: `src/backend/schemas/task.py`
 - Create: `src/backend/api/v1/tasks.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_tasks_api.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_user`, `get_current_workspace_member` from `src/backend/api/deps.py`.
 - Produces: `GET /api/v1/tasks`, `POST /api/v1/tasks`, `GET /api/v1/tasks/{id}`, `PUT /api/v1/tasks/{id}`, `DELETE /api/v1/tasks/{id}`.
 
@@ -154,11 +158,13 @@ git commit -m "feat(api): implement /api/v1/tasks endpoints for multi-tenant Act
 ### Task 3: LiveKit Webhook Receiver (`/api/v1/webhooks/livekit`)
 
 **Files:**
+
 - Create: `src/backend/api/v1/webhooks.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_livekit_webhooks.py`
 
 **Interfaces:**
+
 - Consumes: LiveKit event payloads (`room_started`, `room_finished`, `participant_joined`, `participant_left`).
 - Produces: Updates `Meeting.status`, `started_at`, `ended_at` in DB.
 
@@ -212,11 +218,13 @@ git commit -m "feat(livekit): implement /api/v1/webhooks/livekit endpoint for au
 ### Task 4: Real-Time SSE Notification Stream (`/api/v1/notifications/stream`)
 
 **Files:**
+
 - Create: `src/backend/api/v1/notifications.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_notifications_api.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_user` from `src/backend/api/deps.py`.
 - Produces: `GET /api/v1/notifications/stream` SSE stream (`text/event-stream`).
 
@@ -256,12 +264,14 @@ git commit -m "feat(notifications): add SSE streaming endpoint /api/v1/notificat
 ### Task 5: Meeting Invitations API (`/api/v1/meetings/{id}/invitations`)
 
 **Files:**
+
 - Create: `src/backend/schemas/invitation.py`
 - Create: `src/backend/api/v1/invitations.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_invitations_api.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_user`, `get_current_workspace_member`.
 - Produces: `POST /api/v1/meetings/{id}/invitations`, `GET /api/v1/invitations/verify/{token}`, `POST /api/v1/invitations/respond`.
 
@@ -310,11 +320,13 @@ git commit -m "feat(invitations): add meeting invitation creation and verificati
 ### Task 6: File Upload & Attachment Service (`/api/v1/meetings/{id}/files`)
 
 **Files:**
+
 - Create: `src/backend/api/v1/files.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_files_api.py`
 
 **Interfaces:**
+
 - Consumes: `get_current_user`, `get_current_workspace_member`.
 - Produces: `POST /api/v1/meetings/{id}/files` (multipart upload), `GET /api/v1/meetings/{id}/files`.
 
@@ -360,11 +372,13 @@ git commit -m "feat(files): add multipart document upload service for meetings"
 ### Task 7: External AI Integration Ingestion Hooks
 
 **Files:**
+
 - Create: `src/backend/api/v1/ai_hooks.py`
 - Modify: `src/backend/api/v1/router.py`
 - Test: `src/backend/tests/test_ai_hooks.py`
 
 **Interfaces:**
+
 - Consumes: REST payloads from AI partner service.
 - Produces: `POST /api/v1/meetings/{id}/transcript`, `POST /api/v1/meetings/{id}/summary`.
 
@@ -409,11 +423,13 @@ git commit -m "feat(ai): add AI partner ingestion hooks for STT transcripts and 
 ### Task 8: Frontend State Bindings & Final Verification
 
 **Files:**
+
 - Modify: `src/frontend/src/lib/api.ts`
 - Modify: `src/frontend/src/app/(dashboard)/tasks/page.tsx`
 - Modify: `src/frontend/src/app/meetings/[id]/meeting-room-client.tsx`
 
 **Interfaces:**
+
 - Consumes: `/api/v1/tasks`, `/api/v1/meetings/{id}/files`, `/api/v1/notifications/stream`.
 
 - [ ] **Step 1: Add `tasksApi`, `invitationsApi`, `filesApi` clients to `src/frontend/src/lib/api.ts`**
