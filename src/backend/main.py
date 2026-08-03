@@ -29,7 +29,13 @@ async def lifespan(app: FastAPI):
     preload_models(vi_en=True, en_vi=True)
     yield
 
+from src.backend.api.v1.router import api_v1_router, v1_router
+from src.backend.core.exceptions import register_exception_handlers
+
 app = FastAPI(title="Smart Meeting AI API", lifespan=lifespan)
+app.include_router(v1_router)
+app.include_router(api_v1_router)
+register_exception_handlers(app)
 
 # Setup CORS cho Next.js Frontend
 app.add_middleware(

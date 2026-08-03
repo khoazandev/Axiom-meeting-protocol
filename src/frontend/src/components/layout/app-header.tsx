@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
@@ -11,6 +11,9 @@ export function AppHeader() {
   const { language, setLanguage, t } = useLanguageStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <header className="h-16 px-6 bg-[#0B0F19]/90 backdrop-blur-md border-b border-blue-950/60 flex items-center justify-between sticky top-0 z-20">
@@ -42,7 +45,7 @@ export function AppHeader() {
         </button>
 
         {/* Workspace Badge */}
-        {activeWorkspace && (
+        {mounted && activeWorkspace && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/40 border border-blue-900/30 text-xs text-blue-300 font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
             <span>{activeWorkspace.name}</span>

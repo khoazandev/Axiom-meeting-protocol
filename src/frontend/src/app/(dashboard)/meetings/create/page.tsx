@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
-import { ArrowLeft, Loader2, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, ShieldCheck, CheckCircle2, AlertCircle, Upload, X, Paperclip } from 'lucide-react';
 
 export default function CreateMeetingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -17,8 +18,24 @@ export default function CreateMeetingPage() {
     duration_minutes: 60,
   });
 
+  // Files to upload after meeting is created
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+
   const charCount = formData.agenda.trim().length;
   const isGateValid = charCount >= 20;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    setPendingFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name));
+      return [...prev, ...selected.filter((f) => !existing.has(f.name))];
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeFile = (name: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.name !== name));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +49,31 @@ export default function CreateMeetingPage() {
     }
 
     try {
-      await meetingsApi.create(formData);
-      router.push('/meetings');
+      // 1. Create the meeting
+      const created = await meetingsApi.create(formData);
+      const meetingId = created.id;
+
+      // 2. Upload all pending files (if any)
+      if (pendingFiles.length > 0) {
+        const token = localStorage.getItem('axiom_token') || '';
+        const wsRaw = localStorage.getItem('axiom_workspace');
+        const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+
+        await Promise.allSettled(
+          pendingFiles.map((file) => {
+            const fd = new FormData();
+            fd.append('file', file);
+            return fetch(`/api/v1/meetings/${meetingId}/files`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
+              body: fd,
+            });
+          })
+        );
+      }
+
+      // 3. Navigate to meeting room
+      router.push(`/meetings/${meetingId}`);
     } catch (err: unknown) {
       if (err instanceof ApiRequestError) {
         setError(err.message);
@@ -43,6 +83,14 @@ export default function CreateMeetingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getFileIcon = (name: string) => {
+    const ext = name.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') return '📄';
+    if (ext === 'docx' || ext === 'doc') return '📝';
+    if (ext === 'xlsx' || ext === 'xls') return '📊';
+    return '📃';
   };
 
   return (
@@ -115,7 +163,7 @@ export default function CreateMeetingPage() {
               rows={4}
               value={formData.agenda}
               onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-              placeholder="1. Review Q2 metrics&#10;2. Discuss Q3 roadmap&#10;3. Allocate engineering resources"
+              placeholder={"1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources"}
               className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
             />
             <p className="text-[11px] text-slate-400 mt-1.5">
@@ -143,6 +191,60 @@ export default function CreateMeetingPage() {
             />
           </div>
 
+          {/* ── File Attachments ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-emerald-400" />
+                Tài liệu đính kèm
+                <span className="text-slate-500 normal-case font-normal">(tùy chọn)</span>
+              </label>
+              {pendingFiles.length > 0 && (
+                <span className="text-[10px] text-emerald-400 font-semibold">{pendingFiles.length} file sẵn sàng</span>
+              )}
+            </div>
+
+            {/* Drop zone */}
+            <label className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-950/10 cursor-pointer hover:border-emerald-500/60 hover:bg-emerald-950/20 transition-all group">
+              <Upload className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="text-xs text-emerald-400 font-semibold">Click để chọn tài liệu</span>
+              <span className="text-[11px] text-slate-500">PDF, Word (.docx), Excel (.xlsx), TXT — sẽ được upload sau khi tạo meeting</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.csv,.md"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </label>
+
+            {/* Selected file list */}
+            {pendingFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {pendingFiles.map((f) => (
+                  <div key={f.name} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0B0F19] border border-emerald-500/20">
+                    <span className="text-base">{getFileIcon(f.name)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white font-medium truncate">{f.name}</p>
+                      <p className="text-[10px] text-slate-500">{(f.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(f.name)}
+                      className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[10px] text-slate-500 text-center">
+                  ✨ AI chatbot sẽ dùng các file này để trả lời câu hỏi trong cuộc họp
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={loading || !isGateValid}
@@ -151,7 +253,7 @@ export default function CreateMeetingPage() {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Deploying Meeting...</span>
+                <span>{pendingFiles.length > 0 ? `Đang tạo và upload ${pendingFiles.length} file...` : 'Deploying Meeting...'}</span>
               </>
             ) : (
               'Deploy & Open Conference'

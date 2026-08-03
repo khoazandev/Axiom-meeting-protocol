@@ -60,6 +60,20 @@ export interface TokenResponse {
   token: string;
 }
 
+export interface RagSource {
+  type: 'agenda' | 'transcript' | 'file' | 'bookmark';
+  snippet: string;
+  filename?: string | null;
+  timestamp?: number | null;
+}
+
+export interface RagQueryResponse {
+  question: string;
+  answer: string;
+  sources: RagSource[];
+  context_used: string[];
+}
+
 // ── Error Class ──────────────────────────────────────────
 
 export class ApiRequestError extends Error {
@@ -206,5 +220,13 @@ export const meetingsApi = {
       `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
       { signal }
     );
+  },
+
+  /** Query the in-meeting RAG chatbot. */
+  ragQuery(meetingId: number | string, question: string): Promise<RagQueryResponse> {
+    return apiFetch<RagQueryResponse>(`/api/v1/meetings/${meetingId}/rag/query`, {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    });
   },
 };

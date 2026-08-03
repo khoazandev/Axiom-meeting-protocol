@@ -44,6 +44,9 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> dict:
-    """Decode and verify a JWT token."""
-    return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+def decode_token(token: str) -> dict | None:
+    """Decode and verify a JWT token. Returns None if token is invalid."""
+    try:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except Exception:
+        return None
