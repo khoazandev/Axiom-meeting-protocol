@@ -142,3 +142,99 @@
     scroll-behavior: auto !important;
   }
 }
+
+@keyframes wave-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-3.5px);
+    opacity: 1;
+  }
+}
+
+.animate-wave-bounce {
+  animation: wave-bounce 1.1s infinite ease-in-out;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Cinema-Style Bilingual Subtitle Overlay
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes subtitle-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes subtitle-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(99, 102, 241, 0.15),
+      0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(99, 102, 241, 0.3),
+      0 8px 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes subtitle-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.subtitle-overlay-container {
+  animation: subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.subtitle-overlay-container.is-streaming {
+  animation:
+    subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both,
+    subtitle-glow 2s ease-in-out infinite;
+}
+
+/* Typewriter cursor: clean on/off blink, no fade */
+@keyframes typewriter-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Subtle Wave Animation for processing state */
+@keyframes wave-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.75;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.processing-wave-dot {
+  display: inline-block;
+  animation: wave-bounce 1.2s infinite ease-in-out;
+}
+
+.subtitle-en-text {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.subtitle-vi-text {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
