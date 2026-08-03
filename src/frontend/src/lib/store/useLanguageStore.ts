@@ -5,7 +5,7 @@ import { Language, translations } from '../i18n/translations';
 interface LanguageState {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: typeof translations['en'];
+  t: (typeof translations)['en'];
 }
 
 export const useLanguageStore = create<LanguageState>()(

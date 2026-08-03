@@ -3,17 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Mic,
-  MicOff,
-  Sparkles,
-  Volume2,
-  Trash2,
-  Zap,
-  Cpu,
-  Radio,
-  Globe
-} from 'lucide-react';
+import { Mic, MicOff, Sparkles, Volume2, Trash2, Zap, Cpu, Radio, Globe } from 'lucide-react';
 
 export interface STTPayload {
   id?: string;
@@ -78,7 +68,9 @@ interface RealtimeSTTPanelProps {
 }
 
 export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTTPanelProps = {}) {
-  const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>(
+    'disconnected'
+  );
   const [isRecording, setIsRecording] = useState(false);
   const [liveSpeechText, setLiveSpeechText] = useState('');
   const [transcripts, setTranscripts] = useState<STTPayload[]>([]);
@@ -125,7 +117,7 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
     processor.onaudioprocess = (e) => {
       if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
       const inputData = e.inputBuffer.getChannelData(0);
-      
+
       const pcm16 = new Int16Array(inputData.length);
       for (let i = 0; i < inputData.length; i++) {
         const s = Math.max(-1, Math.min(1, inputData[i]));
@@ -163,7 +155,9 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
     }
 
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
       recognitionRef.current = null;
     }
 
@@ -207,7 +201,10 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
 
     if (!textToSend) return;
 
-    console.log(`[Pipeline] Sending debounced text to AI (${textToSend.length} chars):`, textToSend);
+    console.log(
+      `[Pipeline] Sending debounced text to AI (${textToSend.length} chars):`,
+      textToSend
+    );
     setLiveSpeechText(textToSend);
     setIsProcessing(true);
 
@@ -263,7 +260,10 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'bilingual_translation_stream' || data.type === 'bilingual_translation') {
+          if (
+            data.type === 'bilingual_translation_stream' ||
+            data.type === 'bilingual_translation'
+          ) {
             const payload: STTPayload = {
               ...data,
               timestamp: data.timestamp || new Date().toLocaleTimeString(),
@@ -369,7 +369,8 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
   // MODE A: Browser Web Speech API (text-only path)
   // ══════════════════════════════════════════════════════
   const startBrowserSTT = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -392,7 +393,8 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
 
       // Show live preview of what user is speaking (interim)
       if (interimTranscript) {
-        const liveText = accumulatedTextRef.current + (accumulatedTextRef.current ? ' ' : '') + interimTranscript;
+        const liveText =
+          accumulatedTextRef.current + (accumulatedTextRef.current ? ' ' : '') + interimTranscript;
         setLiveSpeechText(liveText);
         if (onSubtitleUpdate) {
           onSubtitleUpdate({
@@ -405,7 +407,8 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
 
       // Accumulate finalized segments with 500ms debounce
       if (finalTranscript.trim()) {
-        accumulatedTextRef.current += (accumulatedTextRef.current ? ' ' : '') + finalTranscript.trim();
+        accumulatedTextRef.current +=
+          (accumulatedTextRef.current ? ' ' : '') + finalTranscript.trim();
         setLiveSpeechText(accumulatedTextRef.current);
 
         // Hiển thị lập tức final transcript lên Subtitle ngay khi chốt câu
@@ -439,7 +442,9 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
 
     recognition.onend = () => {
       if (isRecordingRef.current && recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch (e) {}
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
       }
     };
 
@@ -465,16 +470,16 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
               wsStatus === 'connected'
                 ? 'bg-emerald-500 animate-pulse'
                 : wsStatus === 'connecting'
-                ? 'bg-amber-500 animate-ping'
-                : 'bg-rose-500'
+                  ? 'bg-amber-500 animate-ping'
+                  : 'bg-rose-500'
             }`}
           />
           <span className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
             {wsStatus === 'connected'
               ? 'Realtime WS Active'
               : wsStatus === 'connecting'
-              ? 'Connecting...'
-              : 'WS Offline'}
+                ? 'Connecting...'
+                : 'WS Offline'}
           </span>
           <ModeBadge mode={sttMode} />
         </div>
@@ -516,7 +521,9 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
               size="sm"
               variant={isRecording ? 'destructive' : 'default'}
               className={`h-8 gap-1.5 text-xs font-medium transition-all duration-300 ${
-                isRecording ? 'animate-pulse shadow-red-500/20 shadow-lg' : 'shadow-primary/10 shadow-md'
+                isRecording
+                  ? 'animate-pulse shadow-red-500/20 shadow-lg'
+                  : 'shadow-primary/10 shadow-md'
               }`}
               onClick={toggleRecording}
             >
@@ -542,10 +549,14 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
               <Sparkles className="w-8 h-8 text-primary/40 mb-1" />
               <p className="text-xs font-medium text-foreground">Sẵn sàng nhận diện Real-time</p>
               <p className="text-[11px]">
-                Bấm nút <strong>&quot;Thu giọng nói&quot;</strong> ở trên và phát biểu. Giọng nói sẽ xuất hiện dưới dạng phụ đề trực tiếp trên màn hình họp.
+                Bấm nút <strong>&quot;Thu giọng nói&quot;</strong> ở trên và phát biểu. Giọng nói sẽ
+                xuất hiện dưới dạng phụ đề trực tiếp trên màn hình họp.
               </p>
               <p className="text-[10px] text-muted-foreground/60 mt-1">
-                Mode: <strong>{sttMode === 'browser' ? 'Browser STT (vi-VN)' : 'Whisper STT (On-Premise)'}</strong>
+                Mode:{' '}
+                <strong>
+                  {sttMode === 'browser' ? 'Browser STT (vi-VN)' : 'Whisper STT (On-Premise)'}
+                </strong>
               </p>
             </CardContent>
           </Card>
@@ -568,16 +579,20 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
                     </span>
                     {/* Translation method badge */}
                     {item.is_final !== false && item.validation_notes && (
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                        item.validation_notes.includes('MarianMT')
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                          item.validation_notes.includes('MarianMT')
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : item.validation_notes.includes('LLM')
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {item.validation_notes.includes('MarianMT')
+                          ? '⚡ MarianMT'
                           : item.validation_notes.includes('LLM')
-                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {item.validation_notes.includes('MarianMT') ? '⚡ MarianMT' :
-                         item.validation_notes.includes('LLM') ? '✨ LLM' :
-                         item.validation_notes}
+                            ? '✨ LLM'
+                            : item.validation_notes}
                       </span>
                     )}
                   </div>
@@ -618,21 +633,23 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
                 )}
 
                 {/* Tech Terms — only when final */}
-                {item.is_final !== false && item.technical_terms && item.technical_terms.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5 mr-1">
-                      <Cpu className="w-3 h-3" /> Terms:
-                    </span>
-                    {item.technical_terms.map((term, tIdx) => (
-                      <span
-                        key={tIdx}
-                        className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded border border-blue-500/20"
-                      >
-                        {term}
+                {item.is_final !== false &&
+                  item.technical_terms &&
+                  item.technical_terms.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5 mr-1">
+                        <Cpu className="w-3 h-3" /> Terms:
                       </span>
-                    ))}
-                  </div>
-                )}
+                      {item.technical_terms.map((term, tIdx) => (
+                        <span
+                          key={tIdx}
+                          className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded border border-blue-500/20"
+                        >
+                          {term}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </CardContent>
             </Card>
           ))

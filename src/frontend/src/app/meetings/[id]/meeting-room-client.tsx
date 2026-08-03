@@ -40,7 +40,9 @@ export function MeetingRoomClient() {
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'tasks'>('agenda');
+  const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'tasks'>(
+    'agenda'
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [livekitError, setLivekitError] = useState(false);
 
@@ -56,7 +58,12 @@ export function MeetingRoomClient() {
     { sender: 'Bob', text: 'Sounds good! I have the test suite running.', time: '10:01 AM' },
   ]);
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
-    { sender: 'Axiom AI Agent', text: 'I am indexing live speech. Ask me anything about the meeting or uploaded documents.', time: '10:00 AM', isAi: true },
+    {
+      sender: 'Axiom AI Agent',
+      text: 'I am indexing live speech. Ask me anything about the meeting or uploaded documents.',
+      time: '10:00 AM',
+      isAi: true,
+    },
   ]);
   const [inputMsg, setInputMsg] = useState('');
   const [aiQueryMsg, setAiQueryMsg] = useState('');
@@ -72,7 +79,11 @@ export function MeetingRoomClient() {
       const currentMeeting = await meetingsApi.get(meetingId, controller.signal);
       if (!controller.signal.aborted) setMeeting(currentMeeting);
 
-      const tokenData = await meetingsApi.getToken(currentMeeting.id, participantName, controller.signal);
+      const tokenData = await meetingsApi.getToken(
+        currentMeeting.id,
+        participantName,
+        controller.signal
+      );
       if (!controller.signal.aborted && tokenData?.token) setToken(tokenData.token);
       if (!controller.signal.aborted) setLoading(false);
     };
@@ -123,7 +134,11 @@ export function MeetingRoomClient() {
 
     setPublicMessages((prev) => [
       ...prev,
-      { sender: participantName, text: inputMsg.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+      {
+        sender: participantName,
+        text: inputMsg.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
     ]);
     setInputMsg('');
   };
@@ -135,8 +150,17 @@ export function MeetingRoomClient() {
     const q = aiQueryMsg.trim();
     setAiMessages((prev) => [
       ...prev,
-      { sender: participantName, text: q, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
-      { sender: 'Axiom AI Agent', text: `Based on workspace documents and live transcript: "${q}" is covered in Section 3 of the Phase 4 specification.`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isAi: true },
+      {
+        sender: participantName,
+        text: q,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+      {
+        sender: 'Axiom AI Agent',
+        text: `Based on workspace documents and live transcript: "${q}" is covered in Section 3 of the Phase 4 specification.`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isAi: true,
+      },
     ]);
     setAiQueryMsg('');
   };
@@ -219,7 +243,9 @@ export function MeetingRoomClient() {
             className="p-1.5 rounded-xl bg-bg-card border border-border text-text-secondary hover:text-text-primary hover:border-blue-800 transition-all"
             title="Toggle Right Panel"
           >
-            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} />
+            <ChevronRight
+              className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`}
+            />
           </button>
         </div>
       </header>
@@ -260,7 +286,8 @@ export function MeetingRoomClient() {
           {livekitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng Chat, Agenda, AI RAG vẫn hoạt động.
+              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng Chat, Agenda, AI
+              RAG vẫn hoạt động.
             </div>
           )}
 
@@ -272,7 +299,9 @@ export function MeetingRoomClient() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] font-bold text-accent ">{currentSubtitle.speaker}</div>
-                <p className="text-xs text-text-primary truncate font-medium mt-0.5">{currentSubtitle.text}</p>
+                <p className="text-xs text-text-primary truncate font-medium mt-0.5">
+                  {currentSubtitle.text}
+                </p>
               </div>
               <div className="px-2 py-0.5 rounded bg-accent-muted text-indigo-300 text-[9px] font-mono border border-accent/30">
                 Live STT
@@ -328,9 +357,7 @@ export function MeetingRoomClient() {
               {activeRightTab === 'agenda' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold  text-text-secondary">
-                       Checklist
-                    </span>
+                    <span className="text-xs font-bold  text-text-secondary">Checklist</span>
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success border border-emerald-500/30">
                       Enforced
                     </span>
@@ -338,7 +365,10 @@ export function MeetingRoomClient() {
 
                   <div className="p-4 rounded-xl bg-bg-card border border-border space-y-3">
                     {meeting.agenda.split('\n').map((line, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed">
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed"
+                      >
                         <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                         <span>{line}</span>
                       </div>
@@ -351,7 +381,10 @@ export function MeetingRoomClient() {
                 <div className="h-full flex flex-col justify-between space-y-3">
                   <div className="space-y-3 overflow-y-auto max-h-[480px]">
                     {publicMessages.map((msg, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-bg-card border border-border space-y-1">
+                      <div
+                        key={i}
+                        className="p-3 rounded-xl bg-bg-card border border-border space-y-1"
+                      >
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="font-bold text-accent">{msg.sender}</span>
                           <span className="text-text-muted">{msg.time}</span>
@@ -361,7 +394,10 @@ export function MeetingRoomClient() {
                     ))}
                   </div>
 
-                  <form onSubmit={handleSendPublicChat} className="flex items-center gap-2 pt-2 border-t border-border">
+                  <form
+                    onSubmit={handleSendPublicChat}
+                    className="flex items-center gap-2 pt-2 border-t border-border"
+                  >
                     <input
                       type="text"
                       value={inputMsg}
@@ -369,7 +405,10 @@ export function MeetingRoomClient() {
                       placeholder="Send chat message..."
                       className="flex-1 px-3 py-2 rounded-xl bg-bg-card border border-border text-xs text-text-primary placeholder-text-placeholder focus:outline-none focus:border-blue-500"
                     />
-                    <button type="submit" className="p-2 rounded-xl bg-accent hover:bg-accent/90 text-text-primary">
+                    <button
+                      type="submit"
+                      className="p-2 rounded-xl bg-accent hover:bg-accent/90 text-text-primary"
+                    >
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   </form>
@@ -380,9 +419,14 @@ export function MeetingRoomClient() {
                 <div className="h-full flex flex-col justify-between space-y-3">
                   <div className="space-y-3 overflow-y-auto max-h-[480px]">
                     {aiMessages.map((msg, i) => (
-                      <div key={i} className={`p-3 rounded-xl border ${msg.isAi ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-bg-card border-border'} space-y-1`}>
+                      <div
+                        key={i}
+                        className={`p-3 rounded-xl border ${msg.isAi ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-bg-card border-border'} space-y-1`}
+                      >
                         <div className="flex items-center justify-between text-[10px]">
-                          <span className={`font-bold ${msg.isAi ? 'text-accent' : 'text-accent'}`}>{msg.sender}</span>
+                          <span className={`font-bold ${msg.isAi ? 'text-accent' : 'text-accent'}`}>
+                            {msg.sender}
+                          </span>
                           <span className="text-text-muted">{msg.time}</span>
                         </div>
                         <p className="text-xs text-slate-200 leading-relaxed">{msg.text}</p>
@@ -390,7 +434,10 @@ export function MeetingRoomClient() {
                     ))}
                   </div>
 
-                  <form onSubmit={handleSendAiQuery} className="flex items-center gap-2 pt-2 border-t border-border">
+                  <form
+                    onSubmit={handleSendAiQuery}
+                    className="flex items-center gap-2 pt-2 border-t border-border"
+                  >
                     <input
                       type="text"
                       value={aiQueryMsg}
@@ -398,7 +445,10 @@ export function MeetingRoomClient() {
                       placeholder="Ask AI Assistant about docs..."
                       className="flex-1 px-3 py-2 rounded-xl bg-bg-card border border-indigo-950 text-xs text-text-primary placeholder-text-placeholder focus:outline-none focus:border-indigo-500"
                     />
-                    <button type="submit" className="p-2 rounded-xl bg-accent hover:bg-accent/90 text-text-primary">
+                    <button
+                      type="submit"
+                      className="p-2 rounded-xl bg-accent hover:bg-accent/90 text-text-primary"
+                    >
                       <Zap className="w-3.5 h-3.5" />
                     </button>
                   </form>

@@ -65,9 +65,7 @@ export default function CreateMeetingPage() {
             <span>{t.createMeeting.badge}</span>
           </div>
           <h1 className="text-lg font-semibold text-text-primary">{t.createMeeting.title}</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t.createMeeting.subTitle}
-          </p>
+          <p className="text-sm text-text-secondary mt-1">{t.createMeeting.subTitle}</p>
         </div>
 
         {error && (
@@ -105,10 +103,14 @@ export default function CreateMeetingPage() {
                 {isGateValid ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                    <span>{t.createMeeting.gateValidated} ({charCount}/20)</span>
+                    <span>
+                      {t.createMeeting.gateValidated} ({charCount}/20)
+                    </span>
                   </>
                 ) : (
-                  <span>{charCount} / 20 {t.createMeeting.gateRequired}</span>
+                  <span>
+                    {charCount} / 20 {t.createMeeting.gateRequired}
+                  </span>
                 )}
               </div>
             </div>

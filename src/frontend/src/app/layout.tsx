@@ -24,8 +24,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: 'Axiom — Họp thông minh',
-    description:
-      'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
+    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
     type: 'website',
     locale: 'vi_VN',
     siteName: 'Axiom',
@@ -33,8 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Axiom — Họp thông minh',
-    description:
-      'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
+    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
   },
   robots: {
     index: true,

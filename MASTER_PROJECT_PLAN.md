@@ -44,11 +44,11 @@ Axiom is an **open-source Enterprise Meeting Protocol** designed as a "Digital E
 
 ### Architecture Philosophy: H-P-D-I
 
-| Layer | Name | Purpose |
-|:---:|:---|:---|
-| **H** | Human | Distraction-free UI. LiveKit WebRTC. |
-| **P** | Process | Business logic gates. TDD-defended. |
-| **D** | Data | On-premise DB. Zero cloud leakage. |
+| Layer | Name         | Purpose                              |
+| :---: | :----------- | :----------------------------------- |
+| **H** | Human        | Distraction-free UI. LiveKit WebRTC. |
+| **P** | Process      | Business logic gates. TDD-defended.  |
+| **D** | Data         | On-premise DB. Zero cloud leakage.   |
 | **I** | Intelligence | Whisper STT + Llama-3 summarization. |
 
 ### Current Reality
@@ -57,14 +57,14 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 ### Vision vs. Reality Gap
 
-| Dimension | Vision (docs) | Reality (code) |
-|:---|:---|:---|
-| **Pages** | 20+ screens | 4 screens (Landing, Dashboard, Create, Room) |
-| **Backend APIs** | 50+ endpoints across 12 BE tasks | 3 endpoints (`/`, `/api/meetings/`, `/api/meetings/{id}/token`) |
-| **DB Schema** | 12+ tables (roles, departments, users, transcripts, etc.) | 2 tables (meetings, action_items) |
-| **Auth** | JWT + RBAC (4 levels) + Invitation engine | None |
-| **AI** | 6 AI tasks (STT, RAG, MoM, Intent, Knowledge Hub) | Placeholder UI only |
-| **Tests** | >90% coverage target | 2 test functions |
+| Dimension        | Vision (docs)                                             | Reality (code)                                                  |
+| :--------------- | :-------------------------------------------------------- | :-------------------------------------------------------------- |
+| **Pages**        | 20+ screens                                               | 4 screens (Landing, Dashboard, Create, Room)                    |
+| **Backend APIs** | 50+ endpoints across 12 BE tasks                          | 3 endpoints (`/`, `/api/meetings/`, `/api/meetings/{id}/token`) |
+| **DB Schema**    | 12+ tables (roles, departments, users, transcripts, etc.) | 2 tables (meetings, action_items)                               |
+| **Auth**         | JWT + RBAC (4 levels) + Invitation engine                 | None                                                            |
+| **AI**           | 6 AI tasks (STT, RAG, MoM, Intent, Knowledge Hub)         | Placeholder UI only                                             |
+| **Tests**        | >90% coverage target                                      | 2 test functions                                                |
 
 ---
 
@@ -121,37 +121,37 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 ### 2.4 Files Inventory
 
-| Layer | Files | LOC (approx) |
-|:---|:---:|:---:|
-| Frontend TSX/TS | 21 | ~2,100 |
-| Frontend CSS | 1 | 144 |
-| Backend Python | 3 (main, models, database) | 140 |
-| Backend Tests | 1 | 56 |
-| Config files | ~15 | ~300 |
-| Documentation | 10 .md files | ~2,500 |
-| **TOTAL** | ~50 | ~5,200 |
+| Layer           |           Files            | LOC (approx) |
+| :-------------- | :------------------------: | :----------: |
+| Frontend TSX/TS |             21             |    ~2,100    |
+| Frontend CSS    |             1              |     144      |
+| Backend Python  | 3 (main, models, database) |     140      |
+| Backend Tests   |             1              |      56      |
+| Config files    |            ~15             |     ~300     |
+| Documentation   |        10 .md files        |    ~2,500    |
+| **TOTAL**       |            ~50             |    ~5,200    |
 
 ### 2.5 Technical Debt Register
 
-| ID | Debt | Severity | Location |
-|:---|:---|:---:|:---|
-| TD-01 | `sql_app.db` and `test.db` committed to repo root | High | Root directory |
-| TD-02 | `declarative_base()` import from deprecated path | Low | `database.py` L3 |
-| TD-03 | Database URL hardcoded, not from env | High | `database.py` L5 |
-| TD-04 | `datetime.utcnow` deprecated in Python 3.12+ | Low | `models.py` L15 |
-| TD-05 | `model.dict()` deprecated, should be `model.model_dump()` | Low | `main.py` L56 |
-| TD-06 | `orm_mode` deprecated, should be `from_attributes` | Low | `main.py` L39 |
-| TD-07 | CORS allows only `localhost:3000`, no env-based config | Medium | `main.py` L20 |
-| TD-08 | No authentication on token endpoint — anyone can get LiveKit token | Critical | `main.py` L69 |
-| TD-09 | `participant_name` is random client-side, no identity verification | Critical | `meeting-room-client.tsx` L32 |
-| TD-10 | Landing page is `'use client'` — entire page is CSR, losing SSR/SEO | Medium | `page.tsx` L1 |
-| TD-11 | 541-line monolithic `landing-sections.tsx` | Medium | Landing page |
-| TD-12 | Next.js rewrite proxy hardcoded to `localhost:8000` | Medium | `next.config.ts` L8 |
-| TD-13 | No `.env.local` exists (only `.env.example`) | Low | Frontend |
-| TD-14 | `.cursorrules` references "Next.js 14" but project uses Next.js 16 | Low | `.cursorrules` L2 |
-| TD-15 | Meeting room fetches ALL meetings then filters by ID | Medium | `meeting-room-client.tsx` L37 |
-| TD-16 | React Doctor skills installed in 4 duplicate directories (.agents, .claude, .continue, .kiro) | Low | Frontend |
-| TD-17 | No error boundary components | Medium | Frontend |
+| ID    | Debt                                                                                          | Severity | Location                      |
+| :---- | :-------------------------------------------------------------------------------------------- | :------: | :---------------------------- |
+| TD-01 | `sql_app.db` and `test.db` committed to repo root                                             |   High   | Root directory                |
+| TD-02 | `declarative_base()` import from deprecated path                                              |   Low    | `database.py` L3              |
+| TD-03 | Database URL hardcoded, not from env                                                          |   High   | `database.py` L5              |
+| TD-04 | `datetime.utcnow` deprecated in Python 3.12+                                                  |   Low    | `models.py` L15               |
+| TD-05 | `model.dict()` deprecated, should be `model.model_dump()`                                     |   Low    | `main.py` L56                 |
+| TD-06 | `orm_mode` deprecated, should be `from_attributes`                                            |   Low    | `main.py` L39                 |
+| TD-07 | CORS allows only `localhost:3000`, no env-based config                                        |  Medium  | `main.py` L20                 |
+| TD-08 | No authentication on token endpoint — anyone can get LiveKit token                            | Critical | `main.py` L69                 |
+| TD-09 | `participant_name` is random client-side, no identity verification                            | Critical | `meeting-room-client.tsx` L32 |
+| TD-10 | Landing page is `'use client'` — entire page is CSR, losing SSR/SEO                           |  Medium  | `page.tsx` L1                 |
+| TD-11 | 541-line monolithic `landing-sections.tsx`                                                    |  Medium  | Landing page                  |
+| TD-12 | Next.js rewrite proxy hardcoded to `localhost:8000`                                           |  Medium  | `next.config.ts` L8           |
+| TD-13 | No `.env.local` exists (only `.env.example`)                                                  |   Low    | Frontend                      |
+| TD-14 | `.cursorrules` references "Next.js 14" but project uses Next.js 16                            |   Low    | `.cursorrules` L2             |
+| TD-15 | Meeting room fetches ALL meetings then filters by ID                                          |  Medium  | `meeting-room-client.tsx` L37 |
+| TD-16 | React Doctor skills installed in 4 duplicate directories (.agents, .claude, .continue, .kiro) |   Low    | Frontend                      |
+| TD-17 | No error boundary components                                                                  |  Medium  | Frontend                      |
 
 ---
 
@@ -200,29 +200,29 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 ## 4. Project Score
 
-| # | Category | Score | Explanation |
-|:---:|:---|:---:|:---|
-| 1 | **Architecture** | 6/10 | H-P-D-I philosophy is excellent but implementation is skeletal. No service layer, no dependency injection beyond basic FastAPI DI. |
-| 2 | **Folder Structure** | 7/10 | Clean monorepo (`src/backend`, `src/frontend`). Frontend follows Next.js App Router conventions. Backend is flat but acceptable for current size. |
-| 3 | **Code Quality** | 7/10 | What exists is clean. Proper TypeScript, proper Pydantic. Prettier + ESLint + Black + isort enforced. |
-| 4 | **Readability** | 8/10 | Excellent naming, Vietnamese comments in backend aid local team. Frontend JSX is well-structured. |
-| 5 | **Maintainability** | 4/10 | No abstractions, no service layers, no shared types, 541-line monolithic landing component. Hard to extend. |
-| 6 | **Scalability** | 2/10 | SQLite, single-file backend, no connection pooling, no caching, no queue system. Cannot scale beyond local dev. |
-| 7 | **Performance** | 5/10 | Landing page is fully CSR (loses SSR benefits). Meeting room fetches all meetings to find one. No code splitting beyond default Next.js. GSAP animations are well-optimized with IntersectionObserver. |
-| 8 | **Security** | 1/10 | No authentication. No authorization. LiveKit token generation is unauthenticated. Database files committed to repo. CORS allows only localhost. |
-| 9 | **Accessibility** | 5/10 | `prefers-reduced-motion` media query exists. Semantic HTML usage is decent. Missing: ARIA labels, focus management, keyboard navigation, skip links, color contrast verification. |
-| 10 | **SEO** | 4/10 | Meta title/description set in root layout. But landing page is `'use client'` defeating SSR. No OpenGraph, no Twitter Cards, no structured data, no sitemap, no robots.txt. |
-| 11 | **UI Consistency** | 8/10 | Excellent. Shadcn components + custom design tokens. Trust & Authority palette consistently applied. Typography hierarchy clear. |
-| 12 | **UX** | 6/10 | Good empty states, loading states, error states. Animations add polish. But: no feedback after meeting creation (just redirect), no confirmation dialogs, random participant names, no onboarding flow. |
-| 13 | **Component Design** | 6/10 | Shadcn primitives are well-used. ReactBits animation components are reusable. But: Navbar is duplicated across pages, no layout components, landing is monolithic. |
-| 14 | **State Management** | 3/10 | Raw `useState` + `useEffect` everywhere. No global state. No data fetching library (no SWR, no React Query, no tRPC). |
-| 15 | **API Design** | 4/10 | Inconsistent versioning (no `/api/v1/` prefix despite docs specifying it). No pagination on list endpoint despite the parameter existing. No proper error response schema. |
-| 16 | **Error Handling** | 4/10 | Backend raises HTTPException with Vietnamese messages. Frontend has error states. But: no global error boundary, no error logging, no structured error responses. |
-| 17 | **Form Validation** | 5/10 | Agenda validation on both FE/BE is good. But: no form library (React Hook Form / Zod), no field-level validation feedback, no debouncing. |
-| 18 | **Testing** | 1/10 | 2 backend tests. 0 frontend tests. 0 E2E tests. 0 integration tests. No coverage reporting. |
-| 19 | **Developer Experience** | 7/10 | Justfile commands, Husky hooks, Prettier auto-format, uv for Python. Comprehensive README quick-start. |
-| 20 | **Documentation** | 8/10 | Exceptional for the project size. README, ARCHITECTURE, CONTRIBUTING, DEPLOYMENT, MVP, SECURITY, TDD guide, PR template, Issue templates all exist and are detailed. |
-| 21 | **Overall Production Readiness** | 2/10 | This is a well-documented, beautifully designed prototype. But it lacks every production requirement: auth, security, tests, migrations, Docker, monitoring, error tracking. |
+|  #  | Category                         | Score | Explanation                                                                                                                                                                                             |
+| :-: | :------------------------------- | :---: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|  1  | **Architecture**                 | 6/10  | H-P-D-I philosophy is excellent but implementation is skeletal. No service layer, no dependency injection beyond basic FastAPI DI.                                                                      |
+|  2  | **Folder Structure**             | 7/10  | Clean monorepo (`src/backend`, `src/frontend`). Frontend follows Next.js App Router conventions. Backend is flat but acceptable for current size.                                                       |
+|  3  | **Code Quality**                 | 7/10  | What exists is clean. Proper TypeScript, proper Pydantic. Prettier + ESLint + Black + isort enforced.                                                                                                   |
+|  4  | **Readability**                  | 8/10  | Excellent naming, Vietnamese comments in backend aid local team. Frontend JSX is well-structured.                                                                                                       |
+|  5  | **Maintainability**              | 4/10  | No abstractions, no service layers, no shared types, 541-line monolithic landing component. Hard to extend.                                                                                             |
+|  6  | **Scalability**                  | 2/10  | SQLite, single-file backend, no connection pooling, no caching, no queue system. Cannot scale beyond local dev.                                                                                         |
+|  7  | **Performance**                  | 5/10  | Landing page is fully CSR (loses SSR benefits). Meeting room fetches all meetings to find one. No code splitting beyond default Next.js. GSAP animations are well-optimized with IntersectionObserver.  |
+|  8  | **Security**                     | 1/10  | No authentication. No authorization. LiveKit token generation is unauthenticated. Database files committed to repo. CORS allows only localhost.                                                         |
+|  9  | **Accessibility**                | 5/10  | `prefers-reduced-motion` media query exists. Semantic HTML usage is decent. Missing: ARIA labels, focus management, keyboard navigation, skip links, color contrast verification.                       |
+| 10  | **SEO**                          | 4/10  | Meta title/description set in root layout. But landing page is `'use client'` defeating SSR. No OpenGraph, no Twitter Cards, no structured data, no sitemap, no robots.txt.                             |
+| 11  | **UI Consistency**               | 8/10  | Excellent. Shadcn components + custom design tokens. Trust & Authority palette consistently applied. Typography hierarchy clear.                                                                        |
+| 12  | **UX**                           | 6/10  | Good empty states, loading states, error states. Animations add polish. But: no feedback after meeting creation (just redirect), no confirmation dialogs, random participant names, no onboarding flow. |
+| 13  | **Component Design**             | 6/10  | Shadcn primitives are well-used. ReactBits animation components are reusable. But: Navbar is duplicated across pages, no layout components, landing is monolithic.                                      |
+| 14  | **State Management**             | 3/10  | Raw `useState` + `useEffect` everywhere. No global state. No data fetching library (no SWR, no React Query, no tRPC).                                                                                   |
+| 15  | **API Design**                   | 4/10  | Inconsistent versioning (no `/api/v1/` prefix despite docs specifying it). No pagination on list endpoint despite the parameter existing. No proper error response schema.                              |
+| 16  | **Error Handling**               | 4/10  | Backend raises HTTPException with Vietnamese messages. Frontend has error states. But: no global error boundary, no error logging, no structured error responses.                                       |
+| 17  | **Form Validation**              | 5/10  | Agenda validation on both FE/BE is good. But: no form library (React Hook Form / Zod), no field-level validation feedback, no debouncing.                                                               |
+| 18  | **Testing**                      | 1/10  | 2 backend tests. 0 frontend tests. 0 E2E tests. 0 integration tests. No coverage reporting.                                                                                                             |
+| 19  | **Developer Experience**         | 7/10  | Justfile commands, Husky hooks, Prettier auto-format, uv for Python. Comprehensive README quick-start.                                                                                                  |
+| 20  | **Documentation**                | 8/10  | Exceptional for the project size. README, ARCHITECTURE, CONTRIBUTING, DEPLOYMENT, MVP, SECURITY, TDD guide, PR template, Issue templates all exist and are detailed.                                    |
+| 21  | **Overall Production Readiness** | 2/10  | This is a well-documented, beautifully designed prototype. But it lacks every production requirement: auth, security, tests, migrations, Docker, monitoring, error tracking.                            |
 
 **Weighted Average: 4.6 / 10**
 
@@ -232,53 +232,53 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 ### Critical (Blocks Any Production Use)
 
-| # | Gap | Impact |
-|:---|:---|:---|
-| GAP-C01 | No authentication (JWT, login, register) | Anyone can access everything |
-| GAP-C02 | No authorization (RBAC, route protection) | No data isolation between users/departments |
-| GAP-C03 | No database migrations (Alembic) | Schema changes destroy data |
-| GAP-C04 | LiveKit tokens issued without auth check | Anyone can join any meeting room |
-| GAP-C05 | SQLite in production path, no PostgreSQL | Single-writer, no concurrent access |
-| GAP-C06 | Database files committed to git | Sensitive data in version control |
-| GAP-C07 | No Docker infrastructure | Cannot deploy to any server |
+| #       | Gap                                       | Impact                                       |
+| :------ | :---------------------------------------- | :------------------------------------------- |
+| GAP-C01 | No authentication (JWT, login, register)  | Anyone can access everything                 |
+| GAP-C02 | No authorization (RBAC, route protection) | No data isolation between users/departments  |
+| GAP-C03 | No database migrations (Alembic)          | Schema changes destroy data                  |
+| GAP-C04 | LiveKit tokens issued without auth check  | Anyone can join any meeting room             |
+| GAP-C05 | SQLite in production path, no PostgreSQL  | Single-writer, no concurrent access          |
+| GAP-C06 | Database files committed to git           | Sensitive data in version control            |
+| GAP-C07 | No Docker infrastructure                  | Cannot deploy to any server                  |
 | GAP-C08 | No HTTPS/WSS configuration for production | WebRTC requires HTTPS in production browsers |
 
 ### High (Significantly Degrades Product)
 
-| # | Gap | Impact |
-|:---|:---|:---|
-| GAP-H01 | No individual meeting endpoint (`GET /api/meetings/{id}`) | Frontend fetches all meetings to find one |
-| GAP-H02 | No meeting deletion or update endpoints | Cannot manage meetings after creation |
-| GAP-H03 | No user profile or settings management | No personalization |
-| GAP-H04 | No real-time features (WebSocket/SSE) | No live notifications, no live transcripts |
-| GAP-H05 | No global error boundary | Unhandled errors crash entire app |
-| GAP-H06 | No API versioning | Breaking changes affect all clients |
-| GAP-H07 | No rate limiting | Vulnerable to abuse |
-| GAP-H08 | No frontend test suite | Zero confidence in refactoring |
+| #       | Gap                                                       | Impact                                     |
+| :------ | :-------------------------------------------------------- | :----------------------------------------- |
+| GAP-H01 | No individual meeting endpoint (`GET /api/meetings/{id}`) | Frontend fetches all meetings to find one  |
+| GAP-H02 | No meeting deletion or update endpoints                   | Cannot manage meetings after creation      |
+| GAP-H03 | No user profile or settings management                    | No personalization                         |
+| GAP-H04 | No real-time features (WebSocket/SSE)                     | No live notifications, no live transcripts |
+| GAP-H05 | No global error boundary                                  | Unhandled errors crash entire app          |
+| GAP-H06 | No API versioning                                         | Breaking changes affect all clients        |
+| GAP-H07 | No rate limiting                                          | Vulnerable to abuse                        |
+| GAP-H08 | No frontend test suite                                    | Zero confidence in refactoring             |
 
 ### Medium (Reduces Quality & Developer Velocity)
 
-| # | Gap | Impact |
-|:---|:---|:---|
-| GAP-M01 | No state management library (Zustand/React Query) | Prop drilling, inconsistent fetching |
-| GAP-M02 | No API client layer | Duplicated fetch logic across components |
-| GAP-M03 | No shared types between FE/BE | Schema drift risk |
-| GAP-M04 | No code splitting strategy | Bundle size will grow unchecked |
-| GAP-M05 | No monitoring/logging infrastructure | Cannot diagnose production issues |
-| GAP-M06 | No feature flags system | Cannot safely roll out features |
-| GAP-M07 | 541-line monolithic landing component | Hard to maintain |
-| GAP-M08 | No pagination implementation | Will fail with many meetings |
-| GAP-M09 | No dark mode toggle UI | CSS tokens exist but no way to activate |
+| #       | Gap                                               | Impact                                   |
+| :------ | :------------------------------------------------ | :--------------------------------------- |
+| GAP-M01 | No state management library (Zustand/React Query) | Prop drilling, inconsistent fetching     |
+| GAP-M02 | No API client layer                               | Duplicated fetch logic across components |
+| GAP-M03 | No shared types between FE/BE                     | Schema drift risk                        |
+| GAP-M04 | No code splitting strategy                        | Bundle size will grow unchecked          |
+| GAP-M05 | No monitoring/logging infrastructure              | Cannot diagnose production issues        |
+| GAP-M06 | No feature flags system                           | Cannot safely roll out features          |
+| GAP-M07 | 541-line monolithic landing component             | Hard to maintain                         |
+| GAP-M08 | No pagination implementation                      | Will fail with many meetings             |
+| GAP-M09 | No dark mode toggle UI                            | CSS tokens exist but no way to activate  |
 
 ### Low (Nice-to-Have)
 
-| # | Gap | Impact |
-|:---|:---|:---|
-| GAP-L01 | No PWA support | Cannot install as app |
-| GAP-L02 | No i18n framework | Vietnamese/English hardcoded |
-| GAP-L03 | No analytics integration | Cannot measure user behavior |
-| GAP-L04 | No keyboard shortcuts | Power user efficiency |
-| GAP-L05 | No favicon optimized for all platforms | Minor branding gap |
+| #       | Gap                                      | Impact                        |
+| :------ | :--------------------------------------- | :---------------------------- |
+| GAP-L01 | No PWA support                           | Cannot install as app         |
+| GAP-L02 | No i18n framework                        | Vietnamese/English hardcoded  |
+| GAP-L03 | No analytics integration                 | Cannot measure user behavior  |
+| GAP-L04 | No keyboard shortcuts                    | Power user efficiency         |
+| GAP-L05 | No favicon optimized for all platforms   | Minor branding gap            |
 | GAP-L06 | Deprecated Pydantic/SQLAlchemy APIs used | Will break on future upgrades |
 
 ---
@@ -287,23 +287,23 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 ### MVP Features (Phase 1-2 in MVP.md)
 
-| Feature | Status | Evidence |
-|:---|:---:|:---|
-| Meeting dashboard listing | Done | `meetings-dashboard-client.tsx` |
-| Create Meeting with Agenda Gate | Done | FE validation + BE `HTTPException` |
-| Agenda >=20 chars enforcement (BE) | Done | `main.py` L50 + `test_main.py` L36 |
-| LiveKit WebRTC video conference | Done | `meeting-room-client.tsx` |
-| LiveKit token generation | Done | `main.py` L69 |
-| Premium landing page | Done | `landing-sections.tsx` |
+| Feature                            | Status | Evidence                           |
+| :--------------------------------- | :----: | :--------------------------------- |
+| Meeting dashboard listing          |  Done  | `meetings-dashboard-client.tsx`    |
+| Create Meeting with Agenda Gate    |  Done  | FE validation + BE `HTTPException` |
+| Agenda >=20 chars enforcement (BE) |  Done  | `main.py` L50 + `test_main.py` L36 |
+| LiveKit WebRTC video conference    |  Done  | `meeting-room-client.tsx`          |
+| LiveKit token generation           |  Done  | `main.py` L69                      |
+| Premium landing page               |  Done  | `landing-sections.tsx`             |
 
 ### Partially Completed Features
 
-| Feature | Status | What's Missing |
-|:---|:---:|:---|
-| Backend test suite | Partial (2/10+ tests) | Missing: successful creation, listing, edge cases, error scenarios |
-| Meeting room sidebar | Placeholder | AI Intelligence section shows "Whisper Transcription Pending" — no real functionality |
-| Action Items model | Schema only | DB model exists in `models.py` L25 but no API endpoints |
-| Dark mode | CSS only | Tokens defined in `globals.css` L88 but no `.dark` class toggle |
+| Feature              |        Status         | What's Missing                                                                        |
+| :------------------- | :-------------------: | :------------------------------------------------------------------------------------ |
+| Backend test suite   | Partial (2/10+ tests) | Missing: successful creation, listing, edge cases, error scenarios                    |
+| Meeting room sidebar |      Placeholder      | AI Intelligence section shows "Whisper Transcription Pending" — no real functionality |
+| Action Items model   |      Schema only      | DB model exists in `models.py` L25 but no API endpoints                               |
+| Dark mode            |       CSS only        | Tokens defined in `globals.css` L88 but no `.dark` class toggle                       |
 
 ### Missing Core Features (from SMART_MEETING_AI.md)
 
@@ -350,24 +350,24 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Fix all critical technical debt, establish proper development foundations.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| Remove `sql_app.db` and `test.db` from git, add to `.gitignore` | Critical | 1h |
-| Implement Alembic database migrations | Critical | 4h |
-| Replace SQLite with PostgreSQL support (env-configurable) | Critical | 4h |
-| Fix deprecated Pydantic/SQLAlchemy APIs | Medium | 2h |
-| Add `GET /api/v1/meetings/{id}` endpoint | High | 2h |
-| Add `DELETE /api/v1/meetings/{id}` endpoint | Medium | 2h |
-| Add global error handling middleware (FastAPI) | High | 3h |
-| Add global error boundary (React) | High | 3h |
-| Create API client layer (`src/frontend/src/lib/api.ts`) | High | 4h |
-| Extract landing page sections into individual components | Medium | 3h |
-| Create shared layout component with Navbar | Medium | 4h |
-| Environment-based API URL configuration | High | 2h |
-| Backend test suite expansion to >80% coverage | High | 8h |
-| Add `.env.local.example` and document env setup | Medium | 1h |
-| Create Dockerfile for backend + frontend | High | 6h |
-| Create `docker-compose.yml` for local full-stack | High | 4h |
+| Task                                                            | Priority | Est. |
+| :-------------------------------------------------------------- | :------: | :--: |
+| Remove `sql_app.db` and `test.db` from git, add to `.gitignore` | Critical |  1h  |
+| Implement Alembic database migrations                           | Critical |  4h  |
+| Replace SQLite with PostgreSQL support (env-configurable)       | Critical |  4h  |
+| Fix deprecated Pydantic/SQLAlchemy APIs                         |  Medium  |  2h  |
+| Add `GET /api/v1/meetings/{id}` endpoint                        |   High   |  2h  |
+| Add `DELETE /api/v1/meetings/{id}` endpoint                     |  Medium  |  2h  |
+| Add global error handling middleware (FastAPI)                  |   High   |  3h  |
+| Add global error boundary (React)                               |   High   |  3h  |
+| Create API client layer (`src/frontend/src/lib/api.ts`)         |   High   |  4h  |
+| Extract landing page sections into individual components        |  Medium  |  3h  |
+| Create shared layout component with Navbar                      |  Medium  |  4h  |
+| Environment-based API URL configuration                         |   High   |  2h  |
+| Backend test suite expansion to >80% coverage                   |   High   |  8h  |
+| Add `.env.local.example` and document env setup                 |  Medium  |  1h  |
+| Create Dockerfile for backend + frontend                        |   High   |  6h  |
+| Create `docker-compose.yml` for local full-stack                |   High   |  4h  |
 
 **Definition of Done:** All critical debt resolved. `docker-compose up` brings up full stack. Backend tests >80% coverage. No database files in git.
 
@@ -377,21 +377,21 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Implement auth, RBAC, and essential meeting management.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| **BE-01:** JWT Auth service (login, refresh, guards) | Critical | 16h |
-| **BE-02:** RBAC + Invitation engine | Critical | 12h |
-| **FE-01:** Login page + token management | Critical | 12h |
-| **FE-02:** Base layout with sidebar + route guards | Critical | 16h |
-| **BE-03:** User profile CRUD | High | 8h |
-| **BE-04:** Department & User admin CRUD | High | 12h |
-| **FE-04:** User profile page | High | 8h |
-| **FE-05/06:** Admin pages (departments, users) | High | 16h |
-| **DT-01:** Full PostgreSQL schema (12+ tables) | Critical | 12h |
-| Dark mode toggle implementation | Medium | 4h |
-| State management setup (Zustand + React Query) | High | 8h |
-| Form validation library (React Hook Form + Zod) | High | 6h |
-| API versioning (`/api/v1/`) | High | 4h |
+| Task                                                 | Priority | Est. |
+| :--------------------------------------------------- | :------: | :--: |
+| **BE-01:** JWT Auth service (login, refresh, guards) | Critical | 16h  |
+| **BE-02:** RBAC + Invitation engine                  | Critical | 12h  |
+| **FE-01:** Login page + token management             | Critical | 12h  |
+| **FE-02:** Base layout with sidebar + route guards   | Critical | 16h  |
+| **BE-03:** User profile CRUD                         |   High   |  8h  |
+| **BE-04:** Department & User admin CRUD              |   High   | 12h  |
+| **FE-04:** User profile page                         |   High   |  8h  |
+| **FE-05/06:** Admin pages (departments, users)       |   High   | 16h  |
+| **DT-01:** Full PostgreSQL schema (12+ tables)       | Critical | 12h  |
+| Dark mode toggle implementation                      |  Medium  |  4h  |
+| State management setup (Zustand + React Query)       |   High   |  8h  |
+| Form validation library (React Hook Form + Zod)      |   High   |  6h  |
+| API versioning (`/api/v1/`)                          |   High   |  4h  |
 
 **Definition of Done:** Users can register, login, create meetings. RBAC enforced. Admin can manage departments/users. All endpoints authenticated. Full schema migrated.
 
@@ -401,27 +401,27 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** LiveKit webhook handling, recording, basic AI pipeline, post-meeting features.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| **BE-06:** Dashboard stats API | High | 8h |
-| **BE-07:** Meeting scheduler + Calendar Intelligence | High | 16h |
-| **BE-08:** File upload service (multipart) | High | 12h |
-| **BE-09:** LiveKit webhook handler + Egress recording | Critical | 20h |
-| **BE-10:** Post-meeting data + transcript search | High | 12h |
-| **BE-11:** Task management + outbound sync | Medium | 16h |
-| **FE-07:** Home Dashboard with stats cards | High | 12h |
-| **FE-08:** Calendar view (react-big-calendar) | Medium | 16h |
-| **FE-10:** File upload drag-and-drop | High | 12h |
-| **FE-11:** Pre-Meeting Lobby | Medium | 12h |
-| **FE-12:** Enhanced video call controls | High | 8h |
-| **FE-16:** Post-meeting transcript player | High | 16h |
-| **FE-18:** My Tasks view | Medium | 12h |
-| **BE-05:** Notification system (SSE) | High | 16h |
-| **FE-03:** Notification center | High | 12h |
-| Rate limiting middleware | High | 4h |
-| Request logging + structured error responses | High | 8h |
-| Frontend E2E test suite (Playwright) | High | 16h |
-| Performance optimization (SSR, code splitting) | High | 12h |
+| Task                                                  | Priority | Est. |
+| :---------------------------------------------------- | :------: | :--: |
+| **BE-06:** Dashboard stats API                        |   High   |  8h  |
+| **BE-07:** Meeting scheduler + Calendar Intelligence  |   High   | 16h  |
+| **BE-08:** File upload service (multipart)            |   High   | 12h  |
+| **BE-09:** LiveKit webhook handler + Egress recording | Critical | 20h  |
+| **BE-10:** Post-meeting data + transcript search      |   High   | 12h  |
+| **BE-11:** Task management + outbound sync            |  Medium  | 16h  |
+| **FE-07:** Home Dashboard with stats cards            |   High   | 12h  |
+| **FE-08:** Calendar view (react-big-calendar)         |  Medium  | 16h  |
+| **FE-10:** File upload drag-and-drop                  |   High   | 12h  |
+| **FE-11:** Pre-Meeting Lobby                          |  Medium  | 12h  |
+| **FE-12:** Enhanced video call controls               |   High   |  8h  |
+| **FE-16:** Post-meeting transcript player             |   High   | 16h  |
+| **FE-18:** My Tasks view                              |  Medium  | 12h  |
+| **BE-05:** Notification system (SSE)                  |   High   | 16h  |
+| **FE-03:** Notification center                        |   High   | 12h  |
+| Rate limiting middleware                              |   High   |  4h  |
+| Request logging + structured error responses          |   High   |  8h  |
+| Frontend E2E test suite (Playwright)                  |   High   | 16h  |
+| Performance optimization (SSR, code splitting)        |   High   | 12h  |
 
 **Definition of Done:** Complete meeting lifecycle (create -> join -> record -> review). Notifications work. File upload works. Calendar shows meetings. All endpoints rate-limited. E2E tests pass.
 
@@ -431,21 +431,21 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Implement the I (Intelligence) layer of H-P-D-I.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| **DT-03:** Qdrant Vector DB setup | Critical | 8h |
-| **DT-04:** Redis Queue + Dead Letter Queue | Critical | 12h |
-| **AI-01:** LiveKit Python Agent for STT (Whisper) | Critical | 40h |
-| **AI-02:** RAG Document Vectorization pipeline | High | 24h |
-| **AI-03:** In-Meeting RAG AI Assistant | High | 32h |
-| **AI-04:** Realtime Intent Detection | Medium | 24h |
-| **AI-05:** Post-Meeting Auto MoM pipeline | High | 32h |
-| **AI-06:** Global Knowledge Hub RAG Engine | Medium | 24h |
-| **FE-13:** Live Subtitle Panel | High | 16h |
-| **FE-14:** Dual Chat (Group + AI RAG) | High | 20h |
-| **FE-15:** Smart Bookmark + Live Action Item | Medium | 12h |
-| **FE-17:** Auto MoM Dashboard + 1-Click Task Sync | High | 16h |
-| **FE-19:** Knowledge Hub + Global RAG Chatbot | Medium | 20h |
+| Task                                              | Priority | Est. |
+| :------------------------------------------------ | :------: | :--: |
+| **DT-03:** Qdrant Vector DB setup                 | Critical |  8h  |
+| **DT-04:** Redis Queue + Dead Letter Queue        | Critical | 12h  |
+| **AI-01:** LiveKit Python Agent for STT (Whisper) | Critical | 40h  |
+| **AI-02:** RAG Document Vectorization pipeline    |   High   | 24h  |
+| **AI-03:** In-Meeting RAG AI Assistant            |   High   | 32h  |
+| **AI-04:** Realtime Intent Detection              |  Medium  | 24h  |
+| **AI-05:** Post-Meeting Auto MoM pipeline         |   High   | 32h  |
+| **AI-06:** Global Knowledge Hub RAG Engine        |  Medium  | 24h  |
+| **FE-13:** Live Subtitle Panel                    |   High   | 16h  |
+| **FE-14:** Dual Chat (Group + AI RAG)             |   High   | 20h  |
+| **FE-15:** Smart Bookmark + Live Action Item      |  Medium  | 12h  |
+| **FE-17:** Auto MoM Dashboard + 1-Click Task Sync |   High   | 16h  |
+| **FE-19:** Knowledge Hub + Global RAG Chatbot     |  Medium  | 20h  |
 
 **Definition of Done:** Real-time transcription visible in meetings. RAG chatbot answers document questions. Auto-MoM generated after meeting ends. Knowledge Hub searchable.
 
@@ -455,18 +455,18 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Enterprise-grade reliability, compliance, and administration.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| SSO integration (SAML/OIDC) | High | 24h |
-| Audit logging system | High | 16h |
-| Data encryption at rest | High | 12h |
-| Multi-tenant department isolation | High | 20h |
-| Admin analytics dashboard | Medium | 20h |
-| Email service (SMTP/Nodemailer) | Medium | 12h |
-| Webhook outbound sync engine (Jira/Trello) | Medium | 16h |
-| Compliance reporting | Low | 12h |
-| Backup & restore automation | High | 12h |
-| API documentation (Swagger/OpenAPI auto-gen) | Medium | 4h |
+| Task                                         | Priority | Est. |
+| :------------------------------------------- | :------: | :--: |
+| SSO integration (SAML/OIDC)                  |   High   | 24h  |
+| Audit logging system                         |   High   | 16h  |
+| Data encryption at rest                      |   High   | 12h  |
+| Multi-tenant department isolation            |   High   | 20h  |
+| Admin analytics dashboard                    |  Medium  | 20h  |
+| Email service (SMTP/Nodemailer)              |  Medium  | 12h  |
+| Webhook outbound sync engine (Jira/Trello)   |  Medium  | 16h  |
+| Compliance reporting                         |   Low    | 12h  |
+| Backup & restore automation                  |   High   | 12h  |
+| API documentation (Swagger/OpenAPI auto-gen) |  Medium  |  4h  |
 
 **Definition of Done:** Enterprise SSO works. Audit logs capture all sensitive actions. Data encrypted at rest. API docs auto-generated.
 
@@ -476,18 +476,18 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Infrastructure for 100,000 concurrent users.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| PostgreSQL read replicas + connection pooling (PgBouncer) | High | 16h |
-| Redis clustering | High | 12h |
-| Kubernetes deployment manifests | High | 24h |
-| Horizontal pod autoscaling | High | 12h |
-| CDN for static assets | Medium | 8h |
-| Database query optimization + EXPLAIN ANALYZE | High | 16h |
-| Caching layer (Redis for hot data) | High | 12h |
-| Load testing suite (k6/Locust) | High | 16h |
-| Monitoring stack (Prometheus + Grafana + OpenTelemetry) | High | 24h |
-| Blue-green deployments | Medium | 12h |
+| Task                                                      | Priority | Est. |
+| :-------------------------------------------------------- | :------: | :--: |
+| PostgreSQL read replicas + connection pooling (PgBouncer) |   High   | 16h  |
+| Redis clustering                                          |   High   | 12h  |
+| Kubernetes deployment manifests                           |   High   | 24h  |
+| Horizontal pod autoscaling                                |   High   | 12h  |
+| CDN for static assets                                     |  Medium  |  8h  |
+| Database query optimization + EXPLAIN ANALYZE             |   High   | 16h  |
+| Caching layer (Redis for hot data)                        |   High   | 12h  |
+| Load testing suite (k6/Locust)                            |   High   | 16h  |
+| Monitoring stack (Prometheus + Grafana + OpenTelemetry)   |   High   | 24h  |
+| Blue-green deployments                                    |  Medium  | 12h  |
 
 **Definition of Done:** System handles 100K concurrent users. P99 latency <200ms. Auto-scales under load. Full observability.
 
@@ -497,18 +497,18 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 
 **Goal:** Global-scale architecture.
 
-| Task | Priority | Est. |
-|:---|:---:|:---:|
-| Multi-region LiveKit deployment | High | 40h |
-| Database sharding by department | High | 32h |
-| Event-driven architecture (Kafka/NATS) | High | 40h |
-| Offline meeting notes (PWA) | Medium | 24h |
-| Mobile app (React Native) | Medium | 80h |
-| AI model optimization (INT8 quantization, TensorRT) | Medium | 24h |
-| Multi-language support (i18n) | Medium | 20h |
-| Advanced analytics (BigQuery/ClickHouse) | Medium | 24h |
-| Security audit by third party | High | External |
-| SOC 2 compliance preparation | High | External |
+| Task                                                | Priority |   Est.   |
+| :-------------------------------------------------- | :------: | :------: |
+| Multi-region LiveKit deployment                     |   High   |   40h    |
+| Database sharding by department                     |   High   |   32h    |
+| Event-driven architecture (Kafka/NATS)              |   High   |   40h    |
+| Offline meeting notes (PWA)                         |  Medium  |   24h    |
+| Mobile app (React Native)                           |  Medium  |   80h    |
+| AI model optimization (INT8 quantization, TensorRT) |  Medium  |   24h    |
+| Multi-language support (i18n)                       |  Medium  |   20h    |
+| Advanced analytics (BigQuery/ClickHouse)            |  Medium  |   24h    |
+| Security audit by third party                       |   High   | External |
+| SOC 2 compliance preparation                        |   High   | External |
 
 ---
 
@@ -682,6 +682,7 @@ The project has achieved **100% Roadmap Completion** across all 7 Phases (Phase 
 ### 9.1 Folder Restructuring
 
 **Current Backend:**
+
 ```
 src/backend/
 ├── main.py          (85 lines — everything)
@@ -691,6 +692,7 @@ src/backend/
 ```
 
 **Target Backend:**
+
 ```
 src/backend/
 ├── alembic/
@@ -740,6 +742,7 @@ src/backend/
 ```
 
 **Target Frontend:**
+
 ```
 src/frontend/src/
 ├── app/
@@ -803,14 +806,14 @@ src/frontend/src/
 
 ### 9.3 Hooks Extraction
 
-| Hook | Source | Purpose |
-|:---|:---|:---|
-| `useMeetings()` | meetings-dashboard-client | Fetch + cache meetings list |
-| `useMeeting(id)` | meeting-room-client | Fetch single meeting + token |
-| `useTheme()` | New | Dark/light mode toggle |
-| `useMediaDevices()` | New | Camera/mic selection for lobby |
-| `useAuth()` | New | Login/logout/token management |
-| `useLiveKitToken(meetingId)` | meeting-room-client | Token fetch with auth |
+| Hook                         | Source                    | Purpose                        |
+| :--------------------------- | :------------------------ | :----------------------------- |
+| `useMeetings()`              | meetings-dashboard-client | Fetch + cache meetings list    |
+| `useMeeting(id)`             | meeting-room-client       | Fetch single meeting + token   |
+| `useTheme()`                 | New                       | Dark/light mode toggle         |
+| `useMediaDevices()`          | New                       | Camera/mic selection for lobby |
+| `useAuth()`                  | New                       | Login/logout/token management  |
+| `useLiveKitToken(meetingId)` | meeting-room-client       | Token fetch with auth          |
 
 ---
 
@@ -818,72 +821,72 @@ src/frontend/src/
 
 ### React Rendering
 
-| Issue | Severity | Location | Fix |
-|:---|:---:|:---|:---|
-| Landing page is fully client-rendered | Medium | `page.tsx` L1 | Extract static sections as Server Components, only animation wrappers as client |
-| Meeting room re-renders on any state change | Low | meeting-room-client | Memoize child components with `React.memo` |
-| No memoization anywhere | Low | All components | Add `useMemo`/`useCallback` where needed |
+| Issue                                       | Severity | Location            | Fix                                                                             |
+| :------------------------------------------ | :------: | :------------------ | :------------------------------------------------------------------------------ |
+| Landing page is fully client-rendered       |  Medium  | `page.tsx` L1       | Extract static sections as Server Components, only animation wrappers as client |
+| Meeting room re-renders on any state change |   Low    | meeting-room-client | Memoize child components with `React.memo`                                      |
+| No memoization anywhere                     |   Low    | All components      | Add `useMemo`/`useCallback` where needed                                        |
 
 ### Bundle Size
 
-| Issue | Severity | Fix |
-|:---|:---:|:---|
-| GSAP imported in landing page bundle | Medium | Dynamic import with `next/dynamic` |
-| LiveKit SDK loaded on all meeting pages | Low | Already lazy via page-based code splitting |
-| No bundle analyzer configured | Low | Add `@next/bundle-analyzer` |
+| Issue                                   | Severity | Fix                                        |
+| :-------------------------------------- | :------: | :----------------------------------------- |
+| GSAP imported in landing page bundle    |  Medium  | Dynamic import with `next/dynamic`         |
+| LiveKit SDK loaded on all meeting pages |   Low    | Already lazy via page-based code splitting |
+| No bundle analyzer configured           |   Low    | Add `@next/bundle-analyzer`                |
 
 ### Network Requests
 
-| Issue | Severity | Location | Fix |
-|:---|:---:|:---|:---|
-| Meeting room fetches ALL meetings | Medium | `meeting-room-client.tsx` L37 | Use `GET /api/meetings/{id}` |
-| No request caching | Medium | All fetch calls | Implement React Query with staleTime |
-| No request deduplication | Low | Multiple components could fetch same data | React Query handles this |
+| Issue                             | Severity | Location                                  | Fix                                  |
+| :-------------------------------- | :------: | :---------------------------------------- | :----------------------------------- |
+| Meeting room fetches ALL meetings |  Medium  | `meeting-room-client.tsx` L37             | Use `GET /api/meetings/{id}`         |
+| No request caching                |  Medium  | All fetch calls                           | Implement React Query with staleTime |
+| No request deduplication          |   Low    | Multiple components could fetch same data | React Query handles this             |
 
 ### Images & Fonts
 
-| Issue | Severity | Fix |
-|:---|:---:|:---|
-| Plus Jakarta Sans loaded with 5 weights | Low | Consider loading only 400, 600, 700 |
-| Logo.jpg not optimized | Low | Convert to WebP, use `priority` prop |
+| Issue                                   | Severity | Fix                                  |
+| :-------------------------------------- | :------: | :----------------------------------- |
+| Plus Jakarta Sans loaded with 5 weights |   Low    | Consider loading only 400, 600, 700  |
+| Logo.jpg not optimized                  |   Low    | Convert to WebP, use `priority` prop |
 
 ---
 
 ## 11. Security Audit
 
-| # | Category | Finding | Severity | Recommendation |
-|:---:|:---|:---|:---:|:---|
-| SEC-01 | Authentication | No authentication system exists | Critical | Implement JWT auth with httpOnly cookies (FEAT-001) |
-| SEC-02 | Authorization | No role-based access control | Critical | Implement RBAC middleware (FEAT-002) |
-| SEC-03 | Token Exposure | LiveKit tokens issued without auth | Critical | Require authenticated user for token endpoint |
-| SEC-04 | Data Leakage | `sql_app.db` committed to git | Critical | Remove from git, add to .gitignore |
-| SEC-05 | Secrets | LiveKit credentials have fallback defaults in code | Medium | Remove defaults, fail fast if env missing |
-| SEC-06 | CORS | Only allows `localhost:3000` | Medium | Make configurable via environment variable |
-| SEC-07 | Input Validation | Only agenda length validated | Medium | Add validation for all fields (XSS prevention) |
-| SEC-08 | Rate Limiting | None | Medium | Add `slowapi` rate limiting |
-| SEC-09 | HTTPS | No SSL configuration | Medium | Document reverse proxy + SSL setup |
-| SEC-10 | Dependencies | No `safety` or `npm audit` in CI | Low | Add dependency scanning to CI |
-| SEC-11 | Error Messages | Backend returns Vietnamese error details | Low | Avoid exposing internal details |
-| SEC-12 | Client State | Participant name is random, not verified | Medium | Link to authenticated user identity |
+|   #    | Category         | Finding                                            | Severity | Recommendation                                      |
+| :----: | :--------------- | :------------------------------------------------- | :------: | :-------------------------------------------------- |
+| SEC-01 | Authentication   | No authentication system exists                    | Critical | Implement JWT auth with httpOnly cookies (FEAT-001) |
+| SEC-02 | Authorization    | No role-based access control                       | Critical | Implement RBAC middleware (FEAT-002)                |
+| SEC-03 | Token Exposure   | LiveKit tokens issued without auth                 | Critical | Require authenticated user for token endpoint       |
+| SEC-04 | Data Leakage     | `sql_app.db` committed to git                      | Critical | Remove from git, add to .gitignore                  |
+| SEC-05 | Secrets          | LiveKit credentials have fallback defaults in code |  Medium  | Remove defaults, fail fast if env missing           |
+| SEC-06 | CORS             | Only allows `localhost:3000`                       |  Medium  | Make configurable via environment variable          |
+| SEC-07 | Input Validation | Only agenda length validated                       |  Medium  | Add validation for all fields (XSS prevention)      |
+| SEC-08 | Rate Limiting    | None                                               |  Medium  | Add `slowapi` rate limiting                         |
+| SEC-09 | HTTPS            | No SSL configuration                               |  Medium  | Document reverse proxy + SSL setup                  |
+| SEC-10 | Dependencies     | No `safety` or `npm audit` in CI                   |   Low    | Add dependency scanning to CI                       |
+| SEC-11 | Error Messages   | Backend returns Vietnamese error details           |   Low    | Avoid exposing internal details                     |
+| SEC-12 | Client State     | Participant name is random, not verified           |  Medium  | Link to authenticated user identity                 |
 
 ---
 
 ## 12. SEO Audit
 
-| # | Category | Finding | Status | Fix |
-|:---:|:---|:---|:---:|:---|
-| SEO-01 | Title Tag | Present in root layout | OK | — |
-| SEO-02 | Meta Description | Present in root layout | OK | — |
-| SEO-03 | SSR/SSG | Landing page is `'use client'` | Missing | Refactor to Server Component with client animation wrappers |
-| SEO-04 | Open Graph | Missing | Missing | Add OG tags to layout metadata |
-| SEO-05 | Twitter Cards | Missing | Missing | Add Twitter card meta tags |
-| SEO-06 | Canonical URL | Missing | Missing | Add canonical URL |
-| SEO-07 | Sitemap | Missing | Missing | Add `next-sitemap` package |
-| SEO-08 | Robots.txt | Missing | Missing | Create public/robots.txt |
-| SEO-09 | Structured Data | Missing | Missing | Add JSON-LD for SoftwareApplication |
-| SEO-10 | Heading Hierarchy | Single H1 per page | OK | — |
-| SEO-11 | Image Alt | Logo has alt text | OK | — |
-| SEO-12 | Semantic HTML | header, main, section used | OK | Add nav, footer semantic tags |
+|   #    | Category          | Finding                        | Status  | Fix                                                         |
+| :----: | :---------------- | :----------------------------- | :-----: | :---------------------------------------------------------- |
+| SEO-01 | Title Tag         | Present in root layout         |   OK    | —                                                           |
+| SEO-02 | Meta Description  | Present in root layout         |   OK    | —                                                           |
+| SEO-03 | SSR/SSG           | Landing page is `'use client'` | Missing | Refactor to Server Component with client animation wrappers |
+| SEO-04 | Open Graph        | Missing                        | Missing | Add OG tags to layout metadata                              |
+| SEO-05 | Twitter Cards     | Missing                        | Missing | Add Twitter card meta tags                                  |
+| SEO-06 | Canonical URL     | Missing                        | Missing | Add canonical URL                                           |
+| SEO-07 | Sitemap           | Missing                        | Missing | Add `next-sitemap` package                                  |
+| SEO-08 | Robots.txt        | Missing                        | Missing | Create public/robots.txt                                    |
+| SEO-09 | Structured Data   | Missing                        | Missing | Add JSON-LD for SoftwareApplication                         |
+| SEO-10 | Heading Hierarchy | Single H1 per page             |   OK    | —                                                           |
+| SEO-11 | Image Alt         | Logo has alt text              |   OK    | —                                                           |
+| SEO-12 | Semantic HTML     | header, main, section used     |   OK    | Add nav, footer semantic tags                               |
 
 ---
 
@@ -893,49 +896,49 @@ src/frontend/src/
 
 **Current:** 2 tests. **Target:** >90% coverage.
 
-| Module | Test Count Target | Priority |
-|:---|:---:|:---:|
-| Auth service (hash, verify, JWT) | 15 | P0 |
-| Meeting CRUD | 12 | P0 |
-| Agenda validation (edge cases) | 8 | P0 |
-| User CRUD | 10 | P1 |
-| Department CRUD | 8 | P1 |
-| Task management | 8 | P2 |
-| LiveKit webhook handler | 10 | P1 |
-| Notification service | 6 | P2 |
+| Module                           | Test Count Target | Priority |
+| :------------------------------- | :---------------: | :------: |
+| Auth service (hash, verify, JWT) |        15         |    P0    |
+| Meeting CRUD                     |        12         |    P0    |
+| Agenda validation (edge cases)   |         8         |    P0    |
+| User CRUD                        |        10         |    P1    |
+| Department CRUD                  |         8         |    P1    |
+| Task management                  |         8         |    P2    |
+| LiveKit webhook handler          |        10         |    P1    |
+| Notification service             |         6         |    P2    |
 
 ### Unit Tests (Frontend — Vitest + React Testing Library)
 
 **Current:** 0 tests. **Target:** >70% coverage.
 
-| Component | Test Count Target | Priority |
-|:---|:---:|:---:|
-| API client | 8 | P0 |
-| Auth hooks | 6 | P0 |
-| Meeting form validation | 8 | P1 |
-| Meeting card component | 4 | P1 |
-| Error boundary | 3 | P1 |
-| Theme toggle | 3 | P2 |
+| Component               | Test Count Target | Priority |
+| :---------------------- | :---------------: | :------: |
+| API client              |         8         |    P0    |
+| Auth hooks              |         6         |    P0    |
+| Meeting form validation |         8         |    P1    |
+| Meeting card component  |         4         |    P1    |
+| Error boundary          |         3         |    P1    |
+| Theme toggle            |         3         |    P2    |
 
 ### E2E Tests (Playwright)
 
 **Current:** 0 tests. **Target:** Critical user flows covered.
 
-| Flow | Priority |
-|:---|:---:|
-| Login -> Dashboard -> Create Meeting -> Join Room | P0 |
-| Admin: Create Department -> Invite User | P1 |
-| Meeting lifecycle: Create -> Join -> End -> View Summary | P1 |
-| Error handling: Invalid login, expired token | P2 |
+| Flow                                                     | Priority |
+| :------------------------------------------------------- | :------: |
+| Login -> Dashboard -> Create Meeting -> Join Room        |    P0    |
+| Admin: Create Department -> Invite User                  |    P1    |
+| Meeting lifecycle: Create -> Join -> End -> View Summary |    P1    |
+| Error handling: Invalid login, expired token             |    P2    |
 
 ### Coverage Goals
 
-| Phase | Backend | Frontend | E2E |
-|:---|:---:|:---:|:---:|
-| Phase 1 | 80% | 0% | 0 flows |
-| Phase 2 | 85% | 40% | 2 flows |
-| Phase 3 | 90% | 60% | 5 flows |
-| Phase 4+ | 90% | 70% | 10 flows |
+| Phase    | Backend | Frontend |   E2E    |
+| :------- | :-----: | :------: | :------: |
+| Phase 1  |   80%   |    0%    | 0 flows  |
+| Phase 2  |   85%   |   40%    | 2 flows  |
+| Phase 3  |   90%   |   60%    | 5 flows  |
+| Phase 4+ |   90%   |   70%    | 10 flows |
 
 ---
 
@@ -1028,22 +1031,22 @@ src/frontend/src/
 
 ## 16. Naming Standards
 
-| Element | Convention | Example |
-|:---|:---|:---|
-| Git branch | `type/short-description` | `feat/jwt-auth`, `fix/meeting-404` |
-| Commit message | Conventional Commits | `feat(api): add meeting token endpoint` |
-| Python file | `snake_case.py` | `auth_service.py` |
-| Python class | `PascalCase` | `MeetingService` |
-| Python function | `snake_case` | `create_meeting()` |
-| Python constant | `UPPER_SNAKE_CASE` | `MAX_AGENDA_LENGTH` |
-| TypeScript file | `kebab-case.tsx` | `meeting-card.tsx` |
-| React component | `PascalCase` | `MeetingCard` |
-| React hook | `use` prefix camelCase | `useMeetings` |
-| CSS variable | `--kebab-case` | `--accent-foreground` |
-| API endpoint | `/api/v1/resource` | `/api/v1/meetings/` |
-| Database table | `snake_case` plural | `meeting_participants` |
-| Database column | `snake_case` | `created_at` |
-| Environment variable | `UPPER_SNAKE_CASE` | `LIVEKIT_API_KEY` |
+| Element              | Convention               | Example                                 |
+| :------------------- | :----------------------- | :-------------------------------------- |
+| Git branch           | `type/short-description` | `feat/jwt-auth`, `fix/meeting-404`      |
+| Commit message       | Conventional Commits     | `feat(api): add meeting token endpoint` |
+| Python file          | `snake_case.py`          | `auth_service.py`                       |
+| Python class         | `PascalCase`             | `MeetingService`                        |
+| Python function      | `snake_case`             | `create_meeting()`                      |
+| Python constant      | `UPPER_SNAKE_CASE`       | `MAX_AGENDA_LENGTH`                     |
+| TypeScript file      | `kebab-case.tsx`         | `meeting-card.tsx`                      |
+| React component      | `PascalCase`             | `MeetingCard`                           |
+| React hook           | `use` prefix camelCase   | `useMeetings`                           |
+| CSS variable         | `--kebab-case`           | `--accent-foreground`                   |
+| API endpoint         | `/api/v1/resource`       | `/api/v1/meetings/`                     |
+| Database table       | `snake_case` plural      | `meeting_participants`                  |
+| Database column      | `snake_case`             | `created_at`                            |
+| Environment variable | `UPPER_SNAKE_CASE`       | `LIVEKIT_API_KEY`                       |
 
 ---
 
@@ -1079,14 +1082,14 @@ Scopes: api, ui, auth, meetings, livekit, db, ci, docs
 
 ## 18. Release Strategy
 
-| Version | Milestone | Key Features |
-|:---|:---|:---|
-| `v0.1.0` | Current | Meeting CRUD + LiveKit room + Landing page |
-| `v0.2.0` | Phase 1 complete | Stabilization, Docker, migrations |
-| `v0.5.0` | Phase 2 complete | Auth, RBAC, admin pages |
+| Version  | Milestone        | Key Features                                     |
+| :------- | :--------------- | :----------------------------------------------- |
+| `v0.1.0` | Current          | Meeting CRUD + LiveKit room + Landing page       |
+| `v0.2.0` | Phase 1 complete | Stabilization, Docker, migrations                |
+| `v0.5.0` | Phase 2 complete | Auth, RBAC, admin pages                          |
 | `v1.0.0` | Phase 3 complete | Full meeting lifecycle, recording, notifications |
-| `v2.0.0` | Phase 4 complete | AI pipeline (STT, RAG, MoM) |
-| `v3.0.0` | Phase 5 complete | Enterprise features (SSO, audit, encryption) |
+| `v2.0.0` | Phase 4 complete | AI pipeline (STT, RAG, MoM)                      |
+| `v3.0.0` | Phase 5 complete | Enterprise features (SSO, audit, encryption)     |
 
 ### Versioning: Semantic Versioning (SemVer)
 
@@ -1140,6 +1143,7 @@ Knowledge Hub becomes the primary value. RAG chatbot provides instant access to 
 ### Year 3: DX-OS Platform
 
 Axiom expands beyond meetings into a full Digital Enterprise Operating System:
+
 - Task management (with Jira/Trello integration)
 - Document management (with OCR)
 - Decision tracking
@@ -1161,33 +1165,33 @@ Axiom expands beyond meetings into a full Digital Enterprise Operating System:
 
 ### Sprint 1 (Week 1-2): Foundation
 
-| # | Task | Priority | Est. | Files |
-|:---:|:---|:---:|:---:|:---|
-| 1 | Remove `sql_app.db` and `test.db` from git, update `.gitignore` | P0 | 30m | `.gitignore`, root |
-| 2 | Fix deprecated APIs: `orm_mode` -> `from_attributes`, `.dict()` -> `.model_dump()`, `utcnow` -> `now(UTC)` | P0 | 1h | `main.py`, `models.py` |
-| 3 | Set up Alembic migrations | P0 | 4h | `src/backend/alembic/` |
-| 4 | Make database URL configurable via env | P0 | 2h | `database.py`, `.env.example` |
-| 5 | Add `GET /api/v1/meetings/{id}` endpoint (TDD) | P0 | 3h | `main.py`, `test_main.py` |
-| 6 | Add `DELETE /api/v1/meetings/{id}` endpoint (TDD) | P1 | 2h | `main.py`, `test_main.py` |
-| 7 | Expand backend tests to >80% coverage | P0 | 8h | `test_main.py` |
-| 8 | Create `Dockerfile.backend` and `Dockerfile.frontend` | P1 | 6h | `docker/` |
-| 9 | Create `docker-compose.yml` (PostgreSQL + FastAPI + Next.js + LiveKit) | P1 | 4h | Root |
-| 10 | Add OpenGraph / Twitter meta tags | P1 | 1h | `layout.tsx` |
+|  #  | Task                                                                                                       | Priority | Est. | Files                         |
+| :-: | :--------------------------------------------------------------------------------------------------------- | :------: | :--: | :---------------------------- |
+|  1  | Remove `sql_app.db` and `test.db` from git, update `.gitignore`                                            |    P0    | 30m  | `.gitignore`, root            |
+|  2  | Fix deprecated APIs: `orm_mode` -> `from_attributes`, `.dict()` -> `.model_dump()`, `utcnow` -> `now(UTC)` |    P0    |  1h  | `main.py`, `models.py`        |
+|  3  | Set up Alembic migrations                                                                                  |    P0    |  4h  | `src/backend/alembic/`        |
+|  4  | Make database URL configurable via env                                                                     |    P0    |  2h  | `database.py`, `.env.example` |
+|  5  | Add `GET /api/v1/meetings/{id}` endpoint (TDD)                                                             |    P0    |  3h  | `main.py`, `test_main.py`     |
+|  6  | Add `DELETE /api/v1/meetings/{id}` endpoint (TDD)                                                          |    P1    |  2h  | `main.py`, `test_main.py`     |
+|  7  | Expand backend tests to >80% coverage                                                                      |    P0    |  8h  | `test_main.py`                |
+|  8  | Create `Dockerfile.backend` and `Dockerfile.frontend`                                                      |    P1    |  6h  | `docker/`                     |
+|  9  | Create `docker-compose.yml` (PostgreSQL + FastAPI + Next.js + LiveKit)                                     |    P1    |  4h  | Root                          |
+| 10  | Add OpenGraph / Twitter meta tags                                                                          |    P1    |  1h  | `layout.tsx`                  |
 
 ### Sprint 2 (Week 3-4): Authentication
 
-| # | Task | Priority | Est. | Files |
-|:---:|:---|:---:|:---:|:---|
-| 11 | Restructure backend into `api/`, `core/`, `models/`, `schemas/`, `services/` | P0 | 6h | `src/backend/` |
-| 12 | Implement JWT auth service (login, register, refresh) — TDD | P0 | 16h | `src/backend/api/v1/auth.py` |
-| 13 | Implement RBAC middleware — TDD | P0 | 8h | `src/backend/core/security.py` |
-| 14 | Create Login page | P0 | 8h | `src/frontend/src/app/(auth)/login/` |
-| 15 | Create API client layer | P0 | 4h | `src/frontend/src/lib/api.ts` |
-| 16 | Set up Zustand + React Query | P0 | 6h | `src/frontend/src/stores/`, `hooks/` |
-| 17 | Create dashboard layout with sidebar | P0 | 12h | `src/frontend/src/app/(dashboard)/layout.tsx` |
-| 18 | Extract landing sections into individual components | P1 | 3h | `src/frontend/src/app/(marketing)/_sections/` |
-| 19 | Add global React Error Boundary | P1 | 3h | `src/frontend/src/components/shared/error-boundary.tsx` |
-| 20 | Implement dark mode toggle | P2 | 4h | `src/frontend/src/hooks/use-theme.ts` |
+|  #  | Task                                                                         | Priority | Est. | Files                                                   |
+| :-: | :--------------------------------------------------------------------------- | :------: | :--: | :------------------------------------------------------ |
+| 11  | Restructure backend into `api/`, `core/`, `models/`, `schemas/`, `services/` |    P0    |  6h  | `src/backend/`                                          |
+| 12  | Implement JWT auth service (login, register, refresh) — TDD                  |    P0    | 16h  | `src/backend/api/v1/auth.py`                            |
+| 13  | Implement RBAC middleware — TDD                                              |    P0    |  8h  | `src/backend/core/security.py`                          |
+| 14  | Create Login page                                                            |    P0    |  8h  | `src/frontend/src/app/(auth)/login/`                    |
+| 15  | Create API client layer                                                      |    P0    |  4h  | `src/frontend/src/lib/api.ts`                           |
+| 16  | Set up Zustand + React Query                                                 |    P0    |  6h  | `src/frontend/src/stores/`, `hooks/`                    |
+| 17  | Create dashboard layout with sidebar                                         |    P0    | 12h  | `src/frontend/src/app/(dashboard)/layout.tsx`           |
+| 18  | Extract landing sections into individual components                          |    P1    |  3h  | `src/frontend/src/app/(marketing)/_sections/`           |
+| 19  | Add global React Error Boundary                                              |    P1    |  3h  | `src/frontend/src/components/shared/error-boundary.tsx` |
+| 20  | Implement dark mode toggle                                                   |    P2    |  4h  | `src/frontend/src/hooks/use-theme.ts`                   |
 
 ---
 
@@ -1195,4 +1199,4 @@ Axiom expands beyond meetings into a full Digital Enterprise Operating System:
 
 ---
 
-*End of MASTER_PROJECT_PLAN.md — Total analysis based on 50+ files, 5,200+ LOC, 10+ documentation files.*
+_End of MASTER_PROJECT_PLAN.md — Total analysis based on 50+ files, 5,200+ LOC, 10+ documentation files._

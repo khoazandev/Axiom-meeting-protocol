@@ -3,14 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { MeetingRoomClient } from './meeting-room-client';
-import {
-  Sparkles,
-  CheckCircle2,
-  Users,
-  Zap,
-  CheckSquare,
-  Video,
-} from 'lucide-react';
+import { Sparkles, CheckCircle2, Users, Zap, CheckSquare, Video } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
@@ -129,7 +122,9 @@ export default function MeetingRoomPage() {
           <div className="h-full p-8 overflow-y-auto max-w-5xl mx-auto space-y-6">
             {/* Header */}
             <div>
-              <h1 className="text-lg font-semibold text-text-primary">Biên bản cuộc họp tự động (MoM)</h1>
+              <h1 className="text-lg font-semibold text-text-primary">
+                Biên bản cuộc họp tự động (MoM)
+              </h1>
               <p className="text-sm text-text-secondary mt-1">
                 Tóm tắt điều hành, nhật ký quyết định và công việc được tổng hợp tự động.
               </p>
@@ -142,7 +137,8 @@ export default function MeetingRoomPage() {
                 <span>Tóm tắt điều hành</span>
               </div>
               <p className="text-sm text-text-secondary leading-relaxed">
-                {mom?.summary || 'Biên bản cuộc họp đã được tạo thành công với sự tham gia của các thành viên.'}
+                {mom?.summary ||
+                  'Biên bản cuộc họp đã được tạo thành công với sự tham gia của các thành viên.'}
               </p>
             </div>
 
@@ -155,11 +151,16 @@ export default function MeetingRoomPage() {
                   <span>Quyết định chính</span>
                 </div>
                 <div className="space-y-3">
-                  {(mom?.key_decisions || [
-                    'Thông qua kế hoạch kiến trúc ứng dụng.',
-                    'Xác nhận schema cơ sở dữ liệu multi-tenant.',
-                  ]).map((dec: string, idx: number) => (
-                    <div key={idx} className="p-3 rounded-lg bg-bg-elevated border border-border flex items-start gap-2.5 text-sm text-text-secondary">
+                  {(
+                    mom?.key_decisions || [
+                      'Thông qua kế hoạch kiến trúc ứng dụng.',
+                      'Xác nhận schema cơ sở dữ liệu multi-tenant.',
+                    ]
+                  ).map((dec: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-lg bg-bg-elevated border border-border flex items-start gap-2.5 text-sm text-text-secondary"
+                    >
                       <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                       <span>{dec}</span>
                     </div>
@@ -174,15 +175,19 @@ export default function MeetingRoomPage() {
                   <span>Thời lượng phát biểu</span>
                 </div>
                 <div className="space-y-4 pt-1">
-                  {(mom?.speaker_stats || [
-                    { speaker: 'Alice (Principal Architect)', percentage: 50 },
-                    { speaker: 'Bob (Frontend Engineer)', percentage: 30 },
-                    { speaker: 'Charlie (AI Partner)', percentage: 20 },
-                  ]).map((sp: { speaker: string; percentage: number }, idx: number) => (
+                  {(
+                    mom?.speaker_stats || [
+                      { speaker: 'Alice (Principal Architect)', percentage: 50 },
+                      { speaker: 'Bob (Frontend Engineer)', percentage: 30 },
+                      { speaker: 'Charlie (AI Partner)', percentage: 20 },
+                    ]
+                  ).map((sp: { speaker: string; percentage: number }, idx: number) => (
                     <div key={idx} className="space-y-1.5">
                       <div className="flex justify-between text-xs text-text-secondary font-medium">
                         <span>{sp.speaker}</span>
-                        <span className="font-mono text-accent font-semibold">{sp.percentage}%</span>
+                        <span className="font-mono text-accent font-semibold">
+                          {sp.percentage}%
+                        </span>
                       </div>
                       <div className="h-2 w-full bg-bg-elevated rounded-full overflow-hidden border border-border">
                         <div
@@ -206,11 +211,16 @@ export default function MeetingRoomPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(mom?.action_items || [
-                  'Hoàn thiện LiveKit Webhook Receiver',
-                  'Triển khai pipeline trích xuất tài liệu',
-                ]).map((item: string, idx: number) => (
-                  <div key={idx} className="p-3.5 rounded-lg bg-bg-elevated border border-border flex items-start gap-3 text-sm">
+                {(
+                  mom?.action_items || [
+                    'Hoàn thiện LiveKit Webhook Receiver',
+                    'Triển khai pipeline trích xuất tài liệu',
+                  ]
+                ).map((item: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-lg bg-bg-elevated border border-border flex items-start gap-3 text-sm"
+                  >
                     <CheckSquare className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                     <span className="text-text-secondary font-medium">{item}</span>
                   </div>

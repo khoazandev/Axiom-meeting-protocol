@@ -69,12 +69,8 @@ export default function MeetingsDashboardPage() {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="bg-bg-card border border-border rounded-xl p-6">
-        <h1 className="text-lg font-semibold text-text-primary mb-1">
-          {t.meetings.title}
-        </h1>
-        <p className="text-sm text-text-secondary mb-5">
-          {t.meetings.subTitle}
-        </p>
+        <h1 className="text-lg font-semibold text-text-primary mb-1">{t.meetings.title}</h1>
+        <p className="text-sm text-text-secondary mb-5">{t.meetings.subTitle}</p>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <Link href="/meetings/create">
@@ -145,7 +141,10 @@ export default function MeetingsDashboardPage() {
           {[
             { key: 'all' as const, label: `${t.meetings.allTab} (${meetings.length})` },
             { key: 'live' as const, label: `${t.meetings.statusActive} (${activeCount})` },
-            { key: 'scheduled' as const, label: `${t.meetings.statusScheduled} (${meetings.length - activeCount})` },
+            {
+              key: 'scheduled' as const,
+              label: `${t.meetings.statusScheduled} (${meetings.length - activeCount})`,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -181,9 +180,7 @@ export default function MeetingsDashboardPage() {
           <div className="p-12 rounded-xl bg-bg-card border border-border text-center space-y-3">
             <Calendar className="w-8 h-8 text-text-muted mx-auto" />
             <div className="text-sm font-semibold text-text-primary">{t.meetings.emptyTitle}</div>
-            <p className="text-sm text-text-secondary max-w-sm mx-auto">
-              {t.meetings.emptySub}
-            </p>
+            <p className="text-sm text-text-secondary max-w-sm mx-auto">{t.meetings.emptySub}</p>
             <Link href="/meetings/create" className="inline-block mt-2">
               <button className="px-4 py-2.5 rounded-lg bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-medium transition-colors">
                 {t.meetings.createBtn}

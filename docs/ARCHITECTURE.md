@@ -27,7 +27,7 @@ The layer enforcing organizational discipline (e.g., No Agenda = No Meeting).
 The digital assistant layer, operating via real-time WebSocket streams and background tasks.
 
 - **Technologies:** Silero VAD v5 (Silence Filtering), Faster-Whisper (Real-time STT), Regex N-Gram & Stutter Deduplicator, Ollama (Qwen3:8b) / Heuristic Fallback Engine.
-- **Workflow:** 
+- **Workflow:**
   1. Live microphone stream captured via Web Audio API & Web Speech API on Next.js frontend.
   2. Binary audio chunks & text utterances streamed over WebSocket (`ws://127.0.0.1:8000/ws/realtime-stt`).
   3. Silero VAD filters out silence (`speech_prob < 0.4`), Faster-Whisper transcribes speech, Regex filters N-gram phrase repetitions (2-8 words) & speech typos.

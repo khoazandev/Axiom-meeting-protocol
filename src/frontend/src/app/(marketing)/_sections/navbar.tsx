@@ -46,7 +46,10 @@ export function Navbar() {
           <Link href="#features" className="hover:text-foreground transition-colors duration-200">
             Features
           </Link>
-          <Link href="#how-it-works" className="hover:text-foreground transition-colors duration-200">
+          <Link
+            href="#how-it-works"
+            className="hover:text-foreground transition-colors duration-200"
+          >
             Process
           </Link>
           <Link href="/meetings" className="hover:text-foreground transition-colors duration-200">

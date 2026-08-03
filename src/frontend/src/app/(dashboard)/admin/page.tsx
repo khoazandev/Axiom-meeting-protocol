@@ -179,7 +179,8 @@ export default function AdminPage() {
         </div>
         <h2 className="text-xl font-bold text-text-primary">403 Access Restricted</h2>
         <p className="text-xs text-text-secondary leading-relaxed">
-          The Admin Console is strictly reserved for Workspace Owners and Administrators. Please contact your workspace administrator for elevated governance permissions.
+          The Admin Console is strictly reserved for Workspace Owners and Administrators. Please
+          contact your workspace administrator for elevated governance permissions.
         </p>
       </div>
     );
@@ -194,9 +195,7 @@ export default function AdminPage() {
             <ShieldCheck className="w-6 h-6 text-success" />
             <h1 className="text-lg font-semibold text-text-primary">{t.admin.title}</h1>
           </div>
-          <p className="text-sm text-text-secondary mt-1">
-            {t.admin.subTitle}
-          </p>
+          <p className="text-sm text-text-secondary mt-1">{t.admin.subTitle}</p>
         </div>
 
         <span className="px-3 py-1 rounded-md bg-success/10 border border-success/20 text-success text-xs font-medium flex items-center gap-1.5">
@@ -212,7 +211,9 @@ export default function AdminPage() {
             <span>Workspace Members</span>
             <Users className="w-4 h-4 text-accent" />
           </div>
-          <div className="text-2xl font-bold text-text-primary font-mono">{stats?.total_members || 1}</div>
+          <div className="text-2xl font-bold text-text-primary font-mono">
+            {stats?.total_members || 1}
+          </div>
         </div>
 
         <div className="p-5 rounded-xl bg-bg-card border border-border space-y-2">
@@ -220,7 +221,9 @@ export default function AdminPage() {
             <span>Total Meetings</span>
             <Video className="w-4 h-4 text-accent" />
           </div>
-          <div className="text-2xl font-bold text-text-primary font-mono">{stats?.total_meetings || 0}</div>
+          <div className="text-2xl font-bold text-text-primary font-mono">
+            {stats?.total_meetings || 0}
+          </div>
         </div>
 
         <div className="p-5 rounded-xl bg-bg-card border border-border space-y-2">
@@ -228,7 +231,9 @@ export default function AdminPage() {
             <span>Knowledge Docs</span>
             <FileText className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="text-2xl font-bold text-text-primary font-mono">{stats?.total_documents || 0}</div>
+          <div className="text-2xl font-bold text-text-primary font-mono">
+            {stats?.total_documents || 0}
+          </div>
         </div>
 
         <div className="p-5 rounded-xl bg-bg-card border border-border space-y-2">
@@ -236,7 +241,9 @@ export default function AdminPage() {
             <span>Audit Events</span>
             <Database className="w-4 h-4 text-success" />
           </div>
-          <div className="text-2xl font-bold text-text-primary font-mono">{stats?.total_audit_events || 0}</div>
+          <div className="text-2xl font-bold text-text-primary font-mono">
+            {stats?.total_audit_events || 0}
+          </div>
         </div>
       </div>
 
@@ -277,8 +284,12 @@ export default function AdminPage() {
                           {log.action}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-text-secondary font-medium">{log.resource}</td>
-                      <td className="py-2.5 px-3 text-text-secondary font-mono text-[11px]">{log.ip_address || '127.0.0.1'}</td>
+                      <td className="py-2.5 px-3 text-text-secondary font-medium">
+                        {log.resource}
+                      </td>
+                      <td className="py-2.5 px-3 text-text-secondary font-mono text-[11px]">
+                        {log.ip_address || '127.0.0.1'}
+                      </td>
                       <td className="py-2.5 px-3 text-text-secondary font-mono text-[10px]">
                         {new Date(log.created_at).toLocaleTimeString()}
                       </td>
@@ -323,17 +334,24 @@ export default function AdminPage() {
           </form>
 
           <div className="space-y-3 pt-2">
-            <div className="text-[11px] font-bold text-text-secondary ">Active Webhooks ({webhooks.length})</div>
+            <div className="text-[11px] font-bold text-text-secondary ">
+              Active Webhooks ({webhooks.length})
+            </div>
             {webhooks.length === 0 ? (
               <div className="p-4 text-center text-xs text-text-secondary bg-bg-base rounded-xl border border-border">
                 No outbound webhooks registered.
               </div>
             ) : (
               webhooks.map((wh) => (
-                <div key={wh.id} className="p-3 rounded-xl bg-bg-base border border-border flex items-center justify-between text-xs">
+                <div
+                  key={wh.id}
+                  className="p-3 rounded-xl bg-bg-base border border-border flex items-center justify-between text-xs"
+                >
                   <div className="space-y-0.5 truncate">
                     <div className="font-bold text-text-primary truncate">{wh.name}</div>
-                    <div className="text-[10px] text-text-secondary font-mono truncate">{wh.target_url}</div>
+                    <div className="text-[10px] text-text-secondary font-mono truncate">
+                      {wh.target_url}
+                    </div>
                   </div>
                   <button
                     onClick={() => handleDeleteWebhook(wh.id)}

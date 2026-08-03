@@ -196,8 +196,12 @@ export function TopNavbar() {
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-72 bg-bg-card border border-border rounded-xl p-3 shadow-lg z-50">
                 <div className="flex items-center justify-between mb-2 pb-2 border-b border-border-subtle">
-                  <span className="text-sm font-semibold text-text-primary">{t.header.notifications}</span>
-                  <span className="text-xs text-accent hover:underline cursor-pointer">{t.header.markAllRead}</span>
+                  <span className="text-sm font-semibold text-text-primary">
+                    {t.header.notifications}
+                  </span>
+                  <span className="text-xs text-accent hover:underline cursor-pointer">
+                    {t.header.markAllRead}
+                  </span>
                 </div>
                 <div className="text-sm text-text-muted py-4 text-center">
                   Không có thông báo mới
@@ -222,7 +226,9 @@ export function TopNavbar() {
               <div className="absolute right-0 mt-2 w-56 bg-bg-card border border-border rounded-xl p-1.5 shadow-lg z-50">
                 {/* User info */}
                 <div className="px-3 py-2.5 border-b border-border-subtle">
-                  <div className="text-sm font-semibold text-text-primary">{user?.full_name || 'User'}</div>
+                  <div className="text-sm font-semibold text-text-primary">
+                    {user?.full_name || 'User'}
+                  </div>
                   <div className="text-xs text-text-muted truncate mt-0.5">{user?.email}</div>
                   {activeWorkspace && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs text-text-muted">
@@ -365,7 +371,9 @@ export function TopNavbar() {
                   {userInitial}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-text-primary truncate">{user?.full_name || 'User'}</div>
+                  <div className="text-sm font-medium text-text-primary truncate">
+                    {user?.full_name || 'User'}
+                  </div>
                   <div className="text-xs text-text-muted truncate">{user?.email}</div>
                 </div>
                 <button

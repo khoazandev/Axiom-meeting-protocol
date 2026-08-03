@@ -53,12 +53,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-2xl font-extrabold tracking-tight">
-                Something went wrong
-              </h1>
+              <h1 className="text-2xl font-extrabold tracking-tight">Something went wrong</h1>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                An unexpected error occurred. This has been logged for investigation.
-                Please try again.
+                An unexpected error occurred. This has been logged for investigation. Please try
+                again.
               </p>
             </div>
 

@@ -37,7 +37,10 @@ export default function RegisterPage() {
       // 3. Create initial workspace if workspaceName provided
       let initialWs = null;
       if (workspaceName.trim()) {
-        const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = workspaceName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
         initialWs = await workspaceApi.create(workspaceName.trim(), slug || 'workspace');
       }
 

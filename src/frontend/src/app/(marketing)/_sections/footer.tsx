@@ -27,9 +27,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground st">
-              Architecture
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Architecture</h4>
             <div className="space-y-2.5">
               {['H (Human)', 'P (Process)', 'D (Data)', 'I (Intelligence)'].map((item) => (
                 <p
@@ -43,9 +41,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground st">
-              Resources
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Resources</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'Documentation', href: '#' },
@@ -65,9 +61,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-muted-foreground st">
-              Open Source
-            </h4>
+            <h4 className="text-xs font-bold text-muted-foreground st">Open Source</h4>
             <div className="space-y-2.5">
               {[
                 { label: 'GitHub', href: 'https://github.com/khoazandev/Axiom-meeting-protocol' },

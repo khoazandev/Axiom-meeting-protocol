@@ -60,8 +60,8 @@ export function FeaturesSection() {
           <div className="space-y-3">
             <h3 className="text-xl font-bold tracking-tight">Data Sovereign</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Your intellectual property never leaves your servers. True On-Premise security for
-              dữ liệu của bạn.
+              Your intellectual property never leaves your servers. True On-Premise security for dữ
+              liệu của bạn.
             </p>
           </div>
           <div className="flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">

@@ -16,9 +16,7 @@ export default function CalendarPage() {
       <div className="p-12 rounded-xl bg-bg-card border border-border text-center space-y-3">
         <Sparkles className="w-8 h-8 text-accent mx-auto animate-pulse" />
         <h3 className="text-sm font-semibold text-text-primary">{t.calendar.noEvents}</h3>
-        <p className="text-sm text-text-secondary max-w-sm mx-auto">
-          {t.calendar.subTitle}
-        </p>
+        <p className="text-sm text-text-secondary max-w-sm mx-auto">{t.calendar.subTitle}</p>
       </div>
     </div>
   );

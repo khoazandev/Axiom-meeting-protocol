@@ -40,6 +40,7 @@ This spins up a LiveKit server at `ws://localhost:7880` with the API key `devkey
 ### Step 2: Configure Environment Variables
 
 **Backend (`src/backend/.env`):**
+
 ```env
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
@@ -49,6 +50,7 @@ CORS_ORIGINS=http://localhost:3000
 ```
 
 **Frontend (`src/frontend/.env.local`):**
+
 ```env
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
 BACKEND_URL=http://localhost:8000

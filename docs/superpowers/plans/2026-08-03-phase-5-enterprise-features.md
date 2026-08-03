@@ -7,6 +7,7 @@
 ## Task 1: Database Models & Alembic Migration for Phase 5
 
 ### Files
+
 - **Modify:** [models.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/models.py)
 - **New Migration:** [c3d4e5f6a7b8_add_phase5_tables.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/alembic/versions/c3d4e5f6a7b8_add_phase5_tables.py)
 - **New Test:** [test_models_phase5.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_models_phase5.py)
@@ -39,6 +40,7 @@
 ## Task 2: Audit Logging Service & API (`/api/v1/admin/audit-logs`)
 
 ### Files
+
 - **New Router:** [admin.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/admin.py)
 - **Modify Router:** [router.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/router.py)
 - **New Test:** [test_audit_logs_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_audit_logs_api.py)
@@ -71,6 +73,7 @@
 ## Task 3: Outbound Webhook Integration API (`/api/v1/admin/webhooks`)
 
 ### Files
+
 - **Modify Router:** [admin.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/admin.py)
 - **New Test:** [test_admin_webhooks_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_admin_webhooks_api.py)
 
@@ -98,6 +101,7 @@
 ## Task 4: Admin Workspace Stats API (`/api/v1/admin/stats`)
 
 ### Files
+
 - **Modify Router:** [admin.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/api/v1/admin.py)
 - **New Test:** [test_admin_stats_api.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_admin_stats_api.py)
 
@@ -122,6 +126,7 @@
 ## Task 5: Email Notification Service Helper
 
 ### Files
+
 - **New Service:** [email_service.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/services/email_service.py)
 - **New Test:** [test_email_service.py](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/backend/tests/test_email_service.py)
 
@@ -143,7 +148,8 @@
 ## Task 6: Frontend Dedicated Admin Portal (`/admin`)
 
 ### Files
-- **New Page:** [page.tsx](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/(dashboard)/admin/page.tsx)
+
+- **New Page:** [page.tsx](<file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/app/(dashboard)/admin/page.tsx>)
 
 ### Step-by-Step Instructions
 
@@ -158,6 +164,7 @@
 ## Task 7: Sidebar Navigation RBAC Link Update
 
 ### Files
+
 - **Modify Component:** [app-sidebar.tsx](file:///c:/Users/Admin/Desktop/Smart_metting_AI/src/frontend/src/components/layout/app-sidebar.tsx)
 
 ### Step-by-Step Instructions

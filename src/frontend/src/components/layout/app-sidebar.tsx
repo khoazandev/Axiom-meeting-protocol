@@ -117,7 +117,9 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
               title={item.label}
             >
               <div className="flex items-center gap-3">
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+                <Icon
+                  className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
+                />
                 {!collapsed && <span>{item.label}</span>}
               </div>
               {!collapsed && item.badge && (
@@ -135,14 +137,20 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {user?.full_name ? user.full_name[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'U'}
+              {user?.full_name
+                ? user.full_name[0].toUpperCase()
+                : user?.email
+                  ? user.email[0].toUpperCase()
+                  : 'U'}
             </div>
             {!collapsed && (
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-white truncate">
                   {user?.full_name || 'Enterprise User'}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate">{user?.email || 'user@company.com'}</div>
+                <div className="text-[10px] text-slate-400 truncate">
+                  {user?.email || 'user@company.com'}
+                </div>
               </div>
             )}
           </div>

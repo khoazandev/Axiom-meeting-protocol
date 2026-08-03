@@ -30,8 +30,6 @@ interface Task {
   dueDate: string;
 }
 
-
-
 export default function TasksPage() {
   const { t } = useLanguageStore();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -98,9 +96,7 @@ export default function TasksPage() {
             <h1 className="text-lg font-semibold text-text-primary">{t.tasks.title}</h1>
             {isLoading && <Loader2 className="w-4 h-4 text-accent animate-spin ml-2" />}
           </div>
-          <p className="text-sm text-text-secondary mt-1">
-            {t.tasks.subTitle}
-          </p>
+          <p className="text-sm text-text-secondary mt-1">{t.tasks.subTitle}</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -150,9 +146,7 @@ export default function TasksPage() {
         <div className="p-12 rounded-xl bg-bg-card border border-border text-center space-y-3">
           <Calendar className="w-8 h-8 text-text-muted mx-auto" />
           <div className="text-sm font-semibold text-text-primary">{t.tasks.emptyTitle}</div>
-          <p className="text-sm text-text-secondary max-w-sm mx-auto">
-            {t.tasks.emptySub}
-          </p>
+          <p className="text-sm text-text-secondary max-w-sm mx-auto">{t.tasks.emptySub}</p>
         </div>
       )}
 
@@ -167,7 +161,9 @@ export default function TasksPage() {
                 key={col.id}
                 className="bg-bg-card/60 border border-border rounded-xl p-4 flex flex-col min-h-[480px]"
               >
-                <div className={`flex items-center justify-between pb-3 border-b border-border mb-4 ${col.color}`}>
+                <div
+                  className={`flex items-center justify-between pb-3 border-b border-border mb-4 ${col.color}`}
+                >
                   <span className="text-xs font-bold ">{col.title}</span>
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-border text-text-secondary border border-border">
                     {colTasks.length}
@@ -181,21 +177,25 @@ export default function TasksPage() {
                       className="p-4 rounded-xl bg-bg-card border border-border shadow-md hover:border-blue-500/40 transition-all space-y-3"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-accent font-semibold">{task.id}</span>
+                        <span className="text-[10px] font-mono text-accent font-semibold">
+                          {task.id}
+                        </span>
                         <span
                           className={`text-[9px] font-bold  px-2 py-0.5 rounded-full ${
                             task.priority === 'HIGH'
                               ? 'bg-red-500/20 text-danger border border-red-500/30'
                               : task.priority === 'MEDIUM'
-                              ? 'bg-warning/10 text-warning border border-amber-500/30'
-                              : 'bg-slate-500/20 text-text-secondary border border-slate-500/30'
+                                ? 'bg-warning/10 text-warning border border-amber-500/30'
+                                : 'bg-slate-500/20 text-text-secondary border border-slate-500/30'
                           }`}
                         >
                           {task.priority}
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-semibold text-text-primary leading-relaxed">{task.title}</h4>
+                      <h4 className="text-xs font-semibold text-text-primary leading-relaxed">
+                        {task.title}
+                      </h4>
 
                       <div className="p-2 rounded-lg bg-bg-base border border-border flex items-center gap-1.5 text-[10px] text-text-secondary">
                         <Video className="w-3 h-3 text-accent shrink-0" />

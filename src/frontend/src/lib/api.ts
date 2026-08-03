@@ -230,7 +230,11 @@ export const meetingsApi = {
   },
 
   /** Get a LiveKit token for a meeting room. */
-  getToken(meetingId: number | string, participantName: string, signal?: AbortSignal): Promise<TokenResponse> {
+  getToken(
+    meetingId: number | string,
+    participantName: string,
+    signal?: AbortSignal
+  ): Promise<TokenResponse> {
     return apiFetch<TokenResponse>(
       `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
       { signal }

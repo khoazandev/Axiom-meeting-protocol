@@ -76,7 +76,9 @@ export default function KnowledgePage() {
       formData.append('file', file);
 
       // Remove Content-Type for FormData — browser sets it with boundary
-      const { 'Content-Type': _, ...uploadHeaders } = headers as Record<string, string> & { 'Content-Type'?: string };
+      const { 'Content-Type': _, ...uploadHeaders } = headers as Record<string, string> & {
+        'Content-Type'?: string;
+      };
 
       const res = await fetch('/api/v1/knowledge/documents', {
         method: 'POST',
@@ -155,9 +157,7 @@ export default function KnowledgePage() {
             <BookOpen className="w-5 h-5 text-accent" />
             <h1 className="text-lg font-semibold text-text-primary">{t.knowledge.title}</h1>
           </div>
-          <p className="text-sm text-text-secondary mt-1">
-            {t.knowledge.subTitle}
-          </p>
+          <p className="text-sm text-text-secondary mt-1">{t.knowledge.subTitle}</p>
         </div>
 
         {uploadFeedback && (
@@ -190,7 +190,11 @@ export default function KnowledgePage() {
             disabled={isSearching}
             className="px-5 py-3 rounded-xl bg-accent hover:bg-accent/90 text-text-primary text-xs font-bold shadow-lg  flex items-center gap-2 transition-all disabled:opacity-50"
           >
-            {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {isSearching ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
             <span>{t.knowledge.searchBtn}</span>
           </button>
         </form>
@@ -198,13 +202,20 @@ export default function KnowledgePage() {
         {/* Search Results */}
         {searchResults.length > 0 && (
           <div className="space-y-3 pt-2">
-            <div className="text-xs font-bold text-text-secondary ">Search Results ({searchResults.length})</div>
+            <div className="text-xs font-bold text-text-secondary ">
+              Search Results ({searchResults.length})
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {searchResults.map((res, i) => (
-                <div key={i} className="p-3.5 rounded-xl bg-bg-base border border-border/60 space-y-1.5 text-xs">
+                <div
+                  key={i}
+                  className="p-3.5 rounded-xl bg-bg-base border border-border/60 space-y-1.5 text-xs"
+                >
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-bold text-accent">{res.title}</span>
-                    <span className="text-[9px] font-mono text-text-muted px-2 py-0.5 rounded bg-indigo-950/40 border border-indigo-900/40">{res.type}</span>
+                    <span className="text-[9px] font-mono text-text-muted px-2 py-0.5 rounded bg-indigo-950/40 border border-indigo-900/40">
+                      {res.type}
+                    </span>
                   </div>
                   <p className="text-text-secondary leading-relaxed text-[11px]">{res.snippet}</p>
                 </div>
@@ -226,8 +237,15 @@ export default function KnowledgePage() {
           <label className="border-2 border-dashed border-border hover:border-accent/40 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors space-y-2">
             <UploadCloud className="w-8 h-8 text-accent" />
             <span className="text-xs font-bold text-text-primary">Click to Upload PDF / DOCX</span>
-            <span className="text-[10px] text-text-secondary">Files will be auto-vectorized for RAG search</span>
-            <input type="file" onChange={handleFileUpload} disabled={isUploading} className="hidden" />
+            <span className="text-[10px] text-text-secondary">
+              Files will be auto-vectorized for RAG search
+            </span>
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="hidden"
+            />
           </label>
         </div>
 
@@ -247,12 +265,17 @@ export default function KnowledgePage() {
           ) : (
             <div className="space-y-3">
               {documents.map((doc) => (
-                <div key={doc.id} className="p-3.5 rounded-xl bg-bg-base border border-border flex items-center justify-between text-xs">
+                <div
+                  key={doc.id}
+                  className="p-3.5 rounded-xl bg-bg-base border border-border flex items-center justify-between text-xs"
+                >
                   <div className="flex items-center gap-3">
                     <FileText className="w-4 h-4 text-accent shrink-0" />
                     <div>
                       <div className="font-semibold text-text-primary">{doc.filename}</div>
-                      <div className="text-[10px] text-text-secondary font-mono">{(doc.file_size / 1024).toFixed(1)} KB</div>
+                      <div className="text-[10px] text-text-secondary font-mono">
+                        {(doc.file_size / 1024).toFixed(1)} KB
+                      </div>
                     </div>
                   </div>
 
