@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Sparkles, Volume2, Trash2, Zap, Cpu, Radio, Globe } from 'lucide-react';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export interface STTPayload {
   id?: string;
@@ -65,9 +66,17 @@ export interface SubtitleData {
 interface RealtimeSTTPanelProps {
   isJitsiMuted?: boolean;
   onSubtitleUpdate?: (sub: SubtitleData | null) => void;
+  onTranscriptUpdate?: (fullTranscriptText: string) => void;
 }
 
-export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTTPanelProps = {}) {
+export function RealtimeSTTPanel({
+  isJitsiMuted,
+  onSubtitleUpdate,
+  onTranscriptUpdate,
+}: RealtimeSTTPanelProps = {}) {
+  const currentUser = useAuthStore((state) => state.user);
+  const speakerName = currentUser?.full_name || 'Thành viên cuộc họp';
+
   const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>(
     'disconnected'
   );
@@ -93,6 +102,22 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording]);
+
+  // Sync full accumulated transcript text (with speaker name attribution) to parent component for RAG
+  useEffect(() => {
+    if (onTranscriptUpdate && transcripts.length > 0) {
+      const fullText = transcripts
+        .map((t) => {
+          const text = t.vi_text || t.polished_text || t.original_text;
+          const time = t.timestamp || '';
+          return text ? `[${speakerName}${time ? ' — ' + time : ''}]: ${text}` : '';
+        })
+        .filter(Boolean)
+        .reverse()
+        .join('\n');
+      onTranscriptUpdate(fullText);
+    }
+  }, [transcripts, onTranscriptUpdate, speakerName]);
 
   // STT Mode: auto-detected based on backend Whisper availability
   const [sttMode, setSttMode] = useState<STTMode>('browser');

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.backend.api import deps
 from src.backend.database import get_db
 from src.backend.models import Meeting, MeetingFile, User, WorkspaceMember
+from src.backend.services.text_extractor import extract_text
 
 router = APIRouter(tags=["files"])
 
@@ -55,6 +56,9 @@ async def upload_meeting_file(
     with open(file_path, "wb") as f:
         f.write(contents)
 
+    # Extract text for RAG search (Option B)
+    extracted = extract_text(contents, file.filename, file.content_type or "")
+
     meeting_file = MeetingFile(
         meeting_id=meeting.id,
         uploaded_by_id=current_user.id,
@@ -62,6 +66,7 @@ async def upload_meeting_file(
         file_path=file_path,
         file_size=len(contents),
         content_type=file.content_type or "application/octet-stream",
+        extracted_text=extracted or None,
     )
     db.add(meeting_file)
     db.commit()
