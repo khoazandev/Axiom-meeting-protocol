@@ -77,8 +77,10 @@ def upgrade() -> None:
     with op.batch_alter_table('meeting_files', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_meeting_files_meeting_id'), ['meeting_id'], unique=False)
 
+    status_enum = sa.Enum('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='meetingstatusenum')
+    status_enum.create(op.get_bind(), checkfirst=True)
     with op.batch_alter_table('meetings', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('status', sa.Enum('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='meetingstatusenum'), server_default='SCHEDULED', nullable=False))
+        batch_op.add_column(sa.Column('status', status_enum, server_default='SCHEDULED', nullable=False))
         batch_op.add_column(sa.Column('started_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('ended_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('recording_url', sa.String(), nullable=True))
@@ -90,7 +92,8 @@ def downgrade() -> None:
         batch_op.drop_column('ended_at')
         batch_op.drop_column('started_at')
         batch_op.drop_column('status')
-
+    status_enum = sa.Enum('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='meetingstatusenum')
+    status_enum.drop(op.get_bind(), checkfirst=True)
     op.drop_table('meeting_files')
     op.drop_table('meeting_invitations')
     op.drop_table('tasks')

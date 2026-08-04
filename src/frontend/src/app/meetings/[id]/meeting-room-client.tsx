@@ -23,6 +23,7 @@ import {
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { meetingsApi, getAuthHeaders, type Meeting, ApiRequestError } from '@/lib/api';
+import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
 
 interface ChatMessage {
   sender: string;
@@ -46,11 +47,7 @@ export function MeetingRoomClient() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [livekitError, setLivekitError] = useState(false);
 
-  // Subtitle State
-  const [currentSubtitle, setCurrentSubtitle] = useState<{ speaker: string; text: string }>({
-    speaker: 'Alice (Principal Architect)',
-    text: 'Welcome everyone! We are reviewing Phase 4 AI Intelligence UI Pipeline and Knowledge Hub endpoints.',
-  });
+
 
   // Chat States
   const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([
@@ -190,7 +187,7 @@ export function MeetingRoomClient() {
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
 
   return (
-    <div className="h-screen bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
+    <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
       {/* Top Header: Google Meet Style */}
       <header className="h-14 px-6 bg-bg-card border-b border-border flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-4">
@@ -251,12 +248,12 @@ export function MeetingRoomClient() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden min-h-0 min-w-0">
         {/* Left Side: LiveKit Video Canvas + Subtitle Overlay (Google Meet Style) */}
-        <div className="flex-1 bg-black relative flex flex-col justify-between overflow-hidden">
-          <div className="flex-1 relative flex items-center justify-center">
+        <div className="flex-1 bg-black relative flex flex-col overflow-hidden min-h-0 min-w-0">
+          <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
             {token === '' ? (
-              <div className="text-text-secondary flex flex-col items-center gap-3">
+              <div className="text-text-secondary flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-accent" />
                 <p className="text-xs font-medium">Connecting to LiveKit WebRTC Server...</p>
               </div>
@@ -267,7 +264,7 @@ export function MeetingRoomClient() {
                 token={token}
                 serverUrl={livekitUrl}
                 data-lk-theme="default"
-                style={{ height: '100%', width: '100%' }}
+                className="w-full h-full absolute inset-0 flex flex-col"
                 onDisconnected={() => {
                   console.log('LiveKit connection closed or server offline.');
                   setLivekitError(true);
@@ -278,6 +275,9 @@ export function MeetingRoomClient() {
               >
                 <VideoConference />
                 <RoomAudioRenderer />
+                
+                {/* Live Subtitle Overlay Bar */}
+                <LiveSubtitle />
               </LiveKitRoom>
             )}
           </div>
@@ -290,24 +290,6 @@ export function MeetingRoomClient() {
               RAG vẫn hoạt động.
             </div>
           )}
-
-          {/* Live Subtitle Overlay Bar (Google Meet Style) */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4 z-30">
-            <div className="p-3.5 rounded-xl bg-bg-base/90 border border-border backdrop-blur-md shadow-lg flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-accent/30 border border-blue-500/40 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-accent" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold text-accent ">{currentSubtitle.speaker}</div>
-                <p className="text-xs text-text-primary truncate font-medium mt-0.5">
-                  {currentSubtitle.text}
-                </p>
-              </div>
-              <div className="px-2 py-0.5 rounded bg-accent-muted text-indigo-300 text-[9px] font-mono border border-accent/30">
-                Live STT
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Collapsible Drawers (Agenda, Public Chat, AI Assistant, Tasks) */}
