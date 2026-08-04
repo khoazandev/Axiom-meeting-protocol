@@ -13,7 +13,9 @@ export function AppHeader() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="h-16 px-6 bg-[#0B0F19]/90 backdrop-blur-md border-b border-blue-950/60 flex items-center justify-between sticky top-0 z-20">

@@ -4,7 +4,17 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Calendar, Clock, CheckCircle2, ArrowLeft, Upload, Sparkles, FileText, Zap } from 'lucide-react';
+import {
+  Loader2,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  ArrowLeft,
+  Upload,
+  Sparkles,
+  FileText,
+  Zap,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -40,14 +50,22 @@ export default function MeetingRoomPage() {
   const [activeTab, setActiveTab] = useState<'agenda' | 'files' | 'ai'>('agenda');
 
   // File upload state
-  const [uploadedFiles, setUploadedFiles] = useState<{id: string; filename: string; content_type: string}[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<
+    { id: string; filename: string; content_type: string }[]
+  >([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
   // AI RAG chat state
-  interface AiMsg { role: 'user' | 'ai'; text: string; }
+  interface AiMsg {
+    role: 'user' | 'ai';
+    text: string;
+  }
   const [aiMessages, setAiMessages] = useState<AiMsg[]>([
-    { role: 'ai', text: 'Xin chào! Mình là Axiom AI — trợ lý thông minh trong phòng họp. Bạn có thể upload tài liệu hoặc bật mic phát biểu, rồi hỏi mình bất cứ điều gì về cuộc họp nhé.' },
+    {
+      role: 'ai',
+      text: 'Xin chào! Mình là Axiom AI — trợ lý thông minh trong phòng họp. Bạn có thể upload tài liệu hoặc bật mic phát biểu, rồi hỏi mình bất cứ điều gì về cuộc họp nhé.',
+    },
   ]);
   const [aiQuery, setAiQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -60,7 +78,7 @@ export default function MeetingRoomPage() {
   const viTextRef = useRef<HTMLParagraphElement>(null);
   const processingRef = useRef<HTMLSpanElement>(null);
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const currentViRef = useRef<string>('');
   const viTargetTextRef = useRef<string>('');
   const viRevealedLenRef = useRef<number>(0);
@@ -77,7 +95,10 @@ export default function MeetingRoomPage() {
       if (viRevealedLenRef.current < viTargetTextRef.current.length) {
         viRevealedLenRef.current++;
         if (viTextRef.current) {
-          viTextRef.current.textContent = viTargetTextRef.current.slice(0, viRevealedLenRef.current);
+          viTextRef.current.textContent = viTargetTextRef.current.slice(
+            0,
+            viRevealedLenRef.current
+          );
         }
         viAnimTimerRef.current = setTimeout(tick, 20);
       } else {
@@ -89,52 +110,63 @@ export default function MeetingRoomPage() {
   }, []);
 
   // Callback: writes streaming characters directly to DOM (no React re-render)
-  const handleSubtitleUpdate = useCallback((sub: SubtitleData | null) => {
-    if (!sub) {
-      if (viAnimTimerRef.current) { clearTimeout(viAnimTimerRef.current); viAnimTimerRef.current = null; }
-      currentViRef.current = '';
-      viTargetTextRef.current = '';
-      viRevealedLenRef.current = 0;
-      if (viTextRef.current) viTextRef.current.textContent = '';
-      if (enTextRef.current) enTextRef.current.textContent = '';
-      if (processingRef.current) processingRef.current.style.display = 'none';
-      setSubtitleVisible(false);
-      return;
-    }
-
-    // Show overlay
-    setSubtitleVisible(true);
-
-    // VI text: typewriter streaming effect
-    if (sub.vi) {
-      if (sub.vi !== viTargetTextRef.current) {
-        // If a new sentence starts, reset typewriter
-        if (currentViRef.current !== sub.vi && !sub.vi.startsWith(currentViRef.current.slice(0, Math.min(10, currentViRef.current.length)))) {
-          viRevealedLenRef.current = 0;
-          if (viTextRef.current) viTextRef.current.textContent = '';
-          if (enTextRef.current) enTextRef.current.textContent = '';
+  const handleSubtitleUpdate = useCallback(
+    (sub: SubtitleData | null) => {
+      if (!sub) {
+        if (viAnimTimerRef.current) {
+          clearTimeout(viAnimTimerRef.current);
+          viAnimTimerRef.current = null;
         }
-        currentViRef.current = sub.vi;
-        viTargetTextRef.current = sub.vi;
-        if (!viAnimTimerRef.current) {
-          startViTypewriter();
+        currentViRef.current = '';
+        viTargetTextRef.current = '';
+        viRevealedLenRef.current = 0;
+        if (viTextRef.current) viTextRef.current.textContent = '';
+        if (enTextRef.current) enTextRef.current.textContent = '';
+        if (processingRef.current) processingRef.current.style.display = 'none';
+        setSubtitleVisible(false);
+        return;
+      }
+
+      // Show overlay
+      setSubtitleVisible(true);
+
+      // VI text: typewriter streaming effect
+      if (sub.vi) {
+        if (sub.vi !== viTargetTextRef.current) {
+          // If a new sentence starts, reset typewriter
+          if (
+            currentViRef.current !== sub.vi &&
+            !sub.vi.startsWith(
+              currentViRef.current.slice(0, Math.min(10, currentViRef.current.length))
+            )
+          ) {
+            viRevealedLenRef.current = 0;
+            if (viTextRef.current) viTextRef.current.textContent = '';
+            if (enTextRef.current) enTextRef.current.textContent = '';
+          }
+          currentViRef.current = sub.vi;
+          viTargetTextRef.current = sub.vi;
+          if (!viAnimTimerRef.current) {
+            startViTypewriter();
+          }
         }
       }
-    }
 
-    // EN text: write directly to DOM as backend streams characters
-    if (sub.en) {
-      if (processingRef.current) processingRef.current.style.display = 'none';
-      if (enTextRef.current) enTextRef.current.textContent = sub.en;
-    } else {
-      if (processingRef.current) processingRef.current.style.display = 'inline-block';
-    }
-  }, [startViTypewriter]);
+      // EN text: write directly to DOM as backend streams characters
+      if (sub.en) {
+        if (processingRef.current) processingRef.current.style.display = 'none';
+        if (enTextRef.current) enTextRef.current.textContent = sub.en;
+      } else {
+        if (processingRef.current) processingRef.current.style.display = 'inline-block';
+      }
+    },
+    [startViTypewriter]
+  );
 
   useEffect(() => {
     const token = localStorage.getItem('axiom_token') || '';
     const wsRaw = localStorage.getItem('axiom_workspace');
-    const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+    const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
 
     if (!token) {
       router.push('/login');
@@ -166,7 +198,7 @@ export default function MeetingRoomPage() {
   useEffect(() => {
     const token = localStorage.getItem('axiom_token') || '';
     const wsRaw = localStorage.getItem('axiom_workspace');
-    const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+    const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
     if (!token || !wsId) return;
     fetch(`/api/v1/meetings/${meetingId}/files`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
@@ -180,20 +212,27 @@ export default function MeetingRoomPage() {
         }
         return r.json();
       })
-      .then((files) => { if (Array.isArray(files)) setUploadedFiles(files); })
+      .then((files) => {
+        if (Array.isArray(files)) setUploadedFiles(files);
+      })
       .catch(() => {});
   }, [meetingId, router]);
 
   // Auto-scroll AI chat to bottom
-  useEffect(() => { aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [aiMessages]);
+  useEffect(() => {
+    aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const token = localStorage.getItem('axiom_token') || '';
     const wsRaw = localStorage.getItem('axiom_workspace');
-    const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
-    if (!token || !wsId) { setUploadFeedback('⚠️ Chưa đăng nhập hoặc chưa chọn workspace.'); return; }
+    const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
+    if (!token || !wsId) {
+      setUploadFeedback('⚠️ Chưa đăng nhập hoặc chưa chọn workspace.');
+      return;
+    }
     setUploadingFile(true);
     setUploadFeedback(null);
     const formData = new FormData();
@@ -212,8 +251,12 @@ export default function MeetingRoomPage() {
         const err = await res.json().catch(() => ({}));
         setUploadFeedback(`❌ Lỗi: ${err?.error?.message || res.statusText}`);
       }
-    } catch { setUploadFeedback('❌ Upload thất bại.'); }
-    finally { setUploadingFile(false); e.target.value = ''; }
+    } catch {
+      setUploadFeedback('❌ Upload thất bại.');
+    } finally {
+      setUploadingFile(false);
+      e.target.value = '';
+    }
   };
 
   const handleAiQuery = async (e: React.FormEvent) => {
@@ -226,10 +269,14 @@ export default function MeetingRoomPage() {
     try {
       const token = localStorage.getItem('axiom_token') || '';
       const wsRaw = localStorage.getItem('axiom_workspace');
-      const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+      const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
       const res = await fetch(`/api/v1/meetings/${meetingId}/rag/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-Workspace-ID': wsId,
+        },
         body: JSON.stringify({
           question: q,
           live_transcript: liveTranscript,
@@ -242,22 +289,38 @@ export default function MeetingRoomPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        const sourceNames = data.sources?.length > 0
-          ? Array.from(new Set(data.sources.map((s: {display_name?: string; filename?: string; type: string}) => {
-              if (s.display_name) return s.display_name;
-              if (s.type === 'file') return `Tài liệu: ${s.filename || 'File'}`;
-              if (s.type === 'agenda') return 'Agenda cuộc họp';
-              if (s.type === 'transcript') return 'Thành viên cuộc họp (Người đã đóng góp ý kiến)';
-              return 'Nguồn cuộc họp';
-            }))).filter(Boolean).join(' | ')
-          : '';
+        const sourceNames =
+          data.sources?.length > 0
+            ? Array.from(
+                new Set(
+                  data.sources.map(
+                    (s: { display_name?: string; filename?: string; type: string }) => {
+                      if (s.display_name) return s.display_name;
+                      if (s.type === 'file') return `Tài liệu: ${s.filename || 'File'}`;
+                      if (s.type === 'agenda') return 'Agenda cuộc họp';
+                      if (s.type === 'transcript')
+                        return 'Thành viên cuộc họp (Người đã đóng góp ý kiến)';
+                      return 'Nguồn cuộc họp';
+                    }
+                  )
+                )
+              )
+                .filter(Boolean)
+                .join(' | ')
+            : '';
         const sources = sourceNames ? `\n\n📌 Nguồn: ${sourceNames}` : '';
         setAiMessages((prev) => [...prev, { role: 'ai', text: data.answer + sources }]);
       } else {
-        setAiMessages((prev) => [...prev, { role: 'ai', text: '⚠️ Không nhận được phản hồi từ AI.' }]);
+        setAiMessages((prev) => [
+          ...prev,
+          { role: 'ai', text: '⚠️ Không nhận được phản hồi từ AI.' },
+        ]);
       }
-    } catch { setAiMessages((prev) => [...prev, { role: 'ai', text: '⚠️ Lỗi kết nối.' }]); }
-    finally { setAiLoading(false); }
+    } catch {
+      setAiMessages((prev) => [...prev, { role: 'ai', text: '⚠️ Lỗi kết nối.' }]);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // Init Jitsi when BOTH meeting data AND script are ready
@@ -273,7 +336,9 @@ export default function MeetingRoomPage() {
         try {
           const s = await navigator.mediaDevices.getUserMedia({ audio: true });
           s.getTracks().forEach((t) => t.stop());
-        } catch { /* no media — Jitsi will handle it */ }
+        } catch {
+          /* no media — Jitsi will handle it */
+        }
       }
 
       if (!window.JitsiMeetExternalAPI || !jitsiContainerRef.current) return;
@@ -322,7 +387,11 @@ export default function MeetingRoomPage() {
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden selection:bg-primary/20">
-      <Script src="https://meet.jit.si/external_api.js" strategy="lazyOnload" onLoad={() => setJitsiScriptLoaded(true)} />
+      <Script
+        src="https://meet.jit.si/external_api.js"
+        strategy="lazyOnload"
+        onLoad={() => setJitsiScriptLoaded(true)}
+      />
 
       <header className="h-16 px-6 border-b border-border/40 flex items-center justify-between shrink-0 bg-background z-10">
         <div className="flex items-center gap-4">
@@ -369,38 +438,47 @@ export default function MeetingRoomPage() {
                 }}
               >
                 {/* English — Primary subtitle (ref-driven, no React re-render on streaming) */}
-                <p 
+                <p
                   className="subtitle-en-text font-sans font-black italic tracking-wide leading-snug break-words"
                   style={{
                     color: 'black',
-                    textShadow: '-2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0px 4px 4px rgba(0,0,0,0.3)',
+                    textShadow:
+                      '-2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0px 4px 4px rgba(0,0,0,0.3)',
                     fontSize: 'clamp(1.25rem, 3vw, 2rem)',
                     minHeight: '1.5em',
                   }}
                 >
-                  <span 
+                  <span
                     ref={processingRef}
                     className="inline-block text-emerald-600 font-sans font-black italic text-lg tracking-wide"
                     style={{
                       display: 'none',
-                      textShadow: '-1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2)',
+                      textShadow:
+                        '-1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2)',
                     }}
                   >
                     Processing
-                    <span className="processing-wave-dot ml-0.5" style={{ animationDelay: '0s' }}>.</span>
-                    <span className="processing-wave-dot" style={{ animationDelay: '0.2s' }}>.</span>
-                    <span className="processing-wave-dot" style={{ animationDelay: '0.4s' }}>.</span>
+                    <span className="processing-wave-dot ml-0.5" style={{ animationDelay: '0s' }}>
+                      .
+                    </span>
+                    <span className="processing-wave-dot" style={{ animationDelay: '0.2s' }}>
+                      .
+                    </span>
+                    <span className="processing-wave-dot" style={{ animationDelay: '0.4s' }}>
+                      .
+                    </span>
                   </span>
                   <span ref={enTextRef} />
                 </p>
                 {/* Vietnamese — Secondary subtitle (ref-driven typewriter streaming) */}
-                <p 
+                <p
                   ref={viTextRef}
                   className="subtitle-vi-text font-sans font-black italic tracking-wide leading-snug break-words mt-2"
                   style={{
                     color: 'black',
-                    textShadow: '-1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff, 0px 2px 3px rgba(0,0,0,0.3)',
-                    fontSize: 'clamp(1rem, 2.25vw, 1.5rem)'
+                    textShadow:
+                      '-1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff, 0px 2px 3px rgba(0,0,0,0.3)',
+                    fontSize: 'clamp(1rem, 2.25vw, 1.5rem)',
                   }}
                 />
               </div>
@@ -418,41 +496,69 @@ export default function MeetingRoomPage() {
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border-b-2 ${
                   activeTab === tab
-                    ? tab === 'files' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                    : tab === 'ai' ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                    : 'border-primary text-primary bg-primary/5'
+                    ? tab === 'files'
+                      ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                      : tab === 'ai'
+                        ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+                        : 'border-primary text-primary bg-primary/5'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {tab === 'agenda' && <><FileText className="w-3.5 h-3.5" />Agenda</>}
-                {tab === 'files' && <><Upload className="w-3.5 h-3.5" />Files ({uploadedFiles.length})</>}
-                {tab === 'ai' && <><Sparkles className="w-3.5 h-3.5" />AI RAG</>}
+                {tab === 'agenda' && (
+                  <>
+                    <FileText className="w-3.5 h-3.5" />
+                    Agenda
+                  </>
+                )}
+                {tab === 'files' && (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    Files ({uploadedFiles.length})
+                  </>
+                )}
+                {tab === 'ai' && (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    AI RAG
+                  </>
+                )}
               </button>
             ))}
           </div>
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-
             {/* AGENDA TAB */}
             {activeTab === 'agenda' && (
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Meeting Agenda</h3>
-                  <span className="text-xs font-medium px-2 py-0.5 bg-green-500/10 text-green-600 rounded">Validated</span>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Meeting Agenda
+                  </h3>
+                  <span className="text-xs font-medium px-2 py-0.5 bg-green-500/10 text-green-600 rounded">
+                    Validated
+                  </span>
                 </div>
                 <Card className="border-border/50 shadow-none bg-background">
                   <CardContent className="p-4">
-                    {meeting.agenda.split('\n').filter(Boolean).map((line, i) => (
-                      <p key={i} className="flex items-start gap-2 text-sm leading-relaxed mb-2 last:mb-0">
-                        <CheckCircle2 className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                        <span>{line}</span>
-                      </p>
-                    ))}
+                    {meeting.agenda
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((line, i) => (
+                        <p
+                          key={i}
+                          className="flex items-start gap-2 text-sm leading-relaxed mb-2 last:mb-0"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                          <span>{line}</span>
+                        </p>
+                      ))}
                   </CardContent>
                 </Card>
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Upload tài liệu vào tab <span className="text-emerald-500 font-semibold">Files</span> để AI chatbot đọc được nội dung.
+                  Upload tài liệu vào tab{' '}
+                  <span className="text-emerald-500 font-semibold">Files</span> để AI chatbot đọc
+                  được nội dung.
                 </p>
               </section>
             )}
@@ -461,18 +567,24 @@ export default function MeetingRoomPage() {
             {activeTab === 'files' && (
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Tài liệu cuộc họp</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tài liệu cuộc họp
+                  </h3>
                   <span className="text-xs text-muted-foreground">{uploadedFiles.length} file</span>
                 </div>
 
                 <label className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-500/5 cursor-pointer hover:border-emerald-500/60 hover:bg-emerald-500/10 transition-all group">
-                  {uploadingFile
-                    ? <Loader2 className="w-7 h-7 text-emerald-500 animate-spin" />
-                    : <Upload className="w-7 h-7 text-emerald-500 group-hover:scale-110 transition-transform" />}
+                  {uploadingFile ? (
+                    <Loader2 className="w-7 h-7 text-emerald-500 animate-spin" />
+                  ) : (
+                    <Upload className="w-7 h-7 text-emerald-500 group-hover:scale-110 transition-transform" />
+                  )}
                   <span className="text-sm font-semibold text-emerald-500">
                     {uploadingFile ? 'Đang upload...' : 'Click để chọn tài liệu'}
                   </span>
-                  <span className="text-xs text-muted-foreground">PDF, Word (.docx), Excel (.xlsx), TXT</span>
+                  <span className="text-xs text-muted-foreground">
+                    PDF, Word (.docx), Excel (.xlsx), TXT
+                  </span>
                   <input
                     type="file"
                     accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.csv,.md"
@@ -483,19 +595,37 @@ export default function MeetingRoomPage() {
                 </label>
 
                 {uploadFeedback && (
-                  <div className={`text-sm px-4 py-2.5 rounded-lg ${
-                    uploadFeedback.startsWith('✅') ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'
-                  }`}>{uploadFeedback}</div>
+                  <div
+                    className={`text-sm px-4 py-2.5 rounded-lg ${
+                      uploadFeedback.startsWith('✅')
+                        ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                        : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                    }`}
+                  >
+                    {uploadFeedback}
+                  </div>
                 )}
 
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Đã upload</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Đã upload
+                    </p>
                     {uploadedFiles.map((f, i) => {
                       const ext = f.filename.split('.').pop()?.toLowerCase() || '';
-                      const icon = ext === 'pdf' ? '📄' : ext === 'docx' || ext === 'doc' ? '📝' : ext === 'xlsx' || ext === 'xls' ? '📊' : '📃';
+                      const icon =
+                        ext === 'pdf'
+                          ? '📄'
+                          : ext === 'docx' || ext === 'doc'
+                            ? '📝'
+                            : ext === 'xlsx' || ext === 'xls'
+                              ? '📊'
+                              : '📃';
                       return (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-background border border-border/50">
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-background border border-border/50"
+                        >
                           <span className="text-lg">{icon}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{f.filename}</p>
@@ -505,34 +635,50 @@ export default function MeetingRoomPage() {
                         </div>
                       );
                     })}
-                    <p className="text-xs text-muted-foreground text-center">✨ AI sẽ dùng các file này khi bạn hỏi trong tab AI RAG</p>
+                    <p className="text-xs text-muted-foreground text-center">
+                      ✨ AI sẽ dùng các file này khi bạn hỏi trong tab AI RAG
+                    </p>
                   </div>
                 )}
 
                 {uploadedFiles.length === 0 && !uploadFeedback && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Chưa có tài liệu nào. Upload để AI chatbot có thể trả lời dựa vào nội dung.</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    Chưa có tài liệu nào. Upload để AI chatbot có thể trả lời dựa vào nội dung.
+                  </p>
                 )}
               </section>
             )}
 
             {/* AI RAG TAB */}
             {activeTab === 'ai' && (
-              <section className="flex flex-col h-full space-y-3" style={{minHeight: '500px'}}>
+              <section className="flex flex-col h-full space-y-3" style={{ minHeight: '500px' }}>
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-indigo-400" />
                   AI RAG Chatbot
                 </h3>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-3 pb-2" style={{maxHeight: '420px'}}>
+                <div
+                  className="flex-1 overflow-y-auto space-y-3 pb-2"
+                  style={{ maxHeight: '420px' }}
+                >
                   {aiMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${ msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                          : 'bg-muted border border-border/60 text-foreground rounded-tl-sm'
-                      }`}>
-                        {msg.role === 'ai' && <span className="text-xs font-semibold text-indigo-400 block mb-1">⚡ Axiom AI</span>}
+                    <div
+                      key={i}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                          msg.role === 'user'
+                            ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                            : 'bg-muted border border-border/60 text-foreground rounded-tl-sm'
+                        }`}
+                      >
+                        {msg.role === 'ai' && (
+                          <span className="text-xs font-semibold text-indigo-400 block mb-1">
+                            ⚡ Axiom AI
+                          </span>
+                        )}
                         {msg.text}
                       </div>
                     </div>
@@ -549,13 +695,18 @@ export default function MeetingRoomPage() {
                 </div>
 
                 {/* Input */}
-                <form onSubmit={handleAiQuery} className="flex gap-2 pt-2 border-t border-border/40">
+                <form
+                  onSubmit={handleAiQuery}
+                  className="flex gap-2 pt-2 border-t border-border/40"
+                >
                   <input
                     type="text"
                     value={aiQuery}
                     onChange={(e) => setAiQuery(e.target.value)}
                     disabled={aiLoading}
-                    placeholder={aiLoading ? 'Đang xử lý...' : 'Hỏi về agenda, tài liệu, transcript...'}
+                    placeholder={
+                      aiLoading ? 'Đang xử lý...' : 'Hỏi về agenda, tài liệu, transcript...'
+                    }
                     className="flex-1 px-3 py-2 rounded-xl bg-background border border-border/60 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500 disabled:opacity-50 transition-colors"
                   />
                   <button
@@ -563,7 +714,11 @@ export default function MeetingRoomPage() {
                     disabled={aiLoading || !aiQuery.trim()}
                     className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    {aiLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Zap className="w-4 h-4" />
+                    )}
                   </button>
                 </form>
               </section>

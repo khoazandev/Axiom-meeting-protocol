@@ -43,7 +43,9 @@ export function MeetingRoomClient() {
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [liveKitError, setLiveKitError] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'files'>('agenda');
+  const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'files'>(
+    'agenda'
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [currentSubtitle, setCurrentSubtitle] = useState<{ speaker: string; text: string }>({
@@ -53,14 +55,21 @@ export function MeetingRoomClient() {
   // Chat States
   const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([]);
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
-    { sender: 'Axiom AI Agent', text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, tài liệu, hoặc bất cứ điều gì liên quan đến cuộc họp này.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isAi: true },
+    {
+      sender: 'Axiom AI Agent',
+      text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, tài liệu, hoặc bất cứ điều gì liên quan đến cuộc họp này.',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isAi: true,
+    },
   ]);
   const [inputMsg, setInputMsg] = useState('');
   const [aiQueryMsg, setAiQueryMsg] = useState('');
 
   // File upload state
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{id: string; filename: string; content_type: string}[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<
+    { id: string; filename: string; content_type: string }[]
+  >([]);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
   // Bookmark Feedback
@@ -74,7 +83,8 @@ export function MeetingRoomClient() {
   // Load meeting data (critical path)
   useEffect(() => {
     const controller = new AbortController();
-    meetingsApi.get(meetingId, controller.signal)
+    meetingsApi
+      .get(meetingId, controller.signal)
       .then((m) => {
         if (!controller.signal.aborted) {
           setMeeting(m);
@@ -93,7 +103,8 @@ export function MeetingRoomClient() {
   useEffect(() => {
     if (!meeting) return;
     const controller = new AbortController();
-    meetingsApi.getToken(meeting.id, participantName, controller.signal)
+    meetingsApi
+      .getToken(meeting.id, participantName, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted && data?.token) setToken(data.token);
       })
@@ -106,15 +117,22 @@ export function MeetingRoomClient() {
   // Load uploaded files for this meeting
   useEffect(() => {
     if (!meeting) return;
-    const token = typeof window !== 'undefined' ? (localStorage.getItem('axiom_token') || '') : '';
-    const wsId = typeof window !== 'undefined' ? (localStorage.getItem('axiom_workspace') ? JSON.parse(localStorage.getItem('axiom_workspace') || '{}')?.id || '' : '') : '';
+    const token = typeof window !== 'undefined' ? localStorage.getItem('axiom_token') || '' : '';
+    const wsId =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('axiom_workspace')
+          ? JSON.parse(localStorage.getItem('axiom_workspace') || '{}')?.id || ''
+          : ''
+        : '';
     if (!token || !wsId) return;
 
     fetch(`/api/v1/meetings/${meetingId}/files`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
     })
       .then((r) => r.json())
-      .then((files) => { if (Array.isArray(files)) setUploadedFiles(files); })
+      .then((files) => {
+        if (Array.isArray(files)) setUploadedFiles(files);
+      })
       .catch(() => {});
   }, [meeting, meetingId]);
 
@@ -154,7 +172,11 @@ export function MeetingRoomClient() {
 
     setPublicMessages((prev) => [
       ...prev,
-      { sender: participantName, text: inputMsg.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+      {
+        sender: participantName,
+        text: inputMsg.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
     ]);
     setInputMsg('');
   };
@@ -170,23 +192,30 @@ export function MeetingRoomClient() {
     // Optimistically show user message
     setAiMessages((prev) => [
       ...prev,
-      { sender: participantName, text: q, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+      {
+        sender: participantName,
+        text: q,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
     ]);
 
     try {
       const result = await meetingsApi.ragQuery(meetingId, q);
 
       // Format sources as a readable block
-      const sourceBlock = result.sources.length > 0
-        ? '\n\n**Nguồn:**\n' + result.sources
-            .slice(0, 3)
-            .map((s: RagSource) => {
-              const label = { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
-              const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
-              return `• ${title}: ${s.snippet.slice(0, 100)}${s.snippet.length > 100 ? '...' : ''}`;
-            })
-            .join('\n')
-        : '';
+      const sourceBlock =
+        result.sources.length > 0
+          ? '\n\n**Nguồn:**\n' +
+            result.sources
+              .slice(0, 3)
+              .map((s: RagSource) => {
+                const label =
+                  { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
+                const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
+                return `• ${title}: ${s.snippet.slice(0, 100)}${s.snippet.length > 100 ? '...' : ''}`;
+              })
+              .join('\n')
+          : '';
 
       setAiMessages((prev) => [
         ...prev,
@@ -198,10 +227,16 @@ export function MeetingRoomClient() {
         },
       ]);
     } catch (err) {
-      const msg = err instanceof ApiRequestError ? err.message : 'AI Agent không phản hồi. Vui lòng thử lại.';
+      const msg =
+        err instanceof ApiRequestError ? err.message : 'AI Agent không phản hồi. Vui lòng thử lại.';
       setAiMessages((prev) => [
         ...prev,
-        { sender: 'Axiom AI Agent', text: `⚠️ ${msg}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isAi: true },
+        {
+          sender: 'Axiom AI Agent',
+          text: `⚠️ ${msg}`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isAi: true,
+        },
       ]);
     } finally {
       setIsAiLoading(false);
@@ -220,7 +255,9 @@ export function MeetingRoomClient() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0B0F19] text-white space-y-4 p-4 text-center">
         <h1 className="text-2xl font-bold text-red-400">Không tìm thấy cuộc họp</h1>
-        <p className="text-slate-400 text-sm max-w-md">Meeting không tồn tại hoặc bạn không có quyền truy cập.</p>
+        <p className="text-slate-400 text-sm max-w-md">
+          Meeting không tồn tại hoặc bạn không có quyền truy cập.
+        </p>
         <Link href="/meetings">
           <button className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-lg shadow-blue-600/25 transition-all">
             Quay lại danh sách
@@ -236,7 +273,10 @@ export function MeetingRoomClient() {
     const authToken = localStorage.getItem('axiom_token');
     const wsRaw = localStorage.getItem('axiom_workspace');
     const wsId = wsRaw ? JSON.parse(wsRaw)?.id : null;
-    if (!authToken || !wsId) { setUploadFeedback('⚠️ Chưa đăng nhập hoặc chưa chọn workspace.'); return; }
+    if (!authToken || !wsId) {
+      setUploadFeedback('⚠️ Chưa đăng nhập hoặc chưa chọn workspace.');
+      return;
+    }
 
     setUploadingFile(true);
     setUploadFeedback(null);
@@ -263,7 +303,6 @@ export function MeetingRoomClient() {
       e.target.value = '';
     }
   };
-
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
 
@@ -321,7 +360,9 @@ export function MeetingRoomClient() {
             className="p-1.5 rounded-xl bg-[#131B2E] border border-blue-950 text-slate-400 hover:text-white hover:border-blue-800 transition-all"
             title="Toggle Right Panel"
           >
-            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} />
+            <ChevronRight
+              className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`}
+            />
           </button>
         </div>
       </header>
@@ -439,16 +480,24 @@ export function MeetingRoomClient() {
                   </div>
 
                   <div className="p-4 rounded-2xl bg-[#131B2E] border border-blue-950/80 space-y-3">
-                    {meeting.agenda.split('\n').filter(Boolean).map((line, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span>{line}</span>
-                      </div>
-                    ))}
+                    {meeting.agenda
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((line, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{line}</span>
+                        </div>
+                      ))}
                   </div>
 
                   <p className="text-[10px] text-slate-500 text-center">
-                    Upload tài liệu vào tab <span className="text-emerald-400 font-bold">Files</span> để AI có thể trả lời dựa vào nội dung file.
+                    Upload tài liệu vào tab{' '}
+                    <span className="text-emerald-400 font-bold">Files</span> để AI có thể trả lời
+                    dựa vào nội dung file.
                   </p>
                 </div>
               )}
@@ -484,7 +533,9 @@ export function MeetingRoomClient() {
 
                   {/* Upload Feedback */}
                   {uploadFeedback && (
-                    <div className={`text-xs px-3 py-2 rounded-xl ${uploadFeedback.startsWith('✅') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                    <div
+                      className={`text-xs px-3 py-2 rounded-xl ${uploadFeedback.startsWith('✅') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
+                    >
                       {uploadFeedback}
                     </div>
                   )}
@@ -492,27 +543,45 @@ export function MeetingRoomClient() {
                   {/* Uploaded Files List */}
                   {uploadedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Đã upload</span>
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        Đã upload
+                      </span>
                       {uploadedFiles.map((f, i) => {
                         const ext = f.filename.split('.').pop()?.toLowerCase() || '';
-                        const icon = ext === 'pdf' ? '📄' : ext === 'docx' || ext === 'doc' ? '📝' : ext === 'xlsx' || ext === 'xls' ? '📊' : '📃';
+                        const icon =
+                          ext === 'pdf'
+                            ? '📄'
+                            : ext === 'docx' || ext === 'doc'
+                              ? '📝'
+                              : ext === 'xlsx' || ext === 'xls'
+                                ? '📊'
+                                : '📃';
                         return (
-                          <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#131B2E] border border-blue-950/60">
+                          <div
+                            key={i}
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#131B2E] border border-blue-950/60"
+                          >
                             <span className="text-base">{icon}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-slate-200 truncate font-medium">{f.filename}</p>
+                              <p className="text-xs text-slate-200 truncate font-medium">
+                                {f.filename}
+                              </p>
                               <p className="text-[10px] text-slate-500 uppercase">{ext}</p>
                             </div>
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           </div>
                         );
                       })}
-                      <p className="text-[10px] text-slate-500 text-center">AI sẽ dùng các file này để trả lời câu hỏi trong tab AI ✨</p>
+                      <p className="text-[10px] text-slate-500 text-center">
+                        AI sẽ dùng các file này để trả lời câu hỏi trong tab AI ✨
+                      </p>
                     </div>
                   )}
 
                   {uploadedFiles.length === 0 && !uploadFeedback && (
-                    <p className="text-[10px] text-slate-500 text-center">Chưa có tài liệu nào. Upload để AI chatbot có thể đọc nội dung.</p>
+                    <p className="text-[10px] text-slate-500 text-center">
+                      Chưa có tài liệu nào. Upload để AI chatbot có thể đọc nội dung.
+                    </p>
                   )}
                 </div>
               )}
@@ -521,7 +590,10 @@ export function MeetingRoomClient() {
                 <div className="h-full flex flex-col justify-between space-y-3">
                   <div className="space-y-3 overflow-y-auto max-h-[480px]">
                     {publicMessages.map((msg, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1">
+                      <div
+                        key={i}
+                        className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1"
+                      >
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="font-bold text-blue-400">{msg.sender}</span>
                           <span className="text-slate-500">{msg.time}</span>
@@ -531,7 +603,10 @@ export function MeetingRoomClient() {
                     ))}
                   </div>
 
-                  <form onSubmit={handleSendPublicChat} className="flex items-center gap-2 pt-2 border-t border-blue-950">
+                  <form
+                    onSubmit={handleSendPublicChat}
+                    className="flex items-center gap-2 pt-2 border-t border-blue-950"
+                  >
                     <input
                       type="text"
                       value={inputMsg}
@@ -539,7 +614,10 @@ export function MeetingRoomClient() {
                       placeholder="Send chat message..."
                       className="flex-1 px-3 py-2 rounded-xl bg-[#131B2E] border border-blue-950 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
-                    <button type="submit" className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white">
+                    <button
+                      type="submit"
+                      className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white"
+                    >
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   </form>
@@ -550,9 +628,16 @@ export function MeetingRoomClient() {
                 <div className="h-full flex flex-col justify-between space-y-3">
                   <div className="space-y-3 overflow-y-auto max-h-[480px]">
                     {aiMessages.map((msg, i) => (
-                      <div key={i} className={`p-3 rounded-xl border ${msg.isAi ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-[#131B2E] border-blue-950'} space-y-1`}>
+                      <div
+                        key={i}
+                        className={`p-3 rounded-xl border ${msg.isAi ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-[#131B2E] border-blue-950'} space-y-1`}
+                      >
                         <div className="flex items-center justify-between text-[10px]">
-                          <span className={`font-bold ${msg.isAi ? 'text-indigo-400' : 'text-blue-400'}`}>{msg.sender}</span>
+                          <span
+                            className={`font-bold ${msg.isAi ? 'text-indigo-400' : 'text-blue-400'}`}
+                          >
+                            {msg.sender}
+                          </span>
                           <span className="text-slate-500">{msg.time}</span>
                         </div>
                         <p className="text-xs text-slate-200 leading-relaxed">{msg.text}</p>
@@ -560,13 +645,18 @@ export function MeetingRoomClient() {
                     ))}
                   </div>
 
-                  <form onSubmit={handleSendAiQuery} className="flex items-center gap-2 pt-2 border-t border-blue-950">
+                  <form
+                    onSubmit={handleSendAiQuery}
+                    className="flex items-center gap-2 pt-2 border-t border-blue-950"
+                  >
                     <input
                       type="text"
                       value={aiQueryMsg}
                       onChange={(e) => setAiQueryMsg(e.target.value)}
                       disabled={isAiLoading}
-                      placeholder={isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, tài liệu, transcript...'}
+                      placeholder={
+                        isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, tài liệu, transcript...'
+                      }
                       className="flex-1 px-3 py-2 rounded-xl bg-[#131B2E] border border-indigo-950 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
@@ -574,7 +664,11 @@ export function MeetingRoomClient() {
                       disabled={isAiLoading}
                       className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      {isAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                      {isAiLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Zap className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </form>
                 </div>

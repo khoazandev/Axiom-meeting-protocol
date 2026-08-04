@@ -69,7 +69,11 @@ interface RealtimeSTTPanelProps {
   onTranscriptUpdate?: (fullTranscriptText: string) => void;
 }
 
-export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate, onTranscriptUpdate }: RealtimeSTTPanelProps = {}) {
+export function RealtimeSTTPanel({
+  isJitsiMuted,
+  onSubtitleUpdate,
+  onTranscriptUpdate,
+}: RealtimeSTTPanelProps = {}) {
   const currentUser = useAuthStore((state) => state.user);
   const speakerName = currentUser?.full_name || 'Thành viên cuộc họp';
 

@@ -4,7 +4,16 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
-import { ArrowLeft, Loader2, ShieldCheck, CheckCircle2, AlertCircle, Upload, X, Paperclip } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Upload,
+  X,
+  Paperclip,
+} from 'lucide-react';
 
 export default function CreateMeetingPage() {
   const router = useRouter();
@@ -57,7 +66,7 @@ export default function CreateMeetingPage() {
       if (pendingFiles.length > 0) {
         const token = localStorage.getItem('axiom_token') || '';
         const wsRaw = localStorage.getItem('axiom_workspace');
-        const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+        const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
 
         await Promise.allSettled(
           pendingFiles.map((file) => {
@@ -113,7 +122,8 @@ export default function CreateMeetingPage() {
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Deploy New Meeting</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Configure a structured meeting with mandatory agenda validation for automated AI post-meeting analytics.
+              Configure a structured meeting with mandatory agenda validation for automated AI
+              post-meeting analytics.
             </p>
           </div>
 
@@ -164,11 +174,14 @@ export default function CreateMeetingPage() {
                 rows={4}
                 value={formData.agenda}
                 onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-                placeholder={"1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources"}
+                placeholder={
+                  '1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources'
+                }
                 className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
               />
               <p className="text-[11px] text-slate-400 mt-1.5">
-                Backend enforces a minimum 20-character agenda to guarantee structured meeting records.
+                Backend enforces a minimum 20-character agenda to guarantee structured meeting
+                records.
               </p>
             </div>
 
@@ -201,15 +214,21 @@ export default function CreateMeetingPage() {
                   <span className="text-slate-500 normal-case font-normal">(tùy chọn)</span>
                 </label>
                 {pendingFiles.length > 0 && (
-                  <span className="text-[10px] text-emerald-400 font-semibold">{pendingFiles.length} file sẵn sàng</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold">
+                    {pendingFiles.length} file sẵn sàng
+                  </span>
                 )}
               </div>
 
               {/* Drop zone */}
               <label className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-950/10 cursor-pointer hover:border-emerald-500/60 hover:bg-emerald-950/20 transition-all group">
                 <Upload className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-emerald-400 font-semibold">Click để chọn tài liệu</span>
-                <span className="text-[11px] text-slate-500">PDF, Word (.docx), Excel (.xlsx), TXT — sẽ được upload sau khi tạo meeting</span>
+                <span className="text-xs text-emerald-400 font-semibold">
+                  Click để chọn tài liệu
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  PDF, Word (.docx), Excel (.xlsx), TXT — sẽ được upload sau khi tạo meeting
+                </span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -224,11 +243,16 @@ export default function CreateMeetingPage() {
               {pendingFiles.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {pendingFiles.map((f) => (
-                    <div key={f.name} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0B0F19] border border-emerald-500/20">
+                    <div
+                      key={f.name}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0B0F19] border border-emerald-500/20"
+                    >
                       <span className="text-base">{getFileIcon(f.name)}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-white font-medium truncate">{f.name}</p>
-                        <p className="text-[10px] text-slate-500">{(f.size / 1024).toFixed(0)} KB</p>
+                        <p className="text-[10px] text-slate-500">
+                          {(f.size / 1024).toFixed(0)} KB
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -254,7 +278,11 @@ export default function CreateMeetingPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{pendingFiles.length > 0 ? `Đang tạo và upload ${pendingFiles.length} file...` : 'Deploying Meeting...'}</span>
+                  <span>
+                    {pendingFiles.length > 0
+                      ? `Đang tạo và upload ${pendingFiles.length} file...`
+                      : 'Deploying Meeting...'}
+                  </span>
                 </>
               ) : (
                 'Deploy & Open Conference'
