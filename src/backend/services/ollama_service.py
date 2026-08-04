@@ -28,9 +28,17 @@ def get_active_model() -> str:
         r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
         if r.status_code == 200:
             installed = [m.get("name", "") for m in r.json().get("models", [])]
-            for candidate in ["qwen2.5:7b", "qwen2.5:latest", "qwen2.5:3b", "qwen2.5:1.5b", "qwen2.5:0.5b", "llama3.2:3b"]:
+            # Prioritize Qwen models by size / generation
+            candidates = [
+                "qwen3.6", "qwen3.5", "qwen3", "qwen2.5:14b", "qwen2.5:7b", "qwen2.5:latest",
+                "qwen2.5:3b", "qwen2.5:1.5b", "qwen2.5:0.5b", "llama3.2:3b", "llama3:8b"
+            ]
+            for candidate in candidates:
                 if any(m.startswith(candidate) or candidate in m for m in installed):
                     return candidate
+            # If any other model is installed in Ollama, pick the first one
+            if installed:
+                return installed[0]
     except Exception:
         pass
     return "qwen2.5:3b"
