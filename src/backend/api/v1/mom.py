@@ -271,33 +271,26 @@ def meeting_rag_query(
     sources: List[Dict[str, Any]] = []
     context_used: List[str] = []
 
-    # 1. Search Agenda
-    if meeting.agenda and _keyword_match(meeting.agenda, keywords):
+    # 1. Search Agenda (Only attach if keywords match or query explicitly asks about agenda/topics)
+    q_lower = data.question.lower()
+    agenda_triggers = ["agenda", "nội dung", "kế hoạch", "chủ đề", "mục tiêu", "lịch trình"]
+    is_agenda_query = any(trig in q_lower for trig in agenda_triggers)
+
+    if meeting.agenda and (_keyword_match(meeting.agenda, keywords) or is_agenda_query):
         agenda_lower = meeting.agenda.lower()
+        matched_snippet = None
         for kw in keywords:
             idx = agenda_lower.find(kw)
             if idx != -1:
                 start = max(0, idx - 60)
                 end = min(len(meeting.agenda), idx + 140)
-                snippet = meeting.agenda[start:end].strip()
-                sources.append({
-                    "type": "agenda",
-                    "display_name": "Agenda cuộc họp",
-                    "snippet": f"...{snippet}..."
-                })
+                matched_snippet = meeting.agenda[start:end].strip()
                 break
-        if not sources and meeting.agenda:
-            sources.append({
-                "type": "agenda",
-                "display_name": "Agenda cuộc họp",
-                "snippet": meeting.agenda[:200]
-            })
-        context_used.append("agenda")
-    elif meeting.agenda:
+        snippet = f"...{matched_snippet}..." if matched_snippet else meeting.agenda[:200]
         sources.append({
             "type": "agenda",
             "display_name": "Agenda cuộc họp",
-            "snippet": meeting.agenda[:200]
+            "snippet": snippet
         })
         context_used.append("agenda")
 
@@ -312,35 +305,44 @@ def meeting_rag_query(
     if full_transcript:
         lines = [l.strip() for l in full_transcript.split("\n") if l.strip()]
         
-        # Check if user is asking about recent / ongoing discussion
-        q_lower = data.question.lower()
-        recent_triggers = [
+        # Check if user is asking about recent / ongoing discussion or speech
+        speech_triggers = [
             "vừa", "vừa mới", "vừa rồi", "đang nói", "nói gì", "thảo luận gì",
-            "nói tới đâu", "vấn đề nào", "ai vừa nói", "gì rồi", "nhắc tới", "vừa qua"
+            "nói tới đâu", "vấn đề nào", "ai vừa nói", "ai là người nói", "ai nói",
+            "gì rồi", "nhắc tới", "vừa qua", "nói lời chào", "phát biểu"
         ]
-        is_recent_query = any(trig in q_lower for trig in recent_triggers)
+        is_speech_query = any(trig in q_lower for trig in speech_triggers)
 
-        if is_recent_query:
-            recent_text = "\n".join(lines[-6:]) if len(lines) >= 6 else "\n".join(lines)
+        def _extract_speaker(line_str: str) -> str:
+            """Extract clean speaker name from formatted line like '[Trần Tấn Đạt — 12:51 PM]: ...'"""
+            if ":" in line_str:
+                raw_header = line_str.split(":", 1)[0].strip("[] ")
+                clean_name = raw_header.split("—")[0].split("-")[0].strip()
+                if clean_name and len(clean_name) < 40:
+                    return clean_name
+            return "Thành viên cuộc họp"
+
+        if is_speech_query:
+            recent_lines = lines[-6:] if len(lines) >= 6 else lines
+            recent_text = "\n".join(recent_lines)
+            
+            # Find speaker of the target speech line if available
+            speaker = _extract_speaker(recent_lines[-1]) if recent_lines else "Thành viên cuộc họp"
+            
             sources.append({
                 "type": "transcript",
-                "display_name": "Thành viên cuộc họp (Người đã đóng góp ý kiến)",
-                "snippet": f"Nội dung trao đổi gần đây:\n{recent_text}"
+                "display_name": f"{speaker} (Ý kiến phát biểu)",
+                "snippet": f"Nội dung trao đổi:\n{recent_text}"
             })
             context_used.append("live_transcript")
         else:
             matched_lines = [l for l in lines if _keyword_match(l, keywords)]
             if matched_lines:
                 for line in matched_lines[-4:]:
-                    # Extract speaker name if available (e.g., "[Nam]: ..." or "Nam: ...")
-                    speaker = "Thành viên cuộc họp"
-                    if ":" in line:
-                        possible_speaker = line.split(":", 1)[0].strip("[] ").title()
-                        if len(possible_speaker) < 30:
-                            speaker = possible_speaker
+                    speaker = _extract_speaker(line)
                     sources.append({
                         "type": "transcript",
-                        "display_name": f"{speaker} (Người đã đóng góp ý kiến)",
+                        "display_name": f"{speaker} (Ý kiến phát biểu)",
                         "snippet": line
                     })
                 context_used.append("transcript")
