@@ -316,11 +316,16 @@ VI_LOWER = 'a-záàảãạâấầẩẫậăắằẳẵặđéèẻẽẹê�
 
 def _protect_proper_names(text: str):
     """
-    Finds Vietnamese proper names and replaces them with safe English placeholders.
+    Finds Vietnamese proper names and known tech terms, replacing them with safe English placeholders.
     Returns the modified text and a dict mapping placeholders to original names.
     """
     name_pattern = rf'\b[{VI_UPPER}][{VI_LOWER}]+(?:\s+[{VI_UPPER}][{VI_LOWER}]+)+\b'
     names = set(re.findall(name_pattern, text))
+    
+    # Also protect KNOWN_TECH_TERMS found in the text
+    for term in KNOWN_TECH_TERMS:
+        if re.search(r'\b' + re.escape(term) + r'\b', text, flags=re.IGNORECASE):
+            names.add(term)
     
     mapping = {}
     modified_text = text

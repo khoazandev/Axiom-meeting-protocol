@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+      - "8765:8765"   # STT WebSocket
     environment:
       DATABASE_URL: postgresql://axiom:axiom_dev_password@postgres:5432/axiom
       CORS_ORIGINS: http://localhost:3000
@@ -43,11 +44,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
+      args:
+        BACKEND_URL: http://backend:8000
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      BACKEND_URL: http://backend:8000
     depends_on:
       - backend
 
