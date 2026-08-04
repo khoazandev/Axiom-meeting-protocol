@@ -24,10 +24,7 @@ dependencies = [
     "transformers>=4.40.0",
     "sentencepiece>=0.2.0",
     "torch>=2.0.0",
-    "alembic>=1.18.5",
-    "bcrypt>=5.0.0",
-    "pyjwt>=2.13.0",
-    "passlib>=1.7.4",
+    "psycopg2-binary>=2.9.12",
 ]
 
 [project.optional-dependencies]

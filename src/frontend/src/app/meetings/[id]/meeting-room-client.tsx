@@ -25,6 +25,7 @@ import {
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/lib/api';
+import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
 
 interface ChatMessage {
   sender: string;
@@ -45,12 +46,10 @@ export function MeetingRoomClient() {
   const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'files'>('agenda');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Subtitle State
   const [currentSubtitle, setCurrentSubtitle] = useState<{ speaker: string; text: string }>({
     speaker: 'Axiom AI',
     text: 'Phòng họp sẵn sàng. Upload tài liệu vào tab Agenda để chatbot AI có thể trả lời câu hỏi về nội dung.',
   });
-
   // Chat States
   const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([]);
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
@@ -269,7 +268,7 @@ export function MeetingRoomClient() {
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
 
   return (
-    <div className="h-screen bg-[#0B0F19] text-white flex flex-col overflow-hidden select-none">
+    <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
       {/* Top Header: Google Meet Style */}
       <header className="h-14 px-6 bg-[#0E1526] border-b border-blue-950/60 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-4">
@@ -328,13 +327,13 @@ export function MeetingRoomClient() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden min-h-0 min-w-0">
         {/* Left Side: LiveKit Video Canvas + Subtitle Overlay (Google Meet Style) */}
-        <div className="flex-1 bg-black relative flex flex-col justify-between overflow-hidden">
-          <div className="flex-1 relative flex items-center justify-center">
+        <div className="flex-1 bg-black relative flex flex-col overflow-hidden min-h-0 min-w-0">
+          <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
             {token === '' ? (
-              <div className="text-slate-400 flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <div className="text-text-secondary flex flex-col items-center justify-center h-full gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-accent" />
                 <p className="text-xs font-medium">Connecting to LiveKit WebRTC Server...</p>
               </div>
             ) : (
@@ -344,30 +343,32 @@ export function MeetingRoomClient() {
                 token={token}
                 serverUrl={livekitUrl}
                 data-lk-theme="default"
-                style={{ height: '100%', width: '100%' }}
-                onDisconnected={() => router.push('/meetings')}
+                className="w-full h-full absolute inset-0 flex flex-col"
+                onDisconnected={() => {
+                  console.log('LiveKit connection closed or server offline.');
+                  setLiveKitError(true);
+                }}
+                onError={() => {
+                  setLiveKitError(true);
+                }}
               >
                 <VideoConference />
                 <RoomAudioRenderer />
+
+                {/* Live Subtitle Overlay Bar */}
+                <LiveSubtitle />
               </LiveKitRoom>
             )}
           </div>
 
-          {/* Live Subtitle Overlay Bar (Google Meet Style) */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4 z-30">
-            <div className="p-3.5 rounded-2xl bg-[#0B0F19]/90 border border-blue-950/90 backdrop-blur-md shadow-2xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">{currentSubtitle.speaker}</div>
-                <p className="text-xs text-white truncate font-medium mt-0.5">{currentSubtitle.text}</p>
-              </div>
-              <div className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-mono border border-indigo-500/30">
-                Live STT
-              </div>
+          {/* LiveKit Offline Warning */}
+          {liveKitError && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
+              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng Chat, Agenda, AI
+              RAG vẫn hoạt động.
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Side: Collapsible Drawers (Agenda, Public Chat, AI Assistant, Tasks) */}

@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('full_name', sa.String(), nullable=False),
         sa.Column('avatar_url', sa.String(), nullable=True),
         sa.Column('provider', sa.String(), nullable=True, server_default='local'),
-        sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('1')),
+        sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('true')),
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
     op.create_index('ix_users_email', 'users', ['email'], unique=True)
@@ -94,7 +94,7 @@ def upgrade() -> None:
         sa.Column('start_time', sa.DateTime(), nullable=True),
         sa.Column('duration_minutes', sa.Integer(), nullable=True, server_default='60'),
         sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('1')),
+        sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('true')),
         sa.Column('transcript', sa.String(), nullable=True, server_default=''),
         sa.Column('summary', sa.String(), nullable=True, server_default=''),
         sa.Column('workspace_id', sa.String(), sa.ForeignKey('workspaces.id'), nullable=True),
@@ -114,7 +114,7 @@ def upgrade() -> None:
         sa.Column('assignee_id', sa.String(), sa.ForeignKey('users.id'), nullable=True),
         sa.Column('meeting_id', sa.Integer(), sa.ForeignKey('meetings.id'), nullable=True),
         sa.Column('workspace_id', sa.String(), sa.ForeignKey('workspaces.id'), nullable=True),
-        sa.Column('is_completed', sa.Boolean(), nullable=True, server_default=sa.text('0')),
+        sa.Column('is_completed', sa.Boolean(), nullable=True, server_default=sa.text('false')),
     )
     op.create_index('ix_action_items_id', 'action_items', ['id'], unique=False)
     op.create_index('ix_action_items_workspace_id', 'action_items', ['workspace_id'], unique=False)
