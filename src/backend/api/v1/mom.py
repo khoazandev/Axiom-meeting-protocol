@@ -219,6 +219,7 @@ class RagSource(BaseModel):
     type: str        # agenda | transcript | file | bookmark
     snippet: str
     filename: Optional[str] = None
+    display_name: Optional[str] = None
     timestamp: Optional[int] = None
 
 
@@ -279,13 +280,25 @@ def meeting_rag_query(
                 start = max(0, idx - 60)
                 end = min(len(meeting.agenda), idx + 140)
                 snippet = meeting.agenda[start:end].strip()
-                sources.append({"type": "agenda", "snippet": f"...{snippet}..."})
+                sources.append({
+                    "type": "agenda",
+                    "display_name": "Agenda cuộc họp",
+                    "snippet": f"...{snippet}..."
+                })
                 break
         if not sources and meeting.agenda:
-            sources.append({"type": "agenda", "snippet": meeting.agenda[:200]})
+            sources.append({
+                "type": "agenda",
+                "display_name": "Agenda cuộc họp",
+                "snippet": meeting.agenda[:200]
+            })
         context_used.append("agenda")
     elif meeting.agenda:
-        sources.append({"type": "agenda", "snippet": meeting.agenda[:200]})
+        sources.append({
+            "type": "agenda",
+            "display_name": "Agenda cuộc họp",
+            "snippet": meeting.agenda[:200]
+        })
         context_used.append("agenda")
 
     # 2. Search Live Transcript + DB Transcript
@@ -308,15 +321,28 @@ def meeting_rag_query(
         is_recent_query = any(trig in q_lower for trig in recent_triggers)
 
         if is_recent_query:
-            # Include latest discussion lines
             recent_text = "\n".join(lines[-6:]) if len(lines) >= 6 else "\n".join(lines)
-            sources.append({"type": "transcript", "snippet": f"Nội dung trao đổi gần đây:\n{recent_text}"})
+            sources.append({
+                "type": "transcript",
+                "display_name": "Thành viên cuộc họp (Người đã đóng góp ý kiến)",
+                "snippet": f"Nội dung trao đổi gần đây:\n{recent_text}"
+            })
             context_used.append("live_transcript")
         else:
             matched_lines = [l for l in lines if _keyword_match(l, keywords)]
             if matched_lines:
-                for line in matched_lines[-4:]:  # top recent matched lines
-                    sources.append({"type": "transcript", "snippet": line})
+                for line in matched_lines[-4:]:
+                    # Extract speaker name if available (e.g., "[Nam]: ..." or "Nam: ...")
+                    speaker = "Thành viên cuộc họp"
+                    if ":" in line:
+                        possible_speaker = line.split(":", 1)[0].strip("[] ").title()
+                        if len(possible_speaker) < 30:
+                            speaker = possible_speaker
+                    sources.append({
+                        "type": "transcript",
+                        "display_name": f"{speaker} (Người đã đóng góp ý kiến)",
+                        "snippet": line
+                    })
                 context_used.append("transcript")
 
     # 3. Search Uploaded Files (extracted text)
@@ -331,11 +357,21 @@ def meeting_rag_query(
                     start = max(0, idx - 60)
                     end = min(len(f.extracted_text), idx + 160)
                     snippet = f.extracted_text[start:end].strip()
-                    sources.append({"type": "file", "filename": f.filename, "snippet": f"...{snippet}..."})
+                    sources.append({
+                        "type": "file",
+                        "filename": f.filename,
+                        "display_name": f"Tài liệu: {f.filename}",
+                        "snippet": f"...{snippet}..."
+                    })
                     matched = True
                     break
         if not matched and _keyword_match(f.filename, keywords):
-            sources.append({"type": "file", "filename": f.filename, "snippet": f"Tài liệu: {f.filename}"})
+            sources.append({
+                "type": "file",
+                "filename": f.filename,
+                "display_name": f"Tài liệu: {f.filename}",
+                "snippet": f"Tài liệu: {f.filename}"
+            })
         if matched:
             context_used.append("files")
 
@@ -345,6 +381,7 @@ def meeting_rag_query(
         if _keyword_match(bm.note, keywords):
             sources.append({
                 "type": "bookmark",
+                "display_name": "Ghi chú cuộc họp",
                 "snippet": bm.note,
                 "timestamp": bm.timestamp_seconds,
             })

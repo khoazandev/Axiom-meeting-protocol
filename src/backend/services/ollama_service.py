@@ -11,11 +11,29 @@ from typing import List, Dict, Any, Optional
 
 import requests
 
+import os
+import requests
+
 logger = logging.getLogger(__name__)
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_MODEL = "qwen2.5:3b"   # 1.9 GB — fits in VRAM (qwen2.5:latest 4.7GB causes OOM)
-OLLAMA_TIMEOUT = 90  # seconds — 3b model still needs time on first load
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_TIMEOUT = 90  # seconds
+
+def get_active_model() -> str:
+    """Dynamically select the best installed Ollama model or fallback to qwen2.5:3b."""
+    env_model = os.environ.get("OLLAMA_MODEL")
+    if env_model:
+        return env_model
+    try:
+        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        if r.status_code == 200:
+            installed = [m.get("name", "") for m in r.json().get("models", [])]
+            for candidate in ["qwen2.5:7b", "qwen2.5:latest", "qwen2.5:3b", "qwen2.5:1.5b", "qwen2.5:0.5b", "llama3.2:3b"]:
+                if any(m.startswith(candidate) or candidate in m for m in installed):
+                    return candidate
+    except Exception:
+        pass
+    return "qwen2.5:3b"
 
 # ── Intent patterns ──────────────────────────────────────────────────────────
 
@@ -190,10 +208,11 @@ def build_rag_answer(
 def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
     """Call Ollama generate API. Returns stripped response text or None on failure."""
     try:
+        model_to_use = get_active_model()
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={
-                "model": OLLAMA_MODEL,
+                "model": model_to_use,
                 "prompt": prompt,
                 "stream": False,
                 "options": {

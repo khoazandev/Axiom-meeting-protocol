@@ -234,9 +234,16 @@ export default function MeetingRoomPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        const sources = data.sources?.length > 0
-          ? '\n\n📌 Nguồn: ' + data.sources.slice(0, 2).map((s: {snippet: string}) => s.snippet?.slice(0, 80)).join(' | ')
+        const sourceNames = data.sources?.length > 0
+          ? Array.from(new Set(data.sources.map((s: {display_name?: string; filename?: string; type: string}) => {
+              if (s.display_name) return s.display_name;
+              if (s.type === 'file') return `Tài liệu: ${s.filename || 'File'}`;
+              if (s.type === 'agenda') return 'Agenda cuộc họp';
+              if (s.type === 'transcript') return 'Thành viên cuộc họp (Người đã đóng góp ý kiến)';
+              return 'Nguồn cuộc họp';
+            }))).filter(Boolean).join(' | ')
           : '';
+        const sources = sourceNames ? `\n\n📌 Nguồn: ${sourceNames}` : '';
         setAiMessages((prev) => [...prev, { role: 'ai', text: data.answer + sources }]);
       } else {
         setAiMessages((prev) => [...prev, { role: 'ai', text: '⚠️ Không nhận được phản hồi từ AI.' }]);
