@@ -99,7 +99,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token || localStorage.getItem('axiom_token');
+    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -121,7 +121,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   // Inject token and active workspace header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token || localStorage.getItem('axiom_token');
+    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
