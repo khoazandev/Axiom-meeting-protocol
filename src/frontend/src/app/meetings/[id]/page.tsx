@@ -135,13 +135,32 @@ export default function MeetingRoomPage() {
     const token = localStorage.getItem('axiom_token') || '';
     const wsRaw = localStorage.getItem('axiom_workspace');
     const wsId = wsRaw ? (JSON.parse(wsRaw)?.id || '') : '';
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     fetch(`/api/v1/meetings/${meetingId}`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
     })
-      .then((res) => res.json())
-      .then((data: Meeting) => { setMeeting(data); setLoading(false); })
+      .then((res) => {
+        if (res.status === 401) {
+          localStorage.removeItem('axiom_token');
+          localStorage.removeItem('axiom_workspace');
+          router.push('/login');
+          return null;
+        }
+        return res.json();
+      })
+      .then((data: Meeting | null) => {
+        if (data && data.id) {
+          setMeeting(data);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
-  }, [meetingId]);
+  }, [meetingId, router]);
 
   // Load uploaded files for this meeting
   useEffect(() => {
@@ -152,10 +171,18 @@ export default function MeetingRoomPage() {
     fetch(`/api/v1/meetings/${meetingId}/files`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          localStorage.removeItem('axiom_token');
+          localStorage.removeItem('axiom_workspace');
+          router.push('/login');
+          return [];
+        }
+        return r.json();
+      })
       .then((files) => { if (Array.isArray(files)) setUploadedFiles(files); })
       .catch(() => {});
-  }, [meetingId]);
+  }, [meetingId, router]);
 
   // Auto-scroll AI chat to bottom
   useEffect(() => { aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [aiMessages]);
