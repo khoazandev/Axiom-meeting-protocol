@@ -256,10 +256,19 @@ export const meetingsApi = {
   },
 
   /** Query the in-meeting RAG chatbot. */
-  ragQuery(meetingId: number | string, question: string): Promise<RagQueryResponse> {
+  ragQuery(
+    meetingId: number | string,
+    question: string,
+    liveTranscript?: string,
+    chatHistory?: { sender: string; text: string; isAi?: boolean }[]
+  ): Promise<RagQueryResponse> {
     return apiFetch<RagQueryResponse>(`/api/v1/meetings/${meetingId}/rag/query`, {
       method: 'POST',
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({
+        question,
+        live_transcript: liveTranscript,
+        chat_history: chatHistory,
+      }),
     });
   },
 };

@@ -203,9 +203,16 @@ def sync_mom_tasks_to_jira(
 # ── In-Meeting RAG Chatbot ────────────────────────────────────────────────────
 
 
+class ChatHistoryItem(BaseModel):
+    sender: str
+    text: str
+    isAi: Optional[bool] = False
+
+
 class RagQueryRequest(BaseModel):
     question: str
     live_transcript: Optional[str] = None
+    chat_history: Optional[List[ChatHistoryItem]] = None
 
     @field_validator("question")
     @classmethod
@@ -389,11 +396,111 @@ def meeting_rag_query(
             })
             context_used.append("bookmark")
 
+    # 5. Compute Real-time Meeting State & Operational Event Logs (System Activity Logs - UTC+7 Vietnam Time)
+    import datetime
+    vietnam_tz = datetime.timezone(datetime.timedelta(hours=7))
+    now = datetime.datetime.now(vietnam_tz)
+
+    start_time_dt = meeting.start_time
+    elapsed_mins = 0
+    if start_time_dt:
+        if start_time_dt.tzinfo is None:
+            start_time_dt = start_time_dt.replace(tzinfo=datetime.timezone.utc)
+        start_time_vn = start_time_dt.astimezone(vietnam_tz)
+        diff_sec = max(0, (now - start_time_vn).total_seconds())
+        elapsed_mins = int(diff_sec // 60)
+        start_time_str = start_time_vn.strftime("%I:%M:%S %p")
+    else:
+        start_time_str = "Vừa khởi tạo"
+
+    current_time_str = now.strftime("%I:%M:%S %p")
+
+    # Build Operational Event Logs array with Vietnam Local Time
+    event_logs: List[str] = []
+    host_name = meeting.created_by.full_name if (meeting.created_by and meeting.created_by.full_name) else "Host cuộc họp"
+    event_logs.append(f"[{start_time_str}] EVENT: Meeting started by user '{host_name}'. Title: '{meeting.title}'. Agenda: '{meeting.agenda}'.")
+
+    # File Upload Events (VN Time)
+    uploaded_files_summary = []
+    for f in files:
+        uploader = f.uploaded_by.full_name if (f.uploaded_by and f.uploaded_by.full_name) else "Thành viên"
+        if f.created_at:
+            f_dt = f.created_at if f.created_at.tzinfo else f.created_at.replace(tzinfo=datetime.timezone.utc)
+            created_time = f_dt.astimezone(vietnam_tz).strftime("%I:%M:%S %p")
+        else:
+            created_time = start_time_str
+        event_logs.append(f"[{created_time}] EVENT: File '{f.filename}' ({f.file_size} bytes, type: {f.content_type}) was uploaded by user '{uploader}'.")
+        uploaded_files_summary.append(f"'{f.filename}' (bởi {uploader})")
+
+    # Bookmark Events (VN Time)
+    for bm in bookmarks:
+        creator = bm.user.full_name if (bm.user and bm.user.full_name) else "Thành viên"
+        if bm.created_at:
+            bm_dt = bm.created_at if bm.created_at.tzinfo else bm.created_at.replace(tzinfo=datetime.timezone.utc)
+            created_time = bm_dt.astimezone(vietnam_tz).strftime("%I:%M:%S %p")
+        else:
+            created_time = start_time_str
+        event_logs.append(f"[{created_time}] EVENT: Bookmark created at {bm.timestamp_seconds}s by user '{creator}': '{bm.note}'.")
+
+    # Extract first speaker & participant list from transcript
+    first_speaker_info = "Chưa có lượt phát biểu nào"
+    participants_set = set()
+    if current_user and current_user.full_name:
+        participants_set.add(current_user.full_name)
+    if host_name:
+        participants_set.add(host_name)
+
+    speech_lines_count = 0
+    if full_transcript:
+        lines = [l.strip() for l in full_transcript.split("\n") if l.strip()]
+        speech_lines_count = len(lines)
+        for idx, line in enumerate(lines):
+            spk = _extract_speaker(line)
+            if spk and spk != "Thành viên cuộc họp":
+                participants_set.add(spk)
+            if idx == 0:
+                first_speaker_info = f"{spk} ({line[:70]})"
+            event_logs.append(f"SPEECH: {line}")
+
+    meeting_info = {
+        "start_time": start_time_str,
+        "current_time": current_time_str,
+        "elapsed_minutes": elapsed_mins,
+        "participants": list(participants_set) if participants_set else [host_name],
+        "first_speaker": first_speaker_info,
+        "speech_count": speech_lines_count,
+        "total_files": len(files),
+        "files_list": uploaded_files_summary,
+        "total_bookmarks": len(bookmarks),
+        "event_logs": event_logs,
+    }
+
+    # If user asks about duration or start time, append system state source
+    duration_triggers = ["bao lâu", "mấy phút", "khi nào bắt đầu", "bắt đầu lúc mấy giờ", "mấy giờ rồi"]
+    if any(trig in q_lower for trig in duration_triggers):
+        sources.append({
+            "type": "system",
+            "display_name": "Hệ thống cuộc họp (Thời gian)",
+            "snippet": f"Cuộc họp '{meeting.title}' bắt đầu lúc {start_time_str}, tính đến hiện tại ({current_time_str}) đã diễn ra được {elapsed_mins} phút."
+        })
+        context_used.append("system")
+
     # Deduplicate context_used
     context_used = list(dict.fromkeys(context_used))
 
-    # 5. Generate answer via Ollama/Qwen2.5 with Live Transcript support
-    answer = build_rag_answer(data.question, sources, live_transcript=data.live_transcript)
+    # Convert chat_history to dict list if provided
+    history_list = None
+    if data.chat_history:
+        history_list = [{"sender": item.sender, "text": item.text, "isAi": item.isAi} for item in data.chat_history]
+
+    # 6. Generate answer via Ollama/Qwen3.5 with Live Transcript, System State, & Chat History support
+    answer = build_rag_answer(
+        data.question,
+        sources,
+        live_transcript=data.live_transcript,
+        meeting_info=meeting_info,
+        chat_history=history_list,
+    )
 
     return RagQueryResponse(
         question=data.question,

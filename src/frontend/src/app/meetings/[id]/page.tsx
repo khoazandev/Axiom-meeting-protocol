@@ -230,7 +230,15 @@ export default function MeetingRoomPage() {
       const res = await fetch(`/api/v1/meetings/${meetingId}/rag/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
-        body: JSON.stringify({ question: q, live_transcript: liveTranscript }),
+        body: JSON.stringify({
+          question: q,
+          live_transcript: liveTranscript,
+          chat_history: aiMessages.slice(-6).map((m) => ({
+            sender: m.role === 'user' ? 'User' : 'Axiom AI',
+            text: m.text,
+            isAi: m.role === 'ai',
+          })),
+        }),
       });
       if (res.ok) {
         const data = await res.json();
