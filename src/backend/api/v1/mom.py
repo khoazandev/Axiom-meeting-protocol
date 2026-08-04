@@ -205,6 +205,7 @@ def sync_mom_tasks_to_jira(
 
 class RagQueryRequest(BaseModel):
     question: str
+    live_transcript: Optional[str] = None
 
     @field_validator("question")
     @classmethod
@@ -271,7 +272,6 @@ def meeting_rag_query(
 
     # 1. Search Agenda
     if meeting.agenda and _keyword_match(meeting.agenda, keywords):
-        # Find the best matching excerpt (up to 200 chars around keyword)
         agenda_lower = meeting.agenda.lower()
         for kw in keywords:
             idx = agenda_lower.find(kw)
@@ -285,25 +285,45 @@ def meeting_rag_query(
             sources.append({"type": "agenda", "snippet": meeting.agenda[:200]})
         context_used.append("agenda")
     elif meeting.agenda:
-        # Always include agenda as context even if no keyword match
         sources.append({"type": "agenda", "snippet": meeting.agenda[:200]})
         context_used.append("agenda")
 
-    # 2. Search Transcript
+    # 2. Search Live Transcript + DB Transcript
+    combined_transcript_parts = []
     if meeting.transcript:
-        lines = meeting.transcript.split("\n")
-        matched_lines = [l for l in lines if l.strip() and _keyword_match(l, keywords)]
-        if matched_lines:
-            for line in matched_lines[:3]:  # top 3 matching lines
-                sources.append({"type": "transcript", "snippet": line.strip()})
-            context_used.append("transcript")
+        combined_transcript_parts.append(meeting.transcript)
+    if data.live_transcript and data.live_transcript.strip():
+        combined_transcript_parts.append(data.live_transcript.strip())
+
+    full_transcript = "\n".join(combined_transcript_parts)
+    if full_transcript:
+        lines = [l.strip() for l in full_transcript.split("\n") if l.strip()]
+        
+        # Check if user is asking about recent / ongoing discussion
+        q_lower = data.question.lower()
+        recent_triggers = [
+            "vừa", "vừa mới", "vừa rồi", "đang nói", "nói gì", "thảo luận gì",
+            "nói tới đâu", "vấn đề nào", "ai vừa nói", "gì rồi", "nhắc tới", "vừa qua"
+        ]
+        is_recent_query = any(trig in q_lower for trig in recent_triggers)
+
+        if is_recent_query:
+            # Include latest discussion lines
+            recent_text = "\n".join(lines[-6:]) if len(lines) >= 6 else "\n".join(lines)
+            sources.append({"type": "transcript", "snippet": f"Nội dung trao đổi gần đây:\n{recent_text}"})
+            context_used.append("live_transcript")
+        else:
+            matched_lines = [l for l in lines if _keyword_match(l, keywords)]
+            if matched_lines:
+                for line in matched_lines[-4:]:  # top recent matched lines
+                    sources.append({"type": "transcript", "snippet": line})
+                context_used.append("transcript")
 
     # 3. Search Uploaded Files (extracted text)
     files = db.query(MeetingFile).filter(MeetingFile.meeting_id == meeting.id).all()
     for f in files:
         matched = False
         if f.extracted_text and _keyword_match(f.extracted_text, keywords):
-            # Find snippet around keyword
             text_lower = f.extracted_text.lower()
             for kw in keywords:
                 idx = text_lower.find(kw)
@@ -333,8 +353,8 @@ def meeting_rag_query(
     # Deduplicate context_used
     context_used = list(dict.fromkeys(context_used))
 
-    # 5. Generate answer via Ollama/Qwen2.5
-    answer = build_rag_answer(data.question, sources)
+    # 5. Generate answer via Ollama/Qwen2.5 with Live Transcript support
+    answer = build_rag_answer(data.question, sources, live_transcript=data.live_transcript)
 
     return RagQueryResponse(
         question=data.question,
@@ -342,3 +362,4 @@ def meeting_rag_query(
         sources=[RagSource(**s) for s in sources],
         context_used=context_used,
     )
+

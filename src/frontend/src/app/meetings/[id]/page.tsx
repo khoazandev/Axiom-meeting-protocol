@@ -33,6 +33,8 @@ export default function MeetingRoomPage() {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [isJitsiMuted, setIsJitsiMuted] = useState<boolean>(true);
+  const [jitsiScriptLoaded, setJitsiScriptLoaded] = useState(false);
+  const jitsiApiRef = useRef<any>(null);
 
   // Sidebar tab state
   const [activeTab, setActiveTab] = useState<'agenda' | 'files' | 'ai'>('agenda');
@@ -45,10 +47,11 @@ export default function MeetingRoomPage() {
   // AI RAG chat state
   interface AiMsg { role: 'user' | 'ai'; text: string; }
   const [aiMessages, setAiMessages] = useState<AiMsg[]>([
-    { role: 'ai', text: 'Xin chào! Hãy upload tài liệu vào tab Files rồi hỏi tôi bất cứ điều gì về nội dung cuộc họp.' },
+    { role: 'ai', text: 'Xin chào! Mình là Axiom AI — trợ lý thông minh trong phòng họp. Bạn có thể upload tài liệu hoặc bật mic phát biểu, rồi hỏi mình bất cứ điều gì về cuộc họp nhé.' },
   ]);
   const [aiQuery, setAiQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
   const aiBottomRef = useRef<HTMLDivElement>(null);
 
   // ── Subtitle system: 100% ref-driven zero re-render, typewriter streaming for both VI and EN ──
@@ -200,7 +203,7 @@ export default function MeetingRoomPage() {
       const res = await fetch(`/api/v1/meetings/${meetingId}/rag/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, live_transcript: liveTranscript }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -215,58 +218,46 @@ export default function MeetingRoomPage() {
     finally { setAiLoading(false); }
   };
 
-  const initJitsi = async () => {
-    // Xin quyền camera & mic ở top-level trước để Jitsi (iframe) không bị lỗi
-    // Nếu camera bị chiếm bởi app khác, vẫn cho phép Jitsi chạy với audio-only
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-    } catch (e) {
-      console.warn('Camera không khả dụng, thử audio-only:', e);
+  // Init Jitsi when BOTH meeting data AND script are ready
+  useEffect(() => {
+    if (!meeting || !jitsiScriptLoaded || jitsiApiRef.current) return;
+
+    const init = async () => {
+      // Request camera/mic permissions up-front so Jitsi iframe doesn't get blocked
       try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioStream.getTracks().forEach((track) => track.stop());
-      } catch (e2) {
-        console.warn('Audio cũng không khả dụng:', e2);
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach((t) => t.stop());
+      } catch {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+          s.getTracks().forEach((t) => t.stop());
+        } catch { /* no media — Jitsi will handle it */ }
       }
-    }
 
-    if (!window.JitsiMeetExternalAPI || !jitsiContainerRef.current || !meeting) return;
+      if (!window.JitsiMeetExternalAPI || !jitsiContainerRef.current) return;
 
-    // Remove any existing iframes just in case
-    jitsiContainerRef.current.innerHTML = '';
+      jitsiContainerRef.current.innerHTML = '';
 
-    const domain = 'meet.jit.si';
-    const options = {
-      roomName: `DX-OS-SmartMeeting-${meeting.id}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '')}`,
-      width: '100%',
-      height: '100%',
-      parentNode: jitsiContainerRef.current,
-      configOverwrite: {
-        startWithAudioMuted: true,
-        startWithVideoMuted: true,
-      },
-      interfaceConfigOverwrite: {
-        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-      },
+      const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+        roomName: `DX-OS-SmartMeeting-${meeting.id}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '')}`,
+        width: '100%',
+        height: '100%',
+        parentNode: jitsiContainerRef.current,
+        configOverwrite: { startWithAudioMuted: true, startWithVideoMuted: true },
+        interfaceConfigOverwrite: { DISABLE_JOIN_LEAVE_NOTIFICATIONS: true },
+      });
+
+      jitsiApiRef.current = api;
+
+      api.addEventListeners({
+        videoConferenceJoined: () => console.log('Joined DX-OS Jitsi room'),
+        videoConferenceLeft: () => router.push('/meetings'),
+        audioMuteStatusChanged: (e: { muted: boolean }) => setIsJitsiMuted(e.muted),
+      });
     };
 
-    const api = new window.JitsiMeetExternalAPI(domain, options);
-
-    // Add event listeners for DX-OS tracking & audio mute sync
-    api.addEventListeners({
-      videoConferenceJoined: () => {
-        console.log('Joined meeting in DX-OS space');
-      },
-      videoConferenceLeft: () => {
-        router.push('/meetings');
-      },
-      audioMuteStatusChanged: (event: { muted: boolean }) => {
-        console.log('Jitsi audio mute status changed:', event.muted);
-        setIsJitsiMuted(event.muted);
-      },
-    });
-  };
+    init();
+  }, [meeting, jitsiScriptLoaded, router]);
 
   if (loading) {
     return (
@@ -289,7 +280,7 @@ export default function MeetingRoomPage() {
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden selection:bg-primary/20">
-      <Script src="https://meet.jit.si/external_api.js" strategy="lazyOnload" onLoad={initJitsi} />
+      <Script src="https://meet.jit.si/external_api.js" strategy="lazyOnload" onLoad={() => setJitsiScriptLoaded(true)} />
 
       <header className="h-16 px-6 border-b border-border/40 flex items-center justify-between shrink-0 bg-background z-10">
         <div className="flex items-center gap-4">
@@ -541,7 +532,11 @@ export default function MeetingRoomPage() {
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 Real-time Intelligence &amp; STT Translation
               </h3>
-              <RealtimeSTTPanel isJitsiMuted={isJitsiMuted} onSubtitleUpdate={handleSubtitleUpdate} />
+              <RealtimeSTTPanel
+                isJitsiMuted={isJitsiMuted}
+                onSubtitleUpdate={handleSubtitleUpdate}
+                onTranscriptUpdate={setLiveTranscript}
+              />
             </section>
           </div>
         </div>

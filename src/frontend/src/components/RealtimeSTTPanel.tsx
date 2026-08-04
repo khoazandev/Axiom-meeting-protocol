@@ -65,9 +65,10 @@ export interface SubtitleData {
 interface RealtimeSTTPanelProps {
   isJitsiMuted?: boolean;
   onSubtitleUpdate?: (sub: SubtitleData | null) => void;
+  onTranscriptUpdate?: (fullTranscriptText: string) => void;
 }
 
-export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTTPanelProps = {}) {
+export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate, onTranscriptUpdate }: RealtimeSTTPanelProps = {}) {
   const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>(
     'disconnected'
   );
@@ -93,6 +94,18 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording]);
+
+  // Sync full accumulated transcript text to parent component for RAG
+  useEffect(() => {
+    if (onTranscriptUpdate && transcripts.length > 0) {
+      const fullText = transcripts
+        .map((t) => t.vi_text || t.polished_text || t.original_text)
+        .filter(Boolean)
+        .reverse()
+        .join('\n');
+      onTranscriptUpdate(fullText);
+    }
+  }, [transcripts, onTranscriptUpdate]);
 
   // STT Mode: auto-detected based on backend Whisper availability
   const [sttMode, setSttMode] = useState<STTMode>('browser');

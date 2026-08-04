@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import requests
 
@@ -19,92 +19,170 @@ OLLAMA_TIMEOUT = 90  # seconds — 3b model still needs time on first load
 
 # ── Intent patterns ──────────────────────────────────────────────────────────
 
+_IDENTITY_PATTERNS = re.compile(
+    r"^\s*(bạn\s*(là\s*ai|tên\s*gì|có\s*thể\s*làm\s*gì|làm\s*được\s*gì|giỏi\s*gì|hoạt\s*động\s*như\s*nào)|"
+    r"who\s+are\s+you|what\s+(are|can)\s+you|tell\s+me\s+about\s+yourself|"
+    r"em\s+là\s*ai|anh\s+là\s*ai|mày\s+là\s*gì|introduce\s+yourself|"
+    r"axiom\s+(là\s*gì|ai|là\s*ai)|bạn\s+có\s+thể\s+giúp\s+(gì|tôi))\s*[?.!]*\s*$",
+    re.IGNORECASE | re.UNICODE,
+)
+
 _GREETING_PATTERNS = re.compile(
     r"^\s*(xin\s*ch[àa]o|hello|hi\b|hey|chào|good\s*(morning|afternoon|evening)|"
     r"alo|yo\b|howdy|sup\b|cảm\s*ơn|thank|cám\s*ơn|thanks|tạm\s*biệt|bye|"
-    r"ok(ay)?|được\s*rồi|oke?|alright|bạn\s*(có\s*thể\s*)?là\s*ai|who\s*are\s*you|"
-    r"bạn\s*tên\s*gì|what\s*(can|do)\s*you\s*do)\s*[?.!]*\s*$",
+    r"ok(ay)?|được\s*rồi|oke?|alright)\s*[?.!]*\s*$",
     re.IGNORECASE | re.UNICODE,
 )
 
 _CHITCHAT_PATTERNS = re.compile(
     r"^\s*(bạn\s*có\s*khỏe|how\s*are\s*you|hôm\s*nay\s*thế\s*nào|what'?s?\s*up|"
     r"bạn\s*(đang\s*)?làm\s*(gì|được\s*gì|được\s*không)|có\s*gì\s*vui|"
-    r"thời\s*tiết|haha|lol|😂|🙂|😊)\s*[?.!]*\s*$",
+    r"haha|lol|😂|🙂|😊)\s*[?.!]*\s*$",
+    re.IGNORECASE | re.UNICODE,
+)
+
+_OFFTOPIC_PATTERNS = re.compile(
+    r"(thời\s*tiết|weather|nhiệt\s*độ|hôm\s*nay\s*mấy\s*độ|"
+    r"recommend\s*(phim|nhạc|sách|game|anime)|phim\s*hay|nhạc\s*hay|"
+    r"giá\s*(vàng|bitcoin|btc|eth|cổ\s*phiếu)|tỷ\s*giá|"
+    r"nấu\s*ăn|công\s*thức|recipe|nên\s*ăn\s*gì|"
+    r"bóng\s*đá|thể\s*thao|sports|kết\s*quả\s*trận|"
+    r"chơi\s*(game|cờ)|giải\s*trí|funny|joke|kể\s*chuyện\s*cười)",
     re.IGNORECASE | re.UNICODE,
 )
 
 
-def _is_casual(question: str) -> bool:
-    """Return True if the question is a greeting or chitchat, not a meeting query."""
-    return bool(_GREETING_PATTERNS.match(question) or _CHITCHAT_PATTERNS.match(question))
+def _detect_intent(question: str) -> str:
+    """Detect intent: 'identity' | 'greeting' | 'chitchat' | 'offtopic' | 'meeting'"""
+    if _IDENTITY_PATTERNS.match(question):
+        return "identity"
+    if _GREETING_PATTERNS.match(question):
+        return "greeting"
+    if _CHITCHAT_PATTERNS.match(question):
+        return "chitchat"
+    if _OFFTOPIC_PATTERNS.search(question):
+        return "offtopic"
+    return "meeting"
 
 
-# ── Prompt builders ───────────────────────────────────────────────────────────
+# ── System prompts ────────────────────────────────────────────────────────────
 
-_SYSTEM_CASUAL = """Bạn là Axiom AI — trợ lý thông minh trong phòng họp, thân thiện và tự nhiên như một đồng nghiệp thực sự.
-Hãy trả lời ngắn gọn, ấm áp, không trích dẫn tài liệu, không liệt kê lý thuyết.
-Nếu người dùng chào hỏi → chào lại tự nhiên và nhắc nhẹ bạn có thể hỏi về nội dung cuộc họp."""
+_SYSTEM_IDENTITY = """\
+Bạn là Axiom AI — trợ lý họp thông minh, được tích hợp trực tiếp vào phòng họp.
+Khi được hỏi về bản thân, hãy giới thiệu ngắn gọn, thân thiện, đề cập các khả năng chính."""
 
-_SYSTEM_RAG = """Bạn là Axiom AI — trợ lý thông minh trong phòng họp.
-Tính cách: thân thiện, tự nhiên, súc tích — như một đồng nghiệp hiểu việc, không phải robot đọc văn bản.
+_SYSTEM_GREETING = """\
+Bạn là Axiom AI — trợ lý họp thông minh. Trả lời ngắn, ấm áp, tự nhiên như đồng nghiệp."""
 
-Khi trả lời:
-- Nói bằng ngôn ngữ câu hỏi (Việt hoặc Anh), giọng tự nhiên như nói chuyện
-- Đi thẳng vào ý chính, không rào đón dài dòng
-- Nếu có thông tin → tóm tắt ngắn gọn, rõ ràng (tối đa 3-4 câu)
-- Nếu không có thông tin → nói thẳng "Mình không thấy thông tin về điều này trong cuộc họp" — đừng bịa
-- TUYỆT ĐỐI không dùng: "Dựa trên nội dung cuộc họp,", "Theo tài liệu,", "[1]", "[2]" hay liệt kê bullet points dài"""
+_SYSTEM_OFFTOPIC = """\
+Bạn là Axiom AI — trợ lý họp thông minh. Nhiệm vụ của bạn chỉ là hỗ trợ trong phạm vi cuộc họp.
+Nếu câu hỏi ngoài phạm vi, hãy từ chối nhẹ nhàng, tự nhiên, và gợi ý người dùng hỏi về cuộc họp."""
+
+_SYSTEM_RAG = """\
+Bạn là Axiom AI — trợ lý họp thông minh, hiểu rõ ngữ cảnh cuộc họp đang diễn ra.
+Tính cách: thân thiện, tự nhiên, súc tích — như đồng nghiệp hiểu việc, không phải robot đọc văn bản.
+
+Nguyên tắc trả lời:
+- Dùng ngôn ngữ câu hỏi (Việt/Anh), giọng tự nhiên như trò chuyện
+- Đi thẳng vào ý chính, không rào đón
+- Có thông tin → tóm tắt 2-4 câu, rõ ràng, đúng trọng tâm
+- Không có thông tin → nói thẳng, đừng bịa
+- TUYỆT ĐỐI không dùng: "Dựa trên nội dung...", "Theo tài liệu...", "[1]", "[2]", bullet points dài"""
 
 
-def build_rag_answer(question: str, sources: List[Dict[str, Any]]) -> str:
+# ── Main entry point ──────────────────────────────────────────────────────────
+
+def build_rag_answer(
+    question: str,
+    sources: List[Dict[str, Any]],
+    live_transcript: Optional[str] = None,
+) -> str:
     """
-    Send question + retrieved source snippets to Qwen2.5 via Ollama
-    and return a natural, conversational answer.
-
-    Falls back to a heuristic answer if Ollama is unreachable.
+    Generate a natural, contextual answer using Qwen2.5 via Ollama.
+    - live_transcript: real-time STT text from the ongoing meeting session
+    Falls back to heuristic if Ollama is unreachable.
     """
-    # ── Casual / greeting path ────────────────────────────────────────────────
-    if _is_casual(question):
-        prompt = f"{_SYSTEM_CASUAL}\n\nNgười dùng: {question}\nAxiom AI:"
-        return _call_ollama(prompt, max_tokens=80) or _casual_fallback(question)
+    intent = _detect_intent(question)
 
-    # ── No sources found ──────────────────────────────────────────────────────
-    if not sources:
+    # ── Identity ──────────────────────────────────────────────────────────────
+    if intent == "identity":
         prompt = (
-            f"{_SYSTEM_RAG}\n\n"
-            f"Câu hỏi: {question}\n\n"
-            f"Lưu ý: Không tìm thấy thông tin liên quan trong tài liệu cuộc họp.\n"
+            f"{_SYSTEM_IDENTITY}\n\n"
+            f"Người dùng hỏi: {question}\n"
+            f"Axiom AI:"
+        )
+        return _call_ollama(prompt, max_tokens=120) or (
+            "Mình là Axiom AI — trợ lý họp thông minh được tích hợp ngay trong phòng họp này. "
+            "Mình có thể giúp bạn: tra cứu nội dung agenda, tìm thông tin trong tài liệu đã upload, "
+            "tóm tắt những gì đã được thảo luận, và trả lời câu hỏi về cuộc họp theo thời gian thực. "
+            "Bạn muốn hỏi gì về cuộc họp hôm nay không? 🎯"
+        )
+
+    # ── Greeting ──────────────────────────────────────────────────────────────
+    if intent == "greeting":
+        prompt = (
+            f"{_SYSTEM_GREETING}\n\n"
+            f"Người dùng: {question}\n"
+            f"Axiom AI:"
+        )
+        return _call_ollama(prompt, max_tokens=80) or _greeting_fallback(question)
+
+    # ── Off-topic ─────────────────────────────────────────────────────────────
+    if intent == "offtopic":
+        prompt = (
+            f"{_SYSTEM_OFFTOPIC}\n\n"
+            f"Câu hỏi ngoài phạm vi cuộc họp: {question}\n"
             f"Axiom AI:"
         )
         return _call_ollama(prompt, max_tokens=100) or (
-            "Mình không tìm thấy thông tin về điều này trong cuộc họp. "
-            "Thử hỏi chi tiết hơn hoặc kiểm tra xem tài liệu đã được upload chưa nhé!"
+            "Câu hỏi này nằm ngoài phạm vi của mình — mình chỉ hỗ trợ về nội dung cuộc họp thôi. "
+            "Bạn muốn hỏi gì về agenda, tài liệu, hoặc những gì đang được thảo luận không? 😊"
         )
 
-    # ── RAG path ──────────────────────────────────────────────────────────────
-    context_lines = []
-    for i, src in enumerate(sources[:5], 1):
+    # ── Meeting RAG ───────────────────────────────────────────────────────────
+    context_lines: List[str] = []
+
+    # 1. Live transcript (highest priority — what's happening RIGHT NOW)
+    if live_transcript and live_transcript.strip():
+        # Take the last 2000 chars — most recent discussion
+        recent = live_transcript.strip()[-2000:]
+        context_lines.append(f"[Cuộc họp đang diễn ra - ghi âm trực tiếp]:\n{recent}")
+
+    # 2. Static sources (agenda, files, bookmarks, DB transcript)
+    for src in sources[:5]:
         label = {
             "agenda": "Agenda",
-            "transcript": "Transcript",
+            "transcript": "Biên bản trước",
             "file": "Tài liệu",
-            "bookmark": "Bookmark",
+            "bookmark": "Ghi chú",
         }.get(src.get("type", ""), "Nguồn")
         snippet = src.get("snippet", "").strip()
         if snippet:
-            context_lines.append(f"[{label}]: {snippet[:400]}")
+            fname = src.get("filename", "")
+            prefix = f"[{label} — {fname}]" if fname else f"[{label}]"
+            context_lines.append(f"{prefix}: {snippet[:400]}")
+
+    if not context_lines:
+        prompt = (
+            f"{_SYSTEM_RAG}\n\n"
+            f"Câu hỏi: {question}\n\n"
+            f"Lưu ý: Chưa có tài liệu hoặc transcript nào trong cuộc họp này.\n"
+            f"Axiom AI:"
+        )
+        return _call_ollama(prompt, max_tokens=120) or (
+            "Mình chưa tìm thấy thông tin về điều này trong cuộc họp. "
+            "Thử upload tài liệu vào tab Files hoặc hỏi sau khi cuộc họp có thêm nội dung nhé!"
+        )
 
     context_block = "\n\n".join(context_lines)
-
     prompt = (
         f"{_SYSTEM_RAG}\n\n"
-        f"=== Dữ liệu cuộc họp ===\n{context_block}\n\n"
+        f"=== Ngữ cảnh cuộc họp ===\n{context_block}\n\n"
         f"=== Câu hỏi ===\n{question}\n\n"
         f"Axiom AI:"
     )
 
-    return _call_ollama(prompt, max_tokens=400) or _heuristic_answer(question, sources)
+    return _call_ollama(prompt, max_tokens=400) or _heuristic_answer(question, sources, live_transcript)
 
 
 # ── Ollama call ───────────────────────────────────────────────────────────────
@@ -119,9 +197,9 @@ def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.7,       # more natural, less robotic
+                    "temperature": 0.7,
                     "top_p": 0.9,
-                    "repeat_penalty": 1.1,    # avoid repetitive phrasing
+                    "repeat_penalty": 1.1,
                     "num_predict": max_tokens,
                 },
             },
@@ -129,7 +207,7 @@ def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
         )
         response.raise_for_status()
         text = response.json().get("response", "").strip()
-        # Strip any accidental system-prompt leakage
+        # Strip accidental system-prompt leakage
         for prefix in ["Axiom AI:", "AI:", "Assistant:"]:
             if text.startswith(prefix):
                 text = text[len(prefix):].strip()
@@ -145,25 +223,38 @@ def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
 
 # ── Fallbacks ─────────────────────────────────────────────────────────────────
 
-def _casual_fallback(question: str) -> str:
+def _greeting_fallback(question: str) -> str:
     """Natural fallback for greetings when Ollama is offline."""
     q = question.lower()
-    if any(w in q for w in ["cảm ơn", "thank"]):
+    if any(w in q for w in ["cảm ơn", "cám ơn", "thank"]):
         return "Không có gì! Bạn cần hỏi thêm gì về cuộc họp không? 😊"
     if any(w in q for w in ["tạm biệt", "bye"]):
-        return "Tạm biệt! Chúc cuộc họp hiệu quả nhé 👋"
-    if any(w in q for w in ["ai", "tên", "who", "what can"]):
-        return "Mình là Axiom AI — trợ lý trong phòng họp này. Upload tài liệu rồi hỏi mình về nội dung cuộc họp nhé!"
-    return "Chào bạn! 👋 Mình là Axiom AI. Bạn muốn hỏi gì về nội dung cuộc họp?"
+        return "Tạm biệt! Chúc cuộc họp thành công nhé 👋"
+    return "Chào bạn! 👋 Mình là Axiom AI. Bạn muốn hỏi gì về cuộc họp hôm nay?"
 
 
-def _heuristic_answer(question: str, sources: List[Dict[str, Any]]) -> str:
-    """Simple fallback when Ollama is unavailable — show snippets directly."""
+def _heuristic_answer(
+    question: str,
+    sources: List[Dict[str, Any]],
+    live_transcript: Optional[str] = None,
+) -> str:
+    """Fallback when Ollama is unavailable — show most relevant snippets."""
+    results = []
+
+    # Show live transcript first if available
+    if live_transcript and live_transcript.strip():
+        recent = live_transcript.strip()[-500:]
+        results.append(f"📝 **Đang diễn ra trong cuộc họp:**\n{recent}")
+
+    # Then file/agenda snippets
     snippets = [s.get("snippet", "").strip() for s in sources[:2] if s.get("snippet")]
-    if not snippets:
+    if snippets:
+        results.append("📄 " + " … ".join(s[:200] for s in snippets))
+
+    if not results:
         return "Mình không tìm thấy thông tin liên quan trong cuộc họp."
-    combined = " … ".join(s[:200] for s in snippets)
-    return f"Đây là thông tin tìm được:\n\n{combined}\n\n_(AI đang offline — đây là kết quả tìm kiếm trực tiếp)_"
+
+    return "\n\n".join(results) + "\n\n_(AI đang offline — kết quả tìm kiếm trực tiếp)_"
 
 
 def is_ollama_available() -> bool:
