@@ -8,9 +8,10 @@ export function useWebSpeech(
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Web Speech API is not supported in this browser.");
+      console.warn('Web Speech API is not supported in this browser.');
       return;
     }
 
@@ -21,12 +22,12 @@ export function useWebSpeech(
 
     recognition.onstart = () => setIsRecognizing(true);
     recognition.onend = () => setIsRecognizing(false);
-    recognition.onerror = (e: any) => console.error("Speech recognition error:", e.error);
+    recognition.onerror = (e: any) => console.error('Speech recognition error:', e.error);
 
     recognition.onresult = (event: any) => {
       let finalTranscript = '';
       let interimTranscript = '';
-      
+
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
@@ -34,11 +35,11 @@ export function useWebSpeech(
           interimTranscript += event.results[i][0].transcript;
         }
       }
-      
+
       if (finalTranscript.trim().length > 0) {
         onFinalTranscript(finalTranscript.trim());
       }
-      
+
       if (interimTranscript.trim().length > 0 && onInterimTranscript) {
         onInterimTranscript(interimTranscript.trim());
       }

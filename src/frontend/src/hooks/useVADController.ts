@@ -11,9 +11,10 @@ export function useWebSpeech(
   const shouldListenRef = useRef(false);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Web Speech API is not supported in this browser.");
+      console.warn('Web Speech API is not supported in this browser.');
       return;
     }
 
@@ -23,7 +24,7 @@ export function useWebSpeech(
     recognition.lang = 'vi-VN';
 
     recognition.onstart = () => setIsRecognizing(true);
-    
+
     recognition.onend = () => {
       setIsRecognizing(false);
       if (shouldListenRef.current) {
@@ -32,9 +33,9 @@ export function useWebSpeech(
         } catch (e) {}
       }
     };
-    
+
     recognition.onerror = (e: any) => {
-      console.error("Speech recognition error:", e.error);
+      console.error('Speech recognition error:', e.error);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         shouldListenRef.current = false;
       }
@@ -43,7 +44,7 @@ export function useWebSpeech(
     recognition.onresult = (event: any) => {
       let finalTranscript = '';
       let interimTranscript = '';
-      
+
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
@@ -51,18 +52,18 @@ export function useWebSpeech(
           interimTranscript += event.results[i][0].transcript;
         }
       }
-      
+
       if (finalTranscript.trim().length > 0) {
         onFinalTranscript(finalTranscript.trim());
       }
-      
+
       if (interimTranscript.trim().length > 0 && onInterimTranscript) {
         onInterimTranscript(interimTranscript.trim());
       }
     };
 
     recognitionRef.current = recognition;
-    
+
     return () => {
       shouldListenRef.current = false;
       if (recognitionRef.current) {
@@ -99,45 +100,55 @@ export function useWebSpeech(
 // Helper to clean real-time text before backend processing
 function cleanInterimText(text: string): string {
   let cleaned = text;
-  
+
   // Remove filler words
   const fillers = [
-    /\\bừm\\b/gi, /\\bà\\b/gi, /\\buhm\\b/gi, /\\buh\\b/gi, /\\bum\\b/gi, 
-    /\\ber\\b/gi, /\\bah\\b/gi, /\\bừ\\b/gi, /\\bloại như\\b/gi, 
-    /\\bkiểu như\\b/gi, /\\bdạng như\\b/gi, /\\bthì là\\b/gi, /\\bnói chung là\\b/gi
+    /\\bừm\\b/gi,
+    /\\bà\\b/gi,
+    /\\buhm\\b/gi,
+    /\\buh\\b/gi,
+    /\\bum\\b/gi,
+    /\\ber\\b/gi,
+    /\\bah\\b/gi,
+    /\\bừ\\b/gi,
+    /\\bloại như\\b/gi,
+    /\\bkiểu như\\b/gi,
+    /\\bdạng như\\b/gi,
+    /\\bthì là\\b/gi,
+    /\\bnói chung là\\b/gi,
   ];
-  fillers.forEach(f => {
+  fillers.forEach((f) => {
     cleaned = cleaned.replace(f, '');
   });
-  
+
   cleaned = cleaned.replace(/\\s+/g, ' ').trim();
-  
+
   // Capitalize tech terms & common proper names
   const techTerms = {
-    'axiom': 'Axiom',
-    'livekit': 'LiveKit',
-    'ai': 'AI',
-    'api': 'API',
-    'websocket': 'WebSocket',
-    'nextjs': 'Next.js',
-    'react': 'React',
-    'fastapi': 'FastAPI'
+    axiom: 'Axiom',
+    livekit: 'LiveKit',
+    ai: 'AI',
+    api: 'API',
+    websocket: 'WebSocket',
+    nextjs: 'Next.js',
+    react: 'React',
+    fastapi: 'FastAPI',
   };
   Object.entries(techTerms).forEach(([key, val]) => {
     const regex = new RegExp(`\\b${key}\\b`, 'gi');
     cleaned = cleaned.replace(regex, val);
   });
-  
+
   // Capitalize first letter
   if (cleaned.length > 0) {
     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
-  
+
   // Append temporary punctuation if it looks like a sentence
   if (cleaned.length > 10 && !cleaned.endsWith('.')) {
     cleaned += '...';
   }
-  
+
   return cleaned;
 }
 
@@ -146,13 +157,16 @@ export function useVADController() {
   const { sendText, streamData, isConnected } = useTranslationSocket();
   const { isMicrophoneEnabled } = useLocalParticipant();
 
-  const onFinalTranscript = useCallback((text: string) => {
-    if (text) {
-      setInterimText('');
-      // Send raw to backend, let backend do the heavy NLP cleaning
-      sendText(text);
-    }
-  }, [sendText]);
+  const onFinalTranscript = useCallback(
+    (text: string) => {
+      if (text) {
+        setInterimText('');
+        // Send raw to backend, let backend do the heavy NLP cleaning
+        sendText(text);
+      }
+    },
+    [sendText]
+  );
 
   const onInterimTranscript = useCallback((text: string) => {
     if (text) {
@@ -161,7 +175,10 @@ export function useVADController() {
     }
   }, []);
 
-  const { startRecognition, stopRecognition, isRecognizing } = useWebSpeech(onFinalTranscript, onInterimTranscript);
+  const { startRecognition, stopRecognition, isRecognizing } = useWebSpeech(
+    onFinalTranscript,
+    onInterimTranscript
+  );
 
   useEffect(() => {
     if (isMicrophoneEnabled) {
@@ -171,10 +188,10 @@ export function useVADController() {
     }
   }, [isMicrophoneEnabled, startRecognition, stopRecognition]);
 
-  return { 
-    isListening: isRecognizing, 
+  return {
+    isListening: isRecognizing,
     streamData,
     interimText,
-    isConnected
+    isConnected,
   };
 }

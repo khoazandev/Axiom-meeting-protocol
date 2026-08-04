@@ -47,8 +47,6 @@ export function MeetingRoomClient() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [livekitError, setLivekitError] = useState(false);
 
-
-
   // Chat States
   const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([
     { sender: 'Alice', text: 'Hi team, let’s start with the MoM Tab review.', time: '10:00 AM' },
@@ -275,7 +273,7 @@ export function MeetingRoomClient() {
               >
                 <VideoConference />
                 <RoomAudioRenderer />
-                
+
                 {/* Live Subtitle Overlay Bar */}
                 <LiveSubtitle />
               </LiveKitRoom>

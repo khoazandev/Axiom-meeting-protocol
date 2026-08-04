@@ -15,10 +15,9 @@ export function LiveSubtitle() {
           {interimText || streamData?.vi_text}
         </p>
         <p className="text-lg font-bold text-white leading-tight min-h-[1.5rem]">
-          {interimText ? "..." : (streamData?.en_text || "...")}
+          {interimText ? '...' : streamData?.en_text || '...'}
         </p>
       </div>
     </div>
   );
 }
-

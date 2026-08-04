@@ -16,7 +16,7 @@ export function useTranslationSocket() {
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    
+
     // In Docker, we connect to localhost:8000 if exposed, or through Next.js proxy if mapped.
     // For Axiom, since realtime_stt is running in the FastAPI backend on port 8000.
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/realtime-stt';
@@ -24,7 +24,7 @@ export function useTranslationSocket() {
 
     ws.onopen = () => setIsConnected(true);
     ws.onclose = () => setIsConnected(false);
-    ws.onerror = (e) => console.error("WebSocket error:", e);
+    ws.onerror = (e) => console.error('WebSocket error:', e);
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -32,7 +32,7 @@ export function useTranslationSocket() {
           setStreamData(data);
         }
       } catch (err) {
-        console.error("Failed to parse WS message", err);
+        console.error('Failed to parse WS message', err);
       }
     };
 
@@ -46,7 +46,7 @@ export function useTranslationSocket() {
 
   const sendText = useCallback((text: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "translate", text }));
+      wsRef.current.send(JSON.stringify({ type: 'translate', text }));
     }
   }, []);
 
