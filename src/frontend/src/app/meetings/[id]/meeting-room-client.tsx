@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -39,6 +39,16 @@ export function MeetingRoomClient() {
   const params = useParams();
   const router = useRouter();
   const meetingId = params.id as string;
+
+  // Suppress harmless LiveKit internal tile-sorting console errors
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (typeof args[0] === 'string' && args[0].includes('Element not part of the array')) return;
+      originalError.apply(console, args);
+    };
+    return () => { console.error = originalError; };
+  }, []);
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [token, setToken] = useState<string>('');
