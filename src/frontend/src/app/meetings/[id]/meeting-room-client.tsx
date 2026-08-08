@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -14,18 +14,84 @@ import {
   ChevronRight,
   Bookmark,
   Zap,
+  Mic,
+  MicOff,
+  Globe,
+  User,
 } from 'lucide-react';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/lib/api';
 import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
-import { RealtimeSTTPanel } from '@/components/RealtimeSTTPanel';
+import { useVADController } from '@/hooks/useVADController';
+import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
 
 interface ChatMessage {
   sender: string;
   text: string;
   time: string;
   isAi?: boolean;
+}
+
+class LiveKitTileErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.warn('[LiveKitTileErrorBoundary] Suppressed transient tile error:', error?.message);
+    setTimeout(() => this.setState({ hasError: false }), 50);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-black/60 text-slate-400 text-xs">
+          Syncing video streams...
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Inner component that lives INSIDE <LiveKitRoom> so it can use useLocalParticipant()
+function LiveKitContent({
+  onVADUpdate,
+  participantName,
+}: {
+  onVADUpdate: (data: {
+    streamData: TranslationStream | null;
+    interimText: string;
+    isListening: boolean;
+    isConnected: boolean;
+    transcriptHistory: TranscriptHistoryEntry[];
+  }) => void;
+  participantName: string;
+}) {
+  const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(participantName);
+
+  useEffect(() => {
+    onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
+  }, [streamData, interimText, isListening, isConnected, transcriptHistory, onVADUpdate]);
+
+  return (
+    <>
+      <LiveKitTileErrorBoundary>
+        <VideoConference />
+      </LiveKitTileErrorBoundary>
+      <RoomAudioRenderer />
+      <LiveSubtitle streamData={streamData} interimText={interimText} />
+    </>
+  );
 }
 
 export function MeetingRoomClient() {
@@ -37,10 +103,35 @@ export function MeetingRoomClient() {
   useEffect(() => {
     const originalError = console.error;
     console.error = (...args: unknown[]) => {
-      if (typeof args[0] === 'string' && args[0].includes('Element not part of the array')) return;
+      const msg = args[0] ? String(args[0]) : '';
+      if (msg.includes('Element not part of the array')) return;
       originalError.apply(console, args);
     };
-    return () => { console.error = originalError; };
+
+    const handleUnhandledError = (event: ErrorEvent) => {
+      const msg = event.message || (event.error && String(event.error)) || '';
+      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const msg = (event.reason && String(event.reason)) || '';
+      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+
+    window.addEventListener('error', handleUnhandledError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      console.error = originalError;
+      window.removeEventListener('error', handleUnhandledError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -50,10 +141,35 @@ export function MeetingRoomClient() {
   const [activeRightTab, setActiveRightTab] = useState<'transcript' | 'ai'>('transcript');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [currentSubtitle, setCurrentSubtitle] = useState<{ speaker: string; text: string }>({
-    speaker: 'Axiom AI',
-    text: 'Phòng họp sẵn sàng. Bật mic để bắt đầu ghi nhận nội dung cuộc họp.',
-  });
+  // VAD data lifted from LiveKitContent
+  const [vadStreamData, setVadStreamData] = useState<TranslationStream | null>(null);
+  const [vadInterimText, setVadInterimText] = useState('');
+  const [vadIsListening, setVadIsListening] = useState(false);
+  const [vadIsConnected, setVadIsConnected] = useState(false);
+  const [vadTranscriptHistory, setVadTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
+
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  const handleVADUpdate = useCallback((data: {
+    streamData: TranslationStream | null;
+    interimText: string;
+    isListening: boolean;
+    isConnected: boolean;
+    transcriptHistory: TranscriptHistoryEntry[];
+  }) => {
+    setVadStreamData(data.streamData);
+    setVadInterimText(data.interimText);
+    setVadIsListening(data.isListening);
+    setVadIsConnected(data.isConnected);
+    setVadTranscriptHistory(data.transcriptHistory);
+  }, []);
+
+  // Auto-scroll transcript when new entries arrive
+  useEffect(() => {
+    if (vadTranscriptHistory.length > 0) {
+      setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, [vadTranscriptHistory.length]);
 
   // AI Chat state
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
@@ -74,7 +190,7 @@ export function MeetingRoomClient() {
 
   const [participantName] = useState(() => `User-${Math.floor(Math.random() * 1000)}`);
 
-  // Load meeting data (critical path)
+  // Load meeting data
   useEffect(() => {
     const controller = new AbortController();
     meetingsApi
@@ -93,7 +209,7 @@ export function MeetingRoomClient() {
     return () => controller.abort();
   }, [meetingId]);
 
-  // Load LiveKit token (non-critical — video works but room still shows on failure)
+  // Load LiveKit token
   useEffect(() => {
     if (!meeting) return;
     const controller = new AbortController();
@@ -146,7 +262,6 @@ export function MeetingRoomClient() {
     setAiQueryMsg('');
     setIsAiLoading(true);
 
-    // Optimistically show user message
     setAiMessages((prev) => [
       ...prev,
       {
@@ -159,7 +274,6 @@ export function MeetingRoomClient() {
     try {
       const result = await meetingsApi.ragQuery(meetingId, q);
 
-      // Format sources as a readable block
       const sourceBlock =
         result.sources.length > 0
           ? '\n\n**Nguồn:**\n' +
@@ -228,7 +342,7 @@ export function MeetingRoomClient() {
 
   return (
     <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
-      {/* Top Header: Google Meet Style */}
+      {/* Top Header */}
       <header className="h-14 px-6 bg-[#0E1526] border-b border-blue-950/60 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-4">
           <Link href="/meetings">
@@ -270,6 +384,16 @@ export function MeetingRoomClient() {
             <span>Bookmark Moment</span>
           </button>
 
+          {/* STT Status indicator */}
+          <div className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
+            vadIsListening
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+          }`}>
+            {vadIsListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
+            {vadIsListening ? 'STT Active' : 'STT Off'}
+          </div>
+
           <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold border border-emerald-500/20 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
             LiveKit Active
@@ -289,7 +413,7 @@ export function MeetingRoomClient() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden min-h-0 min-w-0">
-        {/* Left Side: LiveKit Video Canvas + Subtitle Overlay (Google Meet Style) */}
+        {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
         <div className="flex-1 bg-black relative flex flex-col overflow-hidden min-h-0 min-w-0">
           <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
             {token === '' ? (
@@ -306,18 +430,15 @@ export function MeetingRoomClient() {
                 data-lk-theme="default"
                 className="w-full h-full absolute inset-0 flex flex-col"
                 onDisconnected={() => {
-                  console.log('LiveKit connection closed or server offline.');
-                  setLiveKitError(true);
+                  console.log('User left the meeting room.');
+                  router.push('/meetings');
                 }}
-                onError={() => {
+                onError={(err) => {
+                  console.error('LiveKit connection error:', err);
                   setLiveKitError(true);
                 }}
               >
-                <VideoConference />
-                <RoomAudioRenderer />
-
-                {/* Live Subtitle Overlay Bar */}
-                <LiveSubtitle />
+                <LiveKitContent onVADUpdate={handleVADUpdate} participantName={participantName} />
               </LiveKitRoom>
             )}
           </div>
@@ -326,8 +447,7 @@ export function MeetingRoomClient() {
           {liveKitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng Chat, Agenda, AI
-              RAG vẫn hoạt động.
+              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng AI RAG vẫn hoạt động.
             </div>
           )}
         </div>
@@ -335,7 +455,7 @@ export function MeetingRoomClient() {
         {/* Right Side: Transcript + AI Assistant */}
         {sidebarOpen && (
           <aside className="w-80 md:w-96 bg-[#0E1526] border-l border-blue-950/60 flex flex-col shrink-0 overflow-hidden">
-            {/* 2 Tabs Only */}
+            {/* 2 Tabs */}
             <div className="flex items-center border-b border-blue-950/60 p-2 gap-1.5 bg-[#131B2E]/60">
               <button
                 onClick={() => setActiveRightTab('transcript')}
@@ -381,10 +501,95 @@ export function MeetingRoomClient() {
                     </p>
                   </div>
 
-                  {/* Full STT Panel — controls + transcript feed + translation */}
-                  <div className="flex-1 overflow-hidden p-3">
-                    <RealtimeSTTPanel />
+                  {/* STT status bar */}
+                  <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        {vadIsConnected ? 'WS Connected' : 'WS Offline'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {vadIsListening ? (
+                        <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                          <Mic className="w-3 h-3" /> Đang thu
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                          <MicOff className="w-3 h-3" /> Bật mic để ghi
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Live interim text preview */}
+                  {vadInterimText && (
+                    <div className="px-3 py-2 border-b border-blue-950/60 bg-blue-500/5">
+                      <p className="text-[11px] text-blue-300 italic flex items-center gap-1.5">
+                        <Mic className="w-3 h-3 text-blue-400 animate-pulse" />
+                        {vadInterimText}
+                        <span className="inline-block w-1 h-3 bg-blue-400 animate-pulse ml-0.5" />
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Transcript History Feed */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {vadTranscriptHistory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
+                          <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
+                            Bật mic trong thanh công cụ LiveKit và nói. Mỗi câu nói sẽ được nhận diện, dịch song ngữ và hiển thị tại đây.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      vadTranscriptHistory.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1.5"
+                        >
+                          {/* Speaker + Time */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                                <User className="w-2.5 h-2.5 text-blue-400" />
+                              </div>
+                              <span className="text-[10px] font-bold text-blue-400">{entry.speaker || participantName}</span>
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-mono">{entry.timestamp}</span>
+                          </div>
+
+                          {/* Vietnamese text */}
+                          <p className="text-xs text-slate-200 leading-relaxed">{entry.vi_text}</p>
+
+                          {/* English translation */}
+                          {entry.en_text && (
+                            <div className="flex items-start gap-1 border-t border-blue-950/60 pt-1.5 mt-1">
+                              <Globe className="w-3 h-3 text-sky-400 shrink-0 mt-0.5" />
+                              <p className="text-[10px] text-sky-300/80 italic leading-relaxed">
+                                {entry.en_text}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                    <div ref={transcriptEndRef} />
+                  </div>
+
+                  {/* Transcript count footer */}
+                  {vadTranscriptHistory.length > 0 && (
+                    <div className="p-2 border-t border-blue-950/60 text-center">
+                      <span className="text-[9px] text-slate-500">
+                        {vadTranscriptHistory.length} phát biểu đã ghi nhận
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -444,4 +649,3 @@ export function MeetingRoomClient() {
     </div>
   );
 }
-

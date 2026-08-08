@@ -157,9 +157,9 @@ function cleanInterimText(text: string): string {
   return cleaned;
 }
 
-export function useVADController() {
+export function useVADController(speakerName = 'Thành viên') {
   const [interimText, setInterimText] = useState<string>('');
-  const { connect, disconnect, sendText, streamData, isConnected } = useTranslationSocket();
+  const { connect, disconnect, sendText, streamData, isConnected, transcriptHistory } = useTranslationSocket(speakerName);
   const { isMicrophoneEnabled } = useLocalParticipant();
 
   const onFinalTranscript = useCallback(
@@ -200,6 +200,6 @@ export function useVADController() {
     streamData,
     interimText,
     isConnected,
+    transcriptHistory,
   };
 }
-

@@ -3,5 +3,9 @@
 import { MeetingRoomClient } from './meeting-room-client';
 
 export default function MeetingRoomPage() {
-  return <MeetingRoomClient />;
+  return (
+    <div className="h-screen w-screen overflow-hidden">
+      <MeetingRoomClient />
+    </div>
+  );
 }
