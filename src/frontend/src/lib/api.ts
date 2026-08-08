@@ -16,6 +16,10 @@ export interface Meeting {
   start_time: string;
   duration_minutes: number;
   is_active: boolean;
+  status?: string | null;
+  ended_at?: string | null;
+  transcript?: string | null;
+  summary?: string | null;
   workspace_id?: string | null;
 }
 

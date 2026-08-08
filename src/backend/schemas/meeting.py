@@ -23,6 +23,11 @@ class MeetingResponse(MeetingCreate):
     id: int
     is_active: bool
     start_time: datetime
+    status: str | None = None
+    ended_at: datetime | None = None
+    transcript: str | None = None
+    summary: str | None = None
+    workspace_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

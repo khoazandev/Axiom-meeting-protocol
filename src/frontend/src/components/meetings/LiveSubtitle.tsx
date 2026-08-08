@@ -1,11 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useVADController } from '@/hooks/useVADController';
+import type { TranslationStream } from '@/hooks/useTranslationSocket';
 
-export function LiveSubtitle() {
-  const { streamData, interimText, isListening } = useVADController();
+interface LiveSubtitleProps {
+  streamData: TranslationStream | null;
+  interimText: string;
+}
 
+export function LiveSubtitle({ streamData, interimText }: LiveSubtitleProps) {
   if (!streamData && !interimText) return null;
 
   return (

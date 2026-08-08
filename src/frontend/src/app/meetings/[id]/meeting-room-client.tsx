@@ -1,31 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Loader2,
   Calendar,
   Clock,
-  CheckCircle2,
   ArrowLeft,
   ShieldCheck,
   Sparkles,
   FileText,
-  MessageSquare,
-  CheckSquare,
   ChevronRight,
   Bookmark,
-  Send,
-  User,
   Zap,
-  Upload,
-  Paperclip,
+  Mic,
+  MicOff,
+  Globe,
+  User,
 } from 'lucide-react';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/lib/api';
 import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
+import { useVADController } from '@/hooks/useVADController';
+import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
 
 interface ChatMessage {
   sender: string;
@@ -34,43 +33,158 @@ interface ChatMessage {
   isAi?: boolean;
 }
 
+class LiveKitTileErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.warn('[LiveKitTileErrorBoundary] Suppressed transient tile error:', error?.message);
+    setTimeout(() => this.setState({ hasError: false }), 50);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-black/60 text-slate-400 text-xs">
+          Syncing video streams...
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Inner component that lives INSIDE <LiveKitRoom> so it can use useLocalParticipant()
+function LiveKitContent({
+  onVADUpdate,
+  participantName,
+}: {
+  onVADUpdate: (data: {
+    streamData: TranslationStream | null;
+    interimText: string;
+    isListening: boolean;
+    isConnected: boolean;
+    transcriptHistory: TranscriptHistoryEntry[];
+  }) => void;
+  participantName: string;
+}) {
+  const { streamData, interimText, isListening, isConnected, transcriptHistory } =
+    useVADController(participantName);
+
+  useEffect(() => {
+    onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
+  }, [streamData, interimText, isListening, isConnected, transcriptHistory, onVADUpdate]);
+
+  return (
+    <>
+      <LiveKitTileErrorBoundary>
+        <VideoConference />
+      </LiveKitTileErrorBoundary>
+      <RoomAudioRenderer />
+      <LiveSubtitle streamData={streamData} interimText={interimText} />
+    </>
+  );
+}
+
 export function MeetingRoomClient() {
   const params = useParams();
   const router = useRouter();
   const meetingId = params.id as string;
 
+  // Suppress harmless LiveKit internal tile-sorting console errors
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      const msg = args[0] ? String(args[0]) : '';
+      if (msg.includes('Element not part of the array')) return;
+      originalError.apply(console, args);
+    };
+
+    const handleUnhandledError = (event: ErrorEvent) => {
+      const msg = event.message || (event.error && String(event.error)) || '';
+      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const msg = (event.reason && String(event.reason)) || '';
+      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+
+    window.addEventListener('error', handleUnhandledError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      console.error = originalError;
+      window.removeEventListener('error', handleUnhandledError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [liveKitError, setLiveKitError] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<'agenda' | 'chat' | 'ai' | 'files'>(
-    'agenda'
-  );
+  const [activeRightTab, setActiveRightTab] = useState<'transcript' | 'ai'>('transcript');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [currentSubtitle, setCurrentSubtitle] = useState<{ speaker: string; text: string }>({
-    speaker: 'Axiom AI',
-    text: 'Phòng họp sẵn sàng. Upload tài liệu vào tab Agenda để chatbot AI có thể trả lời câu hỏi về nội dung.',
-  });
-  // Chat States
-  const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([]);
+  // VAD data lifted from LiveKitContent
+  const [vadStreamData, setVadStreamData] = useState<TranslationStream | null>(null);
+  const [vadInterimText, setVadInterimText] = useState('');
+  const [vadIsListening, setVadIsListening] = useState(false);
+  const [vadIsConnected, setVadIsConnected] = useState(false);
+  const [vadTranscriptHistory, setVadTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
+
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  const handleVADUpdate = useCallback(
+    (data: {
+      streamData: TranslationStream | null;
+      interimText: string;
+      isListening: boolean;
+      isConnected: boolean;
+      transcriptHistory: TranscriptHistoryEntry[];
+    }) => {
+      setVadStreamData(data.streamData);
+      setVadInterimText(data.interimText);
+      setVadIsListening(data.isListening);
+      setVadIsConnected(data.isConnected);
+      setVadTranscriptHistory(data.transcriptHistory);
+    },
+    []
+  );
+
+  // Auto-scroll transcript when new entries arrive
+  useEffect(() => {
+    if (vadTranscriptHistory.length > 0) {
+      setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, [vadTranscriptHistory.length]);
+
+  // AI Chat state
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
     {
       sender: 'Axiom AI Agent',
-      text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, tài liệu, hoặc bất cứ điều gì liên quan đến cuộc họp này.',
+      text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, transcript, hoặc bất cứ điều gì liên quan đến cuộc họp này.',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isAi: true,
     },
   ]);
-  const [inputMsg, setInputMsg] = useState('');
   const [aiQueryMsg, setAiQueryMsg] = useState('');
-
-  // File upload state
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<
-    { id: string; filename: string; content_type: string }[]
-  >([]);
-  const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
   // Bookmark Feedback
   const [bookmarkFeedback, setBookmarkFeedback] = useState<string | null>(null);
@@ -80,7 +194,7 @@ export function MeetingRoomClient() {
 
   const [participantName] = useState(() => `User-${Math.floor(Math.random() * 1000)}`);
 
-  // Load meeting data (critical path)
+  // Load meeting data
   useEffect(() => {
     const controller = new AbortController();
     meetingsApi
@@ -99,7 +213,7 @@ export function MeetingRoomClient() {
     return () => controller.abort();
   }, [meetingId]);
 
-  // Load LiveKit token (non-critical — video works but room still shows on failure)
+  // Load LiveKit token
   useEffect(() => {
     if (!meeting) return;
     const controller = new AbortController();
@@ -113,28 +227,6 @@ export function MeetingRoomClient() {
       });
     return () => controller.abort();
   }, [meeting, participantName]);
-
-  // Load uploaded files for this meeting
-  useEffect(() => {
-    if (!meeting) return;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('axiom_token') || '' : '';
-    const wsId =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('axiom_workspace')
-          ? JSON.parse(localStorage.getItem('axiom_workspace') || '{}')?.id || ''
-          : ''
-        : '';
-    if (!token || !wsId) return;
-
-    fetch(`/api/v1/meetings/${meetingId}/files`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
-    })
-      .then((r) => r.json())
-      .then((files) => {
-        if (Array.isArray(files)) setUploadedFiles(files);
-      })
-      .catch(() => {});
-  }, [meeting, meetingId]);
 
   const handleAddBookmark = async () => {
     try {
@@ -166,21 +258,6 @@ export function MeetingRoomClient() {
     }
   };
 
-  const handleSendPublicChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMsg.trim()) return;
-
-    setPublicMessages((prev) => [
-      ...prev,
-      {
-        sender: participantName,
-        text: inputMsg.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-    setInputMsg('');
-  };
-
   const handleSendAiQuery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiQueryMsg.trim() || isAiLoading) return;
@@ -189,7 +266,6 @@ export function MeetingRoomClient() {
     setAiQueryMsg('');
     setIsAiLoading(true);
 
-    // Optimistically show user message
     setAiMessages((prev) => [
       ...prev,
       {
@@ -202,7 +278,6 @@ export function MeetingRoomClient() {
     try {
       const result = await meetingsApi.ragQuery(meetingId, q);
 
-      // Format sources as a readable block
       const sourceBlock =
         result.sources.length > 0
           ? '\n\n**Nguồn:**\n' +
@@ -267,48 +342,11 @@ export function MeetingRoomClient() {
     );
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const authToken = localStorage.getItem('axiom_token');
-    const wsRaw = localStorage.getItem('axiom_workspace');
-    const wsId = wsRaw ? JSON.parse(wsRaw)?.id : null;
-    if (!authToken || !wsId) {
-      setUploadFeedback('⚠️ Chưa đăng nhập hoặc chưa chọn workspace.');
-      return;
-    }
-
-    setUploadingFile(true);
-    setUploadFeedback(null);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch(`/api/v1/meetings/${meetingId}/files`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${authToken}`, 'X-Workspace-ID': wsId },
-        body: formData,
-      });
-      if (res.ok) {
-        const uploaded = await res.json();
-        setUploadedFiles((prev) => [...prev, uploaded]);
-        setUploadFeedback(`✅ Đã upload: ${file.name}`);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        setUploadFeedback(`❌ Lỗi: ${err?.error?.message || res.statusText}`);
-      }
-    } catch {
-      setUploadFeedback('❌ Upload thất bại. Kiểm tra kết nối.');
-    } finally {
-      setUploadingFile(false);
-      e.target.value = '';
-    }
-  };
-
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
 
   return (
     <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
-      {/* Top Header: Google Meet Style */}
+      {/* Top Header */}
       <header className="h-14 px-6 bg-[#0E1526] border-b border-blue-950/60 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-4">
           <Link href="/meetings">
@@ -350,6 +388,18 @@ export function MeetingRoomClient() {
             <span>Bookmark Moment</span>
           </button>
 
+          {/* STT Status indicator */}
+          <div
+            className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
+              vadIsListening
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+            }`}
+          >
+            {vadIsListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
+            {vadIsListening ? 'STT Active' : 'STT Off'}
+          </div>
+
           <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold border border-emerald-500/20 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
             LiveKit Active
@@ -369,7 +419,7 @@ export function MeetingRoomClient() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden min-h-0 min-w-0">
-        {/* Left Side: LiveKit Video Canvas + Subtitle Overlay (Google Meet Style) */}
+        {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
         <div className="flex-1 bg-black relative flex flex-col overflow-hidden min-h-0 min-w-0">
           <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
             {token === '' ? (
@@ -386,18 +436,15 @@ export function MeetingRoomClient() {
                 data-lk-theme="default"
                 className="w-full h-full absolute inset-0 flex flex-col"
                 onDisconnected={() => {
-                  console.log('LiveKit connection closed or server offline.');
-                  setLiveKitError(true);
+                  console.log('User left the meeting room.');
+                  router.push('/meetings');
                 }}
-                onError={() => {
+                onError={(err) => {
+                  console.error('LiveKit connection error:', err);
                   setLiveKitError(true);
                 }}
               >
-                <VideoConference />
-                <RoomAudioRenderer />
-
-                {/* Live Subtitle Overlay Bar */}
-                <LiveSubtitle />
+                <LiveKitContent onVADUpdate={handleVADUpdate} participantName={participantName} />
               </LiveKitRoom>
             )}
           </div>
@@ -406,227 +453,163 @@ export function MeetingRoomClient() {
           {liveKitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng Chat, Agenda, AI
-              RAG vẫn hoạt động.
+              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng AI RAG vẫn hoạt
+              động.
             </div>
           )}
         </div>
 
-        {/* Right Side: Collapsible Drawers (Agenda, Public Chat, AI Assistant, Tasks) */}
+        {/* Right Side: Transcript + AI Assistant */}
         {sidebarOpen && (
           <aside className="w-80 md:w-96 bg-[#0E1526] border-l border-blue-950/60 flex flex-col shrink-0 overflow-hidden">
-            {/* Drawer Tabs */}
-            <div className="flex items-center border-b border-blue-950/60 p-2 gap-1 bg-[#131B2E]/60">
+            {/* 2 Tabs */}
+            <div className="flex items-center border-b border-blue-950/60 p-2 gap-1.5 bg-[#131B2E]/60">
               <button
-                onClick={() => setActiveRightTab('agenda')}
-                className={`flex-1 py-1.5 px-1 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  activeRightTab === 'agenda'
+                onClick={() => setActiveRightTab('transcript')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  activeRightTab === 'transcript'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Agenda</span>
-              </button>
-
-              <button
-                onClick={() => setActiveRightTab('files')}
-                className={`flex-1 py-1.5 px-1 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  activeRightTab === 'files'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Files</span>
-              </button>
-
-              <button
-                onClick={() => setActiveRightTab('chat')}
-                className={`flex-1 py-1.5 px-1 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  activeRightTab === 'chat'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-                <span>Chat</span>
+                <span>Nội dung cuộc họp</span>
               </button>
 
               <button
                 onClick={() => setActiveRightTab('ai')}
-                className={`flex-1 py-1.5 px-1 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                   activeRightTab === 'ai'
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>AI</span>
+                <span>AI Assistant</span>
               </button>
             </div>
 
-            {/* Drawer Content */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4">
-              {activeRightTab === 'agenda' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Agenda cuộc họp
-                    </span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      Active
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-[#131B2E] border border-blue-950/80 space-y-3">
-                    {meeting.agenda
-                      .split('\n')
-                      .filter(Boolean)
-                      .map((line, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          <span>{line}</span>
-                        </div>
-                      ))}
-                  </div>
-
-                  <p className="text-[10px] text-slate-500 text-center">
-                    Upload tài liệu vào tab{' '}
-                    <span className="text-emerald-400 font-bold">Files</span> để AI có thể trả lời
-                    dựa vào nội dung file.
-                  </p>
-                </div>
-              )}
-
-              {activeRightTab === 'files' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Tài liệu cuộc họp
-                    </span>
-                    <span className="text-[10px] text-slate-500">{uploadedFiles.length} file</span>
-                  </div>
-
-                  {/* Upload Button */}
-                  <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-emerald-500/30 bg-emerald-950/10 cursor-pointer hover:border-emerald-400/60 hover:bg-emerald-950/20 transition-all group">
-                    {uploadingFile ? (
-                      <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
-                    ) : (
-                      <Upload className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
-                    )}
-                    <span className="text-xs text-emerald-400 font-semibold">
-                      {uploadingFile ? 'Đang upload...' : 'Click để upload tài liệu'}
-                    </span>
-                    <span className="text-[10px] text-slate-500">PDF, Word, Excel, TXT</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.csv,.md"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      disabled={uploadingFile}
-                    />
-                  </label>
-
-                  {/* Upload Feedback */}
-                  {uploadFeedback && (
-                    <div
-                      className={`text-xs px-3 py-2 rounded-xl ${uploadFeedback.startsWith('✅') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
-                    >
-                      {uploadFeedback}
-                    </div>
-                  )}
-
-                  {/* Uploaded Files List */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                        Đã upload
+            {/* Tab Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {activeRightTab === 'transcript' && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Compact agenda header */}
+                  <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Agenda cuộc họp
                       </span>
-                      {uploadedFiles.map((f, i) => {
-                        const ext = f.filename.split('.').pop()?.toLowerCase() || '';
-                        const icon =
-                          ext === 'pdf'
-                            ? '📄'
-                            : ext === 'docx' || ext === 'doc'
-                              ? '📝'
-                              : ext === 'xlsx' || ext === 'xls'
-                                ? '📊'
-                                : '📃';
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#131B2E] border border-blue-950/60"
-                          >
-                            <span className="text-base">{icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-slate-200 truncate font-medium">
-                                {f.filename}
-                              </p>
-                              <p className="text-[10px] text-slate-500 uppercase">{ext}</p>
-                            </div>
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          </div>
-                        );
-                      })}
-                      <p className="text-[10px] text-slate-500 text-center">
-                        AI sẽ dùng các file này để trả lời câu hỏi trong tab AI ✨
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        Active
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                      {meeting.agenda}
+                    </p>
+                  </div>
+
+                  {/* STT status bar */}
+                  <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}
+                      />
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        {vadIsConnected ? 'WS Connected' : 'WS Offline'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {vadIsListening ? (
+                        <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                          <Mic className="w-3 h-3" /> Đang thu
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                          <MicOff className="w-3 h-3" /> Bật mic để ghi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Live interim text preview */}
+                  {vadInterimText && (
+                    <div className="px-3 py-2 border-b border-blue-950/60 bg-blue-500/5">
+                      <p className="text-[11px] text-blue-300 italic flex items-center gap-1.5">
+                        <Mic className="w-3 h-3 text-blue-400 animate-pulse" />
+                        {vadInterimText}
+                        <span className="inline-block w-1 h-3 bg-blue-400 animate-pulse ml-0.5" />
                       </p>
                     </div>
                   )}
 
-                  {uploadedFiles.length === 0 && !uploadFeedback && (
-                    <p className="text-[10px] text-slate-500 text-center">
-                      Chưa có tài liệu nào. Upload để AI chatbot có thể đọc nội dung.
-                    </p>
+                  {/* Transcript History Feed */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {vadTranscriptHistory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
+                          <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
+                            Bật mic trong thanh công cụ LiveKit và nói. Mỗi câu nói sẽ được nhận
+                            diện, dịch song ngữ và hiển thị tại đây.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      vadTranscriptHistory.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1.5"
+                        >
+                          {/* Speaker + Time */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                                <User className="w-2.5 h-2.5 text-blue-400" />
+                              </div>
+                              <span className="text-[10px] font-bold text-blue-400">
+                                {entry.speaker || participantName}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-mono">
+                              {entry.timestamp}
+                            </span>
+                          </div>
+
+                          {/* Vietnamese text */}
+                          <p className="text-xs text-slate-200 leading-relaxed">{entry.vi_text}</p>
+
+                          {/* English translation */}
+                          {entry.en_text && (
+                            <div className="flex items-start gap-1 border-t border-blue-950/60 pt-1.5 mt-1">
+                              <Globe className="w-3 h-3 text-sky-400 shrink-0 mt-0.5" />
+                              <p className="text-[10px] text-sky-300/80 italic leading-relaxed">
+                                {entry.en_text}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                    <div ref={transcriptEndRef} />
+                  </div>
+
+                  {/* Transcript count footer */}
+                  {vadTranscriptHistory.length > 0 && (
+                    <div className="p-2 border-t border-blue-950/60 text-center">
+                      <span className="text-[9px] text-slate-500">
+                        {vadTranscriptHistory.length} phát biểu đã ghi nhận
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
 
-              {activeRightTab === 'chat' && (
-                <div className="h-full flex flex-col justify-between space-y-3">
-                  <div className="space-y-3 overflow-y-auto max-h-[480px]">
-                    {publicMessages.map((msg, i) => (
-                      <div
-                        key={i}
-                        className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="font-bold text-blue-400">{msg.sender}</span>
-                          <span className="text-slate-500">{msg.time}</span>
-                        </div>
-                        <p className="text-xs text-slate-200">{msg.text}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form
-                    onSubmit={handleSendPublicChat}
-                    className="flex items-center gap-2 pt-2 border-t border-blue-950"
-                  >
-                    <input
-                      type="text"
-                      value={inputMsg}
-                      onChange={(e) => setInputMsg(e.target.value)}
-                      placeholder="Send chat message..."
-                      className="flex-1 px-3 py-2 rounded-xl bg-[#131B2E] border border-blue-950 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      type="submit"
-                      className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </form>
-                </div>
-              )}
-
               {activeRightTab === 'ai' && (
-                <div className="h-full flex flex-col justify-between space-y-3">
-                  <div className="space-y-3 overflow-y-auto max-h-[480px]">
+                <div className="flex-1 flex flex-col overflow-hidden p-4">
+                  <div className="flex-1 space-y-3 overflow-y-auto">
                     {aiMessages.map((msg, i) => (
                       <div
                         key={i}
@@ -647,7 +630,7 @@ export function MeetingRoomClient() {
 
                   <form
                     onSubmit={handleSendAiQuery}
-                    className="flex items-center gap-2 pt-2 border-t border-blue-950"
+                    className="flex items-center gap-2 pt-3 mt-3 border-t border-blue-950"
                   >
                     <input
                       type="text"
@@ -655,7 +638,7 @@ export function MeetingRoomClient() {
                       onChange={(e) => setAiQueryMsg(e.target.value)}
                       disabled={isAiLoading}
                       placeholder={
-                        isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, tài liệu, transcript...'
+                        isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, transcript...'
                       }
                       className="flex-1 px-3 py-2 rounded-xl bg-[#131B2E] border border-indigo-950 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
