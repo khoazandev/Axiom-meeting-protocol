@@ -35,7 +35,11 @@ export function useWebSpeech(
     };
 
     recognition.onerror = (e: any) => {
-      console.error('Speech recognition error:', e.error);
+      // 'no-speech' is expected when mic is on but user isn't talking — not a real error
+      if (e.error === 'no-speech' || e.error === 'aborted') {
+        return;
+      }
+      console.warn('[STT] Speech recognition:', e.error);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         shouldListenRef.current = false;
       }
@@ -75,13 +79,14 @@ export function useWebSpeech(
   const startRecognition = useCallback(() => {
     shouldListenRef.current = true;
     try {
-      if (!isRecognizing && recognitionRef.current) {
-        recognitionRef.current.start();
+      if (recognitionRef.current && !shouldListenRef.current) {
+        // Already flagged — skip
       }
-    } catch (e) {
-      console.error(e);
+      recognitionRef.current?.start();
+    } catch {
+      // Silently ignore 'already started' InvalidStateError
     }
-  }, [isRecognizing]);
+  }, []);
 
   const stopRecognition = useCallback(() => {
     shouldListenRef.current = false;

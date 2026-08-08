@@ -26,6 +26,7 @@ import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/compon
 import '@livekit/components-styles';
 import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/lib/api';
 import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
+import { RealtimeSTTPanel } from '@/components/RealtimeSTTPanel';
 
 interface ChatMessage {
   sender: string;
@@ -673,6 +674,15 @@ export function MeetingRoomClient() {
                   </form>
                 </div>
               )}
+
+              {/* Real-time STT + Translation Panel — always visible below tabs */}
+              <section className="pt-4 mt-4 border-t border-blue-950/60">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-amber-400" />
+                  Real-time STT & Translation
+                </h3>
+                <RealtimeSTTPanel />
+              </section>
             </div>
           </aside>
         )}
