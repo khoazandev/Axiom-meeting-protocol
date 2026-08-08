@@ -42,7 +42,10 @@ export function useTranslationSocket(speakerName = 'Thành viên') {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'bilingual_translation_stream' || data.type === 'bilingual_translation') {
+          if (
+            data.type === 'bilingual_translation_stream' ||
+            data.type === 'bilingual_translation'
+          ) {
             setStreamData(data);
 
             // When a translation is final, add to transcript history
@@ -55,7 +58,11 @@ export function useTranslationSocket(speakerName = 'Thành viên') {
                   vi_text: data.vi_text || data.original_text || '',
                   en_text: data.en_text || '',
                   original_text: data.original_text || '',
-                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                  timestamp: new Date().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  }),
                   speaker: speakerName,
                 };
                 if (existingIdx !== -1) {

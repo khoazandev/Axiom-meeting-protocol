@@ -77,7 +77,8 @@ function LiveKitContent({
   }) => void;
   participantName: string;
 }) {
-  const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(participantName);
+  const { streamData, interimText, isListening, isConnected, transcriptHistory } =
+    useVADController(participantName);
 
   useEffect(() => {
     onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
@@ -150,19 +151,22 @@ export function MeetingRoomClient() {
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  const handleVADUpdate = useCallback((data: {
-    streamData: TranslationStream | null;
-    interimText: string;
-    isListening: boolean;
-    isConnected: boolean;
-    transcriptHistory: TranscriptHistoryEntry[];
-  }) => {
-    setVadStreamData(data.streamData);
-    setVadInterimText(data.interimText);
-    setVadIsListening(data.isListening);
-    setVadIsConnected(data.isConnected);
-    setVadTranscriptHistory(data.transcriptHistory);
-  }, []);
+  const handleVADUpdate = useCallback(
+    (data: {
+      streamData: TranslationStream | null;
+      interimText: string;
+      isListening: boolean;
+      isConnected: boolean;
+      transcriptHistory: TranscriptHistoryEntry[];
+    }) => {
+      setVadStreamData(data.streamData);
+      setVadInterimText(data.interimText);
+      setVadIsListening(data.isListening);
+      setVadIsConnected(data.isConnected);
+      setVadTranscriptHistory(data.transcriptHistory);
+    },
+    []
+  );
 
   // Auto-scroll transcript when new entries arrive
   useEffect(() => {
@@ -385,11 +389,13 @@ export function MeetingRoomClient() {
           </button>
 
           {/* STT Status indicator */}
-          <div className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
-            vadIsListening
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-          }`}>
+          <div
+            className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
+              vadIsListening
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+            }`}
+          >
             {vadIsListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
             {vadIsListening ? 'STT Active' : 'STT Off'}
           </div>
@@ -447,7 +453,8 @@ export function MeetingRoomClient() {
           {liveKitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng AI RAG vẫn hoạt động.
+              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng AI RAG vẫn hoạt
+              động.
             </div>
           )}
         </div>
@@ -504,7 +511,9 @@ export function MeetingRoomClient() {
                   {/* STT status bar */}
                   <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                      <div
+                        className={`w-2 h-2 rounded-full ${vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}
+                      />
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                         {vadIsConnected ? 'WS Connected' : 'WS Offline'}
                       </span>
@@ -543,7 +552,8 @@ export function MeetingRoomClient() {
                         <div>
                           <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
                           <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
-                            Bật mic trong thanh công cụ LiveKit và nói. Mỗi câu nói sẽ được nhận diện, dịch song ngữ và hiển thị tại đây.
+                            Bật mic trong thanh công cụ LiveKit và nói. Mỗi câu nói sẽ được nhận
+                            diện, dịch song ngữ và hiển thị tại đây.
                           </p>
                         </div>
                       </div>
@@ -559,9 +569,13 @@ export function MeetingRoomClient() {
                               <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
                                 <User className="w-2.5 h-2.5 text-blue-400" />
                               </div>
-                              <span className="text-[10px] font-bold text-blue-400">{entry.speaker || participantName}</span>
+                              <span className="text-[10px] font-bold text-blue-400">
+                                {entry.speaker || participantName}
+                              </span>
                             </div>
-                            <span className="text-[9px] text-slate-500 font-mono">{entry.timestamp}</span>
+                            <span className="text-[9px] text-slate-500 font-mono">
+                              {entry.timestamp}
+                            </span>
                           </div>
 
                           {/* Vietnamese text */}
