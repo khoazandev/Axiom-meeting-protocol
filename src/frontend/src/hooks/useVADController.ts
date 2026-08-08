@@ -154,7 +154,7 @@ function cleanInterimText(text: string): string {
 
 export function useVADController() {
   const [interimText, setInterimText] = useState<string>('');
-  const { sendText, streamData, isConnected } = useTranslationSocket();
+  const { connect, disconnect, sendText, streamData, isConnected } = useTranslationSocket();
   const { isMicrophoneEnabled } = useLocalParticipant();
 
   const onFinalTranscript = useCallback(
@@ -182,11 +182,13 @@ export function useVADController() {
 
   useEffect(() => {
     if (isMicrophoneEnabled) {
+      connect();
       startRecognition();
     } else {
       stopRecognition();
+      disconnect();
     }
-  }, [isMicrophoneEnabled, startRecognition, stopRecognition]);
+  }, [isMicrophoneEnabled, startRecognition, stopRecognition, connect, disconnect]);
 
   return {
     isListening: isRecognizing,
@@ -195,3 +197,4 @@ export function useVADController() {
     isConnected,
   };
 }
+
