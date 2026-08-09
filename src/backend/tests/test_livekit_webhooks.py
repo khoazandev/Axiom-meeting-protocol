@@ -1,4 +1,5 @@
 from src.backend import models
+from src.backend.conftest import TestingSessionLocal
 
 
 def test_livekit_webhook_room_started_and_finished(client, db_session):
@@ -21,25 +22,29 @@ def test_livekit_webhook_room_started_and_finished(client, db_session):
     db_session.commit()
 
     meeting_id = meeting.id
+    db_session.close()
 
     # Test room_started
     started_payload = {"event": "room_started", "room": {"name": str(meeting_id)}}
     res = client.post("/api/v1/webhooks/livekit", json=started_payload)
     assert res.status_code == 200
 
-    # Expire cached ORM state so refresh re-reads from the DB
-    # (API handler commits on a separate session)
-    db_session.expire_all()
-    db_session.refresh(meeting)
-    assert meeting.status == models.MeetingStatusEnum.IN_PROGRESS
-    assert meeting.started_at is not None
+    # Re-query from a fresh session to cross the transaction boundary
+    # (SQLite isolation prevents the original session from seeing another session's commits)
+    verify = TestingSessionLocal()
+    m = verify.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    assert m.status == models.MeetingStatusEnum.IN_PROGRESS
+    assert m.started_at is not None
+    verify.close()
 
     # Test room_finished
     finished_payload = {"event": "room_finished", "room": {"name": str(meeting_id)}}
     res_fin = client.post("/api/v1/webhooks/livekit", json=finished_payload)
     assert res_fin.status_code == 200
 
-    db_session.expire_all()
-    db_session.refresh(meeting)
-    assert meeting.status == models.MeetingStatusEnum.COMPLETED
-    assert meeting.ended_at is not None
+    verify2 = TestingSessionLocal()
+    m2 = verify2.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    assert m2.status == models.MeetingStatusEnum.COMPLETED
+    assert m2.ended_at is not None
+    verify2.close()
+
