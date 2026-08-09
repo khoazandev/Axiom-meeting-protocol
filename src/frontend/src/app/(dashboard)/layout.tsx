@@ -16,10 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (token && !user) {
       (async () => {
         try {
-          const [me, workspaces] = await Promise.all([
-            authApi.me(),
-            workspaceApi.list(),
-          ]);
+          const [me, workspaces] = await Promise.all([authApi.me(), workspaceApi.list()]);
           setAuth(me, token, workspaces, workspaces[0]);
         } catch {
           // Token is invalid/expired — clear and redirect to login
@@ -32,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } else if (!token) {
       router.push('/login');
     }
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (hydrating) {
     return (
