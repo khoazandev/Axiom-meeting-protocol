@@ -52,6 +52,56 @@ class InvitationStatusEnum(str, enum.Enum):
     DECLINED = "DECLINED"
 
 
+class OrgMemberStatusEnum(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    SUSPENDED = "SUSPENDED"
+    DEACTIVATED = "DEACTIVATED"
+
+
+class MeetingMemberRoleEnum(str, enum.Enum):
+    HOST = "HOST"
+    CO_HOST = "CO_HOST"
+    PARTICIPANT = "PARTICIPANT"
+
+
+class MeetingMemberStatusEnum(str, enum.Enum):
+    INVITED = "INVITED"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+    JOINED = "JOINED"
+    LEFT = "LEFT"
+
+
+class RoleScopeEnum(str, enum.Enum):
+    ORGANIZATION = "ORGANIZATION"
+    DEPARTMENT = "DEPARTMENT"
+
+
+class DocumentStatusEnum(str, enum.Enum):
+    UPLOADED = "UPLOADED"
+    PROCESSING = "PROCESSING"
+    READY = "READY"
+    FAILED = "FAILED"
+
+
+class TranscriptSourceTypeEnum(str, enum.Enum):
+    DOCUMENT = "DOCUMENT"
+    TRANSCRIPT = "TRANSCRIPT"
+
+
+class ActionItemStatusEnum(str, enum.Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+
+class OrgInvitationStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+
+
 class User(database.Base):
     __tablename__ = "users"
 
