@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
+import { cn } from '@/lib/utils';
 import { FadeContent } from '@/components/ui/reactbits/fade-content';
 import { ClickSpark } from '@/components/ui/reactbits/click-spark';
 import { ArrowRight } from 'lucide-react';
@@ -19,25 +21,21 @@ export function CtaSection() {
             meetings.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link href="/meetings/create">
-              <ClickSpark sparkColor="#ffffff">
-                <Button
-                  size="lg"
-                  className="rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-colors cursor-pointer shadow-lg group"
-                >
-                  Deploy Meeting
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </ClickSpark>
-            </Link>
-            <Link href="https://github.com/khoazandev/Axiom-meeting-protocol" target="_blank">
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-colors cursor-pointer"
+            <ClickSpark sparkColor="#ffffff">
+              <Link 
+                href="/meetings/create"
+                className={cn(buttonVariants({ size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-colors cursor-pointer shadow-lg group" }))}
               >
-                View on GitHub
-              </Button>
+                Deploy Meeting
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </ClickSpark>
+            <Link 
+              href="https://github.com/khoazandev/Axiom-meeting-protocol" 
+              target="_blank"
+              className={cn(buttonVariants({ variant: "outline", size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-colors cursor-pointer" }))}
+            >
+              View on GitHub
             </Link>
           </div>
         </div>

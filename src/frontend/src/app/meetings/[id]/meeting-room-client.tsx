@@ -429,8 +429,6 @@ export function MeetingRoomClient() {
               </div>
             ) : (
               <LiveKitRoom
-                video={false}
-                audio={false}
                 token={token}
                 serverUrl={livekitUrl}
                 data-lk-theme="default"

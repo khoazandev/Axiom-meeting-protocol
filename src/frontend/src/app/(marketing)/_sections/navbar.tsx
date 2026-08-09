@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export function Navbar() {
@@ -70,21 +72,20 @@ export function Navbar() {
             >
               Sign Out
             </button>
-            <Link href="/meetings/create">
-              <Button
-                size="sm"
-                className="rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm"
-              >
-                New Meeting
-              </Button>
+            <Link 
+              href="/meetings/create"
+              className={buttonVariants({ size: "sm", className: "rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm" })}
+            >
+              New Meeting
             </Link>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button size="sm" variant="ghost" className="text-xs font-semibold">
-                Sign In
-              </Button>
+            <Link 
+              href="/login"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm", className: "text-xs font-semibold" }))}
+            >
+              Sign In
             </Link>
             <Link href="/register">
               <Button

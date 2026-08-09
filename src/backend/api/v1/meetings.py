@@ -21,6 +21,7 @@ router = APIRouter(prefix="/meetings", tags=["meetings"])
 
 @router.post("", response_model=MeetingResponse)
 @router.post("/", response_model=MeetingResponse)
+@router.post("", response_model=MeetingResponse)
 def create_meeting(
     meeting: MeetingCreate,
     member: WorkspaceMember | None = Depends(get_optional_workspace_member),
@@ -51,6 +52,7 @@ def create_meeting(
 
 @router.get("", response_model=list[MeetingResponse])
 @router.get("/", response_model=list[MeetingResponse])
+@router.get("", response_model=list[MeetingResponse])
 def read_meetings(
     skip: int = 0,
     limit: int = 100,

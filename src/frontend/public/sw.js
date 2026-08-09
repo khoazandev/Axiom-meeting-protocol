@@ -23,6 +23,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Skip non-http(s) requests (e.g. chrome-extension://)
+  const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // Skip API requests — let them go through Next.js proxy without SW interference
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Skip LiveKit server requests (port 7880) — WebRTC connections must not be intercepted
+  if (url.port === '7880' || url.port === '7881') return;
+
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
