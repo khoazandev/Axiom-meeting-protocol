@@ -20,12 +20,8 @@ async def livekit_webhook_handler(request: Request, db: Session = Depends(get_db
     if not room_name:
         return {"status": "ignored", "reason": "no room name"}
 
-    # Attempt to locate meeting by ID
-    try:
-        meeting_id = int(room_name)
-        meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-    except (ValueError, TypeError):
-        meeting = db.query(Meeting).filter(Meeting.id == room_name).first()
+    # Locate meeting by UUID room name
+    meeting = db.query(Meeting).filter(Meeting.id == room_name).first()
 
     if not meeting:
         return {"status": "ignored", "reason": "meeting not found"}
@@ -35,14 +31,12 @@ async def livekit_webhook_handler(request: Request, db: Session = Depends(get_db
     if event == "room_started":
         meeting.status = MeetingStatusEnum.IN_PROGRESS
         meeting.started_at = now_utc
-        meeting.is_active = True
         db.commit()
         return {"status": "processed", "event": event, "meeting_id": meeting.id}
 
     elif event == "room_finished":
         meeting.status = MeetingStatusEnum.COMPLETED
         meeting.ended_at = now_utc
-        meeting.is_active = False
         db.commit()
         return {"status": "processed", "event": event, "meeting_id": meeting.id}
 
