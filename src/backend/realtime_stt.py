@@ -22,7 +22,9 @@ logger.setLevel(logging.INFO)
 # ==================== CONFIGURATION ====================
 SAMPLE_RATE = 16000
 CHUNK_DURATION_SEC = 0.5
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
+import os
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
+OLLAMA_URL = f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate" if OLLAMA_BASE_URL else None
 OLLAMA_MODEL = "qwen3:8b"
 
 # Global lazy-loaded models
@@ -298,8 +300,12 @@ def check_ollama_online() -> bool:
     if _ollama_online is not None and (now - _ollama_check_time) < _OLLAMA_CACHE_TTL:
         return _ollama_online
         
+    if not OLLAMA_BASE_URL:
+        _ollama_check_time = now
+        return False
+        
     try:
-        res = requests.get("http://127.0.0.1:11434/api/tags", timeout=0.5)
+        res = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=0.5)
         _ollama_online = (res.status_code == 200)
     except Exception:
         _ollama_online = False
@@ -430,7 +436,7 @@ def bilingual_translate_llm(text: str, technical_terms: Optional[List[str]] = No
     if technical_terms is None:
         technical_terms = []
 
-    if not check_ollama_online():
+    if not check_ollama_online() or not OLLAMA_URL:
         return None
 
     terms_note = f" Keep these terms in English: {', '.join(technical_terms)}." if technical_terms else ""

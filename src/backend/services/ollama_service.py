@@ -16,7 +16,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
 OLLAMA_TIMEOUT = 90  # seconds
 
 def get_active_model() -> str:
@@ -24,8 +24,10 @@ def get_active_model() -> str:
     env_model = os.environ.get("OLLAMA_MODEL")
     if env_model:
         return env_model
+    if not OLLAMA_BASE_URL:
+        return "qwen2.5:3b"
     try:
-        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        r = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=3)
         if r.status_code == 200:
             installed = [m.get("name", "") for m in r.json().get("models", [])]
             # Prioritize Qwen models by size / generation
@@ -280,10 +282,12 @@ def build_rag_answer(
 
 def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
     """Call Ollama generate API. Returns stripped response text or None on failure."""
+    if not OLLAMA_BASE_URL:
+        return None
     try:
         model_to_use = get_active_model()
         response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/generate",
+            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
             json={
                 "model": model_to_use,
                 "prompt": prompt,
@@ -351,8 +355,10 @@ def _heuristic_answer(
 
 def is_ollama_available() -> bool:
     """Check if Ollama service is running."""
+    if not OLLAMA_BASE_URL:
+        return False
     try:
-        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        r = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=3)
         return r.status_code == 200
     except Exception:
         return False

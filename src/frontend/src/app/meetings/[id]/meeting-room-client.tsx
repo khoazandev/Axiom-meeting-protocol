@@ -344,7 +344,7 @@ export function MeetingRoomClient() {
     );
   }
 
-  const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
+  const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
 
   return (
     <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
@@ -453,8 +453,8 @@ export function MeetingRoomClient() {
           {liveKitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa khởi động (ws://localhost:7880). Các tính năng AI RAG vẫn hoạt
-              động.
+              LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt
+              động bình thường. Mời bạn chat ở khung bên phải nhé! 🚀
             </div>
           )}
         </div>

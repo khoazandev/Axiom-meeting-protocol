@@ -15,12 +15,12 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./sql_app.db"
 
     # CORS
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "*"
 
     # LiveKit
     livekit_api_key: str = "devkey"
     livekit_api_secret: str = "secret"
-    livekit_url: str = "ws://localhost:7880"
+    livekit_url: str = ""
 
     # JWT Authentication
     jwt_secret: str = "dev-secret-key-change-in-production-32bytesmin"
