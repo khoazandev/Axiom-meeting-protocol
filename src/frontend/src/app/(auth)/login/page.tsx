@@ -25,6 +25,7 @@ export default function LoginPage() {
     try {
       const tokens = await authApi.login(email, password);
       localStorage.setItem('axiom_token', tokens.access_token);
+      useAuthStore.setState({ token: tokens.access_token });
       const user = await authApi.me();
       const workspaces = await workspaceApi.list();
       setAuth(user, tokens.access_token, workspaces, workspaces[0]);
@@ -61,6 +62,7 @@ export default function LoginPage() {
             <input
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@company.com"
@@ -75,6 +77,7 @@ export default function LoginPage() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"

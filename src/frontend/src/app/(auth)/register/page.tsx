@@ -80,6 +80,7 @@ export default function RegisterPage() {
             <input
               type="text"
               required
+              autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Sarah Connor"
@@ -94,6 +95,7 @@ export default function RegisterPage() {
             <input
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="sarah@company.com"
@@ -108,6 +110,7 @@ export default function RegisterPage() {
             <input
               type="password"
               required
+              autoComplete="new-password"
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -122,6 +125,7 @@ export default function RegisterPage() {
             </label>
             <input
               type="text"
+              autoComplete="organization"
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
               placeholder={t.auth.orgPlaceholder}

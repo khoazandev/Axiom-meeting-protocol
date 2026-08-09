@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Sparkles, Volume2, Trash2, Zap, Cpu, Radio, Globe } from 'lucide-react';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export interface STTPayload {
   id?: string;
@@ -63,11 +64,19 @@ export interface SubtitleData {
 }
 
 interface RealtimeSTTPanelProps {
-  isJitsiMuted?: boolean;
+  isMuted?: boolean;
   onSubtitleUpdate?: (sub: SubtitleData | null) => void;
+  onTranscriptUpdate?: (fullTranscriptText: string) => void;
 }
 
-export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTTPanelProps = {}) {
+export function RealtimeSTTPanel({
+  isMuted,
+  onSubtitleUpdate,
+  onTranscriptUpdate,
+}: RealtimeSTTPanelProps = {}) {
+  const currentUser = useAuthStore((state) => state.user);
+  const speakerName = currentUser?.full_name || 'Thành viên cuộc họp';
+
   const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>(
     'disconnected'
   );
@@ -93,6 +102,22 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording]);
+
+  // Sync full accumulated transcript text (with speaker name attribution) to parent component for RAG
+  useEffect(() => {
+    if (onTranscriptUpdate && transcripts.length > 0) {
+      const fullText = transcripts
+        .map((t) => {
+          const text = t.vi_text || t.polished_text || t.original_text;
+          const time = t.timestamp || '';
+          return text ? `[${speakerName}${time ? ' — ' + time : ''}]: ${text}` : '';
+        })
+        .filter(Boolean)
+        .reverse()
+        .join('\n');
+      onTranscriptUpdate(fullText);
+    }
+  }, [transcripts, onTranscriptUpdate, speakerName]);
 
   // STT Mode: auto-detected based on backend Whisper availability
   const [sttMode, setSttMode] = useState<STTMode>('browser');
@@ -177,22 +202,22 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
     setLiveSpeechText('');
   }, []);
 
-  // Sync with Jitsi Mute state (Auto start/stop STT based on Jitsi Mic)
+  // Sync with meeting mic mute state (Auto start/stop STT based on mic toggle)
   useEffect(() => {
-    if (isJitsiMuted !== undefined) {
-      if (isJitsiMuted) {
+    if (isMuted !== undefined) {
+      if (isMuted) {
         if (isRecordingRef.current) {
-          console.log('[Pipeline] Jitsi mic MUTED -> Stopping STT recording');
+          console.log('[Pipeline] Mic MUTED -> Stopping STT recording');
           stopRecording();
         }
       } else {
         if (!isRecordingRef.current) {
-          console.log('[Pipeline] Jitsi mic UNMUTED -> Auto-starting STT recording');
+          console.log('[Pipeline] Mic UNMUTED -> Auto-starting STT recording');
           startRecording();
         }
       }
     }
-  }, [isJitsiMuted, startRecording, stopRecording]);
+  }, [isMuted, startRecording, stopRecording]);
 
   // Send accumulated text to backend (called after debounce)
   const flushAccumulatedText = useCallback(() => {
@@ -497,16 +522,16 @@ export function RealtimeSTTPanel({ isJitsiMuted, onSubtitleUpdate }: RealtimeSTT
             </Button>
           )}
 
-          {isJitsiMuted !== undefined ? (
+          {isMuted !== undefined ? (
             <div
               className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-xs font-medium border transition-all duration-300 ${
-                !isJitsiMuted && isRecording
+                !isMuted && isRecording
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-pulse'
                   : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
               }`}
-              title="STT tự động bật/tắt theo nút Mic trên màn hình họp Jitsi"
+              title="STT tự động bật/tắt theo trạng thái mic trong phòng họp"
             >
-              {!isJitsiMuted && isRecording ? (
+              {!isMuted && isRecording ? (
                 <>
                   <Mic className="w-3.5 h-3.5" /> Mic Bật (Đang dịch)
                 </>

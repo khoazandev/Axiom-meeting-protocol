@@ -1,47 +1,79 @@
-import pytest
-from src.backend import models
+from src.backend import database, models
+from src.backend.main import app
+
+
+def _shared_session(session):
+    """Create a get_db override that yields the given session."""
+
+    def override():
+        yield session
+
+    return override
+
 
 def test_livekit_webhook_room_started_and_finished(client, db_session):
-    user = models.User(email="wh_user@test.com", password_hash="hash", full_name="WH User")
-    db_session.add(user)
-    db_session.commit()
+    # Override get_db so the handler uses the SAME session as this test.
+    # This avoids SQLite cross-session isolation (handler can't see test data
+    # when using a separate session on Linux CI).
+    original = app.dependency_overrides.get(database.get_db)
+    app.dependency_overrides[database.get_db] = _shared_session(db_session)
 
-    workspace = models.Workspace(name="WH WS", slug="wh-ws", owner_id=user.id)
-    db_session.add(workspace)
-    db_session.commit()
+    try:
+        user = models.User(
+            email="wh_user@test.com", password_hash="hash", full_name="WH User"
+        )
+        db_session.add(user)
+        db_session.commit()
 
-    meeting = models.Meeting(
-        title="Webhook Test Meeting",
-        agenda="12345678901234567890",
-        workspace_id=workspace.id,
-        created_by_id=user.id,
-        status=models.MeetingStatusEnum.SCHEDULED
-    )
-    db_session.add(meeting)
-    db_session.commit()
+        workspace = models.Workspace(name="WH WS", slug="wh-ws", owner_id=user.id)
+        db_session.add(workspace)
+        db_session.commit()
 
-    meeting_id = meeting.id
+        meeting = models.Meeting(
+            title="Webhook Test Meeting",
+            agenda="12345678901234567890",
+            workspace_id=workspace.id,
+            created_by_id=user.id,
+            status=models.MeetingStatusEnum.SCHEDULED,
+        )
+        db_session.add(meeting)
+        db_session.commit()
 
-    # Test room_started
-    started_payload = {
-        "event": "room_started",
-        "room": {"name": str(meeting_id)}
-    }
-    res = client.post("/api/v1/webhooks/livekit", json=started_payload)
-    assert res.status_code == 200
+        meeting_id = meeting.id
 
-    db_session.refresh(meeting)
-    assert meeting.status == models.MeetingStatusEnum.IN_PROGRESS
-    assert meeting.started_at is not None
+        # Test room_started
+        started_payload = {
+            "event": "room_started",
+            "room": {"name": str(meeting_id)},
+        }
+        res = client.post("/api/v1/webhooks/livekit", json=started_payload)
+        assert res.status_code == 200
+        body = res.json()
+        assert body["status"] == "processed"
 
-    # Test room_finished
-    finished_payload = {
-        "event": "room_finished",
-        "room": {"name": str(meeting_id)}
-    }
-    res_fin = client.post("/api/v1/webhooks/livekit", json=finished_payload)
-    assert res_fin.status_code == 200
+        db_session.refresh(meeting)
+        assert meeting.status == models.MeetingStatusEnum.IN_PROGRESS
+        assert meeting.started_at is not None
 
-    db_session.refresh(meeting)
-    assert meeting.status == models.MeetingStatusEnum.COMPLETED
-    assert meeting.ended_at is not None
+        # Test room_finished
+        finished_payload = {
+            "event": "room_finished",
+            "room": {"name": str(meeting_id)},
+        }
+        res_fin = client.post("/api/v1/webhooks/livekit", json=finished_payload)
+        assert res_fin.status_code == 200
+        body_fin = res_fin.json()
+        assert body_fin["status"] == "processed"
+
+        db_session.refresh(meeting)
+        assert meeting.status == models.MeetingStatusEnum.COMPLETED
+        assert meeting.ended_at is not None
+    finally:
+        # Restore original override
+        if original:
+            app.dependency_overrides[database.get_db] = original
+        else:
+            app.dependency_overrides.pop(database.get_db, None)
+
+
+

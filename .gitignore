@@ -33,3 +33,8 @@ Thumbs.db
 livekit-server/
 models/
 .agents/
+__pycache__/
+*.pyc
+.env
+node_modules/
+.next/

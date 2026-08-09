@@ -214,6 +214,7 @@ class MeetingFile(database.Base):
     file_path = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
     content_type = Column(String, nullable=False)
+    extracted_text = Column(Text, nullable=True)  # Plain text extracted from file for RAG search
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
     meeting = relationship("Meeting", back_populates="files")

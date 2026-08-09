@@ -16,6 +16,10 @@ export interface Meeting {
   start_time: string;
   duration_minutes: number;
   is_active: boolean;
+  status?: string | null;
+  ended_at?: string | null;
+  transcript?: string | null;
+  summary?: string | null;
   workspace_id?: string | null;
 }
 
@@ -60,6 +64,20 @@ export interface TokenResponse {
   token: string;
 }
 
+export interface RagSource {
+  type: 'agenda' | 'transcript' | 'file' | 'bookmark';
+  snippet: string;
+  filename?: string | null;
+  timestamp?: number | null;
+}
+
+export interface RagQueryResponse {
+  question: string;
+  answer: string;
+  sources: RagSource[];
+  context_used: string[];
+}
+
 // ── Error Class ──────────────────────────────────────────
 
 export class ApiRequestError extends Error {
@@ -85,7 +103,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token || localStorage.getItem('axiom_token');
+    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -107,7 +125,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   // Inject token and active workspace header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token || localStorage.getItem('axiom_token');
+    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -239,5 +257,22 @@ export const meetingsApi = {
       `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
       { signal }
     );
+  },
+
+  /** Query the in-meeting RAG chatbot. */
+  ragQuery(
+    meetingId: number | string,
+    question: string,
+    liveTranscript?: string,
+    chatHistory?: { sender: string; text: string; isAi?: boolean }[]
+  ): Promise<RagQueryResponse> {
+    return apiFetch<RagQueryResponse>(`/api/v1/meetings/${meetingId}/rag/query`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question,
+        live_transcript: liveTranscript,
+        chat_history: chatHistory,
+      }),
+    });
   },
 };

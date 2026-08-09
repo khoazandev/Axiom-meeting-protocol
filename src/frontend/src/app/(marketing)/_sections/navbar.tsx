@@ -72,18 +72,24 @@ export function Navbar() {
             >
               Sign Out
             </button>
-            <Link 
+            <Link
               href="/meetings/create"
-              className={buttonVariants({ size: "sm", className: "rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm" })}
+              className={buttonVariants({
+                size: 'sm',
+                className:
+                  'rounded-full px-5 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-sm',
+              })}
             >
               New Meeting
             </Link>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Link 
+            <Link
               href="/login"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm", className: "text-xs font-semibold" }))}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm', className: 'text-xs font-semibold' })
+              )}
             >
               Sign In
             </Link>

@@ -22,18 +22,31 @@ export function CtaSection() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <ClickSpark sparkColor="#ffffff">
-              <Link 
+              <Link
                 href="/meetings/create"
-                className={cn(buttonVariants({ size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-colors cursor-pointer shadow-lg group" }))}
+                className={cn(
+                  buttonVariants({
+                    size: 'lg',
+                    className:
+                      'rounded-full h-12 px-8 font-semibold text-sm bg-white text-primary hover:bg-white/90 transition-colors cursor-pointer shadow-lg group',
+                  })
+                )}
               >
                 Deploy Meeting
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </ClickSpark>
-            <Link 
-              href="https://github.com/khoazandev/Axiom-meeting-protocol" 
+            <Link
+              href="https://github.com/khoazandev/Axiom-meeting-protocol"
               target="_blank"
-              className={cn(buttonVariants({ variant: "outline", size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-colors cursor-pointer" }))}
+              className={cn(
+                buttonVariants({
+                  variant: 'outline',
+                  size: 'lg',
+                  className:
+                    'rounded-full h-12 px-8 font-semibold text-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-colors cursor-pointer',
+                })
+              )}
             >
               View on GitHub
             </Link>
