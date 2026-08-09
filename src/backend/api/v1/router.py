@@ -10,6 +10,7 @@ from fastapi import APIRouter
 from src.backend.api.v1.auth import router as auth_router
 from src.backend.api.v1.departments import router as departments_router
 from src.backend.api.v1.health import router as health_router
+from src.backend.api.v1.meetings_v2 import router as meetings_v2_router
 from src.backend.api.v1.org_invitations import accept_router as invitation_accept_router
 from src.backend.api.v1.org_invitations import router as org_invitations_router
 from src.backend.api.v1.organizations import router as organizations_router
@@ -40,6 +41,7 @@ api_v1_router.include_router(webhooks_router)
 api_v1_router.include_router(organizations_router)
 api_v1_router.include_router(departments_router)
 api_v1_router.include_router(org_invitations_router)
+api_v1_router.include_router(meetings_v2_router)
 api_v1_router.include_router(invitation_accept_router)
 
 
