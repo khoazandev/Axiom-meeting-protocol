@@ -25,7 +25,7 @@ interface SidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { user, activeWorkspace, workspaces, setActiveWorkspace } = useAuthStore();
+  const { user, activeOrganization, organizations, setActiveOrganization } = useAuthStore();
   const { t } = useLanguageStore();
 
   const navItems = [
@@ -51,19 +51,19 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
               <Building className="w-4 h-4" />
             </div>
             <select
-              value={activeWorkspace?.id || ''}
+              value={activeOrganization?.id || ''}
               onChange={(e) => {
-                const ws = workspaces.find((w) => w.id === e.target.value);
-                if (ws) setActiveWorkspace(ws);
+                const org = organizations.find((o) => o.id === e.target.value);
+                if (org) setActiveOrganization(org);
               }}
               className="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer truncate w-full"
             >
-              {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.id} className="bg-[#131B2E] text-white">
-                  {ws.name}
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id} className="bg-[#131B2E] text-white">
+                  {org.name}
                 </option>
               ))}
-              {workspaces.length === 0 && (
+              {organizations.length === 0 && (
                 <option value="" className="bg-[#131B2E] text-slate-400">
                   {t.nav.defaultWorkspace}
                 </option>
@@ -73,7 +73,7 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <div className="w-full flex justify-center">
             <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold">
-              {activeWorkspace?.name ? activeWorkspace.name[0].toUpperCase() : 'A'}
+              {activeOrganization?.name ? activeOrganization.name[0].toUpperCase() : 'A'}
             </div>
           </div>
         )}

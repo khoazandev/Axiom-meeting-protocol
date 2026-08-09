@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import {
   ArrowLeft,
   Loader2,
@@ -21,16 +22,17 @@ export default function CreateMeetingPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeOrganization = useAuthStore((state) => state.activeOrganization);
+
   const [formData, setFormData] = useState({
     title: '',
-    agenda: '',
-    duration_minutes: 60,
+    description: '',
   });
 
   // Files to upload after meeting is created
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-  const charCount = formData.agenda.trim().length;
+  const charCount = formData.description.trim().length;
   const isGateValid = charCount >= 20;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,14 +61,19 @@ export default function CreateMeetingPage() {
 
     try {
       // 1. Create the meeting
-      const created = await meetingsApi.create(formData);
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        organization_id: activeOrganization?.id || null,
+      };
+      const created = await meetingsApi.create(payload);
       const meetingId = created.id;
 
       // 2. Upload all pending files (if any)
       if (pendingFiles.length > 0) {
         const token = localStorage.getItem('axiom_token') || '';
-        const wsRaw = localStorage.getItem('axiom_workspace');
-        const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
+        const orgRaw = localStorage.getItem('axiom_organization');
+        const orgId = orgRaw ? JSON.parse(orgRaw)?.id || '' : '';
 
         await Promise.allSettled(
           pendingFiles.map((file) => {
@@ -74,7 +81,7 @@ export default function CreateMeetingPage() {
             fd.append('file', file);
             return fetch(`/api/v1/meetings/${meetingId}/files`, {
               method: 'POST',
-              headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
+              headers: { Authorization: `Bearer ${token}`, 'X-Organization-ID': orgId },
               body: fd,
             });
           })
@@ -172,8 +179,8 @@ export default function CreateMeetingPage() {
               <textarea
                 required
                 rows={4}
-                value={formData.agenda}
-                onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder={
                   '1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources'
                 }
@@ -183,26 +190,6 @@ export default function CreateMeetingPage() {
                 Backend enforces a minimum 20-character agenda to guarantee structured meeting
                 records.
               </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                Estimated Duration (Minutes)
-              </label>
-              <input
-                type="number"
-                min="15"
-                step="15"
-                required
-                value={formData.duration_minutes}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    duration_minutes: parseInt(e.target.value) || 60,
-                  })
-                }
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-              />
             </div>
 
             {/* ── File Attachments ── */}

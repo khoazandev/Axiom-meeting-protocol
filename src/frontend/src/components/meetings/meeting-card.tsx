@@ -13,13 +13,15 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
   const { t, language } = useLanguageStore();
   const locale = language === 'vi' ? 'vi-VN' : 'en-US';
 
-  const formattedDate = new Date(meeting.start_time).toLocaleDateString(locale, {
+  const meetingDate = meeting.scheduled_at || meeting.created_at;
+
+  const formattedDate = new Date(meetingDate).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 
-  const formattedTime = new Date(meeting.start_time).toLocaleTimeString(locale, {
+  const formattedTime = new Date(meetingDate).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -32,7 +34,7 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
           <h3 className="text-sm font-semibold text-text-primary line-clamp-1 group-hover:text-accent transition-colors">
             {meeting.title}
           </h3>
-          {meeting.is_active ? (
+          {meeting.status === 'ACTIVE' ? (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-success/10 text-success border border-success/20 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               {t.meetings.statusActive}
@@ -50,10 +52,6 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
             <Calendar className="w-3.5 h-3.5" />
             {formattedDate} {formattedTime}
           </span>
-          <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            {meeting.duration_minutes} {t.meetings.minutes}
-          </span>
         </div>
 
         {/* Agenda Preview */}
@@ -63,7 +61,7 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
             {t.meetings.agenda}
           </div>
           <p className="text-sm text-text-secondary line-clamp-2 leading-relaxed">
-            {meeting.agenda}
+            {meeting.description}
           </p>
         </div>
       </div>

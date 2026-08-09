@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopNavbar } from '@/components/layout/top-navbar';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import { authApi, workspaceApi } from '@/lib/api';
+import { authApi, organizationApi } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -16,9 +16,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (token && !user) {
       (async () => {
         try {
-          const [me, workspaces] = await Promise.all([authApi.me(), workspaceApi.list()]);
-          setAuth(me, token, workspaces, workspaces[0]);
-        } catch {
+          const [me, organizations] = await Promise.all([authApi.me(), organizationApi.list()]);
+          setAuth(me, token, organizations, organizations[0]);
+        } catch (err) {
           // Token is invalid/expired — clear and redirect to login
           useAuthStore.getState().logout();
           router.push('/login');

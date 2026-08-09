@@ -7,7 +7,7 @@ import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { Search, Bell, Plus, User, LogOut, ShieldCheck, Globe } from 'lucide-react';
 
 export function AppHeader() {
-  const { user, activeWorkspace, logout } = useAuthStore();
+  const { user, activeOrganization, logout } = useAuthStore();
   const { language, setLanguage, t } = useLanguageStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -47,10 +47,10 @@ export function AppHeader() {
         </button>
 
         {/* Workspace Badge */}
-        {mounted && activeWorkspace && (
+        {mounted && activeOrganization && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/40 border border-blue-900/30 text-xs text-blue-300 font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-            <span>{activeWorkspace.name}</span>
+            <span>{activeOrganization.name}</span>
           </div>
         )}
 

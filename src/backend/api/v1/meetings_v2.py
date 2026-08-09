@@ -1,10 +1,12 @@
 """Meeting CRUD + MeetingMember management API endpoints."""
 
 from fastapi import APIRouter, Depends, status
+from livekit import api
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
-from src.backend.core.exceptions import AuthenticationException, ForbiddenException, NotFoundException
+from src.backend.core.config import get_settings
+from src.backend.core.exceptions import ForbiddenException, NotFoundException
 from src.backend.database import get_db
 from src.backend.models import (
     Meeting,
@@ -20,6 +22,7 @@ from src.backend.schemas.meeting import (
     MeetingMemberResponse,
     MeetingResponse,
     MeetingUpdate,
+    TokenResponse,
 )
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -92,11 +95,7 @@ def list_my_meetings(
     current_user: User = Depends(deps.get_current_user),
 ):
     """List all meetings the current user is a member of."""
-    memberships = (
-        db.query(MeetingMember)
-        .filter(MeetingMember.user_id == current_user.id)
-        .all()
-    )
+    memberships = db.query(MeetingMember).filter(MeetingMember.user_id == current_user.id).all()
     meeting_ids = [m.meeting_id for m in memberships]
     if not meeting_ids:
         return []
@@ -152,6 +151,30 @@ def delete_meeting(
     db.commit()
 
 
+@router.get("/{meeting_id}/token", response_model=TokenResponse)
+def get_meeting_token(
+    meeting_id: str,
+    participant_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Generate a LiveKit access token for a meeting room."""
+    _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
+
+    settings = get_settings()
+    token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+    token.with_identity(participant_name)
+    token.with_name(participant_name)
+    token.with_grants(
+        api.VideoGrant(
+            room_join=True,
+            room=str(meeting_id),
+        )
+    )
+    return TokenResponse(token=token.to_jwt())
+
+
 # ---------------------------------------------------------------------------
 # MeetingMember Management
 # ---------------------------------------------------------------------------
@@ -165,11 +188,7 @@ def list_meeting_members(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
-    return (
-        db.query(MeetingMember)
-        .filter(MeetingMember.meeting_id == meeting_id)
-        .all()
-    )
+    return db.query(MeetingMember).filter(MeetingMember.meeting_id == meeting_id).all()
 
 
 @router.post(

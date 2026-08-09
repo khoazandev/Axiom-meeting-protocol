@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authApi, workspaceApi } from '@/lib/api';
+import { authApi, organizationApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
@@ -15,7 +15,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [workspaceName, setWorkspaceName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,18 +34,18 @@ export default function RegisterPage() {
 
       const user = await authApi.me();
 
-      // 3. Create initial workspace if workspaceName provided
-      let initialWs = null;
-      if (workspaceName.trim()) {
-        const slug = workspaceName
+      // 3. Create initial organization if organizationName provided
+      let initialOrg = null;
+      if (organizationName.trim()) {
+        const slug = organizationName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '');
-        initialWs = await workspaceApi.create(workspaceName.trim(), slug || 'workspace');
+        initialOrg = await organizationApi.create(organizationName.trim(), slug || 'organization');
       }
 
-      const workspaces = await workspaceApi.list();
-      setAuth(user, tokens.access_token, workspaces, initialWs || workspaces[0]);
+      const organizations = await organizationApi.list();
+      setAuth(user, tokens.access_token, organizations, initialOrg || organizations[0]);
 
       router.push('/meetings');
     } catch (err: any) {
@@ -126,8 +126,8 @@ export default function RegisterPage() {
             <input
               type="text"
               autoComplete="organization"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
               placeholder={t.auth.orgPlaceholder}
               className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export function Navbar() {
-  const { user, activeWorkspace, workspaces, setActiveWorkspace, logout } = useAuthStore();
+  const { user, activeOrganization, organizations, setActiveOrganization, logout } = useAuthStore();
 
   return (
     <header className="h-16 px-6 md:px-12 flex items-center justify-between sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -24,20 +24,20 @@ export function Navbar() {
           <span className="font-bold tracking-tight text-sm">Axiom</span>
         </Link>
 
-        {/* Workspace Switcher */}
-        {workspaces.length > 0 && (
+        {/* Organization Switcher */}
+        {organizations.length > 0 && (
           <div className="relative border-l border-border/40 pl-4">
             <select
-              value={activeWorkspace?.id || ''}
+              value={activeOrganization?.id || ''}
               onChange={(e) => {
-                const ws = workspaces.find((w) => w.id === e.target.value);
-                if (ws) setActiveWorkspace(ws);
+                const org = organizations.find((o) => o.id === e.target.value);
+                if (org) setActiveOrganization(org);
               }}
               className="bg-card text-foreground text-xs font-semibold px-3 py-1.5 rounded-lg border border-border/60 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
-              {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.id}>
-                  🏢 {ws.name}
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  🏢 {org.name}
                 </option>
               ))}
             </select>

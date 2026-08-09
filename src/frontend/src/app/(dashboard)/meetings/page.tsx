@@ -58,12 +58,12 @@ export default function MeetingsDashboardPage() {
   };
 
   const filteredMeetings = meetings.filter((m) => {
-    if (activeTab === 'live') return m.is_active;
-    if (activeTab === 'scheduled') return !m.is_active;
+    if (activeTab === 'live') return m.status === 'ACTIVE';
+    if (activeTab === 'scheduled') return m.status !== 'ACTIVE';
     return true;
   });
 
-  const activeCount = meetings.filter((m) => m.is_active).length;
+  const activeCount = meetings.filter((m) => m.status === 'ACTIVE').length;
 
   return (
     <div className="space-y-6">

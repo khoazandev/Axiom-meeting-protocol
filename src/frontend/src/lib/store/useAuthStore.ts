@@ -9,7 +9,7 @@ export interface User {
   is_active: boolean;
 }
 
-export interface Workspace {
+export interface Organization {
   id: string;
   name: string;
   slug: string;
@@ -20,53 +20,54 @@ export interface Workspace {
 interface AuthState {
   user: User | null;
   token: string | null;
-  activeWorkspace: Workspace | null;
-  workspaces: Workspace[];
+  activeOrganization: Organization | null;
+  organizations: Organization[];
   setAuth: (
     user: User,
     token: string,
-    workspaces: Workspace[],
-    activeWorkspace?: Workspace
+    organizations: Organization[],
+    activeOrganization?: Organization
   ) => void;
-  setActiveWorkspace: (workspace: Workspace) => void;
-  setWorkspaces: (workspaces: Workspace[]) => void;
+  setActiveOrganization: (organization: Organization) => void;
+  setOrganizations: (organizations: Organization[]) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null,
-  activeWorkspace:
+  activeOrganization:
     typeof window !== 'undefined'
-      ? JSON.parse(localStorage.getItem('axiom_workspace') || 'null')
+      ? JSON.parse(localStorage.getItem('axiom_organization') || 'null')
       : null,
-  workspaces: [],
-  setAuth: (user, token, workspaces, activeWorkspace) => {
+  organizations: [],
+  setAuth: (user, token, organizations, activeOrganization) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('axiom_token', token);
-      if (activeWorkspace) {
-        localStorage.setItem('axiom_workspace', JSON.stringify(activeWorkspace));
+      if (activeOrganization) {
+        localStorage.setItem('axiom_organization', JSON.stringify(activeOrganization));
       }
     }
     set({
       user,
       token,
-      workspaces,
-      activeWorkspace: activeWorkspace || (workspaces.length > 0 ? workspaces[0] : null),
+      organizations,
+      activeOrganization:
+        activeOrganization || (organizations.length > 0 ? organizations[0] : null),
     });
   },
-  setActiveWorkspace: (workspace) => {
+  setActiveOrganization: (organization) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('axiom_workspace', JSON.stringify(workspace));
+      localStorage.setItem('axiom_organization', JSON.stringify(organization));
     }
-    set({ activeWorkspace: workspace });
+    set({ activeOrganization: organization });
   },
-  setWorkspaces: (workspaces) => set({ workspaces }),
+  setOrganizations: (organizations) => set({ organizations }),
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('axiom_token');
-      localStorage.removeItem('axiom_workspace');
+      localStorage.removeItem('axiom_organization');
     }
-    set({ user: null, token: null, activeWorkspace: null, workspaces: [] });
+    set({ user: null, token: null, activeOrganization: null, organizations: [] });
   },
 }));

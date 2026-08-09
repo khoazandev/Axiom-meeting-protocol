@@ -231,16 +231,16 @@ export function MeetingRoomClient() {
   const handleAddBookmark = async () => {
     try {
       const authToken = localStorage.getItem('axiom_token');
-      const wsRaw = localStorage.getItem('axiom_workspace');
-      const wsId = wsRaw ? JSON.parse(wsRaw)?.id : null;
-      if (!authToken || !wsId) return;
+      const orgRaw = localStorage.getItem('axiom_organization');
+      const orgId = orgRaw ? JSON.parse(orgRaw)?.id : null;
+      if (!authToken || !orgId) return;
 
       const res = await fetch(`/api/v1/meetings/${meetingId}/bookmarks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
-          'X-Workspace-ID': wsId,
+          'X-Organization-ID': orgId,
         },
         body: JSON.stringify({
           timestamp_seconds: 120,
@@ -287,7 +287,9 @@ export function MeetingRoomClient() {
                 const label =
                   { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
                 const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
-                return `• ${title}: ${s.snippet.slice(0, 100)}${s.snippet.length > 100 ? '...' : ''}`;
+                return `• ${title}: ${s.snippet.slice(0, 100)}${
+                  s.snippet.length > 100 ? '...' : ''
+                }`;
               })
               .join('\n')
           : '';
@@ -362,11 +364,11 @@ export function MeetingRoomClient() {
             <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-blue-400" />
-                {new Date(meeting.start_time).toLocaleDateString()}
+                {new Date(meeting.created_at).toLocaleDateString()}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3 text-blue-400" />
-                {meeting.duration_minutes} min
+                {new Date(meeting.created_at).toLocaleTimeString()}
               </span>
             </div>
           </div>
@@ -502,7 +504,7 @@ export function MeetingRoomClient() {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                      {meeting.agenda}
+                      {meeting.description}
                     </p>
                   </div>
 
@@ -510,7 +512,9 @@ export function MeetingRoomClient() {
                   <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-2 h-2 rounded-full ${vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}
+                        className={`w-2 h-2 rounded-full ${
+                          vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
+                        }`}
                       />
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                         {vadIsConnected ? 'WS Connected' : 'WS Offline'}
@@ -611,11 +615,17 @@ export function MeetingRoomClient() {
                     {aiMessages.map((msg, i) => (
                       <div
                         key={i}
-                        className={`p-3 rounded-xl border ${msg.isAi ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-[#131B2E] border-blue-950'} space-y-1`}
+                        className={`p-3 rounded-xl border ${
+                          msg.isAi
+                            ? 'bg-indigo-950/30 border-indigo-500/40'
+                            : 'bg-[#131B2E] border-blue-950'
+                        } space-y-1`}
                       >
                         <div className="flex items-center justify-between text-[10px]">
                           <span
-                            className={`font-bold ${msg.isAi ? 'text-indigo-400' : 'text-blue-400'}`}
+                            className={`font-bold ${
+                              msg.isAi ? 'text-indigo-400' : 'text-blue-400'
+                            }`}
                           >
                             {msg.sender}
                           </span>

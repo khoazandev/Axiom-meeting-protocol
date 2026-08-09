@@ -2,7 +2,7 @@
  * Axiom API Client
  *
  * Centralized API layer for all backend communication.
- * Auto-injects Authorization JWT token and X-Workspace-ID header.
+ * Auto-injects Authorization JWT token and X-Organization-ID header.
  */
 
 import { useAuthStore } from './store/useAuthStore';
@@ -10,23 +10,26 @@ import { useAuthStore } from './store/useAuthStore';
 // ── Types ────────────────────────────────────────────────
 
 export interface Meeting {
-  id: number;
+  id: string;
   title: string;
-  agenda: string;
-  start_time: string;
-  duration_minutes: number;
-  is_active: boolean;
-  status?: string | null;
+  description?: string | null;
+  scheduled_at?: string | null;
+  started_at?: string | null;
   ended_at?: string | null;
-  transcript?: string | null;
-  summary?: string | null;
-  workspace_id?: string | null;
+  status: string;
+  organization_id?: string | null;
+  department_id?: string | null;
+  created_by_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MeetingCreate {
   title: string;
-  agenda: string;
-  duration_minutes: number;
+  description?: string | null;
+  scheduled_at?: string | null;
+  organization_id?: string | null;
+  department_id?: string | null;
 }
 
 export interface User {
@@ -38,7 +41,7 @@ export interface User {
   is_active: boolean;
 }
 
-export interface Workspace {
+export interface Organization {
   id: string;
   name: string;
   slug: string;
@@ -107,9 +110,9 @@ export function getAuthHeaders(): Record<string, string> {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const activeWorkspace = useAuthStore.getState().activeWorkspace;
-    if (activeWorkspace?.id) {
-      headers['X-Workspace-ID'] = activeWorkspace.id;
+    const activeOrganization = useAuthStore.getState().activeOrganization;
+    if (activeOrganization?.id) {
+      headers['X-Organization-ID'] = activeOrganization.id;
     }
   }
   return headers;
@@ -123,16 +126,16 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     ...(options?.headers as Record<string, string>),
   };
 
-  // Inject token and active workspace header from localStorage / Zustand store
+  // Inject token and active organization header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const activeWorkspace = useAuthStore.getState().activeWorkspace;
-    if (activeWorkspace?.id) {
-      headers['X-Workspace-ID'] = activeWorkspace.id;
+    const activeOrganization = useAuthStore.getState().activeOrganization;
+    if (activeOrganization?.id) {
+      headers['X-Organization-ID'] = activeOrganization.id;
     }
   }
 
@@ -200,22 +203,22 @@ export const authApi = {
   },
 };
 
-// ── Workspace API ────────────────────────────────────────
+// ── Organization API ────────────────────────────────────────
 
-export const workspaceApi = {
-  create(name: string, slug: string): Promise<Workspace> {
-    return apiFetch<Workspace>('/api/v1/workspaces', {
+export const organizationApi = {
+  create(name: string, slug: string): Promise<Organization> {
+    return apiFetch<Organization>('/api/v1/organizations', {
       method: 'POST',
       body: JSON.stringify({ name, slug }),
     });
   },
 
-  list(): Promise<Workspace[]> {
-    return apiFetch<Workspace[]>('/api/v1/workspaces');
+  list(): Promise<Organization[]> {
+    return apiFetch<Organization[]>('/api/v1/organizations');
   },
 
-  get(workspaceId: string): Promise<Workspace> {
-    return apiFetch<Workspace>(`/api/v1/workspaces/${workspaceId}`);
+  get(organizationId: string): Promise<Organization> {
+    return apiFetch<Organization>(`/api/v1/organizations/${organizationId}`);
   },
 };
 
