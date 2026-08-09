@@ -1,7 +1,7 @@
 # Platform Redesign — Phase 1: Database Schema & RBAC Foundation
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 
+>
 > **TDD Iron Law:** NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST. Every task follows strict Red-Green-Refactor. Tests are ALWAYS written and verified failing BEFORE any implementation.
 
 **Goal:** Replace workspace-based data model with Organization + Department + RBAC schema (17 tables), keeping the app functional throughout migration.
@@ -23,12 +23,12 @@
 
 This spec is too large for a single plan. It is split into **4 phases**:
 
-| Phase | Plan | Scope |
-|-------|------|-------|
-| **Phase 1 (this plan)** | Database Schema & RBAC Foundation | Models, Alembic migration, permission seeding, conftest |
-| Phase 2 | Organization & Department APIs | CRUD endpoints, invitation flow, membership management |
-| Phase 3 | Meeting Engine Refactor | Unified meeting engine, meeting_members, permission middleware |
-| Phase 4 | Content & AI Tables | transcript_segments, meeting_summaries, action_items, knowledge_chunks, chat |
+| Phase                   | Plan                              | Scope                                                                        |
+| ----------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| **Phase 1 (this plan)** | Database Schema & RBAC Foundation | Models, Alembic migration, permission seeding, conftest                      |
+| Phase 2                 | Organization & Department APIs    | CRUD endpoints, invitation flow, membership management                       |
+| Phase 3                 | Meeting Engine Refactor           | Unified meeting engine, meeting_members, permission middleware               |
+| Phase 4                 | Content & AI Tables               | transcript_segments, meeting_summaries, action_items, knowledge_chunks, chat |
 
 Each phase produces working, testable software independently. Phase 1 must complete before Phase 2 begins.
 
@@ -37,9 +37,11 @@ Each phase produces working, testable software independently. Phase 1 must compl
 ### Task 1: RED — Write All Enum Tests
 
 **Files:**
+
 - Create: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing test file that defines the expected enum API surface
 
 - [ ] **Step 1: Create test file with enum tests**
@@ -116,9 +118,11 @@ git commit -m "test(models): RED — add failing tests for new platform enum typ
 ### Task 2: GREEN — Implement Enums to Pass Tests
 
 **Files:**
+
 - Modify: `src/backend/models.py` (after line ~53, after existing enums)
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 1
 - Produces: All enum classes pass their tests
 
@@ -194,9 +198,11 @@ git commit -m "feat(models): GREEN — implement new platform enum types"
 ### Task 3: RED — Write Organization & OrgMember Model Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests defining Organization and OrganizationMember table structure
 
 - [ ] **Step 1: Add Organization and OrgMember tests**
@@ -324,9 +330,11 @@ git commit -m "test(models): RED — add failing tests for Organization and OrgM
 ### Task 4: GREEN — Implement Organization & OrgMember Models
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 3, `generate_uuid()`, `OrgMemberStatusEnum`, `RoleScopeEnum`
 - Produces: `Organization`, `OrganizationMember` models
 
@@ -409,9 +417,11 @@ git commit -m "feat(models): GREEN — implement Organization and OrganizationMe
 ### Task 5: RED — Write RBAC Model Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests for Role, Permission, RolePermission
 
 - [ ] **Step 1: Add RBAC tests**
@@ -538,9 +548,11 @@ git commit -m "test(models): RED — add failing tests for RBAC (Role, Permissio
 ### Task 6: GREEN — Implement RBAC Models
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 5
 - Produces: `Role`, `Permission`, `RolePermission` models
 
@@ -608,9 +620,11 @@ git commit -m "feat(models): GREEN — implement Role, Permission, RolePermissio
 ### Task 7: RED — Write Department Model Tests (Redesigned)
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests for redesigned Department (with parent_id, description, org FK) and DepartmentMember (with role_id, UUID PK)
 
 - [ ] **Step 1: Add Department tests**
@@ -763,9 +777,11 @@ git commit -m "test(models): RED — add failing tests for redesigned Department
 ### Task 8: GREEN — Rewrite Department & DepartmentMember Models
 
 **Files:**
+
 - Modify: `src/backend/models.py` — replace existing Department and DepartmentMember
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 7
 - Produces: Redesigned `Department` (with parent_id, description, org FK), `DepartmentMember` (UUID PK, role_id, unique constraint)
 
@@ -842,9 +858,11 @@ git commit -m "feat(models): GREEN — rewrite Department and DepartmentMember w
 ### Task 9: RED — Write Meeting & MeetingMember Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests for UUID-PK Meeting (Personal vs Business) and MeetingMember
 
 - [ ] **Step 1: Add Meeting tests**
@@ -1019,9 +1037,11 @@ git commit -m "test(models): RED — add failing tests for redesigned Meeting an
 ### Task 10: GREEN — Rewrite Meeting & Add MeetingMember Models
 
 **Files:**
+
 - Modify: `src/backend/models.py` — replace Meeting, add MeetingMember
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 9
 - Produces: UUID-PK `Meeting`, `MeetingMember` with role/status enums
 
@@ -1117,9 +1137,11 @@ git commit -m "feat(models): GREEN — rewrite Meeting with UUID PK, add Meeting
 ### Task 11: RED — Write Org Invitation & Content Model Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests for OrganizationInvitation, MeetingDocument, TranscriptSegment, MeetingSummary, ActionItem, KnowledgeChunk, MeetingChatMessage
 
 - [ ] **Step 1: Add all remaining model tests**
@@ -1357,9 +1379,11 @@ git commit -m "test(models): RED — add failing tests for OrgInvitation and all
 ### Task 12: GREEN — Implement OrgInvitation & Content Models
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 
 **Interfaces:**
+
 - Consumes: All failing tests from Task 11
 - Produces: `OrganizationInvitation`, `MeetingDocument`, `TranscriptSegment`, `MeetingSummary`, `ActionItem` (redesigned), `KnowledgeChunk`, `MeetingChatMessage`
 
@@ -1414,9 +1438,11 @@ git commit -m "feat(models): GREEN — implement OrgInvitation and all content/A
 ### Task 13: RED — Write Deprecated Model Removal Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Tests asserting old models no longer exist
 
 - [ ] **Step 1: Add deprecation tests**
@@ -1475,15 +1501,18 @@ git commit -m "test(models): RED — add failing tests asserting deprecated mode
 ### Task 14: GREEN — Remove Deprecated Models & Clean Up
 
 **Files:**
+
 - Modify: `src/backend/models.py`
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 13
 - Produces: Clean models.py without any deprecated workspace-era models
 
 - [ ] **Step 1: Remove deprecated classes from models.py**
 
 Delete these classes:
+
 - `Workspace`
 - `WorkspaceMember`
 - `Invitation`
@@ -1546,9 +1575,11 @@ git commit -m "refactor(models): GREEN — remove all deprecated workspace-era m
 ### Task 15: RED — Write RBAC Seed Tests
 
 **Files:**
+
 - Modify: `src/backend/tests/test_models_redesign.py`
 
 **Interfaces:**
+
 - Produces: Failing tests for `seed_roles_and_permissions()` function
 
 - [ ] **Step 1: Add seed tests**
@@ -1661,10 +1692,12 @@ git commit -m "test(seeds): RED — add failing tests for RBAC seeding script"
 ### Task 16: GREEN — Implement RBAC Seed Script
 
 **Files:**
+
 - Create: `src/backend/seeds/__init__.py`
 - Create: `src/backend/seeds/seed_rbac.py`
 
 **Interfaces:**
+
 - Consumes: Failing tests from Task 15, `Role`, `Permission`, `RolePermission` models
 - Produces: `seed_roles_and_permissions(db: Session)` function
 
@@ -1788,10 +1821,12 @@ git commit -m "feat(seeds): GREEN — implement RBAC seeding with system roles a
 ### Task 17: REFACTOR — Update Conftest, Cleanup & Full Test Suite
 
 **Files:**
+
 - Modify: `src/backend/conftest.py`
 - Modify: `src/backend/main.py`
 
 **Interfaces:**
+
 - Consumes: All models, `seed_roles_and_permissions`
 - Produces: Updated test infrastructure, app startup seeding
 

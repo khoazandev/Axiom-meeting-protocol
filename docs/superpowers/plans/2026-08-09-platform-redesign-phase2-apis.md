@@ -1,7 +1,7 @@
 # Platform Redesign — Phase 2: Organization & Department APIs
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 
+>
 > **TDD Iron Law:** NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.
 
 **Goal:** Build Organization CRUD, Department CRUD, membership management, and org invitation flow APIs.
@@ -19,14 +19,14 @@
 
 ## Scope
 
-| Task | Component |
-|------|-----------|
-| 1-2 | Schemas (Organization, Department, OrgMember, OrgInvitation) |
-| 3-4 | Organization CRUD API |
-| 5-6 | Department CRUD API |
-| 7-8 | Organization Invitation API |
-| 9-10 | Re-enable and update auth registration flow |
-| 11 | Update router.py to include new routes |
+| Task | Component                                                    |
+| ---- | ------------------------------------------------------------ |
+| 1-2  | Schemas (Organization, Department, OrgMember, OrgInvitation) |
+| 3-4  | Organization CRUD API                                        |
+| 5-6  | Department CRUD API                                          |
+| 7-8  | Organization Invitation API                                  |
+| 9-10 | Re-enable and update auth registration flow                  |
+| 11   | Update router.py to include new routes                       |
 
 ---
 
