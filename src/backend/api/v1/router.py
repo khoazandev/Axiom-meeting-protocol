@@ -8,7 +8,11 @@ They will be re-enabled and refactored in Phase 2/3.
 from fastapi import APIRouter
 
 from src.backend.api.v1.auth import router as auth_router
+from src.backend.api.v1.departments import router as departments_router
 from src.backend.api.v1.health import router as health_router
+from src.backend.api.v1.org_invitations import accept_router as invitation_accept_router
+from src.backend.api.v1.org_invitations import router as org_invitations_router
+from src.backend.api.v1.organizations import router as organizations_router
 from src.backend.api.v1.webhooks import router as webhooks_router
 
 # Temporarily disabled during platform redesign — will be refactored in Phase 2/3
@@ -33,6 +37,11 @@ v1_router.include_router(health_router)
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(webhooks_router)
+api_v1_router.include_router(organizations_router)
+api_v1_router.include_router(departments_router)
+api_v1_router.include_router(org_invitations_router)
+api_v1_router.include_router(invitation_accept_router)
+
 
 # Routes below will be re-enabled after Phase 2/3 refactor
 # api_v1_router.include_router(workspaces_router)
