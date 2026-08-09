@@ -1,5 +1,11 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from src.backend import models
-from src.backend.conftest import TestingSessionLocal
+
+# Same DB URL as conftest.py — used to create a fresh session for verification
+_verify_engine = create_engine("sqlite:///./test_shared.db", connect_args={"check_same_thread": False})
+_VerifySession = sessionmaker(autocommit=False, autoflush=False, bind=_verify_engine)
 
 
 def test_livekit_webhook_room_started_and_finished(client, db_session):
@@ -30,8 +36,7 @@ def test_livekit_webhook_room_started_and_finished(client, db_session):
     assert res.status_code == 200
 
     # Re-query from a fresh session to cross the transaction boundary
-    # (SQLite isolation prevents the original session from seeing another session's commits)
-    verify = TestingSessionLocal()
+    verify = _VerifySession()
     m = verify.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
     assert m.status == models.MeetingStatusEnum.IN_PROGRESS
     assert m.started_at is not None
@@ -42,9 +47,10 @@ def test_livekit_webhook_room_started_and_finished(client, db_session):
     res_fin = client.post("/api/v1/webhooks/livekit", json=finished_payload)
     assert res_fin.status_code == 200
 
-    verify2 = TestingSessionLocal()
+    verify2 = _VerifySession()
     m2 = verify2.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
     assert m2.status == models.MeetingStatusEnum.COMPLETED
     assert m2.ended_at is not None
     verify2.close()
+
 
