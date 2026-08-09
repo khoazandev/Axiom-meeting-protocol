@@ -35,17 +35,30 @@ export function HeroSection() {
         <FadeContent delay={0.9} duration={0.7}>
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <ClickSpark sparkColor="var(--accent)">
-              <Link 
+              <Link
                 href="/meetings/create"
-                className={cn(buttonVariants({ size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-md shadow-accent/20 group" }))}
+                className={cn(
+                  buttonVariants({
+                    size: 'lg',
+                    className:
+                      'rounded-full h-12 px-8 font-semibold text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer shadow-md shadow-accent/20 group',
+                  })
+                )}
               >
                 Deploy Meeting
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </ClickSpark>
-            <Link 
+            <Link
               href="/meetings"
-              className={cn(buttonVariants({ variant: "outline", size: "lg", className: "rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer" }))}
+              className={cn(
+                buttonVariants({
+                  variant: 'outline',
+                  size: 'lg',
+                  className:
+                    'rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer',
+                })
+              )}
             >
               View Dashboard
             </Link>
