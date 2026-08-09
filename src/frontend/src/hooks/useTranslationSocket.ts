@@ -28,7 +28,14 @@ export function useTranslationSocket(speakerName = 'Thành viên') {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/realtime-stt';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    let wsUrl = '';
+    if (baseUrl) {
+      wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/realtime-stt';
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}/ws/realtime-stt`;
+    }
 
     try {
       const ws = new WebSocket(wsUrl);

@@ -241,8 +241,8 @@ export function RealtimeSTTPanel({
         })
       );
     } else {
-      // Fallback to REST API
-      fetch('http://127.0.0.1:8000/api/stt/translate', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      fetch(`${baseUrl}/api/stt/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: textToSend }),
@@ -273,7 +273,14 @@ export function RealtimeSTTPanel({
 
     try {
       setWsStatus('connecting');
-      const wsUrl = 'ws://127.0.0.1:8000/ws/realtime-stt';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      let wsUrl = '';
+      if (baseUrl) {
+        wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/realtime-stt';
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}/ws/realtime-stt`;
+      }
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -366,7 +373,8 @@ export function RealtimeSTTPanel({
     connectWebSocket();
 
     // Auto-detect Whisper availability from backend
-    fetch('http://127.0.0.1:8000/api/stt/status')
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    fetch(`${baseUrl}/api/stt/status`)
       .then((res) => res.json())
       .then((data) => {
         // Tạm tắt Whisper, ép dùng Browser STT theo yêu cầu
