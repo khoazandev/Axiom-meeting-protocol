@@ -279,7 +279,7 @@ export function RealtimeSTTPanel({
         wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/realtime-stt';
       } else {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}/ws/realtime-stt`;
+        wsUrl = `${protocol}//${window.location.hostname}:8000/ws/realtime-stt`;
       }
       const ws = new WebSocket(wsUrl);
 

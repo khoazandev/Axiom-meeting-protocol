@@ -56,7 +56,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-text-secondary mb-1">{t.settings.workspaceSlug}</label>
               <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-mono text-accent">
-                {activeOrganization?.slug || 'default'}
+                {activeOrganization?.id || 'N/A'}
               </div>
             </div>
           </div>

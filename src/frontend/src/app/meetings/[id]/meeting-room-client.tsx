@@ -25,6 +25,7 @@ import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/li
 import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 interface ChatMessage {
   sender: string;
@@ -67,6 +68,7 @@ class LiveKitTileErrorBoundary extends React.Component<
 function LiveKitContent({
   onVADUpdate,
   participantName,
+  onTranscriptFinalized,
 }: {
   onVADUpdate: (data: {
     streamData: TranslationStream | null;
@@ -76,9 +78,10 @@ function LiveKitContent({
     transcriptHistory: TranscriptHistoryEntry[];
   }) => void;
   participantName: string;
+  onTranscriptFinalized?: (entry: TranscriptHistoryEntry) => void;
 }) {
   const { streamData, interimText, isListening, isConnected, transcriptHistory } =
-    useVADController(participantName);
+    useVADController(participantName, onTranscriptFinalized);
 
   useEffect(() => {
     onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
@@ -168,6 +171,25 @@ export function MeetingRoomClient() {
     []
   );
 
+  const transcriptSequenceRef = useRef(1);
+
+  const handleTranscriptFinalized = useCallback(async (entry: TranscriptHistoryEntry) => {
+    if (!meetingId) return;
+    try {
+      const currentSequence = transcriptSequenceRef.current++;
+      const contentStr = entry.en_text ? `[VI] ${entry.vi_text}\n[EN] ${entry.en_text}` : entry.vi_text;
+      await meetingsApi.saveTranscript(meetingId, {
+        content: contentStr,
+        start_time: entry.timestamp,
+        end_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        sequence: currentSequence,
+      });
+      console.log('[STT] Saved transcript segment to DB', currentSequence);
+    } catch (err) {
+      console.error('[STT] Failed to save transcript segment:', err);
+    }
+  }, [meetingId]);
+
   // Auto-scroll transcript when new entries arrive
   useEffect(() => {
     if (vadTranscriptHistory.length > 0) {
@@ -177,6 +199,36 @@ export function MeetingRoomClient() {
 
   // AI Chat state
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
+    {
+      sender: 'Axiom Assistant',
+      text: 'Xin chào! Tôi có thể giúp gì cho bạn trong cuộc họp này?',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isAi: true,
+    },
+  ]);
+
+  // Action Items state
+  const [actionItems, setActionItems] = useState<any[]>([]);
+
+  // Poll for action items
+  useEffect(() => {
+    if (!meetingId) return;
+    const fetchActionItems = async () => {
+      try {
+        const items = await meetingsApi.getActionItems(meetingId);
+        setActionItems(items);
+      } catch (err) {
+        console.error('Failed to fetch action items:', err);
+      }
+    };
+    
+    // Initial fetch
+    fetchActionItems();
+    
+    // Poll every 10 seconds
+    const interval = setInterval(fetchActionItems, 10000);
+    return () => clearInterval(interval);
+  }, [meetingId]);
     {
       sender: 'Axiom AI Agent',
       text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, transcript, hoặc bất cứ điều gì liên quan đến cuộc họp này.',
@@ -375,37 +427,6 @@ export function MeetingRoomClient() {
         </div>
 
         <div className="flex items-center gap-3">
-          {bookmarkFeedback && (
-            <span className="text-xs text-amber-400 font-semibold px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full animate-bounce">
-              {bookmarkFeedback}
-            </span>
-          )}
-
-          <button
-            onClick={handleAddBookmark}
-            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold flex items-center gap-1.5 transition-all"
-            title="Bookmark Key Moment"
-          >
-            <Bookmark className="w-3.5 h-3.5" />
-            <span>Bookmark Moment</span>
-          </button>
-
-          {/* STT Status indicator */}
-          <div
-            className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
-              vadIsListening
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-            }`}
-          >
-            {vadIsListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
-            {vadIsListening ? 'STT Active' : 'STT Off'}
-          </div>
-
-          <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold border border-emerald-500/20 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-            LiveKit Active
-          </div>
 
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -444,7 +465,11 @@ export function MeetingRoomClient() {
                   setLiveKitError(true);
                 }}
               >
-                <LiveKitContent onVADUpdate={handleVADUpdate} participantName={participantName} />
+                <LiveKitContent 
+                  onVADUpdate={handleVADUpdate} 
+                  participantName={participantName} 
+                  onTranscriptFinalized={handleTranscriptFinalized}
+                />
               </LiveKitRoom>
             )}
           </div>
@@ -473,7 +498,7 @@ export function MeetingRoomClient() {
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Nội dung cuộc họp</span>
+                <span>Meeting Summary AI</span>
               </button>
 
               <button
@@ -492,121 +517,135 @@ export function MeetingRoomClient() {
             {/* Tab Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {activeRightTab === 'transcript' && (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* Compact agenda header */}
-                  <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Agenda cuộc họp
-                      </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        Active
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                      {meeting.description}
-                    </p>
-                  </div>
-
-                  {/* STT status bar */}
-                  <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
-                        }`}
-                      />
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                        {vadIsConnected ? 'WS Connected' : 'WS Offline'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {vadIsListening ? (
-                        <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                          <Mic className="w-3 h-3" /> Đang thu
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                          <MicOff className="w-3 h-3" /> Bật mic để ghi
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Live interim text preview */}
-                  {vadInterimText && (
-                    <div className="px-3 py-2 border-b border-blue-950/60 bg-blue-500/5">
-                      <p className="text-[11px] text-blue-300 italic flex items-center gap-1.5">
-                        <Mic className="w-3 h-3 text-blue-400 animate-pulse" />
-                        {vadInterimText}
-                        <span className="inline-block w-1 h-3 bg-blue-400 animate-pulse ml-0.5" />
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Transcript History Feed */}
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {vadTranscriptHistory.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-400" />
+                <PanelGroup direction="vertical" className="flex-1 overflow-hidden">
+                  <Panel defaultSize={60} minSize={30} className="flex flex-col bg-[#0E1526]">
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      {/* Compact agenda header */}
+                      <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Agenda cuộc họp
+                          </span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            Active
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
-                          <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
-                            Bật mic trong thanh công cụ LiveKit và nói. Mỗi câu nói sẽ được nhận
-                            diện, dịch song ngữ và hiển thị tại đây.
-                          </p>
-                        </div>
+                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                          {meeting.description}
+                        </p>
                       </div>
-                    ) : (
-                      vadTranscriptHistory.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="p-3 rounded-xl bg-[#131B2E] border border-blue-950/80 space-y-1.5"
-                        >
-                          {/* Speaker + Time */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                                <User className="w-2.5 h-2.5 text-blue-400" />
-                              </div>
-                              <span className="text-[10px] font-bold text-blue-400">
-                                {entry.speaker || participantName}
-                              </span>
-                            </div>
-                            <span className="text-[9px] text-slate-500 font-mono">
-                              {entry.timestamp}
+
+                      {/* STT status bar */}
+                      <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
+                            }`}
+                          />
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            {vadIsConnected ? 'WS Connected' : 'WS Offline'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {vadIsListening ? (
+                            <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                              <Mic className="w-3 h-3" /> Đang thu
                             </span>
-                          </div>
-
-                          {/* Vietnamese text */}
-                          <p className="text-xs text-slate-200 leading-relaxed">{entry.vi_text}</p>
-
-                          {/* English translation */}
-                          {entry.en_text && (
-                            <div className="flex items-start gap-1 border-t border-blue-950/60 pt-1.5 mt-1">
-                              <Globe className="w-3 h-3 text-sky-400 shrink-0 mt-0.5" />
-                              <p className="text-[10px] text-sky-300/80 italic leading-relaxed">
-                                {entry.en_text}
-                              </p>
-                            </div>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                              <MicOff className="w-3 h-3" /> Bật mic để ghi
+                            </span>
                           )}
                         </div>
-                      ))
-                    )}
-                    <div ref={transcriptEndRef} />
-                  </div>
+                      </div>
 
-                  {/* Transcript count footer */}
-                  {vadTranscriptHistory.length > 0 && (
-                    <div className="p-2 border-t border-blue-950/60 text-center">
-                      <span className="text-[9px] text-slate-500">
-                        {vadTranscriptHistory.length} phát biểu đã ghi nhận
+                      {/* Live interim text preview */}
+                      {vadInterimText && (
+                        <div className="px-3 py-2 border-b border-blue-950/60 bg-blue-500/5">
+                          <p className="text-[11px] text-blue-300 italic flex items-center gap-1.5">
+                            <Mic className="w-3 h-3 text-blue-400 animate-pulse" />
+                            {vadInterimText}
+                            <span className="inline-block w-1 h-3 bg-blue-400 animate-pulse ml-0.5" />
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Transcript History Feed (Meeting Notes) */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white/5">
+                        {vadTranscriptHistory.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
+                              <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
+                                Bật mic trong thanh công cụ LiveKit và nói.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          vadTranscriptHistory.map((entry) => (
+                            <div key={entry.id} className="text-sm">
+                              <span className="font-bold text-blue-400 mr-2">
+                                [{entry.speaker || participantName}]
+                              </span>
+                              <span className="text-slate-300">
+                                {entry.vi_text}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                        <div ref={transcriptEndRef} />
+                      </div>
+                    </div>
+                  </Panel>
+                  
+                  <PanelResizeHandle className="h-1.5 bg-blue-950/60 hover:bg-blue-500/50 transition-colors cursor-row-resize" />
+                  
+                  <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0B101E]">
+                    <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40 sticky top-0 z-10 flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5" />
+                        Follow-up Tasks
+                      </span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        {actionItems.length}
                       </span>
                     </div>
-                  )}
-                </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                      {actionItems.length === 0 ? (
+                        <div className="text-center py-6 text-slate-500 text-xs">
+                          Chưa có Follow-up Tasks nào được AI trích xuất.
+                        </div>
+                      ) : (
+                        actionItems.map((item: any) => (
+                          <div key={item.id} className="text-xs p-2.5 rounded-lg bg-[#131B2E] border border-blue-950/80">
+                            <div className="flex items-start gap-2">
+                              <div className="mt-0.5 shrink-0">
+                                <div className={`w-2 h-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                              </div>
+                              <div>
+                                <span className="font-bold text-emerald-300 bg-emerald-400/10 px-1.5 py-0.5 rounded mr-1.5">
+                                  {item.title}
+                                </span>
+                                <span className="text-slate-300 leading-relaxed">
+                                  {item.description || ''}
+                                </span>
+                                {item.assignee_id && (
+                                  <span className="text-blue-400 ml-1.5">
+                                    (@Assignee)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </Panel>
+                </PanelGroup>
               )}
 
               {activeRightTab === 'ai' && (

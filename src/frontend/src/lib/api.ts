@@ -44,9 +44,9 @@ export interface User {
 export interface Organization {
   id: string;
   name: string;
-  slug: string;
-  logo_url?: string | null;
-  owner_id: string;
+  created_by_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthTokens {
@@ -206,10 +206,10 @@ export const authApi = {
 // ── Organization API ────────────────────────────────────────
 
 export const organizationApi = {
-  create(name: string, slug: string): Promise<Organization> {
+  create(name: string): Promise<Organization> {
     return apiFetch<Organization>('/api/v1/organizations', {
       method: 'POST',
-      body: JSON.stringify({ name, slug }),
+      body: JSON.stringify({ name }),
     });
   },
 
@@ -277,5 +277,27 @@ export const meetingsApi = {
         chat_history: chatHistory,
       }),
     });
+  },
+
+  /** Save a transcript segment. */
+  saveTranscript(
+    meetingId: number | string,
+    data: {
+      content: string;
+      start_time: string;
+      end_time: string;
+      sequence: number;
+      confidence?: string;
+    }
+  ): Promise<any> {
+    return apiFetch(`/api/v1/meetings/${meetingId}/transcripts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Get action items for a meeting. */
+  getActionItems(meetingId: number | string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/action-items`);
   },
 };

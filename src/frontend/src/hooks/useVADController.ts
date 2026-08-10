@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useTranslationSocket } from './useTranslationSocket';
+import { useTranslationSocket, type TranscriptHistoryEntry } from './useTranslationSocket';
 import { useLocalParticipant } from '@livekit/components-react';
 
 export function useWebSpeech(
@@ -9,6 +9,7 @@ export function useWebSpeech(
   const [isRecognizing, setIsRecognizing] = useState(false);
   const recognitionRef = useRef<any>(null);
   const shouldListenRef = useRef(false);
+  const currentInterimRef = useRef<string>('');
 
   useEffect(() => {
     const SpeechRecognition =
@@ -59,10 +60,14 @@ export function useWebSpeech(
 
       if (finalTranscript.trim().length > 0) {
         onFinalTranscript(finalTranscript.trim());
+        currentInterimRef.current = '';
       }
 
-      if (interimTranscript.trim().length > 0 && onInterimTranscript) {
-        onInterimTranscript(interimTranscript.trim());
+      if (interimTranscript.trim().length > 0) {
+        currentInterimRef.current = interimTranscript.trim();
+        if (onInterimTranscript) {
+          onInterimTranscript(interimTranscript.trim());
+        }
       }
     };
 
@@ -97,7 +102,12 @@ export function useWebSpeech(
     } catch (e) {
       console.error(e);
     }
-  }, []);
+    // Flush pending interim text if any
+    if (currentInterimRef.current) {
+      onFinalTranscript(currentInterimRef.current);
+      currentInterimRef.current = '';
+    }
+  }, [onFinalTranscript]);
 
   return { startRecognition, stopRecognition, isRecognizing };
 }
@@ -157,10 +167,13 @@ function cleanInterimText(text: string): string {
   return cleaned;
 }
 
-export function useVADController(speakerName = 'Thành viên') {
+export function useVADController(
+  speakerName = 'Thành viên',
+  onFinalized?: (entry: TranscriptHistoryEntry) => void
+) {
   const [interimText, setInterimText] = useState<string>('');
   const { connect, disconnect, sendText, streamData, isConnected, transcriptHistory } =
-    useTranslationSocket(speakerName);
+    useTranslationSocket(speakerName, onFinalized);
   const { isMicrophoneEnabled } = useLocalParticipant();
 
   const onFinalTranscript = useCallback(
@@ -187,13 +200,22 @@ export function useVADController(speakerName = 'Thành viên') {
   );
 
   useEffect(() => {
+    let disconnectTimeout: NodeJS.Timeout;
+    
     if (isMicrophoneEnabled) {
       connect();
       startRecognition();
     } else {
       stopRecognition();
-      disconnect();
+      // Delay disconnect by 3 seconds to allow pending sentences to finish translating
+      disconnectTimeout = setTimeout(() => {
+        disconnect();
+      }, 3000);
     }
+    
+    return () => {
+      if (disconnectTimeout) clearTimeout(disconnectTimeout);
+    };
   }, [isMicrophoneEnabled, startRecognition, stopRecognition, connect, disconnect]);
 
   return {
@@ -204,3 +226,4 @@ export function useVADController(speakerName = 'Thành viên') {
     transcriptHistory,
   };
 }
+

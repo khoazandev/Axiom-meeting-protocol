@@ -1,7 +1,7 @@
 """Meeting Content & AI API: Transcripts, Summaries, ActionItems, Chat."""
 
-from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, BackgroundTasks, Depends, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
@@ -98,10 +98,13 @@ class ChatMessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Transcript Endpoints
 # ---------------------------------------------------------------------------
-@router.post("/transcripts", response_model=TranscriptSegmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/transcripts", response_model=TranscriptSegmentResponse, status_code=status.HTTP_201_CREATED
+)
 def add_transcript_segment(
     meeting_id: str,
     payload: TranscriptSegmentCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
@@ -120,6 +123,22 @@ def add_transcript_segment(
     db.add(seg)
     db.commit()
     db.refresh(seg)
+
+    # Trigger micro-batching action item extraction
+    count = db.query(TranscriptSegment).filter_by(meeting_id=meeting_id).count()
+    if count > 0 and count % 5 == 0:
+        from src.backend.services.action_item_extractor import extract_action_items
+
+        def run_extraction():
+            db_generator = get_db()
+            bg_db = next(db_generator)
+            try:
+                extract_action_items(bg_db, meeting_id, current_user.id, micro_batch_limit=10)
+            finally:
+                bg_db.close()
+
+        background_tasks.add_task(run_extraction)
+
     return seg
 
 
@@ -174,11 +193,7 @@ def get_summary(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
-    summary = (
-        db.query(MeetingSummary)
-        .filter(MeetingSummary.meeting_id == meeting_id)
-        .first()
-    )
+    summary = db.query(MeetingSummary).filter(MeetingSummary.meeting_id == meeting_id).first()
     if not summary:
         raise NotFoundException("Summary")
     return summary
@@ -187,7 +202,9 @@ def get_summary(
 # ---------------------------------------------------------------------------
 # Action Item Endpoints
 # ---------------------------------------------------------------------------
-@router.post("/action-items", response_model=ActionItemResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/action-items", response_model=ActionItemResponse, status_code=status.HTTP_201_CREATED
+)
 def create_action_item(
     meeting_id: str,
     payload: ActionItemCreate,
@@ -220,11 +237,7 @@ def list_action_items(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
-    return (
-        db.query(ActionItem)
-        .filter(ActionItem.meeting_id == meeting_id)
-        .all()
-    )
+    return db.query(ActionItem).filter(ActionItem.meeting_id == meeting_id).all()
 
 
 @router.patch("/action-items/{item_id}", response_model=ActionItemResponse)
@@ -254,6 +267,25 @@ def update_action_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+# ---------------------------------------------------------------------------
+# AI Action Item Extraction
+# ---------------------------------------------------------------------------
+@router.post("/extract-action-items")
+def extract_action_items_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Manually trigger AI extraction of action items from meeting transcript."""
+    _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
+
+    from src.backend.services.action_item_extractor import extract_action_items
+
+    items = extract_action_items(db, meeting_id, triggered_by=current_user.id)
+    return {"extracted_count": len(items), "items": items}
 
 
 # ---------------------------------------------------------------------------

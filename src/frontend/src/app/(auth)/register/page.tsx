@@ -37,11 +37,7 @@ export default function RegisterPage() {
       // 3. Create initial organization if organizationName provided
       let initialOrg = null;
       if (organizationName.trim()) {
-        const slug = organizationName
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)/g, '');
-        initialOrg = await organizationApi.create(organizationName.trim(), slug || 'organization');
+        initialOrg = await organizationApi.create(organizationName.trim());
       }
 
       const organizations = await organizationApi.list();
