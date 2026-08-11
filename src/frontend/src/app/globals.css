@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -63,7 +63,7 @@
   --text-muted: #71717a;
   --text-placeholder: #71717a;
   --accent: #2563eb;
-  --accent-muted: rgba(37, 99, 235, 0.10);
+  --accent-muted: rgba(37, 99, 235, 0.1);
   --accent-foreground: #ffffff;
   --focus-ring: rgba(37, 99, 235, 0.5);
   --disabled: #d4d4d8;
@@ -155,7 +155,8 @@
 }
 
 @keyframes wave-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
     opacity: 0.5;
   }
@@ -187,7 +188,8 @@
 }
 
 @keyframes subtitle-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 20px rgba(99, 102, 241, 0.15),
       0 8px 32px rgba(0, 0, 0, 0.5);
@@ -200,8 +202,13 @@
 }
 
 @keyframes subtitle-cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
 
 .subtitle-overlay-container {
@@ -216,14 +223,22 @@
 
 /* Typewriter cursor: clean on/off blink, no fade */
 @keyframes typewriter-blink {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Subtle Wave Animation for processing state */
 @keyframes wave-bounce {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
     opacity: 0.75;
   }

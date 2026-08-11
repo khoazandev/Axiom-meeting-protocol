@@ -72,7 +72,7 @@
 | Whisper Model           | ✅ Loaded | Docker container                | `faster-whisper large-v3` on CPU (int8)         |
 | STT WebSocket           | ✅ Tested | `src/backend/realtime_stt.py`   | `/ws/realtime-stt` — E2E tested with real audio |
 | VAD (Silero)            | ✅ Loaded | `src/backend/realtime_stt.py`   | Voice Activity Detection works                  |
-| CTranslate2 Translation | ✅ Loaded | `src/backend/ct2_translator.py` | EN↔VI translation engine loaded                |
+| CTranslate2 Translation | ✅ Loaded | `src/backend/ct2_translator.py` | EN↔VI translation engine loaded                 |
 
 ---
 

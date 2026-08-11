@@ -32,7 +32,11 @@ export function useTranslationSocket(
   const isIntentionalDisconnectRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING
+    )
+      return;
     isIntentionalDisconnectRef.current = false;
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
