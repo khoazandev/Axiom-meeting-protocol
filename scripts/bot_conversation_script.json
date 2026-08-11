@@ -1,0 +1,50 @@
+{
+  "meeting_title": "Sprint Review - Dự án Axiom",
+  "meeting_description": "Review tiến độ sprint hiện tại, đánh giá các module Backend và Frontend, phân công task cụ thể cho sprint tiếp theo và xác định deadline rõ ràng cho từng thành viên",
+  "participants": {
+    "bot_a": {
+      "name": "Trưởng nhóm Minh",
+      "email": "minh.bot@axiom.dev",
+      "role": "HOST"
+    },
+    "bot_b": {
+      "name": "Dev Khoa",
+      "email": "khoa.bot@axiom.dev",
+      "role": "PARTICIPANT"
+    }
+  },
+  "dialog": [
+    {
+      "speaker": "bot_a",
+      "text": "Chào mọi người, hôm nay chúng ta sẽ review tiến độ dự án Axiom và phân công công việc cho sprint tiếp theo"
+    },
+    {
+      "speaker": "bot_b",
+      "text": "Vâng anh Minh, phần Backend API đã hoàn thành 80 phần trăm, còn thiếu phần WebSocket integration cho module real-time STT"
+    },
+    {
+      "speaker": "bot_a",
+      "text": "Tốt lắm, vậy deadline cho phần WebSocket integration là khi nào? Cần ước lượng chính xác để báo cáo cho khách hàng"
+    },
+    {
+      "speaker": "bot_b",
+      "text": "Em dự kiến hoàn thành WebSocket trước thứ Sáu tuần này, nhưng cần anh review code vào thứ Năm để kịp merge"
+    },
+    {
+      "speaker": "bot_a",
+      "text": "OK anh sẽ review code vào thứ Năm chiều. Còn phần Frontend React thì tiến độ thế nào rồi?"
+    },
+    {
+      "speaker": "bot_b",
+      "text": "Phần Frontend đang chờ API endpoint mới cho authentication module, Khoa đang làm phần đó nhưng gặp vấn đề với JWT refresh token"
+    },
+    {
+      "speaker": "bot_a",
+      "text": "Được rồi, vậy action item cụ thể là Khoa phải hoàn thành authentication trước thứ Tư, sau đó Frontend mới tiếp tục được"
+    },
+    {
+      "speaker": "bot_b",
+      "text": "Đồng ý ạ, em sẽ cập nhật task board trên Jira và gửi email tổng hợp meeting cho toàn bộ team trong hôm nay"
+    }
+  ]
+}

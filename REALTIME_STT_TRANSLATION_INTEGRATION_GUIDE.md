@@ -73,7 +73,7 @@ Backend đóng gói toàn bộ kết quả thành JSON chuẩn và phát tới c
 
 Bạn có thể copy file Python độc lập này để dùng làm Backend Service:
 
-```python
+```text
 import asyncio
 import json
 import logging

@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 export function TopNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, activeWorkspace, logout } = useAuthStore();
+  const { user, activeOrganization, logout } = useAuthStore();
   const { language, setLanguage, t } = useLanguageStore();
   const { theme, setTheme } = useThemeStore();
 
@@ -230,10 +230,10 @@ export function TopNavbar() {
                     {user?.full_name || 'User'}
                   </div>
                   <div className="text-xs text-text-muted truncate mt-0.5">{user?.email}</div>
-                  {activeWorkspace && (
+                  {activeOrganization && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs text-text-muted">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>{activeWorkspace.name}</span>
+                      <span>{activeOrganization.name}</span>
                     </div>
                   )}
                 </div>

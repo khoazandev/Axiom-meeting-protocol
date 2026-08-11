@@ -1,3 +1,4 @@
+"""Tests for LiveKit webhook handler — updated for new Meeting model."""
 from src.backend import database, models
 from src.backend.main import app
 
@@ -13,8 +14,6 @@ def _shared_session(session):
 
 def test_livekit_webhook_room_started_and_finished(client, db_session):
     # Override get_db so the handler uses the SAME session as this test.
-    # This avoids SQLite cross-session isolation (handler can't see test data
-    # when using a separate session on Linux CI).
     original = app.dependency_overrides.get(database.get_db)
     app.dependency_overrides[database.get_db] = _shared_session(db_session)
 
@@ -25,14 +24,8 @@ def test_livekit_webhook_room_started_and_finished(client, db_session):
         db_session.add(user)
         db_session.commit()
 
-        workspace = models.Workspace(name="WH WS", slug="wh-ws", owner_id=user.id)
-        db_session.add(workspace)
-        db_session.commit()
-
         meeting = models.Meeting(
             title="Webhook Test Meeting",
-            agenda="12345678901234567890",
-            workspace_id=workspace.id,
             created_by_id=user.id,
             status=models.MeetingStatusEnum.SCHEDULED,
         )
@@ -69,11 +62,7 @@ def test_livekit_webhook_room_started_and_finished(client, db_session):
         assert meeting.status == models.MeetingStatusEnum.COMPLETED
         assert meeting.ended_at is not None
     finally:
-        # Restore original override
         if original:
             app.dependency_overrides[database.get_db] = original
         else:
             app.dependency_overrides.pop(database.get_db, None)
-
-
-

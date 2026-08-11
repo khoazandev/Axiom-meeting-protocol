@@ -6,7 +6,7 @@ import { Settings, Building, User } from 'lucide-react';
 
 export default function SettingsPage() {
   const { t } = useLanguageStore();
-  const { user, activeWorkspace } = useAuthStore();
+  const { user, activeOrganization } = useAuthStore();
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -50,13 +50,13 @@ export default function SettingsPage() {
             <div>
               <label className="block text-text-secondary mb-1">{t.settings.workspaceName}</label>
               <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
-                {activeWorkspace?.name || t.nav.defaultWorkspace}
+                {activeOrganization?.name || t.nav.defaultWorkspace}
               </div>
             </div>
             <div>
               <label className="block text-text-secondary mb-1">{t.settings.workspaceSlug}</label>
               <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-mono text-accent">
-                {activeWorkspace?.slug || 'default'}
+                {activeOrganization?.id || 'N/A'}
               </div>
             </div>
           </div>

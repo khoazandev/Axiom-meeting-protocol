@@ -3,27 +3,36 @@ import json
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import requests
 import websockets
 from sqlalchemy.orm import Session
 
-# CTranslate2 Translation Engine
-from src.backend.ct2_translator import (
-    translate_vi_to_en,
-    translate_en_to_vi,
-)
 from src.backend import database, models
+
+# CTranslate2 Translation Engine
+from src.backend.ct2_translator import translate_en_to_vi, translate_vi_to_en
 
 # Set up logger
 logger = logging.getLogger("axiom.realtime_stt")
 logger.setLevel(logging.INFO)
 
+from src.backend.core.config import get_settings
+
 # ==================== CONFIGURATION ====================
 SAMPLE_RATE = 16000
 CHUNK_DURATION_SEC = 0.5
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-OLLAMA_MODEL = "qwen3:8b"
+import os
+
+
+def _get_ollama_url():
+    base = get_settings().ollama_base_url
+    return f"{base.rstrip('/')}/api/generate" if base else None
+
+
+OLLAMA_URL = _get_ollama_url()
+
 
 # Global lazy-loaded models
 _whisper_model = None
@@ -31,36 +40,75 @@ _silero_vad_model = None
 
 # Known Technical Terms Dictionary for fallback term extraction
 KNOWN_TECH_TERMS = [
-    "WebSocket", "WebSockets", "VAD", "Silero VAD", "STT", "TTS", "LLM",
-    "FastAPI", "Next.js", "React", "Python", "PyTorch", "Whisper", "Faster-Whisper",
-    "API", "REST", "JSON", "PCM", "gRPC", "Pipeline", "Backend", "Frontend",
-    "Docker", "SQLAlchemy", "Jitsi", "Axiom", "Node.js", "TypeScript", "GPU", "CPU"
+    "WebSocket",
+    "WebSockets",
+    "VAD",
+    "Silero VAD",
+    "STT",
+    "TTS",
+    "LLM",
+    "FastAPI",
+    "Next.js",
+    "React",
+    "Python",
+    "PyTorch",
+    "Whisper",
+    "Faster-Whisper",
+    "API",
+    "REST",
+    "JSON",
+    "PCM",
+    "gRPC",
+    "Pipeline",
+    "Backend",
+    "Frontend",
+    "Docker",
+    "SQLAlchemy",
+    "Jitsi",
+    "Axiom",
+    "Node.js",
+    "TypeScript",
+    "GPU",
+    "CPU",
 ]
+
 
 def get_whisper_model():
     global _whisper_model
     if _whisper_model is None:
         try:
             from faster_whisper import WhisperModel
+
             logger.info("Checking Faster-Whisper model availability...")
-            _whisper_model = WhisperModel("large-v3", device="cpu", compute_type="int8", download_root="./models")
+            settings = get_settings()
+            _whisper_model = WhisperModel(
+                settings.stt_whisper_model,
+                device="cpu",
+                compute_type="int8",
+                download_root="./models",
+            )
         except Exception as e:
-            logger.info(f"Faster-Whisper model not initialized locally (audio text fallback active): {e}")
+            logger.info(
+                f"Faster-Whisper model not initialized locally (audio text fallback active): {e}"
+            )
             _whisper_model = False
     return _whisper_model if _whisper_model is not False else None
+
 
 def get_silero_vad():
     global _silero_vad_model
     if _silero_vad_model is None:
         try:
             import torch
+
             torch.hub.set_dir("./models")
-            model, _ = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', trust_repo=True, skip_validation=True) # type: ignore
+            model, _ = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad", trust_repo=True, skip_validation=True)  # type: ignore
             _silero_vad_model = model
         except Exception as e:
             logger.info(f"Silero VAD remote fetch skipped (using RMS energy VAD): {e}")
             _silero_vad_model = False
     return _silero_vad_model if _silero_vad_model is not False else None
+
 
 # ==================== STAGE 0: VAD FILTER ====================
 def is_speech(audio_chunk: np.ndarray, threshold: float = 0.4) -> Tuple[bool, float]:
@@ -69,8 +117,9 @@ def is_speech(audio_chunk: np.ndarray, threshold: float = 0.4) -> Tuple[bool, fl
     if vad_model is not None:
         try:
             import torch
+
             tensor_audio = torch.from_numpy(audio_chunk).float()
-            speech_prob = vad_model(tensor_audio, SAMPLE_RATE).item() # type: ignore
+            speech_prob = vad_model(tensor_audio, SAMPLE_RATE).item()  # type: ignore
             return speech_prob >= threshold, speech_prob
         except Exception as e:
             logger.warning(f"Silero VAD execution error, falling back to RMS: {e}")
@@ -79,9 +128,11 @@ def is_speech(audio_chunk: np.ndarray, threshold: float = 0.4) -> Tuple[bool, fl
     energy = float(np.sqrt(np.mean(audio_chunk**2))) if len(audio_chunk) > 0 else 0.0
     return energy > 0.015, energy
 
+
 # ==================== STAGE 1: CLEAN & ANALYZE (1 LLM call) ====================
 
 # ==================== STAGE 1: CODE LOGIC SERVICE (100% Rule-Based, Zero LLM) ====================
+
 
 def apply_itn_inverse_text_normalization(text: str) -> str:
     """
@@ -92,28 +143,33 @@ def apply_itn_inverse_text_normalization(text: str) -> str:
     """
     if not text:
         return ""
-    
+
     res = text
-    
+
     # 1. Percentages (vd: "hai mươi phần trăm" -> "20%", "5 phần trăm" -> "5%")
-    res = re.sub(r'(\d+)\s*phần\s*trăm', r'\1%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bmột\s+phần\s+trăm\b', '1%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bhai\s+phần\s+trăm\b', '2%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bba\s+phần\s+trăm\b', '3%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bbốn\s+phần\s+trăm\b', '4%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bnăm\s+phần\s+trăm\b', '5%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bmười\s+phần\s+trăm\b', '10%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bhai\s+mươi\s+phần\s+trăm\b', '20%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bnăm\s+mươi\s+phần\s+trăm\b', '50%', res, flags=re.IGNORECASE)
-    res = re.sub(r'\bmột\s+trăm\s+phần\s+trăm\b', '100%', res, flags=re.IGNORECASE)
+    res = re.sub(r"(\d+)\s*phần\s*trăm", r"\1%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bmột\s+phần\s+trăm\b", "1%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bhai\s+phần\s+trăm\b", "2%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bba\s+phần\s+trăm\b", "3%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bbốn\s+phần\s+trăm\b", "4%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bnăm\s+phần\s+trăm\b", "5%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bmười\s+phần\s+trăm\b", "10%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bhai\s+mươi\s+phần\s+trăm\b", "20%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bnăm\s+mươi\s+phần\s+trăm\b", "50%", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bmột\s+trăm\s+phần\s+trăm\b", "100%", res, flags=re.IGNORECASE)
 
     # 2. Dates (vd: "ngày 15 tháng 8" -> "15/08")
-    res = re.sub(r'\bngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\b', lambda m: f"{int(m.group(1)):02d}/{int(m.group(2)):02d}", res, flags=re.IGNORECASE)
-    
+    res = re.sub(
+        r"\bngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\b",
+        lambda m: f"{int(m.group(1)):02d}/{int(m.group(2)):02d}",
+        res,
+        flags=re.IGNORECASE,
+    )
+
     # 3. Currency (vd: "10 đô la" -> "$10", "100 USD" -> "$100")
-    res = re.sub(r'(\d+)\s*(đô\s*la|usd|\$)', r'$\1', res, flags=re.IGNORECASE)
-    res = re.sub(r'(\d+)\s*(triệu|tr)\b', r'\1.000.000', res, flags=re.IGNORECASE)
-    res = re.sub(r'(\d+)\s*(tỷ)\b', r'\1.000.000.000', res, flags=re.IGNORECASE)
+    res = re.sub(r"(\d+)\s*(đô\s*la|usd|\$)", r"$\1", res, flags=re.IGNORECASE)
+    res = re.sub(r"(\d+)\s*(triệu|tr)\b", r"\1.000.000", res, flags=re.IGNORECASE)
+    res = re.sub(r"(\d+)\s*(tỷ)\b", r"\1.000.000.000", res, flags=re.IGNORECASE)
 
     return res
 
@@ -125,22 +181,34 @@ def remove_fillers_and_hallucinations(text: str) -> str:
     """
     if not text:
         return ""
-    
+
     cleaned = text
 
     # 1. Hallucination & Stutter: multi-word phrase repeat loop (vd: "cảm ơn cảm ơn cảm ơn" -> "cảm ơn")
-    cleaned = re.sub(r'\b(\w+(?:\s+\w+){0,4})(?:\s+\1\b)+', r'\1', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(\w+(?:\s+\w+){0,4})(?:\s+\1\b)+", r"\1", cleaned, flags=re.IGNORECASE)
 
     # 2. Filler words removal
     fillers = [
-        r'\bừm\b', r'\bà\b', r'\buhm\b', r'\buh\b', r'\bum\b', r'\ber\b', r'\bah\b', r'\bừ\b',
-        r'\bloại như\b', r'\bkiểu như\b', r'\bdạng như\b', r'\bthì là\b', r'\bnói chung là\b'
+        r"\bừm\b",
+        r"\bà\b",
+        r"\buhm\b",
+        r"\buh\b",
+        r"\bum\b",
+        r"\ber\b",
+        r"\bah\b",
+        r"\bừ\b",
+        r"\bloại như\b",
+        r"\bkiểu như\b",
+        r"\bdạng như\b",
+        r"\bthì là\b",
+        r"\bnói chung là\b",
     ]
     for f in fillers:
-        cleaned = re.sub(f, '', cleaned, flags=re.IGNORECASE)
-    
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        cleaned = re.sub(f, "", cleaned, flags=re.IGNORECASE)
+
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
+
 
 # Backward compatibility alias
 clean_stutter_and_spelling = remove_fillers_and_hallucinations
@@ -158,24 +226,24 @@ def restore_punctuation_and_capitalization(text: str) -> str:
         return ""
 
     cleaned = text
-    
+
     # Typo map
     typo_map = {
-        r'\blói ngọng\b': 'nói ngọng',
-        r'\blói\b': 'nói',
-        r'\bnàm việc\b': 'làm việc',
-        r'\bvới ai\b': 'với AI',
-        r'\bcác ai\b': 'các AI',
-        r'\bfast api\b': 'FastAPI',
-        r'\bweb socket\b': 'WebSocket',
-        r'\bnext js\b': 'Next.js',
+        r"\blói ngọng\b": "nói ngọng",
+        r"\blói\b": "nói",
+        r"\bnàm việc\b": "làm việc",
+        r"\bvới ai\b": "với AI",
+        r"\bcác ai\b": "các AI",
+        r"\bfast api\b": "FastAPI",
+        r"\bweb socket\b": "WebSocket",
+        r"\bnext js\b": "Next.js",
     }
     for pattern, replacement in typo_map.items():
         cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
 
     # Capitalize technical terms
     for term in KNOWN_TECH_TERMS:
-        pattern = r'\b' + re.escape(term) + r'\b'
+        pattern = r"\b" + re.escape(term) + r"\b"
         cleaned = re.sub(pattern, term, cleaned, flags=re.IGNORECASE)
 
     # Heuristic to capitalize Vietnamese names after "tên là" or "gọi là" to fix ASR lowercase issues
@@ -183,32 +251,42 @@ def restore_punctuation_and_capitalization(text: str) -> str:
     def capitalize_name_heuristic(match):
         prefix = match.group(1)
         name_str = match.group(2)
-        
+
         # Preserve leading/trailing spaces
-        leading_spaces = name_str[:len(name_str) - len(name_str.lstrip())]
-        trailing_spaces = name_str[len(name_str.rstrip()):]
+        leading_spaces = name_str[: len(name_str) - len(name_str.lstrip())]
+        trailing_spaces = name_str[len(name_str.rstrip()) :]
         if not trailing_spaces and name_str.endswith(" "):
             trailing_spaces = " "
-            
+
         words = name_str.split()
         capitalized_words = []
         for i, w in enumerate(words):
-            if i < 4 and w.islower() and len(w) <= 7 and w not in ['và', 'là', 'thì', 'mà', 'ở', 'từ', 'đến']:
+            if (
+                i < 4
+                and w.islower()
+                and len(w) <= 7
+                and w not in ["và", "là", "thì", "mà", "ở", "từ", "đến"]
+            ):
                 capitalized_words.append(w.capitalize())
             else:
                 capitalized_words.append(w)
-                
+
         return prefix + leading_spaces + " ".join(capitalized_words) + trailing_spaces
-        
-    cleaned = re.sub(r'\b(tên là\s+|gọi là\s+)([\w\s]{1,30})(?=\b|[.,!?]|$)', capitalize_name_heuristic, cleaned, flags=re.IGNORECASE)
+
+    cleaned = re.sub(
+        r"\b(tên là\s+|gọi là\s+)([\w\s]{1,30})(?=\b|[.,!?]|$)",
+        capitalize_name_heuristic,
+        cleaned,
+        flags=re.IGNORECASE,
+    )
 
     # Capitalize first letter
     if cleaned:
         cleaned = cleaned[0].upper() + cleaned[1:]
 
     # Append terminal punctuation if missing
-    if cleaned and not cleaned.endswith(('.', '?', '!')):
-        cleaned += '.'
+    if cleaned and not cleaned.endswith((".", "?", "!")):
+        cleaned += "."
 
     return cleaned
 
@@ -217,7 +295,7 @@ def extract_technical_terms(text: str) -> List[str]:
     """Deterministic extraction of known technical terms via regex."""
     found_terms = set()
     for term in KNOWN_TECH_TERMS:
-        pattern = r'\b' + re.escape(term) + r'\b'
+        pattern = r"\b" + re.escape(term) + r"\b"
         if re.search(pattern, text, re.IGNORECASE):
             found_terms.add(term)
     return list(found_terms)
@@ -225,9 +303,15 @@ def extract_technical_terms(text: str) -> List[str]:
 
 def _detect_language_heuristic(text: str, tech_terms: List[str]) -> str:
     """Heuristic language detection using character/word patterns."""
-    has_vi = bool(re.search(r'[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]', text, re.I))
-    has_en_words = bool(re.search(r'\b(we|are|testing|is|the|meeting|protocol|and|with|for)\b', text, re.I))
-    
+    has_vi = bool(
+        re.search(
+            r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]", text, re.I
+        )
+    )
+    has_en_words = bool(
+        re.search(r"\b(we|are|testing|is|the|meeting|protocol|and|with|for)\b", text, re.I)
+    )
+
     if has_vi and (has_en_words or tech_terms):
         return "VI+EN"
     elif has_vi:
@@ -239,7 +323,7 @@ def _detect_language_heuristic(text: str, tech_terms: List[str]) -> str:
 def clean_and_analyze(raw_text: str) -> Dict[str, Any]:
     """
     STAGE 1: 100% CODE LOGIC SERVICE (Zero LLM, <1ms execution)
-    
+
     Processes:
     1. ASR Hallucination & Stutter Removal (Regex)
     2. Filler Words Removal (Regex)
@@ -252,7 +336,7 @@ def clean_and_analyze(raw_text: str) -> Dict[str, Any]:
             "polished_text": "",
             "language_detected": "unknown",
             "technical_terms": [],
-            "context_summary": ""
+            "context_summary": "",
         }
 
     # Step 1: Remove fillers & ASR repetitions
@@ -272,7 +356,7 @@ def clean_and_analyze(raw_text: str) -> Dict[str, Any]:
         "polished_text": polished,
         "language_detected": lang,
         "technical_terms": tech_terms,
-        "context_summary": "Meeting communication & technical protocol"
+        "context_summary": "Meeting communication & technical protocol",
     }
 
 
@@ -282,25 +366,32 @@ _ollama_check_time = 0.0
 _OLLAMA_CACHE_TTL = 30.0  # Re-check every 30 seconds
 _ollama_consecutive_failures = 0
 
+
 def check_ollama_online() -> bool:
     import time
+
     global _ollama_online, _ollama_check_time, _ollama_consecutive_failures
     now = time.monotonic()
-    
+
     # Circuit breaker: if we failed consecutively, force offline for TTL
     if _ollama_consecutive_failures >= 2:
-        if (now - _ollama_check_time) < _OLLAMA_CACHE_TTL * 2: # 60s penalty
+        if (now - _ollama_check_time) < _OLLAMA_CACHE_TTL * 2:  # 60s penalty
             return False
         else:
             # Time to test again
             _ollama_consecutive_failures = 0
-            
+
     if _ollama_online is not None and (now - _ollama_check_time) < _OLLAMA_CACHE_TTL:
         return _ollama_online
-        
+
+    if not get_settings().ollama_base_url:
+        _ollama_check_time = now
+        return False
+
     try:
-        res = requests.get("http://127.0.0.1:11434/api/tags", timeout=0.5)
-        _ollama_online = (res.status_code == 200)
+        base = get_settings().ollama_base_url
+        res = requests.get(f"{base.rstrip('/')}/api/tags", timeout=0.5)
+        _ollama_online = res.status_code == 200
     except Exception:
         _ollama_online = False
     _ollama_check_time = now
@@ -311,45 +402,48 @@ def check_ollama_online() -> bool:
 
 SAFE_PLACEHOLDERS = ["Taylor", "Jordan", "Alex", "Morgan", "Riley", "Casey", "Jamie"]
 
-VI_UPPER = 'A-ZÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶĐÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ'
-VI_LOWER = 'a-záàảãạâấầẩẫậăắằẳẵặđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ'
+VI_UPPER = "A-ZÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶĐÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ"
+VI_LOWER = "a-záàảãạâấầẩẫậăắằẳẵặđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
+
 
 def _protect_proper_names(text: str):
     """
     Finds Vietnamese proper names and known tech terms, replacing them with safe English placeholders.
     Returns the modified text and a dict mapping placeholders to original names.
     """
-    name_pattern = rf'\b[{VI_UPPER}][{VI_LOWER}]+(?:\s+[{VI_UPPER}][{VI_LOWER}]+)+\b'
+    name_pattern = rf"\b[{VI_UPPER}][{VI_LOWER}]+(?:\s+[{VI_UPPER}][{VI_LOWER}]+)+\b"
     names = set(re.findall(name_pattern, text))
-    
+
     # Also protect KNOWN_TECH_TERMS found in the text
     for term in KNOWN_TECH_TERMS:
-        if re.search(r'\b' + re.escape(term) + r'\b', text, flags=re.IGNORECASE):
+        if re.search(r"\b" + re.escape(term) + r"\b", text, flags=re.IGNORECASE):
             names.add(term)
-    
+
     mapping = {}
     modified_text = text
     idx = 0
-    
+
     for name in names:
         if idx < len(SAFE_PLACEHOLDERS):
             placeholder = SAFE_PLACEHOLDERS[idx]
-            modified_text = re.sub(r'\b' + re.escape(name) + r'\b', placeholder, modified_text)
+            modified_text = re.sub(r"\b" + re.escape(name) + r"\b", placeholder, modified_text)
             mapping[placeholder] = name
             idx += 1
-            
+
     return modified_text, mapping
+
 
 def _restore_proper_names(text: str, mapping: dict) -> str:
     restored = text
     for placeholder, original_name in mapping.items():
-        restored = re.sub(r'\b' + re.escape(placeholder) + r'\b', original_name, restored)
+        restored = re.sub(r"\b" + re.escape(placeholder) + r"\b", original_name, restored)
     return restored
+
 
 def _ensure_punctuation(text: str) -> str:
     """Ensure text ends with terminal punctuation."""
-    if text and not text.endswith(('.', '?', '!')):
-        text += '.'
+    if text and not text.endswith((".", "?", "!")):
+        text += "."
     return text
 
 
@@ -360,11 +454,13 @@ def _capitalize_first(text: str) -> str:
     return text
 
 
-def bilingual_translate_fast(text: str, technical_terms: Optional[List[str]] = None) -> Dict[str, str]:
+def bilingual_translate_fast(
+    text: str, technical_terms: Optional[List[str]] = None
+) -> Dict[str, str]:
     """
     PRIMARY TRANSLATION PATH using CTranslate2 (~20-50ms).
     Falls back to echo (passthrough) if CTranslate2 is not available.
-    
+
     Input assumed Vietnamese, output English translation via neural MT.
     """
     if not text.strip():
@@ -374,10 +470,11 @@ def bilingual_translate_fast(text: str, technical_terms: Optional[List[str]] = N
         technical_terms = []
 
     # Determine input language
-    has_vi_chars = bool(re.search(
-        r'[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]',
-        text, re.I
-    ))
+    has_vi_chars = bool(
+        re.search(
+            r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]", text, re.I
+        )
+    )
 
     if has_vi_chars or _detect_language_heuristic(text, technical_terms) in ("Vietnamese", "VI+EN"):
         # Vietnamese input → translate to English
@@ -401,7 +498,7 @@ def bilingual_translate_fast(text: str, technical_terms: Optional[List[str]] = N
 
         # We can protect English names too if translating to VI
         safe_text, name_mapping = _protect_proper_names(text)
-        
+
         en_vi_result = translate_en_to_vi(safe_text)
         if en_vi_result:
             en_vi_result = _restore_proper_names(en_vi_result, name_mapping)
@@ -411,14 +508,12 @@ def bilingual_translate_fast(text: str, technical_terms: Optional[List[str]] = N
             vi_text = en_text
             method = "Fallback (CTranslate2 unavailable)"
 
-    return {
-        "en_text": en_text,
-        "vi_text": vi_text,
-        "validation_notes": method
-    }
+    return {"en_text": en_text, "vi_text": vi_text, "validation_notes": method}
 
 
-def bilingual_translate_llm(text: str, technical_terms: Optional[List[str]] = None) -> Optional[Dict[str, str]]:
+def bilingual_translate_llm(
+    text: str, technical_terms: Optional[List[str]] = None
+) -> Optional[Dict[str, str]]:
     """
     OPTIONAL REFINEMENT PATH (LLM): High-quality translation via Ollama.
     Only used as a background refinement after CTranslate2 provides the initial result.
@@ -430,17 +525,19 @@ def bilingual_translate_llm(text: str, technical_terms: Optional[List[str]] = No
     if technical_terms is None:
         technical_terms = []
 
-    if not check_ollama_online():
+    if not check_ollama_online() or not OLLAMA_URL:
         return None
 
-    terms_note = f" Keep these terms in English: {', '.join(technical_terms)}." if technical_terms else ""
+    terms_note = (
+        f" Keep these terms in English: {', '.join(technical_terms)}." if technical_terms else ""
+    )
     prompt = f"/no_think\nTranslate this Vietnamese text to natural English.{terms_note} Output ONLY the English translation, nothing else.\n\n{text}"
 
     try:
         res = requests.post(
             OLLAMA_URL,
             json={
-                "model": OLLAMA_MODEL,
+                "model": get_settings().stt_ollama_model,
                 "prompt": prompt,
                 "stream": False,
                 "options": {
@@ -453,16 +550,12 @@ def bilingual_translate_llm(text: str, technical_terms: Optional[List[str]] = No
         )
         if res.status_code == 200:
             en_text = res.json().get("response", "").strip()
-            en_text = re.sub(r'^["\']|["\']$', '', en_text).strip()
-            en_text = re.sub(r'^```.*\n?|\n?```$', '', en_text).strip()
+            en_text = re.sub(r'^["\']|["\']$', "", en_text).strip()
+            en_text = re.sub(r"^```.*\n?|\n?```$", "", en_text).strip()
             if en_text and len(en_text) > 3:
                 vi_text = _ensure_punctuation(_capitalize_first(text))
                 en_text = _ensure_punctuation(_capitalize_first(en_text))
-                return {
-                    "en_text": en_text,
-                    "vi_text": vi_text,
-                    "validation_notes": "LLM refined"
-                }
+                return {"en_text": en_text, "vi_text": vi_text, "validation_notes": "LLM refined"}
     except Exception as e:
         logger.warning(f"LLM translate failed: {e}")
 
@@ -484,7 +577,7 @@ def _validate_terms_preserved(original: str, translations: Dict[str, str], terms
     """
     if not terms:
         return "EN: OK | VI: OK"
-    
+
     notes = []
     for lang_key in ("en_text", "vi_text"):
         lang_label = "EN" if lang_key == "en_text" else "VI"
@@ -494,16 +587,17 @@ def _validate_terms_preserved(original: str, translations: Dict[str, str], terms
             notes.append(f"{lang_label}: Missing terms [{', '.join(missing)}]")
         else:
             notes.append(f"{lang_label}: Terms verified")
-    
+
     return " | ".join(notes)
 
 
 # ==================== STAGE 3: FULL PIPELINE ORCHESTRATOR ====================
 
+
 def process_full_translation_pipeline(raw_text: str) -> Optional[Dict[str, Any]]:
     """
     Optimized 3-stage pipeline (was 6 stages with 6 LLM calls, now 2 LLM calls max).
-    
+
     Stage 1: clean_and_analyze()  → 1 LLM call (clean + polish + detect lang + extract terms)
     Stage 2: bilingual_translate() → 1 LLM call (EN + VI translation + validation)
     Stage 3: Assemble JSON payload  → No LLM call
@@ -532,19 +626,19 @@ def process_full_translation_pipeline(raw_text: str) -> Optional[Dict[str, Any]]
         "technical_terms": tech_terms,
         "en_text": translations.get("en_text", ""),
         "vi_text": translations.get("vi_text", ""),
-        "validation_notes": translations.get("validation_notes", "OK")
+        "validation_notes": translations.get("validation_notes", "OK"),
     }
 
 
 async def process_full_translation_pipeline_streaming(raw_text: str, send_fn):
     """
     Ultra-low-latency streaming translation pipeline with CTranslate2.
-    
+
     Strategy:
       Frame 1: Send Vietnamese text immediately (is_final=false) → user sees VI subtitle instantly
       Frame 2: CTranslate2 translates (~30ms) → send full bilingual result (is_final=true)
       Frame 3 (optional): LLM refine in background if Ollama is online
-    
+
     Target: <50ms for first subtitle, <100ms for bilingual result.
     """
     if not raw_text or not raw_text.strip():
@@ -587,15 +681,16 @@ async def process_full_translation_pipeline_streaming(raw_text: str, send_fn):
         return None
 
     # ── Frame 2: CTranslate2 translation streaming ──
-    from .ct2_translator import translate_vi_to_en_stream, is_ct2_available
-    
+    from .ct2_translator import is_ct2_loaded, translate_vi_to_en_stream
+
     safe_polished, name_mapping = _protect_proper_names(polished)
-    
-    if is_ct2_available():
+
+    if is_ct2_loaded():
         en_accumulated = ""
         try:
             # Wrap the synchronous blocking generator so it doesn't block the async event loop
             stream_iter = iter(translate_vi_to_en_stream(safe_polished))
+
             def get_next_token():
                 try:
                     return next(stream_iter)
@@ -606,13 +701,13 @@ async def process_full_translation_pipeline_streaming(raw_text: str, send_fn):
                 token = await asyncio.to_thread(get_next_token)
                 if token is None:
                     break
-                    
+
                 en_accumulated += token
                 display_en = _restore_proper_names(en_accumulated, name_mapping)
                 base_payload["en_text"] = display_en.strip()
                 if not await safe_send(base_payload):
                     return None
-                    
+
             base_payload["is_final"] = True
             base_payload["validation_notes"] = "CTranslate2 Stream"
             await safe_send(base_payload)
@@ -648,4 +743,3 @@ async def process_full_translation_pipeline_streaming(raw_text: str, send_fn):
             logger.warning(f"LLM background refine skipped: {e}")
 
     return base_payload
-

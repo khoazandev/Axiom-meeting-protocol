@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import {
   ArrowLeft,
   Loader2,
@@ -21,17 +22,15 @@ export default function CreateMeetingPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeOrganization = useAuthStore((state) => state.activeOrganization);
+
   const [formData, setFormData] = useState({
     title: '',
-    agenda: '',
-    duration_minutes: 60,
+    description: '',
   });
 
   // Files to upload after meeting is created
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-
-  const charCount = formData.agenda.trim().length;
-  const isGateValid = charCount >= 20;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
@@ -50,23 +49,21 @@ export default function CreateMeetingPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    if (!isGateValid) {
-      setError('Process Gate Violation: Agenda must be at least 20 characters.');
-      setLoading(false);
-      return;
-    }
-
     try {
       // 1. Create the meeting
-      const created = await meetingsApi.create(formData);
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        organization_id: activeOrganization?.id || null,
+      };
+      const created = await meetingsApi.create(payload);
       const meetingId = created.id;
 
       // 2. Upload all pending files (if any)
       if (pendingFiles.length > 0) {
         const token = localStorage.getItem('axiom_token') || '';
-        const wsRaw = localStorage.getItem('axiom_workspace');
-        const wsId = wsRaw ? JSON.parse(wsRaw)?.id || '' : '';
+        const orgRaw = localStorage.getItem('axiom_organization');
+        const orgId = orgRaw ? JSON.parse(orgRaw)?.id || '' : '';
 
         await Promise.allSettled(
           pendingFiles.map((file) => {
@@ -74,7 +71,7 @@ export default function CreateMeetingPage() {
             fd.append('file', file);
             return fetch(`/api/v1/meetings/${meetingId}/files`, {
               method: 'POST',
-              headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': wsId },
+              headers: { Authorization: `Bearer ${token}`, 'X-Organization-ID': orgId },
               body: fd,
             });
           })
@@ -116,14 +113,9 @@ export default function CreateMeetingPage() {
 
         <div className="bg-[#131B2E] border border-blue-950/80 rounded-3xl p-8 shadow-2xl space-y-6">
           <div className="border-b border-blue-950/60 pb-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Process Gate Enforcement</span>
-            </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Deploy New Meeting</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Configure a structured meeting with mandatory agenda validation for automated AI
-              post-meeting analytics.
+              Configure a structured meeting for automated AI post-meeting analytics.
             </p>
           </div>
 
@@ -146,62 +138,6 @@ export default function CreateMeetingPage() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Q3 Architecture Review & Security Gate"
                 className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Agenda (Process Gate)
-                </label>
-                <div
-                  className={`text-xs font-mono font-semibold flex items-center gap-1.5 ${
-                    isGateValid ? 'text-emerald-400' : 'text-amber-400'
-                  }`}
-                >
-                  {isGateValid ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Gate Validated ({charCount}/20 min)</span>
-                    </>
-                  ) : (
-                    <span>{charCount} / 20 characters required</span>
-                  )}
-                </div>
-              </div>
-              <textarea
-                required
-                rows={4}
-                value={formData.agenda}
-                onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-                placeholder={
-                  '1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources'
-                }
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
-              />
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                Backend enforces a minimum 20-character agenda to guarantee structured meeting
-                records.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                Estimated Duration (Minutes)
-              </label>
-              <input
-                type="number"
-                min="15"
-                step="15"
-                required
-                value={formData.duration_minutes}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    duration_minutes: parseInt(e.target.value) || 60,
-                  })
-                }
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
 
@@ -272,7 +208,7 @@ export default function CreateMeetingPage() {
 
             <button
               type="submit"
-              disabled={loading || !isGateValid}
+              disabled={loading}
               className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (

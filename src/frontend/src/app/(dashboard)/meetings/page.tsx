@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { meetingsApi, type Meeting, ApiRequestError } from '@/lib/api';
+import { meetingsApi, type Meeting, type PendingInvitation, ApiRequestError } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { MeetingCard } from '@/components/meetings/meeting-card';
 import {
@@ -14,6 +14,10 @@ import {
   CheckSquare,
   Loader2,
   AlertCircle,
+  Bell,
+  CheckCircle2,
+  XCircle,
+  UserPlus,
 } from 'lucide-react';
 
 export default function MeetingsDashboardPage() {
@@ -24,6 +28,8 @@ export default function MeetingsDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'live' | 'scheduled'>('all');
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
+  const [processingInvite, setProcessingInvite] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,6 +56,48 @@ export default function MeetingsDashboardPage() {
     return () => controller.abort();
   }, []);
 
+  // Poll pending invitations every 5 seconds
+  useEffect(() => {
+    const fetchInvitations = async () => {
+      try {
+        const data = await meetingsApi.getPendingInvitations();
+        setPendingInvitations(data);
+      } catch {
+        // Silently ignore — user may not be logged in yet
+      }
+    };
+    fetchInvitations();
+    const interval = setInterval(fetchInvitations, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcceptInvitation = async (inv: PendingInvitation) => {
+    setProcessingInvite(inv.member_id);
+    try {
+      await meetingsApi.acceptInvitation(inv.meeting_id, inv.member_id);
+      setPendingInvitations((prev) => prev.filter((i) => i.member_id !== inv.member_id));
+      // Refresh meetings list to include the newly accepted meeting
+      const data = await meetingsApi.list();
+      setMeetings(data);
+    } catch (err) {
+      console.error('Failed to accept invitation:', err);
+    } finally {
+      setProcessingInvite(null);
+    }
+  };
+
+  const handleDeclineInvitation = async (inv: PendingInvitation) => {
+    setProcessingInvite(inv.member_id);
+    try {
+      await meetingsApi.declineInvitation(inv.meeting_id, inv.member_id);
+      setPendingInvitations((prev) => prev.filter((i) => i.member_id !== inv.member_id));
+    } catch (err) {
+      console.error('Failed to decline invitation:', err);
+    } finally {
+      setProcessingInvite(null);
+    }
+  };
+
   const handleJoinByCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (joinCode.trim()) {
@@ -58,12 +106,12 @@ export default function MeetingsDashboardPage() {
   };
 
   const filteredMeetings = meetings.filter((m) => {
-    if (activeTab === 'live') return m.is_active;
-    if (activeTab === 'scheduled') return !m.is_active;
+    if (activeTab === 'live') return m.status === 'ACTIVE';
+    if (activeTab === 'scheduled') return m.status !== 'ACTIVE';
     return true;
   });
 
-  const activeCount = meetings.filter((m) => m.is_active).length;
+  const activeCount = meetings.filter((m) => m.status === 'ACTIVE').length;
 
   return (
     <div className="space-y-6">
@@ -101,6 +149,54 @@ export default function MeetingsDashboardPage() {
           </form>
         </div>
       </div>
+
+      {/* Pending Invitations Banner */}
+      {pendingInvitations.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
+            <Bell className="w-4 h-4 animate-pulse" />
+            <span>Bạn có {pendingInvitations.length} lời mời tham gia meeting</span>
+          </div>
+          {pendingInvitations.map((inv) => (
+            <div
+              key={inv.member_id}
+              className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-text-primary truncate">
+                    {inv.meeting_title}
+                  </p>
+                  <p className="text-xs text-text-secondary truncate">
+                    Mời bởi {inv.invited_by} ({inv.invited_by_email})
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleAcceptInvitation(inv)}
+                  disabled={processingInvite === inv.member_id}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-600/40 text-emerald-400 hover:bg-emerald-600/30 text-xs font-medium transition-all disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Chấp nhận
+                </button>
+                <button
+                  onClick={() => handleDeclineInvitation(inv)}
+                  disabled={processingInvite === inv.member_id}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/10 border border-red-600/30 text-red-400 hover:bg-red-600/20 text-xs font-medium transition-all disabled:opacity-50"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Từ chối
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

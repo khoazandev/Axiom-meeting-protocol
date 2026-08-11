@@ -11,18 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
-        
+
     - name: Install uv
       run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      
+
     - name: Install dependencies
       run: uv sync --all-extras
-      
+
     - name: Run Pytest
       env:
         PYTHONPATH: .
@@ -35,16 +35,16 @@ jobs:
         working-directory: src/frontend
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: "20"
-        
+        node-version: "24"
+
     - name: Install root dependencies (for Prettier)
       working-directory: .
       run: npm ci
-      
+
     - name: Check Formatting (Prettier)
       working-directory: .
-      run: npm run format:check
+      run: npm run format:check || (npx prettier --list-different . && exit 1)

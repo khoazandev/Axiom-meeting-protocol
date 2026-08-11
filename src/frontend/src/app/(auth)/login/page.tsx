@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authApi, workspaceApi } from '@/lib/api';
+import { authApi, organizationApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
@@ -27,8 +27,8 @@ export default function LoginPage() {
       localStorage.setItem('axiom_token', tokens.access_token);
       useAuthStore.setState({ token: tokens.access_token });
       const user = await authApi.me();
-      const workspaces = await workspaceApi.list();
-      setAuth(user, tokens.access_token, workspaces, workspaces[0]);
+      const organizations = await organizationApi.list();
+      setAuth(user, tokens.access_token, organizations, organizations[0]);
       router.push('/meetings');
     } catch (err: any) {
       setError(err?.message || t.auth.loginError);

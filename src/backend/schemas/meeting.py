@@ -1,44 +1,58 @@
-"""
-Pydantic schemas for Meeting API requests and responses.
-
-Separated from SQLAlchemy models to maintain clean architecture boundaries.
-"""
+"""Pydantic schemas for Meeting and MeetingMember resources."""
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class MeetingCreate(BaseModel):
-    """Schema for creating a new meeting."""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str | None = None
+    organization_id: str | None = None
+    department_id: str | None = None
+    scheduled_at: datetime | None = None
 
-    title: str
-    agenda: str
-    duration_minutes: int
 
-
-class MeetingResponse(MeetingCreate):
-    """Schema for meeting API responses."""
-
-    id: int
-    is_active: bool
-    start_time: datetime
+class MeetingUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    scheduled_at: datetime | None = None
     status: str | None = None
+
+
+class MeetingResponse(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    organization_id: str | None = None
+    department_id: str | None = None
+    created_by_id: str
+    status: str
+    scheduled_at: datetime | None = None
+    started_at: datetime | None = None
     ended_at: datetime | None = None
-    transcript: str | None = None
-    summary: str | None = None
-    workspace_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = {"from_attributes": True}
 
 
-class MessageResponse(BaseModel):
-    """Generic message response schema."""
+class MeetingMemberAdd(BaseModel):
+    user_id: str
+    role: str = "PARTICIPANT"
 
-    message: str
+
+class MeetingMemberResponse(BaseModel):
+    id: str
+    meeting_id: str
+    user_id: str
+    role: str
+    status: str
+    joined_at: datetime | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class TokenResponse(BaseModel):
-    """LiveKit token response schema."""
-
     token: str
