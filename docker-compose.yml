@@ -12,11 +12,11 @@ services:
       POSTGRES_USER: axiom
       POSTGRES_PASSWORD: axiom_dev_password
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U axiom"]
+      test: ['CMD-SHELL', 'pg_isready -U axiom']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,8 +28,8 @@ services:
       dockerfile: docker/Dockerfile.backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
-      - "8765:8765"   # STT WebSocket
+      - '8000:8000'
+      - '8765:8765' # STT WebSocket
     environment:
       DATABASE_URL: postgresql://axiom:axiom_dev_password@postgres:5432/axiom
       CORS_ORIGINS: http://localhost:3000
@@ -56,7 +56,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
       BACKEND_URL: http://backend:8000
@@ -68,11 +68,11 @@ services:
     image: livekit/livekit-server:latest
     restart: unless-stopped
     ports:
-      - "7880:7880"   # WebSocket
-      - "7881:7881"   # HTTP API
-      - "7882:7882/udp" # WebRTC UDP
+      - '7880:7880' # WebSocket
+      - '7881:7881' # HTTP API
+      - '7882:7882/udp' # WebRTC UDP
     environment:
-      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
+      LIVEKIT_KEYS: '${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}'
     command: --dev --bind 0.0.0.0
 
   # ─── Redis (for future AI queue pipeline) ────────────────────
@@ -80,9 +80,9 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3

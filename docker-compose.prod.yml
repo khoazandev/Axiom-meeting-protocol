@@ -9,11 +9,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_axiom_pass_2026}
       POSTGRES_DB: ${POSTGRES_DB:-axiom_db}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U axiom -d axiom_db"]
+      test: ['CMD-SHELL', 'pg_isready -U axiom -d axiom_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,11 +23,11 @@ services:
     container_name: axiom-redis-prod
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_prod_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,7 +45,7 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
       LIVEKIT_URL: ws://livekit:7880
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - backend
 
