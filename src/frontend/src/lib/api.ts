@@ -203,6 +203,36 @@ export const authApi = {
   },
 };
 
+// ── User API ─────────────────────────────────────────────
+
+export interface UserSearchResult {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string | null;
+}
+
+export interface MeetingMember {
+  id: string;
+  meeting_id: string;
+  user_id: string;
+  role: string;
+  status: string;
+  joined_at: string | null;
+  created_at: string;
+  user_email?: string;
+  user_name?: string;
+}
+
+export const usersApi = {
+  /** Search users by email or name. */
+  search(query: string, limit = 10): Promise<UserSearchResult[]> {
+    return apiFetch<UserSearchResult[]>(
+      `/api/v1/users/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    );
+  },
+};
+
 // ── Organization API ────────────────────────────────────────
 
 export const organizationApi = {
@@ -300,4 +330,63 @@ export const meetingsApi = {
   getActionItems(meetingId: number | string): Promise<any[]> {
     return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/action-items`);
   },
+
+  /** Get transcripts for a meeting. */
+  getTranscripts(meetingId: number | string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/transcripts`);
+  },
+
+  /** List members of a meeting. */
+  getMembers(meetingId: number | string): Promise<MeetingMember[]> {
+    return apiFetch<MeetingMember[]>(`/api/v1/meetings/${meetingId}/members`);
+  },
+
+  /** Add a user as a member of a meeting. */
+  addMember(
+    meetingId: number | string,
+    userId: string,
+    role = 'PARTICIPANT'
+  ): Promise<MeetingMember> {
+    return apiFetch<MeetingMember>(`/api/v1/meetings/${meetingId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, role }),
+    });
+  },
+
+  /** Remove a member from a meeting. */
+  removeMember(meetingId: number | string, memberId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/meetings/${meetingId}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /** Get pending meeting invitations for current user. */
+  getPendingInvitations(): Promise<PendingInvitation[]> {
+    return apiFetch<PendingInvitation[]>('/api/v1/meetings/invitations/pending');
+  },
+
+  /** Accept a meeting invitation. */
+  acceptInvitation(meetingId: string, memberId: string): Promise<MeetingMember> {
+    return apiFetch<MeetingMember>(`/api/v1/meetings/${meetingId}/members/${memberId}/accept`, {
+      method: 'POST',
+    });
+  },
+
+  /** Decline a meeting invitation. */
+  declineInvitation(meetingId: string, memberId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/meetings/${meetingId}/members/${memberId}/decline`, {
+      method: 'POST',
+    });
+  },
 };
+
+export interface PendingInvitation {
+  member_id: string;
+  meeting_id: string;
+  meeting_title: string;
+  meeting_description: string | null;
+  invited_by: string;
+  invited_by_email: string;
+  invited_at: string | null;
+  role: string;
+}

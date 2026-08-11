@@ -18,6 +18,7 @@ import {
   MicOff,
   Globe,
   User,
+  UserPlus,
 } from 'lucide-react';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -26,6 +27,7 @@ import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
 
 interface ChatMessage {
   sender: string;
@@ -80,8 +82,10 @@ function LiveKitContent({
   participantName: string;
   onTranscriptFinalized?: (entry: TranscriptHistoryEntry) => void;
 }) {
-  const { streamData, interimText, isListening, isConnected, transcriptHistory } =
-    useVADController(participantName, onTranscriptFinalized);
+  const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(
+    participantName,
+    onTranscriptFinalized
+  );
 
   useEffect(() => {
     onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
@@ -144,6 +148,7 @@ export function MeetingRoomClient() {
   const [liveKitError, setLiveKitError] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'transcript' | 'ai'>('transcript');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   // VAD data lifted from LiveKitContent
   const [vadStreamData, setVadStreamData] = useState<TranslationStream | null>(null);
@@ -173,22 +178,31 @@ export function MeetingRoomClient() {
 
   const transcriptSequenceRef = useRef(1);
 
-  const handleTranscriptFinalized = useCallback(async (entry: TranscriptHistoryEntry) => {
-    if (!meetingId) return;
-    try {
-      const currentSequence = transcriptSequenceRef.current++;
-      const contentStr = entry.en_text ? `[VI] ${entry.vi_text}\n[EN] ${entry.en_text}` : entry.vi_text;
-      await meetingsApi.saveTranscript(meetingId, {
-        content: contentStr,
-        start_time: entry.timestamp,
-        end_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        sequence: currentSequence,
-      });
-      console.log('[STT] Saved transcript segment to DB', currentSequence);
-    } catch (err) {
-      console.error('[STT] Failed to save transcript segment:', err);
-    }
-  }, [meetingId]);
+  const handleTranscriptFinalized = useCallback(
+    async (entry: TranscriptHistoryEntry) => {
+      if (!meetingId) return;
+      try {
+        const currentSequence = transcriptSequenceRef.current++;
+        const contentStr = entry.en_text
+          ? `[VI] ${entry.vi_text}\n[EN] ${entry.en_text}`
+          : entry.vi_text;
+        await meetingsApi.saveTranscript(meetingId, {
+          content: contentStr,
+          start_time: entry.timestamp,
+          end_time: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+          sequence: currentSequence,
+        });
+        console.log('[STT] Saved transcript segment to DB', currentSequence);
+      } catch (err) {
+        console.error('[STT] Failed to save transcript segment:', err);
+      }
+    },
+    [meetingId]
+  );
 
   // Auto-scroll transcript when new entries arrive
   useEffect(() => {
@@ -207,35 +221,34 @@ export function MeetingRoomClient() {
     },
   ]);
 
-  // Action Items state
+  // Action Items and Transcripts state
   const [actionItems, setActionItems] = useState<any[]>([]);
+  const [dbTranscripts, setDbTranscripts] = useState<any[]>([]);
 
   // Poll for action items
   useEffect(() => {
     if (!meetingId) return;
     const fetchActionItems = async () => {
       try {
-        const items = await meetingsApi.getActionItems(meetingId);
+        const [items, transcripts] = await Promise.all([
+          meetingsApi.getActionItems(meetingId),
+          meetingsApi.getTranscripts(meetingId),
+        ]);
         setActionItems(items);
+        setDbTranscripts(transcripts);
       } catch (err) {
-        console.error('Failed to fetch action items:', err);
+        console.error('Failed to fetch meeting content:', err);
       }
     };
-    
+
     // Initial fetch
     fetchActionItems();
-    
+
     // Poll every 10 seconds
     const interval = setInterval(fetchActionItems, 10000);
     return () => clearInterval(interval);
   }, [meetingId]);
-    {
-      sender: 'Axiom AI Agent',
-      text: 'Xin chào! Tôi đã sẵn sàng. Hãy hỏi tôi về agenda, transcript, hoặc bất cứ điều gì liên quan đến cuộc họp này.',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isAi: true,
-    },
-  ]);
+
   const [aiQueryMsg, setAiQueryMsg] = useState('');
 
   // Bookmark Feedback
@@ -427,7 +440,14 @@ export function MeetingRoomClient() {
         </div>
 
         <div className="flex items-center gap-3">
-
+          <button
+            onClick={() => setInviteModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 border border-blue-600/40 text-blue-300 hover:bg-blue-600/30 hover:text-blue-200 text-xs font-medium transition-all"
+            title="Mời thành viên"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Mời
+          </button>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-1.5 rounded-xl bg-[#131B2E] border border-blue-950 text-slate-400 hover:text-white hover:border-blue-800 transition-all"
@@ -454,6 +474,8 @@ export function MeetingRoomClient() {
               <LiveKitRoom
                 token={token}
                 serverUrl={livekitUrl}
+                connect={true}
+                audio={false}
                 data-lk-theme="default"
                 className="w-full h-full absolute inset-0 flex flex-col"
                 onDisconnected={() => {
@@ -465,9 +487,9 @@ export function MeetingRoomClient() {
                   setLiveKitError(true);
                 }}
               >
-                <LiveKitContent 
-                  onVADUpdate={handleVADUpdate} 
-                  participantName={participantName} 
+                <LiveKitContent
+                  onVADUpdate={handleVADUpdate}
+                  participantName={participantName}
                   onTranscriptFinalized={handleTranscriptFinalized}
                 />
               </LiveKitRoom>
@@ -478,8 +500,8 @@ export function MeetingRoomClient() {
           {liveKitError && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt
-              động bình thường. Mời bạn chat ở khung bên phải nhé! 🚀
+              LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt động bình thường. Mời
+              bạn chat ở khung bên phải nhé! 🚀
             </div>
           )}
         </div>
@@ -520,21 +542,6 @@ export function MeetingRoomClient() {
                 <PanelGroup direction="vertical" className="flex-1 overflow-hidden">
                   <Panel defaultSize={60} minSize={30} className="flex flex-col bg-[#0E1526]">
                     <div className="flex-1 flex flex-col overflow-hidden">
-                      {/* Compact agenda header */}
-                      <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Agenda cuộc họp
-                          </span>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                            Active
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                          {meeting.description}
-                        </p>
-                      </div>
-
                       {/* STT status bar */}
                       <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
                         <div className="flex items-center gap-2">
@@ -573,37 +580,51 @@ export function MeetingRoomClient() {
 
                       {/* Transcript History Feed (Meeting Notes) */}
                       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white/5">
-                        {vadTranscriptHistory.length === 0 ? (
+                        {dbTranscripts.length === 0 && vadTranscriptHistory.length === 0 ? (
                           <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
                             <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                               <FileText className="w-5 h-5 text-blue-400" />
                             </div>
                             <div>
-                              <p className="text-xs font-semibold text-slate-300">Chưa có nội dung</p>
+                              <p className="text-xs font-semibold text-slate-300">
+                                Chưa có nội dung
+                              </p>
                               <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
                                 Bật mic trong thanh công cụ LiveKit và nói.
                               </p>
                             </div>
                           </div>
                         ) : (
-                          vadTranscriptHistory.map((entry) => (
-                            <div key={entry.id} className="text-sm">
-                              <span className="font-bold text-blue-400 mr-2">
-                                [{entry.speaker || participantName}]
-                              </span>
-                              <span className="text-slate-300">
-                                {entry.vi_text}
-                              </span>
-                            </div>
-                          ))
+                          <>
+                            {dbTranscripts.map((entry) => (
+                              <div key={entry.id} className="text-sm">
+                                <span className="font-bold text-blue-400 mr-2">
+                                  [{entry.speaker_id || 'User'}]
+                                </span>
+                                <span className="text-slate-300">{entry.content}</span>
+                              </div>
+                            ))}
+                            {vadTranscriptHistory
+                              .filter(
+                                (v) => !dbTranscripts.some((d) => d.content.includes(v.vi_text))
+                              )
+                              .map((entry) => (
+                                <div key={entry.id} className="text-sm">
+                                  <span className="font-bold text-blue-400 mr-2">
+                                    [{entry.speaker || participantName}]
+                                  </span>
+                                  <span className="text-slate-300">{entry.vi_text}</span>
+                                </div>
+                              ))}
+                          </>
                         )}
                         <div ref={transcriptEndRef} />
                       </div>
                     </div>
                   </Panel>
-                  
+
                   <PanelResizeHandle className="h-1.5 bg-blue-950/60 hover:bg-blue-500/50 transition-colors cursor-row-resize" />
-                  
+
                   <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0B101E]">
                     <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40 sticky top-0 z-10 flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -621,10 +642,17 @@ export function MeetingRoomClient() {
                         </div>
                       ) : (
                         actionItems.map((item: any) => (
-                          <div key={item.id} className="text-xs p-2.5 rounded-lg bg-[#131B2E] border border-blue-950/80">
+                          <div
+                            key={item.id}
+                            className="text-xs p-2.5 rounded-lg bg-[#131B2E] border border-blue-950/80"
+                          >
                             <div className="flex items-start gap-2">
                               <div className="mt-0.5 shrink-0">
-                                <div className={`w-2 h-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                <div
+                                  className={`w-2 h-2 rounded-full ${
+                                    item.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-amber-400'
+                                  }`}
+                                />
                               </div>
                               <div>
                                 <span className="font-bold text-emerald-300 bg-emerald-400/10 px-1.5 py-0.5 rounded mr-1.5">
@@ -634,9 +662,7 @@ export function MeetingRoomClient() {
                                   {item.description || ''}
                                 </span>
                                 {item.assignee_id && (
-                                  <span className="text-blue-400 ml-1.5">
-                                    (@Assignee)
-                                  </span>
+                                  <span className="text-blue-400 ml-1.5">(@Assignee)</span>
                                 )}
                               </div>
                             </div>
@@ -707,6 +733,13 @@ export function MeetingRoomClient() {
           </aside>
         )}
       </main>
+
+      {/* Invite Members Modal */}
+      <InviteMembersModal
+        meetingId={meetingId}
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+      />
     </div>
   );
 }

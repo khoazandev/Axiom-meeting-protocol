@@ -17,6 +17,7 @@ class MeetingUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     scheduled_at: datetime | None = None
+    status: str | None = None
 
 
 class MeetingResponse(BaseModel):

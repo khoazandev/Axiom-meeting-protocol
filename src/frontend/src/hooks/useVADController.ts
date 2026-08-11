@@ -102,11 +102,6 @@ export function useWebSpeech(
     } catch (e) {
       console.error(e);
     }
-    // Flush pending interim text if any
-    if (currentInterimRef.current) {
-      onFinalTranscript(currentInterimRef.current);
-      currentInterimRef.current = '';
-    }
   }, [onFinalTranscript]);
 
   return { startRecognition, stopRecognition, isRecognizing };
@@ -201,7 +196,7 @@ export function useVADController(
 
   useEffect(() => {
     let disconnectTimeout: NodeJS.Timeout;
-    
+
     if (isMicrophoneEnabled) {
       connect();
       startRecognition();
@@ -212,7 +207,7 @@ export function useVADController(
         disconnect();
       }, 3000);
     }
-    
+
     return () => {
       if (disconnectTimeout) clearTimeout(disconnectTimeout);
     };
@@ -226,4 +221,3 @@ export function useVADController(
     transcriptHistory,
   };
 }
-

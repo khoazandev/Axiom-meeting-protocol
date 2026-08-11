@@ -13,23 +13,22 @@ import logging
 import os
 import threading
 import time
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 logger = logging.getLogger("axiom.ct2_translator")
 logger.setLevel(logging.INFO)
+
+from src.backend.core.config import get_settings
 
 # ==================== MODEL REGISTRY ====================
 _models_lock = threading.Lock()
 
 # CTranslate2 engine (fast, quantized)
-_ct2_vi_en = None   # ctranslate2.Translator or False
-_ct2_en_vi = None   # ctranslate2.Translator or False
+_ct2_vi_en = None  # ctranslate2.Translator or False
+_ct2_en_vi = None  # ctranslate2.Translator or False
 _ct2_tokenizer_vi_en = None
 _ct2_tokenizer_en_vi = None
 
-# Model identifiers
-VI_EN_MODEL_NAME = "Helsinki-NLP/opus-mt-vi-en"
-EN_VI_MODEL_NAME = "Helsinki-NLP/opus-mt-en-vi"
 
 # CTranslate2 quantized model directories
 CT2_VI_EN_DIR = "./models/marian_ct2_vi_en"
@@ -38,6 +37,7 @@ MODEL_CACHE_DIR = "./models/marian"
 
 
 # ==================== ENGINE LOAD ====================
+
 
 def _load_ct2_model(ct2_dir: str, model_name: str):
     """
@@ -49,7 +49,9 @@ def _load_ct2_model(ct2_dir: str, model_name: str):
         from transformers import MarianTokenizer
 
         if not os.path.exists(ct2_dir):
-            logger.info(f"CTranslate2 model not found at {ct2_dir}, converting from {model_name}...")
+            logger.info(
+                f"CTranslate2 model not found at {ct2_dir}, converting from {model_name}..."
+            )
             converter = ctranslate2.converters.TransformersConverter(model_name)
             converter.convert(ct2_dir, quantization="int8")
             logger.info(f"CTranslate2 model converted and saved to {ct2_dir}")
@@ -77,7 +79,7 @@ def get_ct2_vi_en() -> Optional[Tuple[Any, Any]]:
     if _ct2_vi_en is None:
         with _models_lock:
             if _ct2_vi_en is None:
-                result = _load_ct2_model(CT2_VI_EN_DIR, VI_EN_MODEL_NAME)
+                result = _load_ct2_model(CT2_VI_EN_DIR, get_settings().trans_vi_en_model)
                 if result:
                     _ct2_vi_en, _ct2_tokenizer_vi_en = result
                 else:
@@ -91,7 +93,7 @@ def get_ct2_en_vi() -> Optional[Tuple[Any, Any]]:
     if _ct2_en_vi is None:
         with _models_lock:
             if _ct2_en_vi is None:
-                result = _load_ct2_model(CT2_EN_VI_DIR, EN_VI_MODEL_NAME)
+                result = _load_ct2_model(CT2_EN_VI_DIR, get_settings().trans_en_vi_model)
                 if result:
                     _ct2_en_vi, _ct2_tokenizer_en_vi = result
                 else:
@@ -101,27 +103,33 @@ def get_ct2_en_vi() -> Optional[Tuple[Any, Any]]:
 
 # ==================== TRANSLATION FUNCTIONS ====================
 
+
 def translate_vi_to_en(text: str) -> Optional[str]:
     """
-    Translate Vietnamese → English using CTranslate2.
+    Translate Vietnamese → English (batch mode, no streaming).
+    Returns None if model is not loaded.
     """
+    if not is_ct2_loaded():
+        return None
     if not text or not text.strip():
         return None
 
     text = text.strip()
     ct2_pair = get_ct2_vi_en()
-    
+
     if not ct2_pair:
         logger.error("CTranslate2 VI→EN model is unavailable.")
         return None
-        
+
     translator, tokenizer = ct2_pair
     try:
         start = time.monotonic()
         source_tokens = tokenizer.convert_ids_to_tokens(tokenizer.encode(text))
         results = translator.translate_batch([source_tokens], beam_size=2)
         target_tokens = results[0].hypotheses[0]
-        result = tokenizer.decode(tokenizer.convert_tokens_to_ids(target_tokens), skip_special_tokens=True)
+        result = tokenizer.decode(
+            tokenizer.convert_tokens_to_ids(target_tokens), skip_special_tokens=True
+        )
         elapsed_ms = (time.monotonic() - start) * 1000
         logger.debug(f"CT2 VI→EN: {elapsed_ms:.0f}ms | '{text[:50]}' → '{result[:50]}'")
         return result.strip() if result else None
@@ -140,7 +148,7 @@ def translate_vi_to_en_stream(text: str):
 
     text = text.strip()
     ct2_pair = get_ct2_vi_en()
-    
+
     if not ct2_pair:
         logger.error("CTranslate2 VI→EN model is unavailable for streaming.")
         return
@@ -149,16 +157,16 @@ def translate_vi_to_en_stream(text: str):
     try:
         source_tokens = tokenizer.convert_ids_to_tokens(tokenizer.encode(text))
         step_results = translator.generate_tokens(source_tokens)
-        
+
         for step_result in step_results:
             token = step_result.token
             if token.endswith("</s>") or token.endswith("<pad>"):
                 continue
-            
+
             # convert_tokens_to_string strips spaces when called on single tokens.
             # We must manually replace SentencePiece marker (U+2581) with space.
-            text_part = token.replace('\u2581', ' ')
-            
+            text_part = token.replace("\u2581", " ")
+
             # Yield token part immediately
             if text_part:
                 yield text_part
@@ -169,14 +177,17 @@ def translate_vi_to_en_stream(text: str):
 
 def translate_en_to_vi(text: str) -> Optional[str]:
     """
-    Translate English → Vietnamese using CTranslate2.
+    Translate English → Vietnamese (batch mode, no streaming).
+    Returns None if model is not loaded.
     """
+    if not is_ct2_loaded():
+        return None
     if not text or not text.strip():
         return None
 
     text = text.strip()
     ct2_pair = get_ct2_en_vi()
-    
+
     if not ct2_pair:
         logger.error("CTranslate2 EN→VI model is unavailable.")
         return None
@@ -187,7 +198,9 @@ def translate_en_to_vi(text: str) -> Optional[str]:
         source_tokens = tokenizer.convert_ids_to_tokens(tokenizer.encode(text))
         results = translator.translate_batch([source_tokens], beam_size=2)
         target_tokens = results[0].hypotheses[0]
-        result = tokenizer.decode(tokenizer.convert_tokens_to_ids(target_tokens), skip_special_tokens=True)
+        result = tokenizer.decode(
+            tokenizer.convert_tokens_to_ids(target_tokens), skip_special_tokens=True
+        )
         elapsed_ms = (time.monotonic() - start) * 1000
         logger.debug(f"CT2 EN→VI: {elapsed_ms:.0f}ms | '{text[:50]}' → '{result[:50]}'")
         return result.strip() if result else None
@@ -197,17 +210,25 @@ def translate_en_to_vi(text: str) -> Optional[str]:
 
 
 def is_ct2_available() -> bool:
-    """Check if at least the VI→EN translation is available."""
+    """Check if at least the VI→EN translation is available (blocks if loading)."""
     return get_ct2_vi_en() is not None
 
 
+def is_ct2_loaded() -> bool:
+    """Non-blocking check if the VI→EN model is loaded in memory."""
+    global _ct2_vi_en
+    return _ct2_vi_en is not None and _ct2_vi_en is not False
+
+
 # ==================== PRELOAD UTILITY ====================
+
 
 def preload_models(vi_en: bool = True, en_vi: bool = True):
     """
     Preload CTranslate2 models in background thread.
     Call this at app startup to avoid cold-start latency on first translation.
     """
+
     def _preload():
         if vi_en:
             get_ct2_vi_en()

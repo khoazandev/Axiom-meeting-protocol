@@ -35,6 +35,12 @@ services:
       CORS_ORIGINS: http://localhost:3000
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      # Ollama / LLM (host.docker.internal = host machine from inside Docker)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      # AI Action Item Extraction
+      EXTRACTION_MODEL: ${EXTRACTION_MODEL:-qwen3:0.6b}
+      EXTRACTION_TIMEOUT: ${EXTRACTION_TIMEOUT:-120}
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +52,8 @@ services:
       dockerfile: docker/Dockerfile.frontend
       args:
         BACKEND_URL: http://backend:8000
+        NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
     ports:
       - "3000:3000"

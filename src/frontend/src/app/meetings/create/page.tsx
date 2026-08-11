@@ -32,9 +32,6 @@ export default function CreateMeetingPage() {
   // Files to upload after meeting is created
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-  const charCount = formData.description.trim().length;
-  const isGateValid = charCount >= 20;
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
     setPendingFiles((prev) => {
@@ -52,13 +49,6 @@ export default function CreateMeetingPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    if (!isGateValid) {
-      setError('Process Gate Violation: Agenda must be at least 20 characters.');
-      setLoading(false);
-      return;
-    }
-
     try {
       // 1. Create the meeting
       const payload = {
@@ -123,14 +113,9 @@ export default function CreateMeetingPage() {
 
         <div className="bg-[#131B2E] border border-blue-950/80 rounded-3xl p-8 shadow-2xl space-y-6">
           <div className="border-b border-blue-950/60 pb-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Process Gate Enforcement</span>
-            </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Deploy New Meeting</h1>
             <p className="text-xs text-slate-400 mt-1">
-              Configure a structured meeting with mandatory agenda validation for automated AI
-              post-meeting analytics.
+              Configure a structured meeting for automated AI post-meeting analytics.
             </p>
           </div>
 
@@ -154,42 +139,6 @@ export default function CreateMeetingPage() {
                 placeholder="e.g. Q3 Architecture Review & Security Gate"
                 className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
               />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Agenda (Process Gate)
-                </label>
-                <div
-                  className={`text-xs font-mono font-semibold flex items-center gap-1.5 ${
-                    isGateValid ? 'text-emerald-400' : 'text-amber-400'
-                  }`}
-                >
-                  {isGateValid ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Gate Validated ({charCount}/20 min)</span>
-                    </>
-                  ) : (
-                    <span>{charCount} / 20 characters required</span>
-                  )}
-                </div>
-              </div>
-              <textarea
-                required
-                rows={4}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder={
-                  '1. Review Q2 metrics\n2. Discuss Q3 roadmap\n3. Allocate engineering resources'
-                }
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
-              />
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                Backend enforces a minimum 20-character agenda to guarantee structured meeting
-                records.
-              </p>
             </div>
 
             {/* ── File Attachments ── */}
@@ -259,7 +208,7 @@ export default function CreateMeetingPage() {
 
             <button
               type="submit"
-              disabled={loading || !isGateValid}
+              disabled={loading}
               className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
