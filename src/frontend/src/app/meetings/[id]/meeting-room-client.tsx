@@ -11,17 +11,21 @@ import {
   Sparkles,
   FileText,
   ChevronRight,
-  Bookmark,
   Zap,
   Mic,
   MicOff,
-  Globe,
-  User,
   UserPlus,
 } from 'lucide-react';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { meetingsApi, type Meeting, type RagSource, ApiRequestError } from '@/lib/api';
+import {
+  meetingsApi,
+  type Meeting,
+  type RagSource,
+  type ActionItemResponse,
+  type TranscriptResponse,
+  ApiRequestError,
+} from '@/lib/api';
 import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
@@ -206,7 +210,10 @@ export function MeetingRoomClient() {
   // Auto-scroll transcript when new entries arrive
   useEffect(() => {
     if (vadTranscriptHistory.length > 0) {
-      const timer = setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      const timer = setTimeout(
+        () => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }),
+        100
+      );
       return () => clearTimeout(timer);
     }
   }, [vadTranscriptHistory.length]);
@@ -222,8 +229,8 @@ export function MeetingRoomClient() {
   ]);
 
   // Action Items and Transcripts state
-  const [actionItems, setActionItems] = useState<any[]>([]);
-  const [dbTranscripts, setDbTranscripts] = useState<any[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItemResponse[]>([]);
+  const [dbTranscripts, setDbTranscripts] = useState<TranscriptResponse[]>([]);
 
   // Poll for action items
   useEffect(() => {
@@ -250,9 +257,6 @@ export function MeetingRoomClient() {
   }, [meetingId]);
 
   const [aiQueryMsg, setAiQueryMsg] = useState('');
-
-  // Bookmark Feedback
-  const [bookmarkFeedback, setBookmarkFeedback] = useState<string | null>(null);
 
   // AI loading state
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -292,36 +296,6 @@ export function MeetingRoomClient() {
       });
     return () => controller.abort();
   }, [meeting, participantName]);
-
-  const handleAddBookmark = async () => {
-    try {
-      const authToken = localStorage.getItem('axiom_token');
-      const orgRaw = localStorage.getItem('axiom_organization');
-      const orgId = orgRaw ? JSON.parse(orgRaw)?.id : null;
-      if (!authToken || !orgId) return;
-
-      const res = await fetch(`/api/v1/meetings/${meetingId}/bookmarks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-          'X-Organization-ID': orgId,
-        },
-        body: JSON.stringify({
-          timestamp_seconds: 120,
-          note: `Bookmark moment created during live call`,
-          is_action_item: false,
-        }),
-      });
-
-      if (res.ok) {
-        setBookmarkFeedback('📌 Key moment bookmarked!');
-        setTimeout(() => setBookmarkFeedback(null), 3000);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleSendAiQuery = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -599,14 +573,15 @@ export function MeetingRoomClient() {
                             {dbTranscripts.map((entry) => (
                               <div key={entry.id} className="text-sm">
                                 <span className="font-bold text-blue-400 mr-2">
-                                  [{entry.speaker_id || 'User'}]
+                                  [{entry.speaker || 'User'}]
                                 </span>
                                 <span className="text-slate-300">{entry.content}</span>
                               </div>
                             ))}
                             {vadTranscriptHistory
                               .filter(
-                                (v) => !dbTranscripts.some((d) => d.content.includes(v.vi_text))
+                                (v) =>
+                                  !dbTranscripts.some((d) => (d.content || '').includes(v.vi_text))
                               )
                               .map((entry) => (
                                 <div key={entry.id} className="text-sm">
@@ -641,7 +616,7 @@ export function MeetingRoomClient() {
                           Chưa có Follow-up Tasks nào được AI trích xuất.
                         </div>
                       ) : (
-                        actionItems.map((item: any) => (
+                        actionItems.map((item: ActionItemResponse) => (
                           <div
                             key={item.id}
                             className="text-xs p-2.5 rounded-lg bg-[#131B2E] border border-blue-950/80"

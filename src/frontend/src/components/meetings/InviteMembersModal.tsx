@@ -36,31 +36,42 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
   }, [meetingId]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadMembers();
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    if (!isOpen) return;
+
+    let ignore = false;
+    (async () => {
+      setLoadingMembers(true);
+      try {
+        const data = await meetingsApi.getMembers(meetingId);
+        if (!ignore) setMembers(data);
+      } catch (err) {
+        console.error('Failed to load members:', err);
+      } finally {
+        if (!ignore) setLoadingMembers(false);
+      }
+    })();
+
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
     return () => {
+      ignore = true;
+      clearTimeout(timer);
       setSearchQuery('');
       setSearchResults([]);
       setFeedback(null);
     };
-  }, [isOpen, loadMembers]);
+  }, [isOpen, meetingId]);
 
   // Debounced search
   useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const query = searchQuery.trim();
+    if (!query) return;
 
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
 
     searchTimerRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const results = await usersApi.search(searchQuery.trim());
-        // Filter out users who are already members
+        const results = await usersApi.search(query);
         const memberUserIds = new Set(members.map((m) => m.user_id));
         setSearchResults(results.filter((u) => !memberUserIds.has(u.id)));
       } catch (err) {
@@ -140,7 +151,10 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
               ref={inputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (!e.target.value.trim()) setSearchResults([]);
+              }}
               placeholder="Tìm theo email hoặc tên..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#131B2E] border border-blue-900/50 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition-all"
             />

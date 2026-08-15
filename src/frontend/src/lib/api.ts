@@ -81,6 +81,29 @@ export interface RagQueryResponse {
   context_used: string[];
 }
 
+export interface ActionItemResponse {
+  id: string;
+  meeting_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  assignee_id?: string | null;
+  due_date?: string | null;
+  created_at: string;
+}
+
+export interface TranscriptResponse {
+  id: string;
+  meeting_id: string;
+  content: string;
+  speaker?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  sequence?: number;
+  confidence?: string | null;
+  created_at: string;
+}
+
 // ── Error Class ──────────────────────────────────────────
 
 export class ApiRequestError extends Error {
@@ -319,21 +342,21 @@ export const meetingsApi = {
       sequence: number;
       confidence?: string;
     }
-  ): Promise<any> {
-    return apiFetch(`/api/v1/meetings/${meetingId}/transcripts`, {
+  ): Promise<TranscriptResponse> {
+    return apiFetch<TranscriptResponse>(`/api/v1/meetings/${meetingId}/transcripts`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   /** Get action items for a meeting. */
-  getActionItems(meetingId: number | string): Promise<any[]> {
-    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/action-items`);
+  getActionItems(meetingId: number | string): Promise<ActionItemResponse[]> {
+    return apiFetch<ActionItemResponse[]>(`/api/v1/meetings/${meetingId}/action-items`);
   },
 
   /** Get transcripts for a meeting. */
-  getTranscripts(meetingId: number | string): Promise<any[]> {
-    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/transcripts`);
+  getTranscripts(meetingId: number | string): Promise<TranscriptResponse[]> {
+    return apiFetch<TranscriptResponse[]>(`/api/v1/meetings/${meetingId}/transcripts`);
   },
 
   /** List members of a meeting. */

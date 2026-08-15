@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export interface TranslationStream {
   type: string;
@@ -19,11 +19,19 @@ export interface TranscriptHistoryEntry {
   speaker: string;
 }
 
-export function useTranslationSocket(speakerName = 'Thành viên') {
+export function useTranslationSocket(
+  speakerName = 'Thành viên',
+  onFinalized?: (entry: TranscriptHistoryEntry) => void
+) {
   const [isConnected, setIsConnected] = useState(false);
   const [streamData, setStreamData] = useState<TranslationStream | null>(null);
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const onFinalizedRef = useRef(onFinalized);
+
+  useEffect(() => {
+    onFinalizedRef.current = onFinalized;
+  }, [onFinalized]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -74,6 +82,10 @@ export function useTranslationSocket(speakerName = 'Thành viên') {
                 }
                 return [...prev, entry];
               });
+
+              if (onFinalizedRef.current) {
+                onFinalizedRef.current(entry);
+              }
             }
           }
         } catch (err) {

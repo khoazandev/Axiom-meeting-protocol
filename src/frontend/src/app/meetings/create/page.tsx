@@ -5,16 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { meetingsApi, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import {
-  ArrowLeft,
-  Loader2,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Upload,
-  X,
-  Paperclip,
-} from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, Upload, X, Paperclip } from 'lucide-react';
 
 function getFileIcon(name: string) {
   const ext = name.split('.').pop()?.toLowerCase() || '';

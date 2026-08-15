@@ -142,7 +142,7 @@ export function useWebSpeech(
     } catch (e) {
       console.error(e);
     }
-  }, [onFinalTranscript]);
+  }, []);
 
   return { startRecognition, stopRecognition, isRecognizing };
 }

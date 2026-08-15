@@ -3,16 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getAuthHeaders } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
-import {
-  CheckSquare,
-  Kanban,
-  List,
-  Clock,
-  User,
-  Video,
-  Loader2,
-  Calendar,
-} from 'lucide-react';
+import { CheckSquare, Kanban, List, Clock, User, Video, Loader2, Calendar } from 'lucide-react';
 
 interface RemoteTask {
   id: string;

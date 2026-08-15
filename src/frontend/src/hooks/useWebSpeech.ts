@@ -63,7 +63,8 @@ export function useWebSpeech(
 
     recognition.onstart = () => setIsRecognizing(true);
     recognition.onend = () => setIsRecognizing(false);
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) => console.error('Speech recognition error:', e.error);
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) =>
+      console.error('Speech recognition error:', e.error);
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';

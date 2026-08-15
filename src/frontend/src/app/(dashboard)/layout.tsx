@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         try {
           const [me, organizations] = await Promise.all([authApi.me(), organizationApi.list()]);
           setAuth(me, token, organizations, organizations[0]);
-        } catch (err) {
+        } catch {
           // Token is invalid/expired — clear and redirect to login
           useAuthStore.getState().logout();
           router.push('/login');

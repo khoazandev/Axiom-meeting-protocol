@@ -57,13 +57,15 @@ export default function MeetingsDashboardPage() {
     }
   };
 
+  const isMeetingLive = (m: Meeting) => m.status === 'IN_PROGRESS' || m.status === 'STARTED';
+
   const filteredMeetings = meetings.filter((m) => {
-    if (activeTab === 'live') return m.is_active;
-    if (activeTab === 'scheduled') return !m.is_active;
+    if (activeTab === 'live') return isMeetingLive(m);
+    if (activeTab === 'scheduled') return !isMeetingLive(m);
     return true;
   });
 
-  const activeCount = meetings.filter((m) => m.is_active).length;
+  const activeCount = meetings.filter(isMeetingLive).length;
 
   return (
     <div className="space-y-6">

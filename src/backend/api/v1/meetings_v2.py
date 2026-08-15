@@ -1,7 +1,10 @@
-"""Meeting CRUD + MeetingMember management API endpoints."""
+import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from src.backend.api import deps
 from src.backend.core.exceptions import AuthenticationException, ForbiddenException, NotFoundException
@@ -132,6 +135,18 @@ def update_meeting(
         meeting.description = payload.description
     if payload.scheduled_at is not None:
         meeting.scheduled_at = payload.scheduled_at
+    if payload.status is not None:
+        old_status = meeting.status
+        meeting.status = payload.status
+        if payload.status in ("COMPLETED", "ENDED"):
+            if not meeting.ended_at:
+                meeting.ended_at = datetime.now(timezone.utc)
+            if old_status not in ("COMPLETED", "ENDED"):
+                try:
+                    from src.backend.services.action_item_extractor import extract_action_items
+                    extract_action_items(db, meeting_id, current_user.id)
+                except Exception as e:
+                    logger.warning(f"Failed to auto-extract action items for meeting {meeting_id}: {e}")
 
     db.commit()
     db.refresh(meeting)

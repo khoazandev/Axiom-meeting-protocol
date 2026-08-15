@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, Clock, Video, FileText } from 'lucide-react';
+import { Calendar, Video, FileText } from 'lucide-react';
 import type { Meeting } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
