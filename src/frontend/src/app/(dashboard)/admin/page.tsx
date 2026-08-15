@@ -12,8 +12,6 @@ import {
   Trash2,
   Lock,
   Radio,
-  Search,
-  CheckCircle2,
 } from 'lucide-react';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { getAuthHeaders } from '@/lib/api';
@@ -57,7 +55,7 @@ export default function AdminPage() {
   // Webhook Form State
   const [whName, setWhName] = useState('');
   const [whUrl, setWhUrl] = useState('');
-  const [whEvents, setWhEvents] = useState('task.created,meeting.finished');
+  const whEvents = 'task.created,meeting.finished';
   const [isAddingWh, setIsAddingWh] = useState(false);
 
   useEffect(() => {

@@ -44,8 +44,8 @@ export default function RegisterPage() {
       setAuth(user, tokens.access_token, organizations, initialOrg || organizations[0]);
 
       router.push('/meetings');
-    } catch (err: any) {
-      setError(err?.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

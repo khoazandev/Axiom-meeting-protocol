@@ -21,7 +21,6 @@ import {
   Globe,
   Menu,
   X,
-  User,
   ChevronDown,
 } from 'lucide-react';
 
@@ -66,9 +65,11 @@ export function TopNavbar() {
   }, []);
 
   // Close mobile drawer on route change
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 

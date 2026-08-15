@@ -1,15 +1,10 @@
 """Meeting CRUD + MeetingMember management API endpoints."""
 
-import datetime
-from datetime import timezone
-
 from fastapi import APIRouter, Depends, status
-from livekit import api
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
-from src.backend.core.config import get_settings
-from src.backend.core.exceptions import ForbiddenException, NotFoundException
+from src.backend.core.exceptions import AuthenticationException, ForbiddenException, NotFoundException
 from src.backend.database import get_db
 from src.backend.models import (
     Meeting,
@@ -25,7 +20,6 @@ from src.backend.schemas.meeting import (
     MeetingMemberResponse,
     MeetingResponse,
     MeetingUpdate,
-    TokenResponse,
 )
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -97,65 +91,16 @@ def list_my_meetings(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """List meetings where current user has ACCEPTED/JOINED/HOST status (not INVITED)."""
-    accepted_statuses = [
-        MeetingMemberStatusEnum.ACCEPTED,
-        MeetingMemberStatusEnum.JOINED,
-    ]
+    """List all meetings the current user is a member of."""
     memberships = (
         db.query(MeetingMember)
-        .filter(
-            MeetingMember.user_id == current_user.id,
-            (
-                MeetingMember.status.in_(accepted_statuses)
-                | (MeetingMember.role == MeetingMemberRoleEnum.HOST)
-            ),
-        )
+        .filter(MeetingMember.user_id == current_user.id)
         .all()
     )
     meeting_ids = [m.meeting_id for m in memberships]
     if not meeting_ids:
         return []
     return db.query(Meeting).filter(Meeting.id.in_(meeting_ids)).all()
-
-
-# ---------------------------------------------------------------------------
-# Invitation Flow (must be before /{meeting_id} routes)
-# ---------------------------------------------------------------------------
-@router.get("/invitations/pending", response_model=list[dict])
-def list_pending_invitations(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
-):
-    """List all pending meeting invitations for the current user."""
-    pending_members = (
-        db.query(MeetingMember)
-        .filter(
-            MeetingMember.user_id == current_user.id,
-            MeetingMember.status == MeetingMemberStatusEnum.INVITED,
-        )
-        .all()
-    )
-
-    results = []
-    for pm in pending_members:
-        meeting = db.query(Meeting).filter(Meeting.id == pm.meeting_id).first()
-        inviter = (
-            db.query(User).filter(User.id == meeting.created_by_id).first() if meeting else None
-        )
-        results.append(
-            {
-                "member_id": pm.id,
-                "meeting_id": pm.meeting_id,
-                "meeting_title": meeting.title if meeting else "Unknown",
-                "meeting_description": meeting.description if meeting else None,
-                "invited_by": inviter.full_name if inviter else "Unknown",
-                "invited_by_email": inviter.email if inviter else "",
-                "invited_at": pm.created_at.isoformat() if pm.created_at else None,
-                "role": pm.role.value if pm.role else "PARTICIPANT",
-            }
-        )
-    return results
 
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)
@@ -187,28 +132,9 @@ def update_meeting(
         meeting.description = payload.description
     if payload.scheduled_at is not None:
         meeting.scheduled_at = payload.scheduled_at
-    if payload.status is not None:
-        try:
-            new_status = MeetingStatusEnum(payload.status)
-        except ValueError:
-            new_status = None
-        if new_status:
-            meeting.status = new_status
 
     db.commit()
     db.refresh(meeting)
-
-    # Auto-extract action items when meeting ends
-    if meeting.status == MeetingStatusEnum.COMPLETED:
-        try:
-            from src.backend.services.action_item_extractor import extract_action_items
-
-            extract_action_items(db, meeting_id, triggered_by=current_user.id)
-        except Exception as exc:
-            import logging
-
-            logging.getLogger("axiom").warning("Action item extraction failed: %s", exc)
-
     return meeting
 
 
@@ -226,38 +152,6 @@ def delete_meeting(
     db.commit()
 
 
-@router.get("/{meeting_id}/token", response_model=TokenResponse)
-def get_meeting_token(
-    meeting_id: str,
-    participant_name: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
-):
-    """Generate a LiveKit access token for a meeting room. User must have ACCEPTED status."""
-    _get_meeting_or_404(db, meeting_id)
-    member = _require_meeting_member(db, meeting_id, current_user.id)
-
-    # Only HOST or ACCEPTED/JOINED members can get a token
-    allowed_statuses = [
-        MeetingMemberStatusEnum.ACCEPTED,
-        MeetingMemberStatusEnum.JOINED,
-    ]
-    if member.role != MeetingMemberRoleEnum.HOST and member.status not in allowed_statuses:
-        raise ForbiddenException("You must accept the invitation before joining the meeting")
-
-    settings = get_settings()
-    token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    token.with_identity(participant_name)
-    token.with_name(participant_name)
-    token.with_grants(
-        api.VideoGrants(
-            room_join=True,
-            room=str(meeting_id),
-        )
-    )
-    return TokenResponse(token=token.to_jwt())
-
-
 # ---------------------------------------------------------------------------
 # MeetingMember Management
 # ---------------------------------------------------------------------------
@@ -271,7 +165,11 @@ def list_meeting_members(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
-    return db.query(MeetingMember).filter(MeetingMember.meeting_id == meeting_id).all()
+    return (
+        db.query(MeetingMember)
+        .filter(MeetingMember.meeting_id == meeting_id)
+        .all()
+    )
 
 
 @router.post(
@@ -336,62 +234,86 @@ def remove_meeting_member(
     db.commit()
 
 
-@router.post(
-    "/{meeting_id}/members/{member_id}/accept",
-    response_model=MeetingMemberResponse,
-)
-def accept_invitation(
+# ---------------------------------------------------------------------------
+# LiveKit Token & In-Meeting RAG
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _PydanticBaseModel
+from livekit import api as livekit_api
+from src.backend.core.config import get_settings
+from src.backend.services.ollama_service import build_rag_answer
+
+
+class TokenResponse(_PydanticBaseModel):
+    token: str
+
+
+class RagQueryRequest(_PydanticBaseModel):
+    question: str
+    live_transcript: str | None = None
+    chat_history: list[dict] | None = None
+
+
+class RagSourceItem(_PydanticBaseModel):
+    type: str
+    snippet: str
+    filename: str | None = None
+    timestamp: int | None = None
+
+
+class RagQueryResponse(_PydanticBaseModel):
+    question: str
+    answer: str
+    sources: list[RagSourceItem]
+    context_used: list[str]
+
+
+@router.get("/{meeting_id}/token", response_model=TokenResponse)
+def get_meeting_token(
     meeting_id: str,
-    member_id: str,
+    participant_name: str,
+    db: Session = Depends(get_db),
+):
+    """Generate a LiveKit access token for a meeting room."""
+    _get_meeting_or_404(db, meeting_id)
+    settings = get_settings()
+    token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+    token.with_identity(participant_name)
+    token.with_name(participant_name)
+    token.with_grants(
+        livekit_api.VideoGrants(
+            room_join=True,
+            room=f"meeting-{meeting_id}",
+        )
+    )
+    return TokenResponse(token=token.to_jwt())
+
+
+@router.post("/{meeting_id}/rag/query", response_model=RagQueryResponse)
+def rag_query(
+    meeting_id: str,
+    payload: RagQueryRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """Accept a meeting invitation. Only the invited user can accept."""
-    _get_meeting_or_404(db, meeting_id)
-    member = (
-        db.query(MeetingMember)
-        .filter(
-            MeetingMember.id == member_id,
-            MeetingMember.meeting_id == meeting_id,
-            MeetingMember.user_id == current_user.id,
-            MeetingMember.status == MeetingMemberStatusEnum.INVITED,
-        )
-        .first()
+    """In-meeting RAG chatbot query."""
+    meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
+
+    sources = []
+    if meeting.description:
+        sources.append({"type": "agenda", "snippet": meeting.description})
+
+    answer = build_rag_answer(
+        question=payload.question,
+        sources=sources,
+        live_transcript=payload.live_transcript,
+        chat_history=payload.chat_history,
     )
-    if not member:
-        raise NotFoundException("Pending invitation")
 
-    member.status = MeetingMemberStatusEnum.ACCEPTED
-    member.joined_at = datetime.datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(member)
-    return member
-
-
-@router.post(
-    "/{meeting_id}/members/{member_id}/decline",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def decline_invitation(
-    meeting_id: str,
-    member_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
-):
-    """Decline a meeting invitation. Removes the membership."""
-    _get_meeting_or_404(db, meeting_id)
-    member = (
-        db.query(MeetingMember)
-        .filter(
-            MeetingMember.id == member_id,
-            MeetingMember.meeting_id == meeting_id,
-            MeetingMember.user_id == current_user.id,
-            MeetingMember.status == MeetingMemberStatusEnum.INVITED,
-        )
-        .first()
+    return RagQueryResponse(
+        question=payload.question,
+        answer=answer,
+        sources=[RagSourceItem(**s) for s in sources],
+        context_used=[s["snippet"] for s in sources],
     )
-    if not member:
-        raise NotFoundException("Pending invitation")
 
-    member.status = MeetingMemberStatusEnum.DECLINED
-    db.commit()

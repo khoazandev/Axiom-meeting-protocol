@@ -1,21 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { Search, Bell, Plus, User, LogOut, ShieldCheck, Globe } from 'lucide-react';
+
+const emptySubscribe = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
 
 export function AppHeader() {
   const { user, activeOrganization, logout } = useAuthStore();
   const { language, setLanguage, t } = useLanguageStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   return (
     <header className="h-16 px-6 bg-[#0B0F19]/90 backdrop-blur-md border-b border-blue-950/60 flex items-center justify-between sticky top-0 z-20">

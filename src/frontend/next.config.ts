@@ -1,10 +1,14 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
   skipTrailingSlashRedirect: true,
+  turbopack: {
+    root: path.resolve(__dirname, '../../'),
+  },
   async rewrites() {
     return [
       {

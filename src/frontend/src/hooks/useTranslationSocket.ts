@@ -19,51 +19,25 @@ export interface TranscriptHistoryEntry {
   speaker: string;
 }
 
-export function useTranslationSocket(
-  speakerName = 'Thành viên',
-  onFinalized?: (entry: TranscriptHistoryEntry) => void
-) {
+export function useTranslationSocket(speakerName = 'Thành viên') {
   const [isConnected, setIsConnected] = useState(false);
   const [streamData, setStreamData] = useState<TranslationStream | null>(null);
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
-  const seenIdsRef = useRef<Set<string>>(new Set());
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isIntentionalDisconnectRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (
-      wsRef.current?.readyState === WebSocket.OPEN ||
-      wsRef.current?.readyState === WebSocket.CONNECTING
-    )
-      return;
-    isIntentionalDisconnectRef.current = false;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    let wsUrl = '';
-    if (baseUrl) {
-      wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/realtime-stt';
-    } else {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // Connect directly to backend (port 8000) to avoid Next.js WebSocket proxy ECONNRESET crashes
-      wsUrl = `${protocol}//${window.location.hostname}:8000/ws/realtime-stt`;
-    }
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/realtime-stt';
 
     try {
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => setIsConnected(true);
-      ws.onclose = () => {
-        setIsConnected(false);
-        wsRef.current = null;
-        if (!isIntentionalDisconnectRef.current) {
-          console.log('[STT] WS disconnected. Reconnecting in 3s...');
-          reconnectTimeoutRef.current = setTimeout(() => connect(), 3000);
-        }
-      };
+      ws.onclose = () => setIsConnected(false);
       ws.onerror = () => {
         console.warn('[STT] WebSocket connection unavailable — STT server may not be running.');
-        // onclose will be called after onerror usually
+        setIsConnected(false);
       };
       ws.onmessage = (event) => {
         try {
@@ -76,16 +50,17 @@ export function useTranslationSocket(
 
             // When a translation is final, add to transcript history
             if (data.is_final === true && (data.vi_text || data.en_text)) {
+              const timestamp = new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              });
               const entry: TranscriptHistoryEntry = {
                 id: data.id,
                 vi_text: data.vi_text || data.original_text || '',
                 en_text: data.en_text || '',
                 original_text: data.original_text || '',
-                timestamp: new Date().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                }),
+                timestamp,
                 speaker: speakerName,
               };
 
@@ -99,11 +74,6 @@ export function useTranslationSocket(
                 }
                 return [...prev, entry];
               });
-
-              if (!seenIdsRef.current.has(data.id)) {
-                seenIdsRef.current.add(data.id);
-                if (onFinalized) onFinalized(entry);
-              }
             }
           }
         } catch (err) {
@@ -115,13 +85,9 @@ export function useTranslationSocket(
     } catch {
       console.warn('[STT] Could not create WebSocket connection');
     }
-  }, [speakerName, onFinalized]);
+  }, [speakerName]);
 
   const disconnect = useCallback(() => {
-    isIntentionalDisconnectRef.current = true;
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);

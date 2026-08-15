@@ -1,10 +1,52 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Sparkles, Volume2, Trash2, Zap, Cpu, Radio, Globe } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+
+interface SpeechRecognitionResultItem {
+  transcript: string;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: SpeechRecognitionResultItem;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface ISpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type WindowWithSpeech = Window & {
+  SpeechRecognition?: new () => ISpeechRecognition;
+  webkitSpeechRecognition?: new () => ISpeechRecognition;
+  AudioContext?: typeof AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+};
 
 export interface STTPayload {
   id?: string;
@@ -23,23 +65,6 @@ export interface STTPayload {
 }
 
 type STTMode = 'browser' | 'whisper';
-
-// Wave Text Effect component for subtle "Processing..." animation
-function WaveTextEffect({ text = 'Processing...' }: { text?: string }) {
-  return (
-    <div className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary">
-      {text.split('').map((char, index) => (
-        <span
-          key={index}
-          className="inline-block animate-wave-bounce"
-          style={{ animationDelay: `${index * 0.08}s` }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 // Mode badge component
 function ModeBadge({ mode }: { mode: STTMode }) {
@@ -81,7 +106,7 @@ export function RealtimeSTTPanel({
     'disconnected'
   );
   const [isRecording, setIsRecording] = useState(false);
-  const [liveSpeechText, setLiveSpeechText] = useState('');
+  const [, setLiveSpeechText] = useState('');
   const [transcripts, setTranscripts] = useState<STTPayload[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -89,7 +114,7 @@ export function RealtimeSTTPanel({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
   const subtitleClearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -103,7 +128,7 @@ export function RealtimeSTTPanel({
     isRecordingRef.current = isRecording;
   }, [isRecording]);
 
-  // Sync full accumulated transcript text (with speaker name attribution) to parent component for RAG
+  // Sync full accumulated transcript text to parent component for RAG
   useEffect(() => {
     if (onTranscriptUpdate && transcripts.length > 0) {
       const fullText = transcripts
@@ -123,170 +148,21 @@ export function RealtimeSTTPanel({
   const [sttMode, setSttMode] = useState<STTMode>('browser');
   const sttModeRef = useRef<STTMode>('browser');
 
-  // ══════════════════════════════════════════════════════
-  // Recording Controls (Whisper STT Binary Stream)
-  // ══════════════════════════════════════════════════════
-  const startWhisperSTT = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaStreamRef.current = stream;
-
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
-      sampleRate: 16000,
-    });
-    audioContextRef.current = audioCtx;
-
-    const source = audioCtx.createMediaStreamSource(stream);
-    const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-    processorRef.current = processor;
-
-    processor.onaudioprocess = (e) => {
-      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
-      const inputData = e.inputBuffer.getChannelData(0);
-
-      const pcm16 = new Int16Array(inputData.length);
-      for (let i = 0; i < inputData.length; i++) {
-        const s = Math.max(-1, Math.min(1, inputData[i]));
-        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-      }
-
-      socketRef.current.send(pcm16.buffer);
-    };
-
-    source.connect(processor);
-    processor.connect(audioCtx.destination);
-  };
-
-  const startRecording = useCallback(async () => {
-    if (socketRef.current?.readyState !== WebSocket.OPEN) {
-      connectWebSocket();
-    }
-
-    try {
-      if (sttModeRef.current === 'whisper') {
-        await startWhisperSTT();
-      } else {
-        startBrowserSTT();
-      }
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-    }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
-
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-    }
-    setIsRecording(false);
-    setLiveSpeechText('');
-  }, []);
-
-  // Sync with meeting mic mute state (Auto start/stop STT based on mic toggle)
-  useEffect(() => {
-    if (isMuted !== undefined) {
-      if (isMuted) {
-        if (isRecordingRef.current) {
-          console.log('[Pipeline] Mic MUTED -> Stopping STT recording');
-          stopRecording();
-        }
-      } else {
-        if (!isRecordingRef.current) {
-          console.log('[Pipeline] Mic UNMUTED -> Auto-starting STT recording');
-          startRecording();
-        }
-      }
-    }
-  }, [isMuted, startRecording, stopRecording]);
-
-  // Send accumulated text to backend (called after debounce)
-  const flushAccumulatedText = useCallback(() => {
-    const textToSend = accumulatedTextRef.current.trim();
-    accumulatedTextRef.current = '';
-
-    if (!textToSend) return;
-
-    console.log(
-      `[Pipeline] Sending debounced text to AI (${textToSend.length} chars):`,
-      textToSend
-    );
-    setLiveSpeechText(textToSend);
-    setIsProcessing(true);
-
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'translate',
-          text: textToSend,
-        })
-      );
-    } else {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      fetch(`${baseUrl}/api/stt/translate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToSend }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.type === 'bilingual_translation') {
-            setTranscripts((prev) => [
-              { ...data, timestamp: new Date().toLocaleTimeString() },
-              ...prev,
-            ]);
-          }
-        })
-        .catch((err) => console.error('REST fallback error:', err))
-        .finally(() => {
-          setIsProcessing(false);
-          setLiveSpeechText('');
-        });
-    }
-  }, []);
-
   // Initialize WebSocket Connection with auto-reconnect
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef(2000); // Start at 2s, max 30s
+  const connectWebSocketRef = useRef<() => void>(() => {});
 
   const connectWebSocket = useCallback(() => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) return;
 
     try {
-      setWsStatus('connecting');
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      let wsUrl = '';
-      if (baseUrl) {
-        wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/realtime-stt';
-      } else {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.hostname}:8000/ws/realtime-stt`;
-      }
+      const wsUrl = 'ws://127.0.0.1:8000/ws/realtime-stt';
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         setWsStatus('connected');
         reconnectDelayRef.current = 2000; // Reset delay on success
-        console.log('[Pipeline] WebSocket Connected:', wsUrl);
       };
 
       ws.onmessage = (event) => {
@@ -333,15 +209,13 @@ export function RealtimeSTTPanel({
               }, 8000);
             } else {
               setIsProcessing(true);
-              // Cancel any pending clear while streaming
               if (subtitleClearTimerRef.current) {
                 clearTimeout(subtitleClearTimerRef.current);
                 subtitleClearTimerRef.current = null;
               }
             }
           }
-        } catch (e) {
-          console.error('Error parsing WebSocket response', e);
+        } catch {
           setIsProcessing(false);
         }
       };
@@ -355,55 +229,68 @@ export function RealtimeSTTPanel({
         setWsStatus('disconnected');
         setIsProcessing(false);
         socketRef.current = null;
-        // Auto-reconnect with backoff
         const delay = reconnectDelayRef.current;
         reconnectDelayRef.current = Math.min(delay * 1.5, 30000);
-        console.log(`[Pipeline] WebSocket closed, reconnecting in ${delay}ms...`);
-        reconnectTimerRef.current = setTimeout(connectWebSocket, delay);
+        reconnectTimerRef.current = setTimeout(() => {
+          connectWebSocketRef.current();
+        }, delay);
       };
 
       socketRef.current = ws;
-    } catch (e) {
-      console.error('Failed to create WebSocket', e);
-      setWsStatus('disconnected');
+    } catch {
+      // Handled by onerror / onclose
+    }
+  }, [onSubtitleUpdate]);
+
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+  }, [connectWebSocket]);
+
+  // Send accumulated text to backend
+  const flushAccumulatedText = useCallback(() => {
+    const textToSend = accumulatedTextRef.current.trim();
+    accumulatedTextRef.current = '';
+
+    if (!textToSend) return;
+
+    setLiveSpeechText(textToSend);
+    setIsProcessing(true);
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'translate',
+          text: textToSend,
+        })
+      );
+    } else {
+      fetch('http://127.0.0.1:8000/api/stt/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSend }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.type === 'bilingual_translation') {
+            setTranscripts((prev) => [
+              { ...data, timestamp: new Date().toLocaleTimeString() },
+              ...prev,
+            ]);
+          }
+        })
+        .catch((err) => console.error('REST fallback error:', err))
+        .finally(() => {
+          setIsProcessing(false);
+          setLiveSpeechText('');
+        });
     }
   }, []);
 
-  useEffect(() => {
-    connectWebSocket();
-
-    // Auto-detect Whisper availability from backend
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    fetch(`${baseUrl}/api/stt/status`)
-      .then((res) => res.json())
-      .then((data) => {
-        // Tạm tắt Whisper, ép dùng Browser STT theo yêu cầu
-        const mode: STTMode = 'browser'; // data.whisper_available ? 'whisper' : 'browser';
-        setSttMode(mode);
-        sttModeRef.current = mode;
-        console.log(`[Pipeline] STT mode forced to: ${mode}`, data);
-      })
-      .catch(() => {
-        console.log('[Pipeline] Backend unreachable, defaulting to Browser STT');
-        setSttMode('browser');
-        sttModeRef.current = 'browser';
-      });
-
-    return () => {
-      stopRecording();
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      if (subtitleClearTimerRef.current) clearTimeout(subtitleClearTimerRef.current);
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      if (socketRef.current) socketRef.current.close();
-    };
-  }, []);
-
-  // ══════════════════════════════════════════════════════
-  // MODE A: Browser Web Speech API (text-only path)
-  // ══════════════════════════════════════════════════════
-  const startBrowserSTT = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  // Browser STT
+  const startBrowserSTT = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const win = window as WindowWithSpeech;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -411,7 +298,7 @@ export function RealtimeSTTPanel({
     recognition.interimResults = true;
     recognition.lang = 'vi-VN';
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -424,7 +311,6 @@ export function RealtimeSTTPanel({
         }
       }
 
-      // Show live preview of what user is speaking (interim)
       if (interimTranscript) {
         const liveText =
           accumulatedTextRef.current + (accumulatedTextRef.current ? ' ' : '') + interimTranscript;
@@ -438,13 +324,11 @@ export function RealtimeSTTPanel({
         }
       }
 
-      // Accumulate finalized segments with 500ms debounce
       if (finalTranscript.trim()) {
         accumulatedTextRef.current +=
           (accumulatedTextRef.current ? ' ' : '') + finalTranscript.trim();
         setLiveSpeechText(accumulatedTextRef.current);
 
-        // Hiển thị lập tức final transcript lên Subtitle ngay khi chốt câu
         if (onSubtitleUpdate) {
           onSubtitleUpdate({
             vi: accumulatedTextRef.current,
@@ -453,7 +337,6 @@ export function RealtimeSTTPanel({
           });
         }
 
-        // Reset debounce timer
         if (debounceTimerRef.current) {
           clearTimeout(debounceTimerRef.current);
         }
@@ -463,27 +346,150 @@ export function RealtimeSTTPanel({
       }
     };
 
-    recognition.onerror = (err: any) => {
-      if (err.error === 'no-speech') return; // Ignore silent periods
+    recognition.onerror = (err: SpeechRecognitionErrorEvent) => {
+      if (err.error === 'no-speech') return;
       if (err.error === 'not-allowed' || err.error === 'audio-capture') {
-        console.error('Speech recognition blocked:', err.error);
         setIsRecording(false);
         return;
       }
-      console.warn('SpeechRecognition error:', err.error || err);
     };
 
     recognition.onend = () => {
       if (isRecordingRef.current && recognitionRef.current) {
         try {
           recognitionRef.current.start();
-        } catch (e) {}
+        } catch {
+          // Ignore
+        }
       }
     };
 
     recognition.start();
     recognitionRef.current = recognition;
-  };
+  }, [onSubtitleUpdate, flushAccumulatedText]);
+
+  // Whisper STT
+  const startWhisperSTT = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStreamRef.current = stream;
+
+    const win = window as WindowWithSpeech;
+    const AudioContextClass = win.AudioContext || win.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const audioCtx = new AudioContextClass({
+      sampleRate: 16000,
+    });
+    audioContextRef.current = audioCtx;
+
+    const source = audioCtx.createMediaStreamSource(stream);
+    const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+    processorRef.current = processor;
+
+    processor.onaudioprocess = (e) => {
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+      const inputData = e.inputBuffer.getChannelData(0);
+
+      const pcm16 = new Int16Array(inputData.length);
+      for (let i = 0; i < inputData.length; i++) {
+        const s = Math.max(-1, Math.min(1, inputData[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+
+      socketRef.current.send(pcm16.buffer);
+    };
+
+    source.connect(processor);
+    processor.connect(audioCtx.destination);
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    if (socketRef.current?.readyState !== WebSocket.OPEN) {
+      connectWebSocket();
+    }
+
+    try {
+      if (sttModeRef.current === 'whisper') {
+        await startWhisperSTT();
+      } else {
+        startBrowserSTT();
+      }
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+    }
+  }, [connectWebSocket, startBrowserSTT, startWhisperSTT]);
+
+  const stopRecording = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      recognitionRef.current = null;
+    }
+
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsRecording(false);
+    setLiveSpeechText('');
+  }, []);
+
+  // Sync with meeting mic mute state (Auto start/stop STT based on mic toggle)
+  useEffect(() => {
+    if (isMuted !== undefined) {
+      if (isMuted) {
+        if (isRecordingRef.current) {
+          stopRecording();
+        }
+      } else {
+        if (!isRecordingRef.current) {
+          startRecording();
+        }
+      }
+    }
+  }, [isMuted, startRecording, stopRecording]);
+
+  useEffect(() => {
+    connectWebSocket();
+
+    // Auto-detect Whisper availability from backend
+    fetch('http://127.0.0.1:8000/api/stt/status')
+      .then((res) => res.json())
+      .then(() => {
+        const mode: STTMode = 'browser';
+        setSttMode(mode);
+        sttModeRef.current = mode;
+      })
+      .catch(() => {
+        setSttMode('browser');
+        sttModeRef.current = 'browser';
+      });
+
+    return () => {
+      stopRecording();
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (subtitleClearTimerRef.current) clearTimeout(subtitleClearTimerRef.current);
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (socketRef.current) socketRef.current.close();
+    };
+  }, [connectWebSocket, stopRecording]);
 
   const toggleRecording = () => {
     if (isRecording) {

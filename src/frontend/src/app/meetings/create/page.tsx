@@ -16,6 +16,14 @@ import {
   Paperclip,
 } from 'lucide-react';
 
+function getFileIcon(name: string) {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'pdf') return '📄';
+  if (ext === 'docx' || ext === 'doc') return '📝';
+  if (ext === 'xlsx' || ext === 'xls') return '📊';
+  return '📃';
+}
+
 export default function CreateMeetingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -89,14 +97,6 @@ export default function CreateMeetingPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getFileIcon = (name: string) => {
-    const ext = name.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'pdf') return '📄';
-    if (ext === 'docx' || ext === 'doc') return '📝';
-    if (ext === 'xlsx' || ext === 'xls') return '📊';
-    return '📃';
   };
 
   return (

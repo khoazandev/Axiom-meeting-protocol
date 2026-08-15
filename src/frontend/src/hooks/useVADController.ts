@@ -2,18 +2,59 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslationSocket, type TranscriptHistoryEntry } from './useTranslationSocket';
 import { useLocalParticipant } from '@livekit/components-react';
 
+interface SpeechRecognitionResultItem {
+  transcript: string;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: SpeechRecognitionResultItem;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface ISpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type WindowWithSpeech = Window & {
+  SpeechRecognition?: new () => ISpeechRecognition;
+  webkitSpeechRecognition?: new () => ISpeechRecognition;
+};
+
 export function useWebSpeech(
   onFinalTranscript: (text: string) => void,
   onInterimTranscript?: (text: string) => void
 ) {
   const [isRecognizing, setIsRecognizing] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const shouldListenRef = useRef(false);
   const currentInterimRef = useRef<string>('');
 
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (typeof window === 'undefined') return;
+    const win = window as WindowWithSpeech;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('Web Speech API is not supported in this browser.');
       return;
@@ -31,11 +72,13 @@ export function useWebSpeech(
       if (shouldListenRef.current) {
         try {
           recognition.start();
-        } catch (e) {}
+        } catch {
+          // Ignore restart error
+        }
       }
     };
 
-    recognition.onerror = (e: any) => {
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       // 'no-speech' is expected when mic is on but user isn't talking — not a real error
       if (e.error === 'no-speech' || e.error === 'aborted') {
         return;
@@ -46,7 +89,7 @@ export function useWebSpeech(
       }
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
       let interimTranscript = '';
 
@@ -84,9 +127,6 @@ export function useWebSpeech(
   const startRecognition = useCallback(() => {
     shouldListenRef.current = true;
     try {
-      if (recognitionRef.current && !shouldListenRef.current) {
-        // Already flagged — skip
-      }
       recognitionRef.current?.start();
     } catch {
       // Silently ignore 'already started' InvalidStateError
@@ -113,25 +153,25 @@ function cleanInterimText(text: string): string {
 
   // Remove filler words
   const fillers = [
-    /\\bừm\\b/gi,
-    /\\bà\\b/gi,
-    /\\buhm\\b/gi,
-    /\\buh\\b/gi,
-    /\\bum\\b/gi,
-    /\\ber\\b/gi,
-    /\\bah\\b/gi,
-    /\\bừ\\b/gi,
-    /\\bloại như\\b/gi,
-    /\\bkiểu như\\b/gi,
-    /\\bdạng như\\b/gi,
-    /\\bthì là\\b/gi,
-    /\\bnói chung là\\b/gi,
+    /\bừm\b/gi,
+    /\bà\b/gi,
+    /\buhm\b/gi,
+    /\buh\b/gi,
+    /\bum\b/gi,
+    /\ber\b/gi,
+    /\bah\b/gi,
+    /\bừ\b/gi,
+    /\bloại như\b/gi,
+    /\bkiểu như\b/gi,
+    /\bdạng như\b/gi,
+    /\bthì là\b/gi,
+    /\bnói chung là\b/gi,
   ];
   fillers.forEach((f) => {
     cleaned = cleaned.replace(f, '');
   });
 
-  cleaned = cleaned.replace(/\\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
   // Capitalize tech terms & common proper names
   const techTerms = {

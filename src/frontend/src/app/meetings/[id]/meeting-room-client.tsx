@@ -8,7 +8,6 @@ import {
   Calendar,
   Clock,
   ArrowLeft,
-  ShieldCheck,
   Sparkles,
   FileText,
   ChevronRight,
@@ -151,7 +150,7 @@ export function MeetingRoomClient() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   // VAD data lifted from LiveKitContent
-  const [vadStreamData, setVadStreamData] = useState<TranslationStream | null>(null);
+  const [, setVadStreamData] = useState<TranslationStream | null>(null);
   const [vadInterimText, setVadInterimText] = useState('');
   const [vadIsListening, setVadIsListening] = useState(false);
   const [vadIsConnected, setVadIsConnected] = useState(false);
@@ -207,7 +206,8 @@ export function MeetingRoomClient() {
   // Auto-scroll transcript when new entries arrive
   useEffect(() => {
     if (vadTranscriptHistory.length > 0) {
-      setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      const timer = setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      return () => clearTimeout(timer);
     }
   }, [vadTranscriptHistory.length]);
 
