@@ -15,7 +15,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         </div>
         <h1 className="text-2xl font-bold tracking-tight mb-2">Workspace Invitation</h1>
         <p className="text-text-secondary text-sm mb-6">
-          You've been invited to join a Workspace on Axiom.
+          You&apos;ve been invited to join a Workspace on Axiom.
         </p>
 
         <div className="p-3 bg-bg-base border border-border rounded-xl font-mono text-xs text-accent break-all mb-6">

@@ -17,7 +17,6 @@ import {
   Server,
   Cpu,
   CheckCircle2,
-  Zap,
   Globe,
   ChevronRight,
 } from 'lucide-react';

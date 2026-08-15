@@ -232,3 +232,88 @@ def remove_meeting_member(
 
     db.delete(target)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# LiveKit Token & In-Meeting RAG
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _PydanticBaseModel
+from livekit import api as livekit_api
+from src.backend.core.config import get_settings
+from src.backend.services.ollama_service import build_rag_answer
+
+
+class TokenResponse(_PydanticBaseModel):
+    token: str
+
+
+class RagQueryRequest(_PydanticBaseModel):
+    question: str
+    live_transcript: str | None = None
+    chat_history: list[dict] | None = None
+
+
+class RagSourceItem(_PydanticBaseModel):
+    type: str
+    snippet: str
+    filename: str | None = None
+    timestamp: int | None = None
+
+
+class RagQueryResponse(_PydanticBaseModel):
+    question: str
+    answer: str
+    sources: list[RagSourceItem]
+    context_used: list[str]
+
+
+@router.get("/{meeting_id}/token", response_model=TokenResponse)
+def get_meeting_token(
+    meeting_id: str,
+    participant_name: str,
+    db: Session = Depends(get_db),
+):
+    """Generate a LiveKit access token for a meeting room."""
+    _get_meeting_or_404(db, meeting_id)
+    settings = get_settings()
+    token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+    token.with_identity(participant_name)
+    token.with_name(participant_name)
+    token.with_grants(
+        livekit_api.VideoGrants(
+            room_join=True,
+            room=f"meeting-{meeting_id}",
+        )
+    )
+    return TokenResponse(token=token.to_jwt())
+
+
+@router.post("/{meeting_id}/rag/query", response_model=RagQueryResponse)
+def rag_query(
+    meeting_id: str,
+    payload: RagQueryRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """In-meeting RAG chatbot query."""
+    meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
+
+    sources = []
+    if meeting.description:
+        sources.append({"type": "agenda", "snippet": meeting.description})
+
+    answer = build_rag_answer(
+        question=payload.question,
+        sources=sources,
+        live_transcript=payload.live_transcript,
+        chat_history=payload.chat_history,
+    )
+
+    return RagQueryResponse(
+        question=payload.question,
+        answer=answer,
+        sources=[RagSourceItem(**s) for s in sources],
+        context_used=[s["snippet"] for s in sources],
+    )
+

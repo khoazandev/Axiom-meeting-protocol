@@ -1,15 +1,56 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+interface SpeechRecognitionResultItem {
+  transcript: string;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: SpeechRecognitionResultItem;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface ISpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type WindowWithSpeech = Window & {
+  SpeechRecognition?: new () => ISpeechRecognition;
+  webkitSpeechRecognition?: new () => ISpeechRecognition;
+};
+
 export function useWebSpeech(
   onFinalTranscript: (text: string) => void,
   onInterimTranscript?: (text: string) => void
 ) {
   const [isRecognizing, setIsRecognizing] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
 
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (typeof window === 'undefined') return;
+    const win = window as WindowWithSpeech;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('Web Speech API is not supported in this browser.');
       return;
@@ -22,9 +63,9 @@ export function useWebSpeech(
 
     recognition.onstart = () => setIsRecognizing(true);
     recognition.onend = () => setIsRecognizing(false);
-    recognition.onerror = (e: any) => console.error('Speech recognition error:', e.error);
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => console.error('Speech recognition error:', e.error);
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
       let interimTranscript = '';
 

@@ -8,7 +8,6 @@ import {
   Search,
   FileText,
   Trash2,
-  CheckCircle2,
   Loader2,
   Database,
 } from 'lucide-react';
@@ -76,9 +75,8 @@ export default function KnowledgePage() {
       formData.append('file', file);
 
       // Remove Content-Type for FormData — browser sets it with boundary
-      const { 'Content-Type': _, ...uploadHeaders } = headers as Record<string, string> & {
-        'Content-Type'?: string;
-      };
+      const uploadHeaders = { ...headers } as Record<string, string>;
+      delete uploadHeaders['Content-Type'];
 
       const res = await fetch('/api/v1/knowledge/documents', {
         method: 'POST',

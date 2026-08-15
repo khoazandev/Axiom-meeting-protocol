@@ -50,21 +50,23 @@ export function useTranslationSocket(speakerName = 'Thành viên') {
 
             // When a translation is final, add to transcript history
             if (data.is_final === true && (data.vi_text || data.en_text)) {
+              const timestamp = new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              });
+              const entry: TranscriptHistoryEntry = {
+                id: data.id,
+                vi_text: data.vi_text || data.original_text || '',
+                en_text: data.en_text || '',
+                original_text: data.original_text || '',
+                timestamp,
+                speaker: speakerName,
+              };
+
               setTranscriptHistory((prev) => {
                 // Upsert by id to avoid duplicates
                 const existingIdx = prev.findIndex((e) => e.id === data.id);
-                const entry: TranscriptHistoryEntry = {
-                  id: data.id,
-                  vi_text: data.vi_text || data.original_text || '',
-                  en_text: data.en_text || '',
-                  original_text: data.original_text || '',
-                  timestamp: new Date().toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  }),
-                  speaker: speakerName,
-                };
                 if (existingIdx !== -1) {
                   const updated = [...prev];
                   updated[existingIdx] = entry;

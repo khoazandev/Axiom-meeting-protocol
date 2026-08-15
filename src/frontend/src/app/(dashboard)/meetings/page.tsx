@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { meetingsApi, type Meeting, ApiRequestError } from '@/lib/api';
+import { meetingsApi, type Meeting } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import { MeetingCard } from '@/components/meetings/meeting-card';
 import {
@@ -35,9 +35,9 @@ export default function MeetingsDashboardPage() {
           setMeetings(data);
           setError(null);
         }
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          setError(err?.message || 'Không thể kết nối đến server.');
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setError(err.message || 'Không thể kết nối đến server.');
         }
       } finally {
         if (!controller.signal.aborted) {

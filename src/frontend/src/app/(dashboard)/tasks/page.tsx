@@ -1,23 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { getAuthHeaders } from '@/lib/api';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import {
   CheckSquare,
-  Plus,
-  Filter,
   Kanban,
   List,
   Clock,
   User,
-  AlertCircle,
-  CheckCircle2,
   Video,
   Loader2,
   Calendar,
 } from 'lucide-react';
+
+interface RemoteTask {
+  id: string;
+  title: string;
+  meeting_id?: string | number | null;
+  assignee_id?: string | null;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED';
+  due_date?: string | null;
+}
 
 interface Task {
   id: string;
@@ -50,9 +55,9 @@ export default function TasksPage() {
         const res = await fetch('/api/v1/tasks', { headers });
 
         if (res.ok) {
-          const remoteTasks = await res.json();
+          const remoteTasks = (await res.json()) as RemoteTask[];
           if (Array.isArray(remoteTasks) && remoteTasks.length > 0) {
-            const mapped: Task[] = remoteTasks.map((t: any) => ({
+            const mapped: Task[] = remoteTasks.map((t: RemoteTask) => ({
               id: t.id.substring(0, 8),
               title: t.title,
               meetingTitle: t.meeting_id ? `Meeting #${t.meeting_id}` : 'General Workspace Task',
