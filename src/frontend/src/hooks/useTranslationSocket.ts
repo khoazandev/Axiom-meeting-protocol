@@ -19,6 +19,19 @@ export interface TranscriptHistoryEntry {
   speaker: string;
 }
 
+/**
+ * Debounce delay (ms) to wait for the best translation frame before
+ * calling onFinalized. The backend pipeline sends:
+ *   Frame 2 (CTranslate2, ~100ms) → Frame 3 (LLM refined, ~1-3s)
+ * We wait 2.5s after the last is_final frame to capture the LLM result.
+ */
+const FINALIZE_DEBOUNCE_MS = 2500;
+
+interface PendingFinal {
+  entry: TranscriptHistoryEntry;
+  timer: NodeJS.Timeout;
+}
+
 export function useTranslationSocket(
   speakerName = 'Thành viên',
   onFinalized?: (entry: TranscriptHistoryEntry) => void
@@ -27,10 +40,29 @@ export function useTranslationSocket(
   const [streamData, setStreamData] = useState<TranslationStream | null>(null);
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+<<<<<<< HEAD
   const onFinalizedRef = useRef(onFinalized);
 
   useEffect(() => {
     onFinalizedRef.current = onFinalized;
+  }, [onFinalized]);
+=======
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const pendingFinalRef = useRef<Map<string, PendingFinal>>(new Map());
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isIntentionalDisconnectRef = useRef(false);
+>>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
+
+  // Flush all pending entries immediately (called on disconnect)
+  const flushPending = useCallback(() => {
+    pendingFinalRef.current.forEach((pending, id) => {
+      clearTimeout(pending.timer);
+      if (!seenIdsRef.current.has(id)) {
+        seenIdsRef.current.add(id);
+        if (onFinalized) onFinalized(pending.entry);
+      }
+    });
+    pendingFinalRef.current.clear();
   }, [onFinalized]);
 
   const connect = useCallback(() => {
@@ -42,10 +74,25 @@ export function useTranslationSocket(
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => setIsConnected(true);
+<<<<<<< HEAD
       ws.onclose = () => setIsConnected(false);
       ws.onerror = () => {
         console.warn('[STT] WebSocket connection unavailable — STT server may not be running.');
         setIsConnected(false);
+=======
+      ws.onclose = () => {
+        setIsConnected(false);
+        wsRef.current = null;
+        // Flush any pending translations before reconnect
+        flushPending();
+        if (!isIntentionalDisconnectRef.current) {
+          console.log('[STT] WS disconnected. Reconnecting in 3s...');
+          reconnectTimeoutRef.current = setTimeout(() => connect(), 3000);
+        }
+      };
+      ws.onerror = () => {
+        console.warn('[STT] WebSocket connection unavailable — STT server may not be running.');
+>>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
       };
       ws.onmessage = (event) => {
         try {
@@ -83,8 +130,27 @@ export function useTranslationSocket(
                 return [...prev, entry];
               });
 
+<<<<<<< HEAD
               if (onFinalizedRef.current) {
                 onFinalizedRef.current(entry);
+=======
+              // Debounce onFinalized: wait for the best translation (LLM refined)
+              // before saving to DB. Each new is_final frame resets the timer.
+              if (!seenIdsRef.current.has(data.id)) {
+                const existing = pendingFinalRef.current.get(data.id);
+                if (existing?.timer) clearTimeout(existing.timer);
+
+                const timer = setTimeout(() => {
+                  const pending = pendingFinalRef.current.get(data.id);
+                  if (pending && !seenIdsRef.current.has(data.id)) {
+                    seenIdsRef.current.add(data.id);
+                    if (onFinalized) onFinalized(pending.entry);
+                  }
+                  pendingFinalRef.current.delete(data.id);
+                }, FINALIZE_DEBOUNCE_MS);
+
+                pendingFinalRef.current.set(data.id, { entry, timer });
+>>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
               }
             }
           }
@@ -97,13 +163,25 @@ export function useTranslationSocket(
     } catch {
       console.warn('[STT] Could not create WebSocket connection');
     }
+<<<<<<< HEAD
   }, [speakerName]);
 
   const disconnect = useCallback(() => {
+=======
+  }, [speakerName, onFinalized, flushPending]);
+
+  const disconnect = useCallback(() => {
+    isIntentionalDisconnectRef.current = true;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    // Flush pending entries so no translations are lost
+    flushPending();
+>>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);
-  }, []);
+  }, [flushPending]);
 
   const sendText = useCallback((text: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

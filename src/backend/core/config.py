@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # JWT Authentication
     jwt_secret: str = "dev-secret-key-change-in-production-32bytesmin"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
+    access_token_expire_minutes: int = 480
     refresh_token_expire_days: int = 7
 
     # Ollama / LLM
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # AI Action Item Extraction
     extraction_model: str = "qwen3:0.6b"
-    extraction_timeout: int = 120
+    extraction_timeout: int = 900
     extraction_max_transcript_chars: int = 6000
     extraction_system_prompt: str = (
         "You are a senior product manager. Your job is to extract all action items from meeting transcripts.\n\n"
@@ -62,6 +62,10 @@ class Settings(BaseSettings):
         'Example: [{"task": "Update API docs", "owner": "Khoa", "due_date": "Friday", "priority": "HIGH", "status": "TODO"}]\n\n'
         "If no action items found, return: []"
     )
+
+    # Follow-up Task Extraction (task-extractor model)
+    task_extractor_model: str = "task-extractor01"
+    task_extractor_timeout: int = 900
 
     # Bot Test Scenario
     bot_test_script_delay_seconds: float = 2.0

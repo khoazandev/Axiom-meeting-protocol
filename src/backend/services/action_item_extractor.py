@@ -14,7 +14,7 @@ import requests
 from sqlalchemy.orm import Session
 
 from src.backend.core.config import get_settings
-from src.backend.models import ActionItem, ActionItemStatusEnum, TranscriptSegment, User
+from src.backend.models import FollowUpTask, FollowUpTaskStatusEnum, TranscriptSegment, User
 
 logger = logging.getLogger("axiom.action_extractor")
 
@@ -260,8 +260,8 @@ def extract_action_items(
 
         # Skip duplicates
         existing = (
-            db.query(ActionItem)
-            .filter(ActionItem.meeting_id == meeting_id, ActionItem.title == task)
+            db.query(FollowUpTask)
+            .filter(FollowUpTask.meeting_id == meeting_id, FollowUpTask.title == task)
             .first()
         )
         if existing:
@@ -271,11 +271,11 @@ def extract_action_items(
         if item_data.get("description"):
             description += f"\nContext: {item_data['description']}"
 
-        action_item = ActionItem(
+        action_item = FollowUpTask(
             meeting_id=meeting_id,
             title=task,
             description=description,
-            status=ActionItemStatusEnum.TODO,
+            status=FollowUpTaskStatusEnum.NOT_CONFIRMED,
         )
         db.add(action_item)
 

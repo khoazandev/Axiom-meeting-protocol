@@ -30,17 +30,23 @@ services:
     ports:
       - '8000:8000'
       - '8765:8765' # STT WebSocket
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     environment:
       DATABASE_URL: postgresql://axiom:axiom_dev_password@postgres:5432/axiom
       CORS_ORIGINS: http://localhost:3000
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      LIVEKIT_URL: ws://livekit:7880
       # Ollama / LLM (host.docker.internal = host machine from inside Docker)
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-}
       # AI Action Item Extraction
       EXTRACTION_MODEL: ${EXTRACTION_MODEL:-qwen3:0.6b}
-      EXTRACTION_TIMEOUT: ${EXTRACTION_TIMEOUT:-120}
+      EXTRACTION_TIMEOUT: ${EXTRACTION_TIMEOUT:-900}
+      # Follow-up Task Extraction
+      TASK_EXTRACTOR_MODEL: ${TASK_EXTRACTOR_MODEL:-task-extractor01}
+      TASK_EXTRACTOR_TIMEOUT: ${TASK_EXTRACTOR_TIMEOUT:-900}
     depends_on:
       postgres:
         condition: service_healthy

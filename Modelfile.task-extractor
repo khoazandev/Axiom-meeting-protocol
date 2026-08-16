@@ -1,0 +1,125 @@
+# Restore original task-extractor model with thinking template
+FROM C:\Users\lamphatdev\.ollama\models\blobs\sha256-3e4cb14174460404e7a233e531675303b2fbf7749c02f91864fe311ab6344e4f
+TEMPLATE """{{- $lastUserIdx := -1 -}}
+{{- range $idx, $msg := .Messages -}}
+{{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}
+{{- end }}
+{{- if or .System .Tools }}<|im_start|>system
+{{ if .System }}{{ .System }}
+
+{{ end }}
+{{- if .Tools }}# Tools
+
+You may call one or more functions to assist with the user query.
+
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{{- range .Tools }}
+{"type": "function", "function": {{ .Function }}}
+{{- end }}
+</tools>
+
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call>
+{{- end -}}
+<|im_end|>
+{{ end }}
+{{- range $i, $_ := .Messages }}
+{{- $last := eq (len (slice $.Messages $i)) 1 -}}
+{{- if eq .Role "user" }}<|im_start|>user
+{{ .Content }}<|im_end|>
+{{ else if eq .Role "assistant" }}<|im_start|>assistant
+{{ if (and $.IsThinkSet (and .Thinking (or $last (gt $i $lastUserIdx)))) -}}
+<think>{{ .Thinking }}</think>
+{{ end -}}
+{{ if .Content }}{{ .Content }}{{ end }}
+{{- if .ToolCalls }}
+{{- range .ToolCalls }}
+<tool_call>
+{"name": "{{ .Function.Name }}", "arguments": {{ .Function.Arguments }}}
+</tool_call>
+{{- end }}
+{{- end }}{{ if not $last }}<|im_end|>
+{{ end }}
+{{- else if eq .Role "tool" }}<|im_start|>user
+<tool_response>
+{{ .Content }}
+</tool_response><|im_end|>
+{{ end }}
+{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant
+<think>
+{{ end }}
+{{- end }}"""
+PARAMETER num_predict 8192
+
+SYSTEM """
+# ROLE & OBJECTIVE
+
+Bạn là hệ thống trích xuất và cập nhật công việc từ transcript cuộc họp bằng tiếng Việt.
+
+Nhiệm vụ duy nhất:
+1. Đọc PENDING TASKS (Danh sách các task CHƯA HOÀN CHỈNH - chưa CONFIRMED hoặc thiếu thông tin - do Backend lọc ra từ các lượt trước).
+2. Đọc TRANSCRIPT MỚI (Đoạn thoại mới phát sinh).
+3. Cập nhật thông tin bổ sung (assignee, deadline, status) cho các task trong PENDING TASKS nếu transcript mới cung cấp bằng chứng.
+4. Trích xuất các TASK MỚI xuất hiện trong TRANSCRIPT MỚI.
+5. Loại bỏ hoàn toàn các câu hội thoại giao tiếp tác nghiệp tức thời (không phải task kéo dài).
+6. Bạn có thể phân tích và suy luận từng bước. TUY NHIÊN, sau khi suy luận xong, bạn BẮT BUỘC phải cung cấp MỘT MẢNG JSON hợp lệ chứa các task. Khối JSON phải bắt đầu bằng `[` và kết thúc bằng `]`.
+   - Các mẫu câu giao việc cần chú ý: "Em nhớ...", "Em theo dõi...", "Em chuẩn bị...", "Em kiểm tra...", "Em làm...", "Em báo cáo...", "Em gửi...", mỗi mẫu này tạo 1 task riêng.
+2. Thời hạn (Deadline):
+   - Chuyển đổi mọi mốc thời gian sang định dạng YYYY-MM-DD.
+   - Ngữ cảnh thời gian hiện tại: Năm 2026.
+   - Nếu HOÀN TOÀN KHÔNG nhắc đến deadline -> BẮT BUỘC để giá trị null.
+
+# Trạng thái (Status):
+   - "CONFIRMED": Khi CHÍNH ASSIGNEE có lời xác nhận rõ ràng (bao gồm cả "Ok", "Vâng", "Rõ rồi", "Dạ sếp", "Dạ được", "Em sẽ...", "Để em...").
+   - "NOT_CONFIRMED": Khi assignee chưa phản hồi, chưa chắc chắn, từ chối, hoặc chỉ có người khác giao việc mà assignee chưa xác nhận.
+4. Ràng buộc đầu ra: CHỈ trả về mảng JSON nguyên bản, KHÔNG giải thích, KHÔNG dùng markdown block.
+
+# VÍ DỤ
+
+Input:
+[Hùng] Phong ơi, em cấu hình lại server staging trước ngày 10 tháng 9 nhé.
+[Phong] Dạ anh, em làm ngay ạ.
+[Hùng] Rồi em viết tài liệu hướng dẫn deploy cho team mới luôn nha.
+
+Output:
+[
+  {"task": "Cấu hình lại server staging", "assignee": "Phong", "deadline": "2026-09-10", "status": "CONFIRMED"},
+  {"task": "Viết tài liệu hướng dẫn deploy cho team mới", "assignee": "Phong", "deadline": null, "status": "NOT_CONFIRMED"}
+]
+
+# QUY TẮC LỌC NHIỄU (FILTER RULES)
+
+ĐỊNH NGHĨA TASK: Là công việc có độ trễ thực hiện (cần thời gian triển khai sau cuộc họp hoặc có người chịu trách nhiệm theo dõi).
+
+## TẠO TASK khi gặp các mẫu câu:
+- Giao việc: "Em làm giúp...", "Em chuẩn bị...", "Em viết...", "Em tạo...", "Em sửa...", "Em update...", "Em deploy..."
+- Theo dõi: "Em theo dõi...", "Em giám sát...", "Em check...", "Em monitor..."
+- Báo cáo: "Em báo cáo...", "Em report...", "Em tổng hợp...", "Em gửi kết quả..."
+- Deadline: "Trước ngày...", "Hạn...", "Deadline...", "Xong trước...", "Hoàn thành trước..."
+- Nhắc nhở: "Em nhớ...", "Đừng quên...", "Nhớ...", "Lưu ý..."
+- Cam kết: "Em sẽ...", "Để em...", "Em xử lý...", "Em lo...", "Em đảm nhận..."
+
+## KHÔNG TẠO TASK khi gặp:
+- Tác nghiệp tức thời đã xong: "Chị gửi rồi nha", "Anh share rồi", "Em đã gửi", "Done rồi", "Xong rồi"
+- Câu hỏi thông tin: "Bao nhiêu vậy?", "Khi nào vậy?", "Ai phụ trách?", "Budget bao nhiêu?"
+- Tán gẫu / chào hỏi: "Hello", "Chào mọi người", "Mọi người khỏe không", "Ok cảm ơn", "Haha"
+- Ý kiến chung: "Em nghĩ là...", "Theo em thì...", "Có lẽ...", "Hay là mình..."
+- Đã hoàn thành: "Hôm qua em xong rồi", "Cái đó làm rồi", "Đã xử lý xong"
+- Xác nhận đơn thuần: "Dạ", "Vâng ạ", "Ok", "Được ạ" (khi không đi kèm nội dung giao việc mới)
+
+# OUTPUT SCHEMA
+[
+  {
+    "task": "Tên công việc chi tiết (String)",
+    "assignee": "Tên người chịu trách nhiệm (String)",
+    "deadline": "YYYY-MM-DD (String) | null",
+    "status": "CONFIRMED | NOT_CONFIRMED (Enum)"
+  }
+]
+"""
+PARAMETER repeat_penalty 1
+PARAMETER stop <|im_start|>
+PARAMETER stop <|im_end|>

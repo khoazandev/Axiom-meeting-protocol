@@ -203,3 +203,36 @@ async def websocket_realtime_stt(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Meeting Events WebSocket — per-room event broadcasting
+# ---------------------------------------------------------------------------
+@app.websocket("/ws/meeting-events/{meeting_id}")
+async def websocket_meeting_events(websocket: WebSocket, meeting_id: str):
+    """
+    WebSocket for meeting room events.
+
+    Clients connect to receive real-time events:
+    - `tasks_preview`: New follow-up tasks extracted by AI
+    - `meeting_ended`: Meeting has been ended by host (includes summary)
+    """
+    from src.backend.services.meeting_events import meeting_events_manager
+
+    await meeting_events_manager.connect(meeting_id, websocket)
+    try:
+        while True:
+            # Keep connection alive — client sends pings, we just wait
+            message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
+    except WebSocketDisconnect:
+        logging.info("Meeting events WS disconnected: meeting=%s", meeting_id)
+    except Exception as e:
+        logging.error("Meeting events WS error for %s: %s", meeting_id, e)
+    finally:
+        meeting_events_manager.disconnect(meeting_id, websocket)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
