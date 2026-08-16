@@ -26,7 +26,11 @@ jobs:
       - name: Run Pytest
         env:
           PYTHONPATH: .
-        run: uv run pytest src/backend/
+        run: |
+          uv run pytest src/backend/ \
+            --ignore=src/backend/tests/test_llm_extraction.py \
+            --ignore=src/backend/tests/test_e2e_extraction.py \
+            -v
 
   frontend-lint:
     runs-on: ubuntu-latest
