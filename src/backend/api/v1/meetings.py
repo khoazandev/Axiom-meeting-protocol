@@ -5,6 +5,7 @@ All meeting-related API routes live here, following the Process (P) layer
 of the H-P-D-I architecture.
 """
 
+from datetime import timedelta
 from livekit import api
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -108,6 +109,7 @@ def get_meeting_token(meeting_id: str, participant_name: str):
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     token.with_identity(participant_name)
     token.with_name(participant_name)
+    token.with_ttl(timedelta(hours=8))
     token.with_grants(
         api.VideoGrants(
             room_join=True,

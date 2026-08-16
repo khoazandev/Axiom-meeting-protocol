@@ -70,10 +70,15 @@ class TranscriptSourceTypeEnum(str, enum.Enum):
     TRANSCRIPT = "TRANSCRIPT"
 
 
-class ActionItemStatusEnum(str, enum.Enum):
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
+class FollowUpTaskStatusEnum(str, enum.Enum):
+    CONFIRMED = "CONFIRMED"
+    NOT_CONFIRMED = "NOT_CONFIRMED"
     COMPLETED = "COMPLETED"
+
+class FollowUpTaskSourceEnum(str, enum.Enum):
+    AI_REALTIME = "AI_REALTIME"
+    AI_FULL = "AI_FULL"
+    MANUAL = "MANUAL"
 
 
 class OrgInvitationStatusEnum(str, enum.Enum):
@@ -419,6 +424,10 @@ class TranscriptSegment(database.Base):
     meeting = relationship("Meeting")
     speaker = relationship("User", foreign_keys=[speaker_id])
 
+    @property
+    def speaker_name(self) -> str | None:
+        return self.speaker.full_name if self.speaker else None
+
 
 class MeetingSummary(database.Base):
     __tablename__ = "meeting_summaries"
@@ -440,8 +449,8 @@ class MeetingSummary(database.Base):
     meeting = relationship("Meeting")
 
 
-class ActionItem(database.Base):
-    __tablename__ = "action_items"
+class FollowUpTask(database.Base):
+    __tablename__ = "follow_up_tasks"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     meeting_id = Column(
@@ -450,13 +459,24 @@ class ActionItem(database.Base):
     transcript_segment_id = Column(
         String, ForeignKey("transcript_segments.id"), nullable=True
     )
-    assignee_id = Column(String, ForeignKey("users.id"), nullable=True)
+    assignee_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    
+    @property
+    def assignee_name(self) -> str | None:
+        return self.assignee.full_name if self.assignee else None
+
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    due_at = Column(DateTime, nullable=True)
+    deadline = Column(DateTime, nullable=True)
     status = Column(
-        Enum(ActionItemStatusEnum),
-        default=ActionItemStatusEnum.TODO,
+        Enum(FollowUpTaskStatusEnum),
+        default=FollowUpTaskStatusEnum.NOT_CONFIRMED,
+        nullable=False,
+    )
+    source = Column(
+        Enum(FollowUpTaskSourceEnum),
+        default=FollowUpTaskSourceEnum.MANUAL,
         nullable=False,
     )
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
@@ -468,7 +488,6 @@ class ActionItem(database.Base):
 
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
-    assignee = relationship("User", foreign_keys=[assignee_id])
 
 
 class KnowledgeChunk(database.Base):
@@ -522,3 +541,43 @@ class AuditLog(database.Base):
 
     organization = relationship("Organization")
     user = relationship("User", foreign_keys=[user_id])
+
+
+# ---------------------------------------------------------------------------
+# RAG Feedback Learning — Extraction Corrections
+# ---------------------------------------------------------------------------
+class CorrectionTypeEnum(str, enum.Enum):
+    TASK_EDITED = "task_edited"
+    TASK_DELETED = "task_deleted"
+    TASK_ADDED = "task_added"
+
+
+class ExtractionCorrection(database.Base):
+    __tablename__ = "extraction_corrections"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(
+        String, ForeignKey("meetings.id"), nullable=False, index=True
+    )
+
+    # Transcript snippet that triggered the extraction
+    transcript_snippet = Column(Text, nullable=False)
+
+    # What the AI originally produced
+    ai_output_json = Column(Text, nullable=False)  # JSON string of list[dict]
+
+    # What the user corrected it to
+    corrected_output_json = Column(Text, nullable=False)  # JSON string of list[dict]
+
+    # Type of correction
+    correction_type = Column(
+        Enum(CorrectionTypeEnum), nullable=False
+    )
+
+    # Embedding vector stored as JSON string of list[float] (768-dim)
+    embedding_json = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    meeting = relationship("Meeting")
+

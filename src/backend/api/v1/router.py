@@ -15,6 +15,7 @@ from src.backend.api.v1.meetings_v2 import router as meetings_v2_router
 from src.backend.api.v1.org_invitations import accept_router as invitation_accept_router
 from src.backend.api.v1.org_invitations import router as org_invitations_router
 from src.backend.api.v1.organizations import router as organizations_router
+from src.backend.api.v1.meeting_end import router as meeting_end_router
 
 # Temporarily disabled during platform redesign — will be refactored in Phase 2/3
 # from src.backend.api.v1.admin import router as admin_router
@@ -47,6 +48,7 @@ api_v1_router.include_router(org_invitations_router)
 api_v1_router.include_router(meetings_v2_router)
 api_v1_router.include_router(meeting_content_router)
 api_v1_router.include_router(invitation_accept_router)
+api_v1_router.include_router(meeting_end_router)
 api_v1_router.include_router(users_router)
 
 

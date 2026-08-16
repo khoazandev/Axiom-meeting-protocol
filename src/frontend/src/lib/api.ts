@@ -92,6 +92,20 @@ export interface ActionItemResponse {
   created_at: string;
 }
 
+export interface FollowUpTask {
+  id: string;
+  meeting_id: string;
+  title: string;
+  description: string | null;
+  status: 'CONFIRMED' | 'NOT_CONFIRMED';
+  assignee_id: string | null;
+  assignee_name?: string | null;
+  deadline: string | null;
+  source: 'AI_REALTIME' | 'AI_FULL' | 'MANUAL';
+  transcript_segment_id: string | null;
+  created_at?: string;
+}
+
 export interface TranscriptResponse {
   id: string;
   meeting_id: string;
@@ -102,6 +116,18 @@ export interface TranscriptResponse {
   sequence?: number;
   confidence?: string | null;
   created_at: string;
+}
+
+export interface MeetingEndResponse {
+  meeting_id: string;
+  status: string;
+  summary: {
+    id: string | null;
+    content: string;
+    key_points: string | null;
+    decisions: string | null;
+  } | null;
+  follow_up_tasks: FollowUpTask[];
 }
 
 // ── Error Class ──────────────────────────────────────────
@@ -349,9 +375,51 @@ export const meetingsApi = {
     });
   },
 
-  /** Get action items for a meeting. */
-  getActionItems(meetingId: number | string): Promise<ActionItemResponse[]> {
-    return apiFetch<ActionItemResponse[]>(`/api/v1/meetings/${meetingId}/action-items`);
+  /** Get follow-up tasks for a meeting. */
+  getFollowUpTasks(meetingId: number | string): Promise<FollowUpTask[]> {
+    return apiFetch<FollowUpTask[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
+  },
+
+  /** Create a manual follow-up task (HOST only). */
+  createFollowUpTask(
+    meetingId: number | string,
+    data: { title: string; assignee_id?: string; deadline?: string }
+  ): Promise<FollowUpTask> {
+    return apiFetch<FollowUpTask>(`/api/v1/meetings/${meetingId}/follow-up-tasks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Update a follow-up task (HOST only). */
+  updateFollowUpTask(
+    meetingId: number | string,
+    taskId: string,
+    data: { title?: string; assignee_id?: string; deadline?: string; status?: string }
+  ): Promise<FollowUpTask> {
+    return apiFetch<FollowUpTask>(`/api/v1/meetings/${meetingId}/follow-up-tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Delete a follow-up task (HOST only). */
+  deleteFollowUpTask(meetingId: number | string, taskId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/meetings/${meetingId}/follow-up-tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /** End a meeting (HOST only). Triggers full extraction + summary + room close. */
+  endMeeting(meetingId: number | string): Promise<MeetingEndResponse> {
+    return apiFetch<MeetingEndResponse>(`/api/v1/meetings/${meetingId}/end`, {
+      method: 'POST',
+    });
+  },
+
+  /** @deprecated Use getFollowUpTasks instead */
+  getActionItems(meetingId: number | string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
   },
 
   /** Get transcripts for a meeting. */

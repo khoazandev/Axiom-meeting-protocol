@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from src.backend.api import deps
 from src.backend.database import get_db
 from src.backend.models import (
-    ActionItem,
+    FollowUpTask,
     Meeting,
     MeetingBookmark,
     MeetingFile,
@@ -115,7 +115,7 @@ def get_meeting_mom(
 
     # Key decisions & Action Items from bookmarks & ActionItems
     bookmarks = db.query(MeetingBookmark).filter(MeetingBookmark.meeting_id == meeting.id).all()
-    action_items_db = db.query(ActionItem).filter(ActionItem.meeting_id == meeting.id).all()
+    action_items_db = db.query(FollowUpTask).filter(FollowUpTask.meeting_id == meeting.id).all()
 
     key_decisions = [b.note for b in bookmarks if not b.is_action_item]
     if not key_decisions:
