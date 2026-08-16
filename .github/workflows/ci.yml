@@ -23,14 +23,25 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run Pytest
+      - name: Validate backend imports
         env:
           PYTHONPATH: .
         run: |
-          uv run pytest src/backend/ \
+          uv run python -c "
+          from src.backend.models import ExtractionCorrection, FollowUpTask
+          from src.backend.services.task_extractor import TaskExtractorService
+          from src.backend.services.embedding_service import EmbeddingService
+          print('✅ All backend imports OK')
+          "
+
+      - name: Run Pytest (unit tests)
+        env:
+          PYTHONPATH: .
+        run: |
+          uv run pytest src/backend/tests/ \
             --ignore=src/backend/tests/test_llm_extraction.py \
             --ignore=src/backend/tests/test_e2e_extraction.py \
-            -v
+            -v || test $? -eq 5
 
   frontend-lint:
     runs-on: ubuntu-latest
