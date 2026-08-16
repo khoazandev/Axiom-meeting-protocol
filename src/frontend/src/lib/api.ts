@@ -81,20 +81,29 @@ export interface RagQueryResponse {
   context_used: string[];
 }
 
-<<<<<<< HEAD
 export interface ActionItemResponse {
-=======
-export interface FollowUpTask {
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
   id: string;
   meeting_id: string;
   title: string;
   description: string | null;
-<<<<<<< HEAD
   status: string;
   assignee_id?: string | null;
   due_date?: string | null;
   created_at: string;
+}
+
+export interface FollowUpTask {
+  id: string;
+  meeting_id: string;
+  title: string;
+  description: string | null;
+  status: 'CONFIRMED' | 'NOT_CONFIRMED';
+  assignee_id: string | null;
+  assignee_name?: string | null;
+  deadline: string | null;
+  source: 'AI_REALTIME' | 'AI_FULL' | 'MANUAL';
+  transcript_segment_id: string | null;
+  created_at?: string;
 }
 
 export interface TranscriptResponse {
@@ -107,14 +116,6 @@ export interface TranscriptResponse {
   sequence?: number;
   confidence?: string | null;
   created_at: string;
-=======
-  status: 'CONFIRMED' | 'NOT_CONFIRMED';
-  assignee_id: string | null;
-  assignee_name?: string | null;
-  deadline: string | null;
-  source: 'AI_REALTIME' | 'AI_FULL' | 'MANUAL';
-  transcript_segment_id: string | null;
-  created_at?: string;
 }
 
 export interface MeetingEndResponse {
@@ -127,7 +128,6 @@ export interface MeetingEndResponse {
     decisions: string | null;
   } | null;
   follow_up_tasks: FollowUpTask[];
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
 }
 
 // ── Error Class ──────────────────────────────────────────
@@ -375,11 +375,6 @@ export const meetingsApi = {
     });
   },
 
-<<<<<<< HEAD
-  /** Get action items for a meeting. */
-  getActionItems(meetingId: number | string): Promise<ActionItemResponse[]> {
-    return apiFetch<ActionItemResponse[]>(`/api/v1/meetings/${meetingId}/action-items`);
-=======
   /** Get follow-up tasks for a meeting. */
   getFollowUpTasks(meetingId: number | string): Promise<FollowUpTask[]> {
     return apiFetch<FollowUpTask[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
@@ -425,7 +420,6 @@ export const meetingsApi = {
   /** @deprecated Use getFollowUpTasks instead */
   getActionItems(meetingId: number | string): Promise<any[]> {
     return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
   },
 
   /** Get transcripts for a meeting. */

@@ -40,18 +40,10 @@ export function useTranslationSocket(
   const [streamData, setStreamData] = useState<TranslationStream | null>(null);
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
-<<<<<<< HEAD
-  const onFinalizedRef = useRef(onFinalized);
-
-  useEffect(() => {
-    onFinalizedRef.current = onFinalized;
-  }, [onFinalized]);
-=======
   const seenIdsRef = useRef<Set<string>>(new Set());
   const pendingFinalRef = useRef<Map<string, PendingFinal>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isIntentionalDisconnectRef = useRef(false);
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
 
   // Flush all pending entries immediately (called on disconnect)
   const flushPending = useCallback(() => {
@@ -74,12 +66,6 @@ export function useTranslationSocket(
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => setIsConnected(true);
-<<<<<<< HEAD
-      ws.onclose = () => setIsConnected(false);
-      ws.onerror = () => {
-        console.warn('[STT] WebSocket connection unavailable — STT server may not be running.');
-        setIsConnected(false);
-=======
       ws.onclose = () => {
         setIsConnected(false);
         wsRef.current = null;
@@ -92,7 +78,6 @@ export function useTranslationSocket(
       };
       ws.onerror = () => {
         console.warn('[STT] WebSocket connection unavailable — STT server may not be running.');
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
       };
       ws.onmessage = (event) => {
         try {
@@ -130,10 +115,6 @@ export function useTranslationSocket(
                 return [...prev, entry];
               });
 
-<<<<<<< HEAD
-              if (onFinalizedRef.current) {
-                onFinalizedRef.current(entry);
-=======
               // Debounce onFinalized: wait for the best translation (LLM refined)
               // before saving to DB. Each new is_final frame resets the timer.
               if (!seenIdsRef.current.has(data.id)) {
@@ -150,7 +131,6 @@ export function useTranslationSocket(
                 }, FINALIZE_DEBOUNCE_MS);
 
                 pendingFinalRef.current.set(data.id, { entry, timer });
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
               }
             }
           }
@@ -163,11 +143,6 @@ export function useTranslationSocket(
     } catch {
       console.warn('[STT] Could not create WebSocket connection');
     }
-<<<<<<< HEAD
-  }, [speakerName]);
-
-  const disconnect = useCallback(() => {
-=======
   }, [speakerName, onFinalized, flushPending]);
 
   const disconnect = useCallback(() => {
@@ -177,7 +152,6 @@ export function useTranslationSocket(
     }
     // Flush pending entries so no translations are lost
     flushPending();
->>>>>>> 521b68e (feat: RAG feedback learning + task extraction pipeline + real-time task broadcast)
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);
