@@ -50,6 +50,9 @@ install:
     @echo "3. Installing frontend dependencies..."
     cd src/frontend; npm install
     @echo ""
+    @echo "4. Pulling task-extractor model from Ollama..."
+    ollama pull lamphat03102004/task-extractor01
+    @echo ""
     @echo "All dependencies installed!"
 
 # ============================================================================

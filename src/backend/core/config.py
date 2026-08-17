@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     )
 
     # Follow-up Task Extraction (task-extractor model)
-    task_extractor_model: str = "task-extractor01"
+    task_extractor_model: str = "lamphat03102004/task-extractor01"
     task_extractor_timeout: int = 900
 
     # Bot Test Scenario
