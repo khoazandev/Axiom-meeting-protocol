@@ -30,6 +30,7 @@ from src.backend.api.v1.meeting_end import router as meeting_end_router
 from src.backend.api.v1.tasks import router as tasks_router
 from src.backend.api.v1.users import router as users_router
 from src.backend.api.v1.webhooks import router as webhooks_router
+from src.backend.api.v1.jira import router as jira_router
 
 # from src.backend.api.v1.workspaces import router as workspaces_router
 
@@ -50,6 +51,7 @@ api_v1_router.include_router(meeting_content_router)
 api_v1_router.include_router(invitation_accept_router)
 api_v1_router.include_router(meeting_end_router)
 api_v1_router.include_router(users_router)
+api_v1_router.include_router(jira_router)
 
 
 # Routes below will be re-enabled after Phase 2/3 refactor
