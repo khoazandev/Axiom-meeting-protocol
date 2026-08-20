@@ -15,7 +15,9 @@ interface IssueCardProps {
 export function IssueCard({ issue, onClick, onDragStart }: IssueCardProps) {
   const isDone = issue.status === 'DONE';
   const subtaskCount = issue.subtasks ? issue.subtasks.length : 0;
-  const doneSubtaskCount = issue.subtasks ? issue.subtasks.filter((s) => s.status === 'DONE').length : 0;
+  const doneSubtaskCount = issue.subtasks
+    ? issue.subtasks.filter((s) => s.status === 'DONE').length
+    : 0;
 
   return (
     <div
@@ -27,7 +29,9 @@ export function IssueCard({ issue, onClick, onDragStart }: IssueCardProps) {
       }`}
     >
       {/* Top row: Summary */}
-      <p className={`text-xs font-semibold text-text-primary leading-snug line-clamp-2 ${isDone ? 'line-through text-text-muted' : ''}`}>
+      <p
+        className={`text-xs font-semibold text-text-primary leading-snug line-clamp-2 ${isDone ? 'line-through text-text-muted' : ''}`}
+      >
         {issue.summary}
       </p>
 

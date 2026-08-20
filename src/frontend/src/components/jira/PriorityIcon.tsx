@@ -13,7 +13,10 @@ export function PriorityIcon({ priority, className = 'w-3.5 h-3.5' }: PriorityIc
     case 'CRITICAL':
     case 'HIGHEST':
       return (
-        <span title="Critical / Highest" className="inline-flex items-center text-rose-500 font-bold">
+        <span
+          title="Critical / Highest"
+          className="inline-flex items-center text-rose-500 font-bold"
+        >
           <ChevronsUp className={className} />
         </span>
       );

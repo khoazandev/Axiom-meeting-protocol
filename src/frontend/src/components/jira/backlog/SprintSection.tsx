@@ -85,7 +85,9 @@ export function SprintSection({
                 {isActive ? 'ACTIVE' : 'PLANNED'}
               </span>
             </div>
-            {sprint.goal && <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{sprint.goal}</p>}
+            {sprint.goal && (
+              <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{sprint.goal}</p>
+            )}
           </div>
         </div>
 
@@ -151,8 +153,8 @@ export function SprintSection({
                     issue.status === 'DONE'
                       ? 'bg-success/15 text-success'
                       : issue.status === 'IN_PROGRESS'
-                      ? 'bg-accent/15 text-accent'
-                      : 'bg-bg-elevated text-text-muted'
+                        ? 'bg-accent/15 text-accent'
+                        : 'bg-bg-elevated text-text-muted'
                   }`}
                 >
                   {issue.status.replace('_', ' ')}

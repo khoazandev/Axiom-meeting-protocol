@@ -50,7 +50,9 @@ export function JiraDocsView({ project }: JiraDocsViewProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <BookOpen className="w-5 h-5 text-blue-400" />
-            <h2 className="text-sm font-bold text-text-primary">Workspace Documentation & Meeting Notes</h2>
+            <h2 className="text-sm font-bold text-text-primary">
+              Workspace Documentation & Meeting Notes
+            </h2>
           </div>
           {project.meeting_id && (
             <Link
@@ -64,7 +66,8 @@ export function JiraDocsView({ project }: JiraDocsViewProps) {
           )}
         </div>
         <p className="text-xs text-text-secondary leading-relaxed">
-          All documentation, AI-generated executive summaries, action item transcripts, and decisions linked to this Jira Workspace.
+          All documentation, AI-generated executive summaries, action item transcripts, and
+          decisions linked to this Jira Workspace.
         </p>
       </div>
 
@@ -74,7 +77,9 @@ export function JiraDocsView({ project }: JiraDocsViewProps) {
           <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <div>
               <h3 className="text-sm font-bold text-text-primary">{meeting.title}</h3>
-              <p className="text-xs text-text-muted mt-0.5">{meeting.description || 'No description provided.'}</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                {meeting.description || 'No description provided.'}
+              </p>
             </div>
             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               {meeting.status}
@@ -101,7 +106,9 @@ export function JiraDocsView({ project }: JiraDocsViewProps) {
                   >
                     <div className="flex items-center justify-between text-[10px] text-text-muted">
                       <span className="font-bold text-blue-400">{t.speaker_name}</span>
-                      <span>{t.start_time} - {t.end_time}</span>
+                      <span>
+                        {t.start_time} - {t.end_time}
+                      </span>
                     </div>
                     <p className="text-text-primary leading-relaxed">{t.text}</p>
                   </div>

@@ -57,7 +57,10 @@ export function CreateIssueModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" />
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+      />
 
       {/* Dialog */}
       <div className="relative w-full max-w-lg bg-bg-card border border-border rounded-2xl p-6 shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-150">
@@ -150,11 +153,15 @@ export function CreateIssueModal({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-text-muted block mb-1">Story Points</label>
+              <label className="text-xs font-semibold text-text-muted block mb-1">
+                Story Points
+              </label>
               <input
                 type="number"
                 value={storyPoints}
-                onChange={(e) => setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) =>
+                  setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))
+                }
                 placeholder="e.g. 3, 5, 8"
                 className="w-full text-xs font-medium rounded-xl bg-bg-elevated border border-border px-3 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
               />

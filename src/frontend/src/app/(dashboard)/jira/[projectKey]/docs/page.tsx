@@ -56,15 +56,15 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
       <JiraSidebar currentProjectKey={project.key} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-4">
-        <JiraWorkspaceHeader project={project} onCreateIssueClick={() => setShowCreateModal(true)} />
+        <JiraWorkspaceHeader
+          project={project}
+          onCreateIssueClick={() => setShowCreateModal(true)}
+        />
         <JiraDocsView project={project} />
       </main>
 
       {showCreateModal && (
-        <CreateIssueModal
-          projectId={project.id}
-          onClose={() => setShowCreateModal(false)}
-        />
+        <CreateIssueModal projectId={project.id} onClose={() => setShowCreateModal(false)} />
       )}
     </div>
   );

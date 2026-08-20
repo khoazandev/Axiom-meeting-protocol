@@ -35,7 +35,11 @@ export function JiraListView({
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   const filteredIssues = issues.filter((issue) => {
-    if (search && !issue.summary.toLowerCase().includes(search.toLowerCase()) && !issue.key.toLowerCase().includes(search.toLowerCase())) {
+    if (
+      search &&
+      !issue.summary.toLowerCase().includes(search.toLowerCase()) &&
+      !issue.key.toLowerCase().includes(search.toLowerCase())
+    ) {
       return false;
     }
     if (statusFilter !== 'ALL' && issue.status !== statusFilter) {
@@ -44,7 +48,11 @@ export function JiraListView({
     return true;
   });
 
-  const handleQuickStatusChange = async (issueId: string, newStatus: string, e: React.MouseEvent) => {
+  const handleQuickStatusChange = async (
+    issueId: string,
+    newStatus: string,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
     try {
       const updated = await jiraApi.updateIssue(issueId, { status: newStatus });
@@ -126,11 +134,11 @@ export function JiraListView({
                         <IssueTypeIcon type={issue.type} />
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-blue-400">
-                      {issue.key}
-                    </td>
+                    <td className="py-3 px-3 font-mono font-bold text-blue-400">{issue.key}</td>
                     <td className="py-3 px-4">
-                      <span className={`font-semibold ${issue.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary group-hover:text-blue-400'} transition-colors`}>
+                      <span
+                        className={`font-semibold ${issue.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary group-hover:text-blue-400'} transition-colors`}
+                      >
                         {issue.summary}
                       </span>
                     </td>
@@ -138,13 +146,15 @@ export function JiraListView({
                       <select
                         value={issue.status}
                         onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => handleQuickStatusChange(issue.id, e.target.value, e as any)}
+                        onChange={(e) =>
+                          handleQuickStatusChange(issue.id, e.target.value, e as any)
+                        }
                         className={`text-[10px] font-bold uppercase rounded-lg px-2 py-1 border transition-all ${
                           issue.status === 'DONE'
                             ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                             : issue.status === 'IN_PROGRESS' || issue.status === 'IN_REVIEW'
-                            ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                            : 'bg-bg-elevated text-text-secondary border-border'
+                              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                              : 'bg-bg-elevated text-text-secondary border-border'
                         }`}
                       >
                         <option value="TODO">To Do</option>

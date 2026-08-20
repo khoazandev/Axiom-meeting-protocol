@@ -43,7 +43,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Single root div — prevents hydration mismatch from differing root elements
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col" suppressHydrationWarning>
+    <div
+      className="min-h-screen bg-bg-base text-text-primary flex flex-col"
+      suppressHydrationWarning
+    >
       {!mounted || !ready ? (
         <div className="flex items-center justify-center h-screen">
           <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />

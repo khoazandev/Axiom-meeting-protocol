@@ -69,12 +69,17 @@ export default function JiraListPage({ params }: { params: Promise<{ projectKey:
       <JiraSidebar currentProjectKey={project.key} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-4">
-        <JiraWorkspaceHeader project={project} onCreateIssueClick={() => setShowCreateModal(true)} />
+        <JiraWorkspaceHeader
+          project={project}
+          onCreateIssueClick={() => setShowCreateModal(true)}
+        />
         <JiraListView
           project={project}
           issues={issues}
           onIssueClick={(issue) => setSelectedIssueId(issue.id)}
-          onIssueUpdated={(updated) => setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+          onIssueUpdated={(updated) =>
+            setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+          }
           onCreateIssueClick={() => setShowCreateModal(true)}
         />
       </main>
@@ -82,7 +87,9 @@ export default function JiraListPage({ params }: { params: Promise<{ projectKey:
       <IssueDetailDrawer
         issueId={selectedIssueId}
         onClose={() => setSelectedIssueId(null)}
-        onIssueUpdated={(updated) => setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+        onIssueUpdated={(updated) =>
+          setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+        }
         onIssueDeleted={(deletedId) => setIssues((prev) => prev.filter((i) => i.id !== deletedId))}
       />
 

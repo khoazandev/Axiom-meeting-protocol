@@ -49,13 +49,12 @@ export function InviteSpaceMemberModal({ project, isOpen, onClose }: InviteSpace
             </div>
             <div>
               <h2 className="text-sm font-bold text-text-primary">Add People to Space</h2>
-              <p className="text-[11px] text-text-muted">Space: {project.name} ({project.key})</p>
+              <p className="text-[11px] text-text-muted">
+                Space: {project.name} ({project.key})
+              </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-text-muted hover:text-text-primary text-xs p-1"
-          >
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-xs p-1">
             ✕
           </button>
         </div>
@@ -107,7 +106,8 @@ export function InviteSpaceMemberModal({ project, isOpen, onClose }: InviteSpace
               <p>
                 {role === 'MEMBER' && 'Members can create, edit, move cards, and start sprints.'}
                 {role === 'ADMIN' && 'Admins have full access including space settings & members.'}
-                {role === 'VIEWER' && 'Viewers can view boards, backlog, and timeline in read-only mode.'}
+                {role === 'VIEWER' &&
+                  'Viewers can view boards, backlog, and timeline in read-only mode.'}
               </p>
             </div>
 

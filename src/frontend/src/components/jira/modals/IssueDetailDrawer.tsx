@@ -146,7 +146,8 @@ export function IssueDetailDrawer({
   };
 
   const completedSubtasks = subtasks.filter((s) => s.status === 'DONE').length;
-  const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+  const subtaskProgress =
+    subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
@@ -300,8 +301,14 @@ export function IssueDetailDrawer({
                 <input
                   type="number"
                   value={storyPoints}
-                  onChange={(e) => setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))}
-                  onBlur={() => handleSaveField({ story_points: storyPoints === '' ? undefined : Number(storyPoints) })}
+                  onChange={(e) =>
+                    setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                  onBlur={() =>
+                    handleSaveField({
+                      story_points: storyPoints === '' ? undefined : Number(storyPoints),
+                    })
+                  }
                   placeholder="Points"
                   className="w-full text-xs font-semibold rounded-lg bg-bg-card border border-border px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
                 />
@@ -364,7 +371,9 @@ export function IssueDetailDrawer({
                       </button>
                       <span
                         className={`text-xs font-medium truncate ${
-                          sub.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary'
+                          sub.status === 'DONE'
+                            ? 'line-through text-text-muted'
+                            : 'text-text-primary'
                         }`}
                       >
                         {sub.summary}
@@ -407,13 +416,19 @@ export function IssueDetailDrawer({
               {/* Comments Feed */}
               <div className="space-y-3">
                 {comments.map((c) => (
-                  <div key={c.id} className="p-3.5 rounded-xl bg-bg-elevated/40 border border-border space-y-1.5">
+                  <div
+                    key={c.id}
+                    className="p-3.5 rounded-xl bg-bg-elevated/40 border border-border space-y-1.5"
+                  >
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-text-primary">
                         {c.author_name || 'Team Member'}
                       </span>
                       <span className="text-[10px] text-text-muted">
-                        {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(c.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                     </div>
                     <p className="text-xs text-text-secondary leading-relaxed">{c.content}</p>

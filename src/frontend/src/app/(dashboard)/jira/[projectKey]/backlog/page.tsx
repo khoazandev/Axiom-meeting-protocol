@@ -66,9 +66,7 @@ export default function JiraBacklogPage({ params }: { params: Promise<{ projectK
   };
 
   const handleMoveIssueToSprint = async (issueId: string, sprintId: string | null) => {
-    setIssues((prev) =>
-      prev.map((i) => (i.id === issueId ? { ...i, sprint_id: sprintId } : i))
-    );
+    setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, sprint_id: sprintId } : i)));
 
     try {
       await jiraApi.updateIssue(issueId, { sprint_id: sprintId || '' });

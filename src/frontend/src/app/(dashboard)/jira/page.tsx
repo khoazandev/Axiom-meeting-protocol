@@ -41,7 +41,9 @@ export default function JiraOverviewPage() {
       setLoading(true);
       const [projs, depts] = await Promise.all([
         jiraApi.getProjects(),
-        activeOrganization ? departmentApi.list(activeOrganization.id).catch(() => []) : Promise.resolve([]),
+        activeOrganization
+          ? departmentApi.list(activeOrganization.id).catch(() => [])
+          : Promise.resolve([]),
       ]);
       setProjects(projs);
       setDepartments(depts);
@@ -94,7 +96,11 @@ export default function JiraOverviewPage() {
   };
 
   const filteredProjects = projects.filter((p) => {
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.key.toLowerCase().includes(search.toLowerCase())) {
+    if (
+      search &&
+      !p.name.toLowerCase().includes(search.toLowerCase()) &&
+      !p.key.toLowerCase().includes(search.toLowerCase())
+    ) {
       return false;
     }
     if (selectedDeptFilter !== 'ALL' && p.department_id !== selectedDeptFilter) {
@@ -189,7 +195,8 @@ export default function JiraOverviewPage() {
             <div className="space-y-1">
               <h2 className="text-base font-bold text-text-primary">No spaces found</h2>
               <p className="text-xs text-text-secondary">
-                Create a standalone Scrum/Kanban space or start a department meeting to generate one with AI!
+                Create a standalone Scrum/Kanban space or start a department meeting to generate one
+                with AI!
               </p>
             </div>
             <button
@@ -285,7 +292,9 @@ export default function JiraOverviewPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-text-secondary">Project Key * (2-5 letters)</label>
+                <label className="font-semibold text-text-secondary">
+                  Project Key * (2-5 letters)
+                </label>
                 <input
                   type="text"
                   required

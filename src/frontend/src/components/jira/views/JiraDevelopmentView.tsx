@@ -20,7 +20,11 @@ interface JiraDevelopmentViewProps {
   onSyncMeetingTasks?: () => void;
 }
 
-export function JiraDevelopmentView({ project, issues, onSyncMeetingTasks }: JiraDevelopmentViewProps) {
+export function JiraDevelopmentView({
+  project,
+  issues,
+  onSyncMeetingTasks,
+}: JiraDevelopmentViewProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
@@ -50,10 +54,13 @@ export function JiraDevelopmentView({ project, issues, onSyncMeetingTasks }: Jir
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Code2 className="w-5 h-5 text-blue-400" />
-              <h2 className="text-sm font-bold text-text-primary">AI Action Item Pipeline & Development Sync</h2>
+              <h2 className="text-sm font-bold text-text-primary">
+                AI Action Item Pipeline & Development Sync
+              </h2>
             </div>
             <p className="text-xs text-text-secondary">
-              Real-time synchronization between Meeting Speech-to-Text (`faster-whisper`), LLM Task Extractor and Jira Issues.
+              Real-time synchronization between Meeting Speech-to-Text (`faster-whisper`), LLM Task
+              Extractor and Jira Issues.
             </p>
           </div>
 
@@ -63,7 +70,11 @@ export function JiraDevelopmentView({ project, issues, onSyncMeetingTasks }: Jir
               disabled={isSyncing}
               className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm shrink-0 disabled:opacity-60"
             >
-              {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {isSyncing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
               <span>Sync Action Items from Meeting</span>
             </button>
           )}
@@ -86,7 +97,8 @@ export function JiraDevelopmentView({ project, issues, onSyncMeetingTasks }: Jir
 
         {meetingIssues.length === 0 ? (
           <div className="p-8 text-center text-xs text-text-muted italic bg-bg-elevated/30 rounded-xl border border-border/50">
-            No issues synchronized directly from meeting transcripts yet. Click &quot;Sync Action Items&quot; above to import.
+            No issues synchronized directly from meeting transcripts yet. Click &quot;Sync Action
+            Items&quot; above to import.
           </div>
         ) : (
           <div className="space-y-2">

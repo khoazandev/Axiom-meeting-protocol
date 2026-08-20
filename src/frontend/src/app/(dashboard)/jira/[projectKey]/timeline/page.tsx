@@ -64,12 +64,17 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
       <JiraSidebar currentProjectKey={project.key} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-5">
-        <JiraWorkspaceHeader project={project} onCreateIssueClick={() => setShowCreateModal(true)} />
+        <JiraWorkspaceHeader
+          project={project}
+          onCreateIssueClick={() => setShowCreateModal(true)}
+        />
 
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-text-primary">Sprint & Roadmap Timeline</h2>
-            <p className="text-xs text-text-muted mt-0.5">Track deliverables, sprint burn-down and progress.</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              Track deliverables, sprint burn-down and progress.
+            </p>
           </div>
         </div>
 
@@ -78,10 +83,16 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
           {sprints.map((sprint) => {
             const sprintIssues = issues.filter((i) => i.sprint_id === sprint.id);
             const doneIssues = sprintIssues.filter((i) => i.status === 'DONE');
-            const percent = sprintIssues.length > 0 ? Math.round((doneIssues.length / sprintIssues.length) * 100) : 0;
+            const percent =
+              sprintIssues.length > 0
+                ? Math.round((doneIssues.length / sprintIssues.length) * 100)
+                : 0;
 
             return (
-              <div key={sprint.id} className="p-5 rounded-2xl bg-bg-card border border-border space-y-4 shadow-xs">
+              <div
+                key={sprint.id}
+                className="p-5 rounded-2xl bg-bg-card border border-border space-y-4 shadow-xs"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
@@ -91,8 +102,8 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
                           sprint.status === 'ACTIVE'
                             ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                             : sprint.status === 'CLOSED'
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-bg-elevated text-text-muted'
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'bg-bg-elevated text-text-muted'
                         }`}
                       >
                         {sprint.status}
@@ -130,8 +141,12 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
                     >
                       <div className="flex items-center gap-2 truncate pr-2">
                         <IssueTypeIcon type={issue.type} />
-                        <span className="font-mono text-[11px] font-bold text-blue-400">{issue.key}</span>
-                        <span className={`truncate ${issue.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                        <span className="font-mono text-[11px] font-bold text-blue-400">
+                          {issue.key}
+                        </span>
+                        <span
+                          className={`truncate ${issue.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary'}`}
+                        >
                           {issue.summary}
                         </span>
                       </div>

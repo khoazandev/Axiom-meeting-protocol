@@ -9,7 +9,11 @@ import { CreateIssueModal } from '@/components/jira/modals/CreateIssueModal';
 import { Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function JiraDevelopmentPage({ params }: { params: Promise<{ projectKey: string }> }) {
+export default function JiraDevelopmentPage({
+  params,
+}: {
+  params: Promise<{ projectKey: string }>;
+}) {
   const { projectKey } = use(params);
 
   const [project, setProject] = useState<JiraProject | null>(null);
@@ -61,12 +65,11 @@ export default function JiraDevelopmentPage({ params }: { params: Promise<{ proj
       <JiraSidebar currentProjectKey={project.key} />
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-4">
-        <JiraWorkspaceHeader project={project} onCreateIssueClick={() => setShowCreateModal(true)} />
-        <JiraDevelopmentView
+        <JiraWorkspaceHeader
           project={project}
-          issues={issues}
-          onSyncMeetingTasks={loadData}
+          onCreateIssueClick={() => setShowCreateModal(true)}
         />
+        <JiraDevelopmentView project={project} issues={issues} onSyncMeetingTasks={loadData} />
       </main>
 
       {showCreateModal && (

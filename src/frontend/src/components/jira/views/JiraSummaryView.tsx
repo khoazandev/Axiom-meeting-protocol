@@ -25,7 +25,9 @@ interface JiraSummaryViewProps {
 export function JiraSummaryView({ project, sprints, issues, onIssueClick }: JiraSummaryViewProps) {
   const totalIssues = issues.length;
   const doneIssues = issues.filter((i) => i.status === 'DONE');
-  const inProgressIssues = issues.filter((i) => i.status === 'IN_PROGRESS' || i.status === 'IN_REVIEW');
+  const inProgressIssues = issues.filter(
+    (i) => i.status === 'IN_PROGRESS' || i.status === 'IN_REVIEW'
+  );
   const todoIssues = issues.filter((i) => i.status === 'TODO');
 
   const completionRate = totalIssues > 0 ? Math.round((doneIssues.length / totalIssues) * 100) : 0;
@@ -53,10 +55,15 @@ export function JiraSummaryView({ project, sprints, issues, onIssueClick }: Jira
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-text-primary">{completionRate}%</span>
-            <span className="text-xs text-text-muted">({doneIssues.length}/{totalIssues} completed)</span>
+            <span className="text-xs text-text-muted">
+              ({doneIssues.length}/{totalIssues} completed)
+            </span>
           </div>
           <div className="w-full h-1.5 rounded-full bg-bg-elevated overflow-hidden">
-            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${completionRate}%` }} />
+            <div
+              className="h-full bg-emerald-500 transition-all duration-500"
+              style={{ width: `${completionRate}%` }}
+            />
           </div>
         </div>
 
@@ -110,30 +117,55 @@ export function JiraSummaryView({ project, sprints, issues, onIssueClick }: Jira
             <div>
               <div className="flex justify-between text-xs font-semibold text-text-primary mb-1">
                 <span>To Do</span>
-                <span>{todoIssues.length} ({totalIssues > 0 ? Math.round((todoIssues.length / totalIssues) * 100) : 0}%)</span>
+                <span>
+                  {todoIssues.length} (
+                  {totalIssues > 0 ? Math.round((todoIssues.length / totalIssues) * 100) : 0}%)
+                </span>
               </div>
               <div className="w-full h-2 rounded-full bg-bg-elevated overflow-hidden">
-                <div className="h-full bg-slate-500" style={{ width: `${totalIssues > 0 ? (todoIssues.length / totalIssues) * 100 : 0}%` }} />
+                <div
+                  className="h-full bg-slate-500"
+                  style={{
+                    width: `${totalIssues > 0 ? (todoIssues.length / totalIssues) * 100 : 0}%`,
+                  }}
+                />
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-xs font-semibold text-text-primary mb-1">
                 <span>In Progress / In Review</span>
-                <span>{inProgressIssues.length} ({totalIssues > 0 ? Math.round((inProgressIssues.length / totalIssues) * 100) : 0}%)</span>
+                <span>
+                  {inProgressIssues.length} (
+                  {totalIssues > 0 ? Math.round((inProgressIssues.length / totalIssues) * 100) : 0}
+                  %)
+                </span>
               </div>
               <div className="w-full h-2 rounded-full bg-bg-elevated overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: `${totalIssues > 0 ? (inProgressIssues.length / totalIssues) * 100 : 0}%` }} />
+                <div
+                  className="h-full bg-blue-500"
+                  style={{
+                    width: `${totalIssues > 0 ? (inProgressIssues.length / totalIssues) * 100 : 0}%`,
+                  }}
+                />
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-xs font-semibold text-text-primary mb-1">
                 <span>Done</span>
-                <span>{doneIssues.length} ({totalIssues > 0 ? Math.round((doneIssues.length / totalIssues) * 100) : 0}%)</span>
+                <span>
+                  {doneIssues.length} (
+                  {totalIssues > 0 ? Math.round((doneIssues.length / totalIssues) * 100) : 0}%)
+                </span>
               </div>
               <div className="w-full h-2 rounded-full bg-bg-elevated overflow-hidden">
-                <div className="h-full bg-emerald-500" style={{ width: `${totalIssues > 0 ? (doneIssues.length / totalIssues) * 100 : 0}%` }} />
+                <div
+                  className="h-full bg-emerald-500"
+                  style={{
+                    width: `${totalIssues > 0 ? (doneIssues.length / totalIssues) * 100 : 0}%`,
+                  }}
+                />
               </div>
             </div>
           </div>

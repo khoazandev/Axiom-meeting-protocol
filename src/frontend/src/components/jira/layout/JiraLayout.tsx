@@ -33,9 +33,7 @@ export function JiraLayout({
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-        {children}
-      </main>
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">{children}</main>
 
       {/* Global Create Issue Modal */}
       {showCreateIssueModal && project && (

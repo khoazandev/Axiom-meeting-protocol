@@ -87,7 +87,11 @@ export default function JiraBoardPage({ params }: { params: Promise<{ projectKey
   };
 
   const filteredIssues = issues.filter((issue) => {
-    if (searchQuery && !issue.summary.toLowerCase().includes(searchQuery.toLowerCase()) && !issue.key.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (
+      searchQuery &&
+      !issue.summary.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !issue.key.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
       return false;
     }
     if (typeFilter !== 'ALL' && issue.type !== typeFilter) {

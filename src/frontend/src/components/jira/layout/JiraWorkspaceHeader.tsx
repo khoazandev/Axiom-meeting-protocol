@@ -41,7 +41,12 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
     { id: 'list', label: 'List', icon: ListFilter, href: `/jira/${project.key}/list` },
     { id: 'board', label: 'Board', icon: Kanban, href: `/jira/${project.key}/board` },
     { id: 'backlog', label: 'Backlog', icon: ListFilter, href: `/jira/${project.key}/backlog` },
-    { id: 'development', label: 'Development', icon: Code2, href: `/jira/${project.key}/development` },
+    {
+      id: 'development',
+      label: 'Development',
+      icon: Code2,
+      href: `/jira/${project.key}/development`,
+    },
     { id: 'timeline', label: 'Timeline', icon: Calendar, href: `/jira/${project.key}/timeline` },
     { id: 'docs', label: 'Docs', icon: FileText, href: `/jira/${project.key}/docs` },
     { id: 'reports', label: 'Reports', icon: BarChart3, href: `/jira/${project.key}/reports` },
@@ -79,9 +84,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
               {project.meeting_id ? '🎙️' : project.key.substring(0, 2)}
             </div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">
-              {project.name}
-            </h1>
+            <h1 className="text-xl font-bold text-text-primary tracking-tight">{project.name}</h1>
 
             {/* 3-dots Menu Button */}
             <div className="relative">
@@ -96,10 +99,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
               {/* 3-dots Dropdown Menu */}
               {showDropdown && (
                 <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setShowDropdown(false)}
-                  />
+                  <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />
                   <div className="absolute left-0 top-8 z-40 w-52 rounded-xl bg-bg-card border border-border p-1.5 shadow-xl space-y-0.5 text-xs animate-in fade-in zoom-in-95">
                     <button
                       onClick={() => {
@@ -164,7 +164,11 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
             className="p-2 rounded-xl bg-bg-card border border-border hover:border-blue-500 text-text-muted hover:text-text-primary transition-all shadow-xs"
             title="Share Space"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Share2 className="w-3.5 h-3.5" />
+            )}
           </button>
 
           <button
@@ -180,7 +184,9 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
       {/* Jira View Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pt-1">
         {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href) || (tab.id === 'board' && pathname === `/jira/${project.key}`);
+          const isActive =
+            pathname.startsWith(tab.href) ||
+            (tab.id === 'board' && pathname === `/jira/${project.key}`);
           return (
             <Link
               key={tab.id}

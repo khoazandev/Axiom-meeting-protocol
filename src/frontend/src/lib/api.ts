@@ -562,7 +562,10 @@ export const departmentApi = {
   list: async (orgId: string): Promise<Department[]> => {
     return apiFetch<Department[]>(`/api/v1/organizations/${orgId}/departments`);
   },
-  create: async (orgId: string, data: { name: string; description?: string }): Promise<Department> => {
+  create: async (
+    orgId: string,
+    data: { name: string; description?: string }
+  ): Promise<Department> => {
     return apiFetch<Department>(`/api/v1/organizations/${orgId}/departments`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -571,7 +574,10 @@ export const departmentApi = {
 };
 
 export const jiraApi = {
-  getProjects(params?: { department_id?: string; organization_id?: string }): Promise<JiraProject[]> {
+  getProjects(params?: {
+    department_id?: string;
+    organization_id?: string;
+  }): Promise<JiraProject[]> {
     const q = new URLSearchParams();
     if (params?.department_id) q.set('department_id', params.department_id);
     if (params?.organization_id) q.set('organization_id', params.organization_id);
@@ -604,21 +610,32 @@ export const jiraApi = {
     return apiFetch<Sprint[]>(url);
   },
 
-  createSprint(data: { project_id: string; name: string; goal?: string; duration?: string }): Promise<Sprint> {
+  createSprint(data: {
+    project_id: string;
+    name: string;
+    goal?: string;
+    duration?: string;
+  }): Promise<Sprint> {
     return apiFetch<Sprint>('/api/v1/jira/sprints', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  startSprint(sprintId: string, data: { goal?: string; duration?: string; start_date?: string; end_date?: string }): Promise<Sprint> {
+  startSprint(
+    sprintId: string,
+    data: { goal?: string; duration?: string; start_date?: string; end_date?: string }
+  ): Promise<Sprint> {
     return apiFetch<Sprint>(`/api/v1/jira/sprints/${sprintId}/start`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  completeSprint(sprintId: string, data: { move_incomplete_to_sprint_id?: string | null }): Promise<Sprint> {
+  completeSprint(
+    sprintId: string,
+    data: { move_incomplete_to_sprint_id?: string | null }
+  ): Promise<Sprint> {
     return apiFetch<Sprint>(`/api/v1/jira/sprints/${sprintId}/complete`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -634,7 +651,12 @@ export const jiraApi = {
 
   getIssues(
     projectIdOrKey: string,
-    params?: { sprint_id?: string; type_filter?: string; status_filter?: string; assignee_id?: string }
+    params?: {
+      sprint_id?: string;
+      type_filter?: string;
+      status_filter?: string;
+      assignee_id?: string;
+    }
   ): Promise<Issue[]> {
     const query = new URLSearchParams();
     if (params?.sprint_id) query.append('sprint_id', params.sprint_id);
@@ -678,7 +700,10 @@ export const jiraApi = {
     });
   },
 
-  reorderIssue(issueIdOrKey: string, data: { sprint_id?: string | null; status?: string; position: number }): Promise<Issue> {
+  reorderIssue(
+    issueIdOrKey: string,
+    data: { sprint_id?: string | null; status?: string; position: number }
+  ): Promise<Issue> {
     return apiFetch<Issue>(`/api/v1/jira/issues/${issueIdOrKey}/reorder`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -702,11 +727,13 @@ export const jiraApi = {
     return apiFetch<JiraProject>(`/api/v1/jira/meetings/${meetingId}/workspace`);
   },
 
-  syncMeetingTasksToJira(meetingId: string, data: { project_key?: string; project_name?: string; target_project_id?: string }): Promise<Issue[]> {
+  syncMeetingTasksToJira(
+    meetingId: string,
+    data: { project_key?: string; project_name?: string; target_project_id?: string }
+  ): Promise<Issue[]> {
     return apiFetch<Issue[]>(`/api/v1/jira/meetings/${meetingId}/sync-to-jira`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 };
-

@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  jiraApi,
-  JiraProject,
-} from '@/lib/api';
+import { jiraApi, JiraProject } from '@/lib/api';
 import {
   Sparkles,
   Clock,
@@ -139,10 +136,12 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
               <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
-                <path d="M11.53 2c0 2.4 1.97 4.35 4.39 4.35h2.89V3.53C18.81 2.69 18.12 2 17.28 2h-5.75zm0 5.67c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53h-5.75zm-6.24 5.66c0 2.4 1.97 4.35 4.39 4.35h2.89v-2.82c0-.85-.69-1.53-1.53-1.53H5.29zm0-5.66c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53H5.29z"/>
+                <path d="M11.53 2c0 2.4 1.97 4.35 4.39 4.35h2.89V3.53C18.81 2.69 18.12 2 17.28 2h-5.75zm0 5.67c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53h-5.75zm-6.24 5.66c0 2.4 1.97 4.35 4.39 4.35h2.89v-2.82c0-.85-.69-1.53-1.53-1.53H5.29zm0-5.66c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53H5.29z" />
               </svg>
             </div>
-            <span className="font-bold text-sm text-text-primary tracking-tight">Jira Software</span>
+            <span className="font-bold text-sm text-text-primary tracking-tight">
+              Jira Software
+            </span>
           </div>
           <button
             onClick={() => setCollapsed(true)}
@@ -175,7 +174,11 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                   <Clock className="w-4 h-4 text-text-muted" />
                   <span>Recent</span>
                 </div>
-                {recentOpen ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
+                {recentOpen ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+                )}
               </button>
 
               {recentOpen && (
@@ -207,7 +210,11 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                   <Star className="w-4 h-4 text-amber-500 fill-amber-500/20" />
                   <span>Starred ({starredSpaces.length})</span>
                 </div>
-                {starredOpen ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
+                {starredOpen ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+                )}
               </button>
 
               {starredOpen && starredSpaces.length > 0 && (
@@ -269,7 +276,9 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
           {/* Spaces / Workspaces Section */}
           <div className="pt-2 border-t border-border">
             <div className="flex items-center justify-between px-2.5 py-1 text-text-muted">
-              <span className="font-bold text-[11px] uppercase tracking-wider">Spaces ({projects.length})</span>
+              <span className="font-bold text-[11px] uppercase tracking-wider">
+                Spaces ({projects.length})
+              </span>
               <button
                 onClick={onOpenCreateProject}
                 className="p-0.5 hover:text-text-primary hover:bg-bg-elevated rounded"
@@ -312,7 +321,9 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                       }`}
                       title={isStarred ? 'Unstar' : 'Star space'}
                     >
-                      <Star className={`w-3 h-3 ${isStarred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                      <Star
+                        className={`w-3 h-3 ${isStarred ? 'fill-amber-500 text-amber-500' : ''}`}
+                      />
                     </button>
                   </Link>
                 );
@@ -392,7 +403,12 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
           <div className="w-full max-w-md bg-bg-card border border-border rounded-2xl p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h2 className="text-sm font-bold text-text-primary">Connected Apps & AI Pipeline</h2>
-              <button onClick={() => setShowAppsModal(false)} className="text-text-muted hover:text-text-primary text-xs">✕</button>
+              <button
+                onClick={() => setShowAppsModal(false)}
+                className="text-text-muted hover:text-text-primary text-xs"
+              >
+                ✕
+              </button>
             </div>
             <div className="space-y-2.5 text-xs">
               <div className="p-3 rounded-xl bg-bg-elevated border border-border flex items-center justify-between">
@@ -400,10 +416,14 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                   <Bot className="w-4 h-4 text-emerald-400" />
                   <div>
                     <div className="font-bold text-text-primary">AI Task Extractor</div>
-                    <div className="text-[11px] text-text-muted">Extracts action items from meeting audio</div>
+                    <div className="text-[11px] text-text-muted">
+                      Extracts action items from meeting audio
+                    </div>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Active
+                </span>
               </div>
 
               <div className="p-3 rounded-xl bg-bg-elevated border border-border flex items-center justify-between">
@@ -411,10 +431,14 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                   <Video className="w-4 h-4 text-blue-400" />
                   <div>
                     <div className="font-bold text-text-primary">LiveKit WebRTC Server</div>
-                    <div className="text-[11px] text-text-muted">Real-time video & audio streaming</div>
+                    <div className="text-[11px] text-text-muted">
+                      Real-time video & audio streaming
+                    </div>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">Connected</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  Connected
+                </span>
               </div>
             </div>
           </div>
@@ -427,10 +451,16 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
           <div className="w-full max-w-md bg-bg-card border border-border rounded-2xl p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h2 className="text-sm font-bold text-text-primary">Sprint Goals & Milestones</h2>
-              <button onClick={() => setShowGoalsModal(false)} className="text-text-muted hover:text-text-primary text-xs">✕</button>
+              <button
+                onClick={() => setShowGoalsModal(false)}
+                className="text-text-muted hover:text-text-primary text-xs"
+              >
+                ✕
+              </button>
             </div>
             <p className="text-xs text-text-secondary leading-relaxed">
-              Define sprint objectives, key milestones, and completion criteria for current active sprints.
+              Define sprint objectives, key milestones, and completion criteria for current active
+              sprints.
             </p>
             <div className="p-3 rounded-xl bg-bg-elevated border border-border text-xs space-y-2">
               <div className="flex items-center gap-2 font-bold text-text-primary">
@@ -451,7 +481,12 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
           <div className="w-full max-w-md bg-bg-card border border-border rounded-2xl p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h2 className="text-sm font-bold text-text-primary">Quick Issue Filters</h2>
-              <button onClick={() => setShowFiltersModal(false)} className="text-text-muted hover:text-text-primary text-xs">✕</button>
+              <button
+                onClick={() => setShowFiltersModal(false)}
+                className="text-text-muted hover:text-text-primary text-xs"
+              >
+                ✕
+              </button>
             </div>
             <div className="space-y-1 text-xs">
               <Link
