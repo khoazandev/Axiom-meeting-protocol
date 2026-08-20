@@ -3,7 +3,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY src/frontend/package.json src/frontend/package-lock.json ./
-RUN npm ci --prefer-offline
+RUN npm install
 
 # ─── Stage 2: Builder ──────────────────────────────────────────
 FROM node:20-alpine AS builder

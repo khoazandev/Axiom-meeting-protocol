@@ -22,11 +22,12 @@ import {
   Menu,
   X,
   ChevronDown,
+  Kanban,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/meetings', icon: Video, labelKey: 'meetings' as const },
-  { href: '/tasks', icon: CheckSquare, labelKey: 'tasks' as const },
+  { href: '/jira', icon: Kanban, labelKey: 'tasks' as const },
   { href: '/calendar', icon: CalendarDays, labelKey: 'calendar' as const },
   { href: '/knowledge', icon: FolderOpen, labelKey: 'knowledge' as const },
 ];

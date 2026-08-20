@@ -96,6 +96,14 @@ export default function TasksPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <a
+            href="/jira"
+            className="px-3.5 py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <Kanban className="w-3.5 h-3.5" />
+            <span>Open Jira Workspaces</span>
+          </a>
+
           {/* View Mode Toggle */}
           <div className="flex items-center bg-bg-card border border-border p-1 rounded-xl">
             <button

@@ -581,3 +581,170 @@ class ExtractionCorrection(database.Base):
 
     meeting = relationship("Meeting")
 
+
+# ---------------------------------------------------------------------------
+# Mini Jira / Project Management System
+# ---------------------------------------------------------------------------
+class IssueTypeEnum(str, enum.Enum):
+    EPIC = "EPIC"
+    STORY = "STORY"
+    TASK = "TASK"
+    BUG = "BUG"
+    SUBTASK = "SUBTASK"
+
+
+class IssueStatusEnum(str, enum.Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    IN_REVIEW = "IN_REVIEW"
+    DONE = "DONE"
+
+
+class IssuePriorityEnum(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class SprintStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+
+
+class DurationEnum(str, enum.Enum):
+    ONE_WEEK = "ONE_WEEK"
+    TWO_WEEKS = "TWO_WEEKS"
+    THREE_WEEKS = "THREE_WEEKS"
+    FOUR_WEEKS = "FOUR_WEEKS"
+    CUSTOM = "CUSTOM"
+
+
+class JiraProject(database.Base):
+    __tablename__ = "jira_projects"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    key = Column(String(20), unique=True, nullable=False, index=True)  # e.g., "SMA", "MTG-101"
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=True, unique=True)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=True, index=True)
+    department_id = Column(String, ForeignKey("departments.id"), nullable=True)
+    created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    issue_counter = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    meeting = relationship("Meeting")
+    organization = relationship("Organization")
+    department = relationship("Department")
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    sprints = relationship("Sprint", back_populates="project", cascade="all, delete-orphan")
+    issues = relationship("Issue", back_populates="project", cascade="all, delete-orphan")
+
+
+class Sprint(database.Base):
+    __tablename__ = "sprints"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(String, ForeignKey("jira_projects.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)  # e.g. "SMA Sprint 1"
+    goal = Column(Text, nullable=True)
+    duration = Column(Enum(DurationEnum), default=DurationEnum.TWO_WEEKS, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    status = Column(Enum(SprintStatusEnum), default=SprintStatusEnum.PENDING, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    project = relationship("JiraProject", back_populates="sprints")
+    issues = relationship("Issue", back_populates="sprint")
+
+
+class Issue(database.Base):
+    __tablename__ = "issues"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(String, ForeignKey("jira_projects.id"), nullable=False, index=True)
+    key = Column(String(30), unique=True, nullable=False, index=True)  # e.g., "SMA-1"
+    summary = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    type = Column(Enum(IssueTypeEnum), default=IssueTypeEnum.TASK, nullable=False)
+    status = Column(Enum(IssueStatusEnum), default=IssueStatusEnum.TODO, nullable=False)
+    priority = Column(Enum(IssuePriorityEnum), default=IssuePriorityEnum.MEDIUM, nullable=False)
+    story_points = Column(Integer, nullable=True)
+
+    # Hierarchy
+    parent_id = Column(String, ForeignKey("issues.id"), nullable=True)
+    epic_id = Column(String, ForeignKey("issues.id"), nullable=True)
+    sprint_id = Column(String, ForeignKey("sprints.id"), nullable=True, index=True)
+
+    # Drag-and-drop order
+    sprint_position = Column(Integer, default=0, nullable=False)
+    board_position = Column(Integer, default=0, nullable=False)
+
+    # People
+    reporter_id = Column(String, ForeignKey("users.id"), nullable=False)
+    assignee_id = Column(String, ForeignKey("users.id"), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+
+    # Meeting provenance
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=True)
+    transcript_segment_id = Column(String, ForeignKey("transcript_segments.id"), nullable=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    project = relationship("JiraProject", back_populates="issues")
+    sprint = relationship("Sprint", back_populates="issues")
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    meeting = relationship("Meeting")
+    transcript_segment = relationship("TranscriptSegment")
+    comments = relationship("IssueComment", back_populates="issue", cascade="all, delete-orphan")
+    parent = relationship("Issue", remote_side=[id], foreign_keys=[parent_id], backref="subtasks")
+
+    @property
+    def assignee_name(self) -> str | None:
+        return self.assignee.full_name if self.assignee else None
+
+    @property
+    def reporter_name(self) -> str | None:
+        return self.reporter.full_name if self.reporter else None
+
+
+class IssueComment(database.Base):
+    __tablename__ = "issue_comments"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    issue_id = Column(String, ForeignKey("issues.id"), nullable=False, index=True)
+    author_id = Column(String, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    issue = relationship("Issue", back_populates="comments")
+    author = relationship("User", foreign_keys=[author_id])
+
+    @property
+    def author_name(self) -> str | None:
+        return self.author.full_name if self.author else None
+
+

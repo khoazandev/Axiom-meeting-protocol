@@ -15,11 +15,14 @@ import {
   Mic,
   MicOff,
   UserPlus,
+  Kanban,
+  ExternalLink,
 } from 'lucide-react';
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import {
   meetingsApi,
+  jiraApi,
   type Meeting,
   type RagSource,
   type ActionItemResponse,
@@ -248,13 +251,28 @@ export function MeetingRoomClient() {
       }
     };
 
-    // Initial fetch
     fetchActionItems();
-
-    // Poll every 10 seconds
-    const interval = setInterval(fetchActionItems, 10000);
+    const interval = setInterval(fetchActionItems, 5000);
     return () => clearInterval(interval);
   }, [meetingId]);
+
+  const [isOpeningJira, setIsOpeningJira] = useState(false);
+  const handleOpenJiraWorkspace = async () => {
+    if (!meetingId) return;
+    try {
+      setIsOpeningJira(true);
+      const project = await jiraApi.getMeetingWorkspace(meetingId);
+      // Also sync current action items
+      if (actionItems.length > 0) {
+        await jiraApi.syncMeetingTasksToJira(meetingId, { target_project_id: project.id });
+      }
+      router.push(`/jira/${project.key}/board`);
+    } catch (err) {
+      console.error('Failed to open Jira workspace:', err);
+    } finally {
+      setIsOpeningJira(false);
+    }
+  };
 
   const [aiQueryMsg, setAiQueryMsg] = useState('');
 
@@ -602,13 +620,29 @@ export function MeetingRoomClient() {
 
                   <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0B101E]">
                     <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40 sticky top-0 z-10 flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5" />
-                        Follow-up Tasks
-                      </span>
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                        {actionItems.length}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5" />
+                          Follow-up Tasks
+                        </span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          {actionItems.length}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={handleOpenJiraWorkspace}
+                        disabled={isOpeningJira}
+                        className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-300 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+                        title="Open Jira Board for this Meeting"
+                      >
+                        {isOpeningJira ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Kanban className="w-3 h-3" />
+                        )}
+                        <span>Jira Board</span>
+                      </button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2">
                       {actionItems.length === 0 ? (
