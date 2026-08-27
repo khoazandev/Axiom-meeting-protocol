@@ -3,7 +3,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY src/frontend/package.json src/frontend/package-lock.json ./
-RUN npm ci --prefer-offline
+RUN npm install
 
 # ─── Stage 2: Builder ──────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -32,7 +32,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 

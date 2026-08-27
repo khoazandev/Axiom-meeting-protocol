@@ -16,15 +16,24 @@ from src.backend.schemas.auth import TokenResponse, UserLogin, UserRegister, Use
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+import re
+
+def normalize_email(email: str) -> str:
+    # Remove any trailing @gmail.com (even if repeated)
+    email = re.sub(r'(@gmail\.com)+$', '', email.strip(), flags=re.IGNORECASE)
+    return email + "@gmail.com"
+
+
 @router.post("/register", response_model=UserResponse)
 def register_user(payload: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise ValidationException("A user with this email already exists")
 
     hashed_pw = hash_password(payload.password)
     user = User(
-        email=payload.email,
+        email=email,
         password_hash=hashed_pw,
         full_name=payload.full_name,
         provider="local",
@@ -37,7 +46,8 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login_user(payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    user = db.query(User).filter(User.email == email).first()
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise AuthenticationException("Invalid email or password")
 

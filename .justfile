@@ -13,7 +13,7 @@ backend-install:
 
 backend-dev:
     @echo "Starting backend development server..."
-    uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
+    uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8001
 
 backend-test:
     @echo "Running backend tests..."
@@ -49,6 +49,9 @@ install:
     @echo ""
     @echo "3. Installing frontend dependencies..."
     cd src/frontend; npm install
+    @echo ""
+    @echo "4. Pulling task-extractor model from Ollama..."
+    ollama pull lamphat03102004/task-extractor01
     @echo ""
     @echo "All dependencies installed!"
 

@@ -42,6 +42,15 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -53,90 +62,149 @@
 
 /* ─── Light Mode (default) ─────────────────────────────────── */
 :root {
-  --bg-base: #ffffff;
-  --bg-card: #f4f4f5;
-  --bg-elevated: #e4e4e7;
-  --border: #d4d4d8;
-  --border-subtle: #e4e4e7;
-  --text-primary: #09090b;
-  --text-secondary: #52525b;
-  --text-muted: #71717a;
-  --text-placeholder: #71717a;
-  --accent: #2563eb;
-  --accent-muted: rgba(37, 99, 235, 0.1);
+  /* 6 Core Tokens (Strict) */
+  --core-primary: #2563eb;
+  --core-background: #f8fafc;
+  --core-surface: #ffffff;
+  --core-text: #0f172a;
+  --core-muted: #64748b;
+  --core-success: #16a34a;
+
+  --border: #e2e8f0;
+  --danger: #ef4444;
+
+  /* ── Original Axiom Design Tokens Restored ── */
+  --bg-base: var(--core-background);
+  --bg-card: var(--core-surface);
+  --bg-elevated: var(--core-surface);
+  --border-subtle: var(--core-background);
+  --text-primary: var(--core-text);
+  --text-secondary: var(--core-muted);
+  --text-muted: var(--core-muted);
+  --text-placeholder: var(--core-muted);
+  --accent: var(--core-primary);
+  --accent-muted: color-mix(in srgb, var(--core-primary) 10%, transparent);
   --accent-foreground: #ffffff;
-  --focus-ring: rgba(37, 99, 235, 0.5);
-  --disabled: #d4d4d8;
-  --disabled-text: #a1a1aa;
-  --success: #16a34a;
-  --warning: #b45309;
-  --danger: #dc2626;
+  --focus-ring: color-mix(in srgb, var(--core-primary) 50%, transparent);
+  --disabled: #e2e8f0;
+  --disabled-text: var(--core-muted);
+  --success: var(--core-success);
+  --warning: #f59e0b;
 
   /* shadcn compat */
-  --background: var(--bg-base);
-  --foreground: var(--text-primary);
-  --card: var(--bg-card);
-  --card-foreground: var(--text-primary);
-  --popover: var(--bg-card);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-foreground);
-  --secondary: var(--bg-elevated);
-  --secondary-foreground: var(--text-primary);
-  --muted: var(--bg-elevated);
-  --muted-foreground: var(--text-muted);
+  --background: var(--core-background);
+  --foreground: var(--core-text);
+  --card: var(--core-surface);
+  --card-foreground: var(--core-text);
+  --popover: var(--core-surface);
+  --popover-foreground: var(--core-text);
+
+  --primary: var(--core-primary);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--core-background);
+  --secondary-foreground: var(--core-text);
+
+  --muted: var(--core-background);
+  --muted-foreground: var(--core-muted);
+
   --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+
   --input: var(--border);
-  --ring: var(--focus-ring);
+  --ring: var(--core-primary);
   --radius: 0.625rem;
+
+  /* Sidebar */
+  --sidebar: var(--core-surface);
+  --sidebar-foreground: var(--core-muted);
+  --sidebar-primary: var(--core-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--core-background);
+  --sidebar-accent-foreground: var(--core-primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--core-primary);
 }
 
 /* ─── Dark Mode ────────────────────────────────────────────── */
 .dark {
-  --bg-base: #09090b;
-  --bg-card: #18181b;
-  --bg-elevated: #27272a;
-  --border: #3f3f46;
-  --border-subtle: #27272a;
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-placeholder: #a1a1aa;
-  --accent: #3b82f6;
-  --accent-muted: rgba(59, 130, 246, 0.15);
-  --accent-foreground: #ffffff;
-  --focus-ring: rgba(59, 130, 246, 0.5);
-  --disabled: #3f3f46;
-  --disabled-text: #52525b;
-  --success: #22c55e;
-  --warning: #f59e0b;
+  /* 6 Core Tokens (Dark equivalent) */
+  --core-primary: #2563eb;
+  --core-background: #020617;
+  /* Slate 950 */
+  --core-surface: #0f172a;
+  /* Slate 900 */
+  --core-text: #f8fafc;
+  /* Slate 50 */
+  --core-muted: #94a3b8;
+  /* Slate 400 */
+  --core-success: #16a34a;
+
+  --border: #1e293b;
   --danger: #ef4444;
 
+  /* ── Original Axiom Design Tokens Restored ── */
+  --bg-base: var(--core-background);
+  --bg-card: var(--core-surface);
+  --bg-elevated: #1e293b;
+  /* Slightly elevated from surface */
+  --border-subtle: var(--core-surface);
+  --text-primary: var(--core-text);
+  --text-secondary: var(--core-muted);
+  --text-muted: var(--core-muted);
+  --text-placeholder: var(--core-muted);
+  --accent: var(--core-primary);
+  --accent-muted: color-mix(in srgb, var(--core-primary) 15%, transparent);
+  --accent-foreground: #ffffff;
+  --focus-ring: color-mix(in srgb, var(--core-primary) 50%, transparent);
+  --disabled: #334155;
+  --disabled-text: var(--core-muted);
+  --success: var(--core-success);
+  --warning: #f59e0b;
+
   /* shadcn compat */
-  --background: var(--bg-base);
-  --foreground: var(--text-primary);
-  --card: var(--bg-card);
-  --card-foreground: var(--text-primary);
-  --popover: var(--bg-card);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-foreground);
-  --secondary: var(--bg-elevated);
-  --secondary-foreground: var(--text-primary);
-  --muted: var(--bg-elevated);
-  --muted-foreground: var(--text-muted);
+  --background: var(--core-background);
+  --foreground: var(--core-text);
+  --card: var(--core-surface);
+  --card-foreground: var(--core-text);
+  --popover: var(--core-surface);
+  --popover-foreground: var(--core-text);
+
+  --primary: var(--core-primary);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--core-background);
+  --secondary-foreground: var(--core-text);
+
+  --muted: var(--core-background);
+  --muted-foreground: var(--core-muted);
+
   --destructive: var(--danger);
+  --destructive-foreground: var(--core-text);
+
   --input: var(--border);
-  --ring: var(--focus-ring);
+  --ring: var(--core-primary);
+
+  /* Sidebar */
+  --sidebar: var(--core-surface);
+  --sidebar-foreground: var(--core-muted);
+  --sidebar-primary: var(--core-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--core-background);
+  --sidebar-accent-foreground: var(--core-primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--core-primary);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans scroll-smooth;
   }
@@ -160,6 +228,7 @@
     transform: translateY(0);
     opacity: 0.5;
   }
+
   50% {
     transform: translateY(-3.5px);
     opacity: 1;
@@ -170,97 +239,201 @@
   animation: wave-bounce 1.1s infinite ease-in-out;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Cinema-Style Bilingual Subtitle Overlay
-   ═══════════════════════════════════════════════════════════ */
-
-@keyframes subtitle-fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.97);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
+/* ─── LiveKit Custom Styles ──────────────────────────── */
+.lk-video-conference,
+.lk-room-container {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
 }
 
-@keyframes subtitle-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 20px rgba(99, 102, 241, 0.15),
-      0 8px 32px rgba(0, 0, 0, 0.5);
-  }
-  50% {
-    box-shadow:
-      0 0 30px rgba(99, 102, 241, 0.3),
-      0 8px 40px rgba(0, 0, 0, 0.6);
-  }
+.lk-button {
+  border-radius: 9999px !important;
+  background-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  color: var(--foreground) !important;
 }
 
-@keyframes subtitle-cursor-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
+.lk-button:hover {
+  width: 140px !important;
+  /* Mở rộng đủ để hiển thị chữ */
+  padding: 0 1rem !important;
+  background-color: color-mix(in oklab, var(--primary) 30%, transparent) !important;
 }
 
-.subtitle-overlay-container {
-  animation: subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.subtitle-overlay-container.is-streaming {
-  animation:
-    subtitle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both,
-    subtitle-glow 2s ease-in-out infinite;
-}
-
-/* Typewriter cursor: clean on/off blink, no fade */
-@keyframes typewriter-blink {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-/* Subtle Wave Animation for processing state */
-@keyframes wave-bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.75;
-  }
-  30% {
-    transform: translateY(-5px);
-    opacity: 1;
-  }
-}
-
-.processing-wave-dot {
+/* Ẩn text mặc định */
+.lk-button > :not(svg) {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-block;
-  animation: wave-bounce 1.2s infinite ease-in-out;
+  margin-left: 0;
 }
 
-.subtitle-en-text {
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 4px 12px rgba(0, 0, 0, 0.5);
+/* Hiện text khi hover */
+.lk-button:hover > :not(svg) {
+  opacity: 1;
+  max-width: 100px;
+  margin-left: 8px;
 }
 
-.subtitle-vi-text {
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+/* Sửa lỗi lệch kích thước giữa video và khung (bỏ scale) */
+.lk-participant-tile {
+  border-radius: 1.5rem !important;
+  overflow: hidden !important;
+  background-color: var(--muted) !important;
+}
+
+.lk-participant-media-video,
+.lk-participant-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Đảm bảo nút Disconnect có màu đỏ đúng chuẩn */
+.lk-button.lk-disconnect-button {
+  background-color: var(--destructive) !important;
+  color: white !important;
+}
+
+.lk-button.lk-disconnect-button:hover {
+  background-color: color-mix(in oklab, var(--destructive) 80%, black) !important;
+}
+
+/* ─── LiveKit Chat Theming (Match Project Theme) ────────── */
+[data-lk-theme='default'] .lk-chat {
+  --lk-bg: var(--card);
+  --lk-fg: var(--foreground);
+  --lk-border-color: var(--border);
+  --lk-control-bg: var(--muted);
+  --lk-control-fg: var(--foreground);
+  --lk-control-hover-bg: var(--accent-muted);
+}
+
+.lk-chat {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.lk-chat-header {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.lk-chat-messages {
+  background-color: transparent !important;
+}
+
+.lk-chat-header {
+  background-color: #3080ff !important;
+  color: #fff !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* Fix chat message bubbles */
+.lk-chat-message {
+  color: var(--foreground) !important;
+  background-color: transparent !important;
+}
+
+/* Tên user và Metadata hiển thị trên góc video */
+.lk-participant-name,
+.lk-participant-metadata-item {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.8) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+}
+
+/* Nội dung tin nhắn (bubble) */
+.lk-message-body,
+.lk-chat-message > div:not(.lk-meta) {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: var(--radius-md) !important;
+  margin-top: 4px !important;
+  display: inline-block !important;
+}
+
+.lk-timestamp {
+  color: var(--muted-foreground) !important;
+  font-size: 0.7rem !important;
+  margin-left: 6px !important;
+}
+
+.lk-chat-entry,
+.lk-chat-form {
+  background-color: var(--card) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.lk-chat-entry > .lk-form-control,
+.lk-chat-form > .lk-form-control {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.lk-chat-entry > .lk-form-control::placeholder,
+.lk-chat-form > .lk-form-control::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Custom Send button to icon */
+.lk-chat-entry .lk-button,
+.lk-chat-form button[type='submit'],
+.lk-chat button[type='submit'] {
+  min-width: 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background-color: var(--primary) !important;
+  color: transparent !important;
+  /* Hide original color */
+  font-size: 0 !important;
+  /* Hide original text */
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+.lk-chat-entry .lk-button:hover,
+.lk-chat-form button[type='submit']:hover,
+.lk-chat button[type='submit']:hover {
+  background-color: color-mix(in oklab, var(--primary) 80%, black) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Arrow Icon via text content */
+.lk-chat-entry .lk-button::after,
+.lk-chat-form button[type='submit']::after,
+.lk-chat button[type='submit']::after {
+  content: '➔' !important;
+  font-size: 1rem !important;
+  color: #ffffff !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: block !important;
 }

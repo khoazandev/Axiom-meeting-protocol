@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Wand2 } from 'lucide-react';
 import { authApi, organizationApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
@@ -19,6 +20,14 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const handleRandomFill = () => {
+    const randomNum = Math.floor(Math.random() * 9000) + 1000;
+    setFullName(`Test User ${randomNum}`);
+    setEmail(`testuser${randomNum}`);
+    setPassword('Test@1234');
+    setOrganizationName(`Test Org ${randomNum}`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -30,7 +39,7 @@ export default function RegisterPage() {
 
       // 2. Login user to get tokens
       const tokens = await authApi.login(email, password);
-      localStorage.setItem('axiom_token', tokens.access_token);
+      useAuthStore.setState({ token: tokens.access_token });
 
       const user = await authApi.me();
 
@@ -58,7 +67,18 @@ export default function RegisterPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-accent/20 text-accent font-bold text-xl mb-3">
             🚀
           </div>
-          <h1 className="text-lg font-semibold text-text-primary">{t.auth.registerTitle}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-text-primary">{t.auth.registerTitle}</h1>
+            <button
+              type="button"
+              onClick={handleRandomFill}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+              title="Điền dữ liệu ngẫu nhiên"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              <span>Điền nhanh</span>
+            </button>
+          </div>
           <p className="text-text-secondary text-sm mt-1">{t.auth.registerSubtitle}</p>
         </div>
 
@@ -88,15 +108,20 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
               {t.auth.email}
             </label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="sarah@company.com"
-              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary text-sm placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
-            />
+            <div className="flex rounded-lg overflow-hidden border border-border focus-within:ring-2 focus-within:ring-focus-ring transition-colors">
+              <input
+                type="text"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="sarah"
+                className="flex-1 w-full px-3 py-2.5 bg-bg-elevated text-text-primary text-sm placeholder-text-placeholder focus:outline-none"
+              />
+              <span className="px-3 py-2.5 bg-muted text-text-secondary text-sm border-l border-border flex items-center font-medium">
+                @gmail.com
+              </span>
+            </div>
           </div>
 
           <div>

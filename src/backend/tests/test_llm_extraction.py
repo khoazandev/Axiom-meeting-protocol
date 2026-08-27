@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 
 
 OLLAMA_URL = "http://localhost:11434"
-MODEL = "task-extractor01"
+MODEL = "lamphat03102004/task-extractor01"
 
 VN_TZ = timezone(timedelta(hours=7))
 NOW = datetime.now(VN_TZ)

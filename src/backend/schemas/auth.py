@@ -2,13 +2,13 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     password: str = Field(..., min_length=6)
     full_name: str = Field(..., min_length=1)
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
