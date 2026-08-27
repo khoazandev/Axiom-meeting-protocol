@@ -62,7 +62,8 @@ export function FeaturesSection() {
           <div className="space-y-3 max-w-2xl flex-1">
             <h3 className="text-xl font-bold tracking-tight">Data Sovereign</h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              Your intellectual property never leaves your servers. True On-Premise security for your data.
+              Your intellectual property never leaves your servers. True On-Premise security for
+              your data.
             </p>
           </div>
           <div className="mt-2 md:mt-0 flex items-center text-accent text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">

@@ -104,7 +104,9 @@ export default function CreateMeetingPage() {
 
         <div className="bg-card border border-border rounded-3xl p-8 shadow-xl space-y-6">
           <div className="border-b border-border pb-5">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Deploy New Meeting</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              Deploy New Meeting
+            </h1>
             <p className="text-xs text-muted-foreground mt-1">
               Configure a structured meeting for automated AI post-meeting analytics.
             </p>
@@ -150,9 +152,7 @@ export default function CreateMeetingPage() {
               {/* Drop zone */}
               <label className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 cursor-pointer hover:border-primary/60 hover:bg-primary/10 transition-all group">
                 <Upload className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-primary font-semibold">
-                  Click để chọn tài liệu
-                </span>
+                <span className="text-xs text-primary font-semibold">Click để chọn tài liệu</span>
                 <span className="text-[11px] text-muted-foreground">
                   PDF, Word (.docx), Excel (.xlsx), TXT — sẽ được upload sau khi tạo meeting
                 </span>

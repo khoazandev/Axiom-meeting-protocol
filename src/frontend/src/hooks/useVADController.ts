@@ -26,7 +26,7 @@ export function useVADController(
   onFinalized?: (entry: TranscriptHistoryEntry) => void
 ) {
   const [transcriptHistory, setTranscriptHistory] = useState<TranscriptHistoryEntry[]>([]);
-  
+
   const roomState = useConnectionState();
   const isConnected = roomState === ConnectionState.Connected;
 
@@ -40,7 +40,7 @@ export function useVADController(
           minute: '2-digit',
           second: '2-digit',
         });
-        
+
         const entry: TranscriptHistoryEntry = {
           id: data.id,
           vi_text: data.vi_text || data.original_text || '',

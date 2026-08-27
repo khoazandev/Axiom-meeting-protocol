@@ -23,7 +23,7 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
         setLoading(true);
         const proj = await jiraApi.getProject(projectKey);
         setProject(proj);
-        
+
         const sprintList = await jiraApi.getSprints(proj.key);
         setSprints(sprintList);
       } catch (err) {

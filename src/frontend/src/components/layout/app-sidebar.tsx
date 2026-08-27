@@ -82,7 +82,14 @@ export function AppSidebar() {
 
   const userName = user?.full_name || 'Axiom Member';
   const userEmail = user?.email || 'member@axiom.ai';
-  const userInitials = (userName.split(' ').map((n) => n[0]).join('') || 'A').slice(0, 2).toUpperCase();
+  const userInitials = (
+    userName
+      .split(' ')
+      .map((n) => n[0])
+      .join('') || 'A'
+  )
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -103,7 +110,9 @@ export function AppSidebar() {
                     <span className="truncate font-semibold">
                       {activeOrganization?.name || 'Axiom Workspace'}
                     </span>
-                    <span className="truncate text-xs text-sidebar-foreground/70">Enterprise Plan</span>
+                    <span className="truncate text-xs text-sidebar-foreground/70">
+                      Enterprise Plan
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -114,7 +123,9 @@ export function AppSidebar() {
                 side={isMobile ? 'bottom' : 'right'}
                 sideOffset={4}
               >
-                <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Workspaces
+                </DropdownMenuLabel>
                 {organizations.map((org) => (
                   <DropdownMenuItem
                     key={org.id}
@@ -156,16 +167,14 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navWorkspace.map((item) => {
-                const isActive = pathname === item.url || (item.url !== '/meetings' && pathname.startsWith(item.url));
+                const isActive =
+                  pathname === item.url ||
+                  (item.url !== '/meetings' && pathname.startsWith(item.url));
                 const Icon = item.icon;
 
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       <Link href={item.url}>
                         <Icon />
                         <span>{item.title}</span>
@@ -189,16 +198,13 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navJira.map((item) => {
-                const isActive = pathname === item.url || (item.url === '/jira' && pathname === '/jira');
+                const isActive =
+                  pathname === item.url || (item.url === '/jira' && pathname === '/jira');
                 const Icon = item.icon;
 
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       <Link href={item.url}>
                         <Icon />
                         <span>{item.title}</span>
@@ -222,11 +228,7 @@ export function AppSidebar() {
 
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       <Link href={item.url}>
                         <Icon />
                         <span>{item.title}</span>
@@ -289,7 +291,10 @@ export function AppSidebar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => router.push('/settings')}
+                  className="cursor-pointer"
+                >
                   <Settings className="mr-2 h-4 w-4" />
                   Account Settings
                 </DropdownMenuItem>
@@ -298,7 +303,10 @@ export function AppSidebar() {
                   Administration
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 cursor-pointer">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:bg-destructive/10 cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>

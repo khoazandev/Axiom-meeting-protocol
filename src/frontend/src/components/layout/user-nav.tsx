@@ -26,7 +26,14 @@ export function UserNav() {
 
   const name = user?.full_name || 'Axiom User';
   const email = user?.email || 'user@axiom.ai';
-  const initials = (name.split(' ').map((n) => n[0]).join('') || 'U').slice(0, 2).toUpperCase();
+  const initials = (
+    name
+      .split(' ')
+      .map((n) => n[0])
+      .join('') || 'U'
+  )
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <DropdownMenu>
@@ -63,7 +70,10 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-destructive focus:bg-destructive/10"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

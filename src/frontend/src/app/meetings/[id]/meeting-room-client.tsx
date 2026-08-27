@@ -30,7 +30,7 @@ import {
   useTracks,
   TrackToggle,
   DisconnectButton,
-  Chat
+  Chat,
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import '@livekit/components-styles';
@@ -63,35 +63,36 @@ function SpeechTranslationControl() {
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
       // Sync to LiveKit participant attributes
-      room.localParticipant.setAttributes({
-        translation_enabled: enabled ? 'true' : 'false',
-        translation_source: sourceLang,
-      }).catch(e => console.warn('Failed to set attributes', e));
+      room.localParticipant
+        .setAttributes({
+          translation_enabled: enabled ? 'true' : 'false',
+          translation_source: sourceLang,
+        })
+        .catch((e) => console.warn('Failed to set attributes', e));
     }
   }, [enabled, sourceLang, room, connectionState]);
 
   return (
     <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
+      <button
+        onClick={() => setIsOpen(!isOpen)}
         className={`lk-button ${enabled ? 'bg-primary/20 text-primary border border-primary/50' : ''}`}
         title="Speech Translation"
       >
-        <Globe 
-          className="w-5 h-5" 
-          style={enabled ? {} : { color: '#000000', stroke: '#000000' }} 
-        />
+        <Globe className="w-5 h-5" style={enabled ? {} : { color: '#000000', stroke: '#000000' }} />
       </button>
 
       {isOpen && (
         <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-64 bg-card border border-border shadow-2xl rounded-xl p-4 z-50 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-sm">Speech Translation</span>
-            <button 
+            <button
               onClick={() => setEnabled(!enabled)}
               className={`w-10 h-5 rounded-full relative transition-colors ${enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
             >
-              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`} />
+              <div
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`}
+              />
             </button>
           </div>
 
@@ -133,13 +134,17 @@ function RecordsListener({ onNewRecord }: { onNewRecord: (r: RecordEntry) => voi
       const text = new TextDecoder().decode(payload as Uint8Array);
       const data = JSON.parse(text);
       if (data.type === 'original_transcript') {
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const timeStr = new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
         onNewRecord({
           timestamp: timeStr,
           participant_identity: data.participant_identity,
           original_text: data.original_text,
           language: data.language,
-          is_final: data.is_final
+          is_final: data.is_final,
         });
       }
     } catch (e) {
@@ -225,7 +230,7 @@ function LiveKitContent({
     { onlySubscribed: false }
   );
 
-  const tracks = allTracks.filter(t => !t.participant.identity.startsWith('agent-'));
+  const tracks = allTracks.filter((t) => !t.participant.identity.startsWith('agent-'));
 
   return (
     <div className="w-full h-full flex flex-col p-4 bg-background gap-4">
@@ -310,7 +315,9 @@ export function MeetingRoomClient() {
   const [selectedLanguage, setSelectedLanguage] = useState('vi');
   const [isJoining, setIsJoining] = useState(false);
   const [liveKitError, setLiveKitError] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'records' | 'ai'>('records');
+  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'records' | 'ai'>(
+    'records'
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [recordsHistory, setRecordsHistory] = useState<RecordEntry[]>([]);
@@ -522,16 +529,17 @@ export function MeetingRoomClient() {
       const sourceBlock =
         result.sources.length > 0
           ? '\n\n**Nguồn:**\n' +
-          result.sources
-            .slice(0, 3)
-            .map((s: RagSource) => {
-              const label =
-                { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
-              const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
-              return `• ${title}: ${s.snippet.slice(0, 100)}${s.snippet.length > 100 ? '...' : ''
+            result.sources
+              .slice(0, 3)
+              .map((s: RagSource) => {
+                const label =
+                  { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
+                const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
+                return `• ${title}: ${s.snippet.slice(0, 100)}${
+                  s.snippet.length > 100 ? '...' : ''
                 }`;
-            })
-            .join('\n')
+              })
+              .join('\n')
           : '';
 
       setAiMessages((prev) => [
@@ -594,13 +602,13 @@ export function MeetingRoomClient() {
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight">{meeting.title}</h1>
         <p className="text-muted-foreground text-sm max-w-md text-center">
-          Vui lòng chọn ngôn ngữ bạn sẽ sử dụng để nói trong cuộc họp này.
-          Hệ thống sẽ dùng ngôn ngữ này để nhận diện và hiển thị phụ đề.
+          Vui lòng chọn ngôn ngữ bạn sẽ sử dụng để nói trong cuộc họp này. Hệ thống sẽ dùng ngôn ngữ
+          này để nhận diện và hiển thị phụ đề.
         </p>
-        
+
         <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
           <label className="text-sm font-semibold">Language you use in this call</label>
-          <select 
+          <select
             className="flex h-11 w-full rounded-xl border border-input bg-card text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={selectedLanguage}
             onChange={(e) => setSelectedLanguage(e.target.value)}
@@ -613,7 +621,7 @@ export function MeetingRoomClient() {
           </select>
         </div>
 
-        <button 
+        <button
           onClick={handleJoinMeeting}
           disabled={isJoining}
           className="mt-6 px-8 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all w-full max-w-xs flex items-center justify-center gap-2"
@@ -686,24 +694,33 @@ export function MeetingRoomClient() {
           >
             {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
             <div className="flex-1 bg-background relative flex flex-col overflow-hidden min-h-0 min-w-0 border-r border-border">
-              <RecordsListener onNewRecord={(r) => {
-                setRecordsHistory((prev) => {
-                  const newArr = [...prev];
-                  let found = false;
-                  // Try to find an existing interim record from this participant
-                  for (let i = newArr.length - 1; i >= 0; i--) {
-                    if (newArr[i].participant_identity === r.participant_identity && !newArr[i].is_final) {
-                      newArr[i] = { ...newArr[i], original_text: r.original_text, is_final: r.is_final };
-                      found = true;
-                      break;
+              <RecordsListener
+                onNewRecord={(r) => {
+                  setRecordsHistory((prev) => {
+                    const newArr = [...prev];
+                    let found = false;
+                    // Try to find an existing interim record from this participant
+                    for (let i = newArr.length - 1; i >= 0; i--) {
+                      if (
+                        newArr[i].participant_identity === r.participant_identity &&
+                        !newArr[i].is_final
+                      ) {
+                        newArr[i] = {
+                          ...newArr[i],
+                          original_text: r.original_text,
+                          is_final: r.is_final,
+                        };
+                        found = true;
+                        break;
+                      }
                     }
-                  }
-                  if (!found) {
-                    newArr.push(r);
-                  }
-                  return newArr;
-                });
-              }} />
+                    if (!found) {
+                      newArr.push(r);
+                    }
+                    return newArr;
+                  });
+                }}
+              />
               <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
                 <LiveKitContent
                   onVADUpdate={handleVADUpdate}
@@ -727,8 +744,8 @@ export function MeetingRoomClient() {
               {liveKitError && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
                   <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                  LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt động bình thường. Mời
-                  bạn chat ở khung bên phải nhé! 🚀
+                  LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt động bình thường.
+                  Mời bạn chat ở khung bên phải nhé! 🚀
                 </div>
               )}
             </div>
@@ -740,30 +757,33 @@ export function MeetingRoomClient() {
                 <div className="flex items-center p-3 gap-2 bg-card border-b border-border">
                   <button
                     onClick={() => setActiveRightTab('chat')}
-                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'chat'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                      }`}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      activeRightTab === 'chat'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Chat</span>
                   </button>
                   <button
                     onClick={() => setActiveRightTab('records')}
-                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'records'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                      }`}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      activeRightTab === 'records'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <span>Records</span>
                   </button>
                   <button
                     onClick={() => setActiveRightTab('transcript')}
-                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'transcript'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                      }`}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      activeRightTab === 'transcript'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <span>Notes</span>
@@ -771,10 +791,11 @@ export function MeetingRoomClient() {
 
                   <button
                     onClick={() => setActiveRightTab('ai')}
-                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'ai'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                      }`}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      activeRightTab === 'ai'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>AI Agent</span>
@@ -783,11 +804,15 @@ export function MeetingRoomClient() {
 
                 {/* Tab Content */}
                 <div className="flex-1 flex flex-col overflow-hidden relative">
-                  <div className={`flex-1 flex-col bg-background ${activeRightTab === 'chat' ? 'flex' : 'hidden'}`}>
+                  <div
+                    className={`flex-1 flex-col bg-background ${activeRightTab === 'chat' ? 'flex' : 'hidden'}`}
+                  >
                     <Chat style={{ width: '100%', height: '100%' }} />
                   </div>
 
-                  <div className={`flex-1 flex-col overflow-y-auto ${activeRightTab === 'records' ? 'flex' : 'hidden'}`}>
+                  <div
+                    className={`flex-1 flex-col overflow-y-auto ${activeRightTab === 'records' ? 'flex' : 'hidden'}`}
+                  >
                     {/* Records view will go here */}
                     <div className="p-4 flex flex-col gap-3">
                       {recordsHistory.length === 0 ? (
@@ -796,10 +821,18 @@ export function MeetingRoomClient() {
                         </div>
                       ) : (
                         recordsHistory.map((t, idx) => (
-                          <div key={idx} className={`bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 ${!t.is_final ? 'opacity-70' : 'opacity-100'}`}>
+                          <div
+                            key={idx}
+                            className={`bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 ${!t.is_final ? 'opacity-70' : 'opacity-100'}`}
+                          >
                             <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
-                              <span>[{t.timestamp}] {t.participant_identity.replace('user_', 'User ')} {t.is_final ? '' : '(đang nói...)'}</span>
-                              <span className="opacity-50 font-normal">{t.language.toUpperCase()}</span>
+                              <span>
+                                [{t.timestamp}] {t.participant_identity.replace('user_', 'User ')}{' '}
+                                {t.is_final ? '' : '(đang nói...)'}
+                              </span>
+                              <span className="opacity-50 font-normal">
+                                {t.language.toUpperCase()}
+                              </span>
                             </div>
                             <div className="text-foreground">{t.original_text}</div>
                           </div>
@@ -808,8 +841,10 @@ export function MeetingRoomClient() {
                       <div ref={transcriptEndRef} />
                     </div>
                   </div>
-                  
-                  <div className={`flex-1 flex-col overflow-hidden bg-muted/30 ${activeRightTab === 'transcript' ? 'flex' : 'hidden'}`}>
+
+                  <div
+                    className={`flex-1 flex-col overflow-hidden bg-muted/30 ${activeRightTab === 'transcript' ? 'flex' : 'hidden'}`}
+                  >
                     <div className="p-3 border-b border-border bg-card/80 sticky top-0 z-10 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
@@ -849,8 +884,9 @@ export function MeetingRoomClient() {
                             <div className="flex items-start gap-2">
                               <div className="mt-0.5 shrink-0">
                                 <div
-                                  className={`w-2 h-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-success' : 'bg-warning'
-                                    }`}
+                                  className={`w-2 h-2 rounded-full ${
+                                    item.status === 'COMPLETED' ? 'bg-success' : 'bg-warning'
+                                  }`}
                                 />
                               </div>
                               <div>
@@ -871,34 +907,50 @@ export function MeetingRoomClient() {
                     </div>
                   </div>
 
-                  <div className={`flex-1 flex-col bg-background ${activeRightTab === 'ai' ? 'flex' : 'hidden'}`}>
+                  <div
+                    className={`flex-1 flex-col bg-background ${activeRightTab === 'ai' ? 'flex' : 'hidden'}`}
+                  >
                     <div className="flex flex-col w-full h-full">
                       <ul className="lk-chat-messages flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                         <div className="flex-1" />
                         {aiMessages.map((msg, i) => (
                           <li key={i} className="lk-chat-message flex flex-col gap-1">
                             <div className="lk-meta flex items-center justify-between">
-                              <div className="lk-participant-name font-bold" style={{ color: msg.isAi ? 'var(--primary)' : 'var(--foreground)' }}>
+                              <div
+                                className="lk-participant-name font-bold"
+                                style={{ color: msg.isAi ? 'var(--primary)' : 'var(--foreground)' }}
+                              >
                                 {msg.sender}
                               </div>
                               <div className="lk-timestamp text-muted-foreground">{msg.time}</div>
                             </div>
-                            <div className={`lk-message-body p-3 rounded-2xl leading-relaxed ${msg.isAi ? 'bg-primary/10 text-foreground rounded-tl-sm' : 'bg-muted text-foreground rounded-tr-sm'}`}>
+                            <div
+                              className={`lk-message-body p-3 rounded-2xl leading-relaxed ${msg.isAi ? 'bg-primary/10 text-foreground rounded-tl-sm' : 'bg-muted text-foreground rounded-tr-sm'}`}
+                            >
                               {msg.text}
                             </div>
                           </li>
                         ))}
                       </ul>
-                      <form onSubmit={handleSendAiQuery} className="lk-chat-form shrink-0 border-t border-border p-3 mt-auto">
+                      <form
+                        onSubmit={handleSendAiQuery}
+                        className="lk-chat-form shrink-0 border-t border-border p-3 mt-auto"
+                      >
                         <input
                           type="text"
                           value={aiQueryMsg}
                           onChange={(e) => setAiQueryMsg(e.target.value)}
                           disabled={isAiLoading}
-                          placeholder={isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, transcript...'}
+                          placeholder={
+                            isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, transcript...'
+                          }
                           className="lk-form-control lk-chat-form-input w-full"
                         />
-                        <button type="submit" disabled={isAiLoading} className="lk-button lk-chat-form-button">
+                        <button
+                          type="submit"
+                          disabled={isAiLoading}
+                          className="lk-button lk-chat-form-button"
+                        >
                           {isAiLoading ? '...' : 'Gửi'}
                         </button>
                       </form>

@@ -29,11 +29,11 @@ export function useAudioDucking() {
         if (!micPublication || !micPublication.track) return;
 
         const track = micPublication.track as RemoteAudioTrack;
-        
+
         // Ensure track has setVolume method (it's a RemoteAudioTrack feature)
         if (typeof track.setVolume !== 'function') {
-            console.warn('[AudioDucking] setVolume not available on this track');
-            return;
+          console.warn('[AudioDucking] setVolume not available on this track');
+          return;
         }
 
         if (data.type === 'tts_started') {
@@ -42,11 +42,11 @@ export function useAudioDucking() {
             let currentVol = 1.0;
             const elements = track.attachedElements;
             if (elements.length > 0 && elements[0] instanceof HTMLMediaElement) {
-                currentVol = elements[0].volume;
+              currentVol = elements[0].volume;
             }
             previousVolumesRef.current.set(participantId, currentVol);
           }
-          
+
           console.log(`[AudioDucking] Muting ${participantId} during translation`);
           track.setVolume(0);
         } else if (data.type === 'tts_ended') {

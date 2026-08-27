@@ -222,7 +222,9 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
                 <Loader2 className="w-5 h-5 text-primary animate-spin" />
               </div>
             ) : members.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Chưa có thành viên nào</p>
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Chưa có thành viên nào
+              </p>
             ) : (
               members.map((member) => (
                 <div

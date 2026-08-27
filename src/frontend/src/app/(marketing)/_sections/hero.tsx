@@ -63,8 +63,6 @@ export function HeroSection() {
             </Link>
           </div>
         </FadeContent>
-
-
       </div>
 
       <FadeContent direction="right" distance={60} delay={0.4} duration={1}>
