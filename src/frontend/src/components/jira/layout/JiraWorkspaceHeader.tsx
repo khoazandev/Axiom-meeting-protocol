@@ -81,7 +81,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
 
           {/* Project Title & Space Avatar */}
           <div className="flex items-center gap-2.5 relative">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-foreground font-bold text-xs shadow-sm">
               {project.meeting_id ? '🎙️' : project.key.substring(0, 2)}
             </div>
             <h1 className="text-xl font-bold text-text-primary tracking-tight">{project.name}</h1>
@@ -106,9 +106,9 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
                         setShowDropdown(false);
                         setShowInviteModal(true);
                       }}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-text-primary hover:bg-blue-600/10 hover:text-blue-400 transition-colors font-medium text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-text-primary hover:bg-primary/10 hover:text-primary transition-colors font-medium text-left"
                     >
-                      <UserPlus className="w-4 h-4 text-blue-500" />
+                      <UserPlus className="w-4 h-4 text-primary" />
                       <span>Add people to space</span>
                     </button>
 
@@ -152,7 +152,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
 
           <button
             onClick={() => setShowInviteModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-bg-card border border-border hover:border-blue-500 text-text-primary hover:text-blue-400 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+            className="px-3 py-1.5 rounded-xl bg-bg-card border border-border hover:border-blue-500 text-text-primary hover:text-primary text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
             title="Invite Member"
           >
             <UserPlus className="w-3.5 h-3.5" />
@@ -173,7 +173,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
 
           <button
             onClick={onCreateIssueClick}
-            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-blue-500 text-foreground text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create</span>
@@ -193,7 +193,7 @@ export function JiraWorkspaceHeader({ project, onCreateIssueClick }: JiraWorkspa
               href={tab.href}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border-b-2 ${
                 isActive
-                  ? 'text-blue-500 border-blue-500 bg-blue-500/10 shadow-xs'
+                  ? 'text-primary border-blue-500 bg-blue-500/10 shadow-xs'
                   : 'text-text-secondary border-transparent hover:text-text-primary hover:bg-bg-elevated'
               }`}
             >

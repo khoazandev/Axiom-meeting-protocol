@@ -5,9 +5,10 @@ const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL ||
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: path.resolve(__dirname),
   skipTrailingSlashRedirect: true,
   turbopack: {
-    root: path.resolve(__dirname, '../../'),
+    root: path.resolve(__dirname),
   },
   async rewrites() {
     return [

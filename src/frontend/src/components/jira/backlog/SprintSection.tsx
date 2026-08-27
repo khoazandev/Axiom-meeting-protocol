@@ -104,7 +104,7 @@ export function SprintSection({
           {isActive ? (
             <button
               onClick={() => onCompleteSprint(sprint)}
-              className="px-3.5 py-1.5 rounded-xl bg-success text-white text-xs font-semibold hover:bg-success/90 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-success text-foreground text-xs font-semibold hover:bg-success/90 transition-all flex items-center gap-1.5 shadow-sm"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Complete Sprint</span>
@@ -113,7 +113,7 @@ export function SprintSection({
             <button
               onClick={() => onStartSprint(sprint)}
               disabled={issues.length === 0}
-              className="px-3.5 py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-sm"
             >
               <Play className="w-3.5 h-3.5 fill-white" />
               <span>Start Sprint</span>

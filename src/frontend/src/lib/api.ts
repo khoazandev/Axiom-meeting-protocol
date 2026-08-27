@@ -109,13 +109,15 @@ export interface FollowUpTask {
 export interface TranscriptResponse {
   id: string;
   meeting_id: string;
-  content: string;
+  speaker_id?: string | null;
+  speaker_name?: string | null;
   speaker?: string | null;
+  content: string;
   start_time?: string | null;
   end_time?: string | null;
   sequence?: number;
   confidence?: string | null;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface MeetingEndResponse {
@@ -155,7 +157,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
+    const token = useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -177,7 +179,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   // Inject token and active organization header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('axiom_token') || useAuthStore.getState().token;
+    const token = useAuthStore.getState().token;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -333,10 +335,11 @@ export const meetingsApi = {
   getToken(
     meetingId: number | string,
     participantName: string,
+    language: string = 'vi',
     signal?: AbortSignal
   ): Promise<TokenResponse> {
     return apiFetch<TokenResponse>(
-      `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}`,
+      `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}&language=${encodeURIComponent(language)}`,
       { signal }
     );
   },

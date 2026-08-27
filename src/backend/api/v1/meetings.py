@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.backend import models
-from src.backend.api.deps import get_db, get_optional_workspace_member
+from src.backend.api.deps import get_db, get_optional_workspace_member, get_current_user
 from src.backend.core.config import get_settings
 from src.backend.core.exceptions import NotFoundException, ProcessGateException
 from src.backend.models import WorkspaceMember
@@ -28,17 +28,8 @@ def create_meeting(
     member: WorkspaceMember | None = Depends(get_optional_workspace_member),
     db: Session = Depends(get_db),
 ):
-    """Create a new meeting with Process Gate validation.
-
-    The agenda must be at least 20 characters (after trimming whitespace).
-    This enforces the DX-OS principle: No Agenda = No Meeting.
+    """Create a new meeting.
     """
-    if not meeting.agenda or len(meeting.agenda.strip()) < 20:
-        raise ProcessGateException(
-            message="Agenda must be at least 20 characters to ensure structured meetings.",
-            detail="Process Gate: Detailed agendas are required to enforce meeting discipline.",
-        )
-
     meeting_data = meeting.model_dump()
     if member:
         meeting_data["workspace_id"] = member.workspace_id
@@ -102,18 +93,30 @@ def delete_meeting(
     return MessageResponse(message="Meeting deleted successfully")
 
 
+import uuid
+
+import json
+
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
-def get_meeting_token(meeting_id: str, participant_name: str):
+def get_meeting_token(
+    meeting_id: str, 
+    participant_name: str,
+    language: str = "vi",
+    current_user: models.User = Depends(get_current_user)
+):
     """Generate a LiveKit access token for a meeting room."""
     settings = get_settings()
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    token.with_identity(participant_name)
+    unique_identity = f"user_{current_user.id}"
+    token.with_identity(unique_identity)
     token.with_name(participant_name)
+    token.with_metadata(json.dumps({"language_used_in_call": language}))
     token.with_ttl(timedelta(hours=8))
     token.with_grants(
         api.VideoGrants(
             room_join=True,
             room=f"meeting-{meeting_id}",
+            can_update_own_metadata=True,
         )
     )
     return TokenResponse(token=token.to_jwt())

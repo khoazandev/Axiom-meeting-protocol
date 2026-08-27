@@ -110,7 +110,7 @@ export default function JiraBoardPage({ params }: { params: Promise<{ projectKey
   if (loading && !project) {
     return (
       <div className="flex items-center justify-center p-24">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -120,7 +120,7 @@ export default function JiraBoardPage({ params }: { params: Promise<{ projectKey
       <div className="p-12 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
         <h2 className="text-base font-bold text-text-primary">Project Not Found</h2>
-        <Link href="/jira" className="text-xs text-blue-400 hover:underline font-semibold">
+        <Link href="/jira" className="text-xs text-primary hover:underline font-semibold">
           Back to Spaces
         </Link>
       </div>

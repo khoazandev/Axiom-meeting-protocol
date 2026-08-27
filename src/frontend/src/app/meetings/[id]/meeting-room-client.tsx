@@ -17,23 +17,137 @@ import {
   UserPlus,
   Kanban,
   ExternalLink,
+  Video,
+  MessageSquare,
+  PhoneOff,
+  Globe,
 } from 'lucide-react';
-import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react';
+import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  GridLayout,
+  ParticipantTile,
+  useTracks,
+  TrackToggle,
+  DisconnectButton,
+  Chat
+} from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import '@livekit/components-styles';
 import {
   meetingsApi,
   jiraApi,
+  authApi,
   type Meeting,
   type RagSource,
   type ActionItemResponse,
   type TranscriptResponse,
   ApiRequestError,
 } from '@/lib/api';
-import { LiveSubtitle } from '@/components/meetings/LiveSubtitle';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useVADController } from '@/hooks/useVADController';
-import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useTranslationSocket';
+import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADController';
+import { useTranslationAudioMuting } from '@/hooks/useTranslationAudioMuting';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
+import { useRoomContext, useConnectionState } from '@livekit/components-react';
+import { ConnectionState } from 'livekit-client';
+
+function SpeechTranslationControl() {
+  const room = useRoomContext();
+  const connectionState = useConnectionState();
+  const [isOpen, setIsOpen] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [sourceLang, setSourceLang] = useState('en'); // Default translate from English
+
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connected) {
+      // Sync to LiveKit participant attributes
+      room.localParticipant.setAttributes({
+        translation_enabled: enabled ? 'true' : 'false',
+        translation_source: sourceLang,
+      }).catch(e => console.warn('Failed to set attributes', e));
+    }
+  }, [enabled, sourceLang, room, connectionState]);
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)} 
+        className={`lk-button ${enabled ? 'bg-primary/20 text-primary border border-primary/50' : ''}`}
+        title="Speech Translation"
+      >
+        <Globe 
+          className="w-5 h-5" 
+          style={enabled ? {} : { color: '#000000', stroke: '#000000' }} 
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-64 bg-card border border-border shadow-2xl rounded-xl p-4 z-50 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm">Speech Translation</span>
+            <button 
+              onClick={() => setEnabled(!enabled)}
+              className={`w-10 h-5 rounded-full relative transition-colors ${enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-muted-foreground">Translate from</label>
+            <select
+              disabled={!enabled}
+              value={sourceLang}
+              onChange={(e) => setSourceLang(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+import { useDataChannel } from '@livekit/components-react';
+
+export interface RecordEntry {
+  timestamp: string;
+  participant_identity: string;
+  original_text: string;
+  language: string;
+  is_final: boolean;
+}
+
+function RecordsListener({ onNewRecord }: { onNewRecord: (r: RecordEntry) => void }) {
+  useDataChannel('records', (msg) => {
+    try {
+      const payload = msg.payload || msg; // Handle both v1 and v2 formats
+      const text = new TextDecoder().decode(payload as Uint8Array);
+      const data = JSON.parse(text);
+      if (data.type === 'original_transcript') {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        onNewRecord({
+          timestamp: timeStr,
+          participant_identity: data.participant_identity,
+          original_text: data.original_text,
+          language: data.language,
+          is_final: data.is_final
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to parse record data', e);
+    }
+  });
+  return null;
+}
 
 interface ChatMessage {
   sender: string;
@@ -72,11 +186,12 @@ class LiveKitTileErrorBoundary extends React.Component<
   }
 }
 
-// Inner component that lives INSIDE <LiveKitRoom> so it can use useLocalParticipant()
 function LiveKitContent({
   onVADUpdate,
   participantName,
   onTranscriptFinalized,
+  onInviteClick,
+  onSidebarToggle,
 }: {
   onVADUpdate: (data: {
     streamData: TranslationStream | null;
@@ -87,24 +202,64 @@ function LiveKitContent({
   }) => void;
   participantName: string;
   onTranscriptFinalized?: (entry: TranscriptHistoryEntry) => void;
+  onInviteClick: () => void;
+  onSidebarToggle: () => void;
 }) {
   const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(
     participantName,
     onTranscriptFinalized
   );
 
+  // Activate translation audio muting hook
+  useTranslationAudioMuting();
+
   useEffect(() => {
     onVADUpdate({ streamData, interimText, isListening, isConnected, transcriptHistory });
   }, [streamData, interimText, isListening, isConnected, transcriptHistory, onVADUpdate]);
 
+  const allTracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false }
+  );
+
+  const tracks = allTracks.filter(t => !t.participant.identity.startsWith('agent-'));
+
   return (
-    <>
-      <LiveKitTileErrorBoundary>
-        <VideoConference />
-      </LiveKitTileErrorBoundary>
+    <div className="w-full h-full flex flex-col p-4 bg-background gap-4">
+      {/* Camera Frame */}
+      <div className="relative flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-[#1f1f1f]">
+        <LiveKitTileErrorBoundary>
+          <GridLayout tracks={tracks} style={{ height: '100%', width: '100%', gap: '1rem' }}>
+            <ParticipantTile />
+          </GridLayout>
+          <RoomAudioRenderer />
+        </LiveKitTileErrorBoundary>
+      </div>
+
+      {/* Bottom Control Bar */}
+      <div className="w-full shrink-0 flex items-center justify-center z-50">
+        <div className="bg-card shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-border rounded-2xl px-6 py-3 flex items-center justify-center gap-6">
+          <TrackToggle source={Track.Source.Microphone} />
+          <TrackToggle source={Track.Source.Camera} />
+          <TrackToggle source={Track.Source.ScreenShare} />
+          <SpeechTranslationControl />
+          <button onClick={onInviteClick} className="lk-button" title="Mời thành viên">
+            <UserPlus className="w-5 h-5" />
+          </button>
+          <button onClick={onSidebarToggle} className="lk-button" title="Đóng/Mở Sidebar">
+            <MessageSquare className="w-5 h-5" />
+          </button>
+          <DisconnectButton className="lk-button lk-disconnect-button" title="Rời phòng">
+            <PhoneOff className="w-5 h-5" />
+          </DisconnectButton>
+        </div>
+      </div>
+
       <RoomAudioRenderer />
-      <LiveSubtitle streamData={streamData} interimText={interimText} />
-    </>
+    </div>
   );
 }
 
@@ -151,10 +306,14 @@ export function MeetingRoomClient() {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('vi');
+  const [isJoining, setIsJoining] = useState(false);
   const [liveKitError, setLiveKitError] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<'transcript' | 'ai'>('transcript');
+  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'records' | 'ai'>('records');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [recordsHistory, setRecordsHistory] = useState<RecordEntry[]>([]);
 
   // VAD data lifted from LiveKitContent
   const [, setVadStreamData] = useState<TranslationStream | null>(null);
@@ -279,7 +438,28 @@ export function MeetingRoomClient() {
   // AI loading state
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const [participantName] = useState(() => `User-${Math.floor(Math.random() * 1000)}`);
+  const user = useAuthStore((state) => state.user);
+  const [participantName, setParticipantName] = useState(() => user?.full_name || '');
+
+  useEffect(() => {
+    if (user?.full_name) {
+      setParticipantName(user.full_name);
+    } else {
+      authApi
+        .me()
+        .then((u) => {
+          if (u?.full_name) {
+            setParticipantName(u.full_name);
+            useAuthStore.setState({ user: u });
+          } else {
+            setParticipantName(`User-${Math.floor(Math.random() * 1000)}`);
+          }
+        })
+        .catch(() => {
+          setParticipantName(`User-${Math.floor(Math.random() * 1000)}`);
+        });
+    }
+  }, [user]);
 
   // Load meeting data
   useEffect(() => {
@@ -300,20 +480,24 @@ export function MeetingRoomClient() {
     return () => controller.abort();
   }, [meetingId]);
 
-  // Load LiveKit token
-  useEffect(() => {
-    if (!meeting) return;
-    const controller = new AbortController();
-    meetingsApi
-      .getToken(meeting.id, participantName, controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted && data?.token) setToken(data.token);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setLiveKitError(true);
-      });
-    return () => controller.abort();
-  }, [meeting, participantName]);
+  // Join Meeting Logic
+  const handleJoinMeeting = async () => {
+    if (!meeting || !participantName) return;
+    setIsJoining(true);
+    setLiveKitError(false);
+    try {
+      const data = await meetingsApi.getToken(meeting.id, participantName, selectedLanguage);
+      if (data?.token) {
+        setToken(data.token);
+        setHasJoined(true);
+      }
+    } catch (err) {
+      console.error('Failed to get token:', err);
+      setLiveKitError(true);
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleSendAiQuery = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,17 +522,16 @@ export function MeetingRoomClient() {
       const sourceBlock =
         result.sources.length > 0
           ? '\n\n**Nguồn:**\n' +
-            result.sources
-              .slice(0, 3)
-              .map((s: RagSource) => {
-                const label =
-                  { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
-                const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
-                return `• ${title}: ${s.snippet.slice(0, 100)}${
-                  s.snippet.length > 100 ? '...' : ''
+          result.sources
+            .slice(0, 3)
+            .map((s: RagSource) => {
+              const label =
+                { agenda: '📋', transcript: '🗣️', file: '📄', bookmark: '📌' }[s.type] ?? '📎';
+              const title = s.filename ? `${label} ${s.filename}` : `${label} ${s.type}`;
+              return `• ${title}: ${s.snippet.slice(0, 100)}${s.snippet.length > 100 ? '...' : ''
                 }`;
-              })
-              .join('\n')
+            })
+            .join('\n')
           : '';
 
       setAiMessages((prev) => [
@@ -379,21 +562,21 @@ export function MeetingRoomClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!meeting) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0B0F19] text-white space-y-4 p-4 text-center">
-        <h1 className="text-2xl font-bold text-red-400">Không tìm thấy cuộc họp</h1>
-        <p className="text-slate-400 text-sm max-w-md">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4 p-4 text-center">
+        <h1 className="text-2xl font-bold text-destructive">Không tìm thấy cuộc họp</h1>
+        <p className="text-muted-foreground text-sm max-w-md">
           Meeting không tồn tại hoặc bạn không có quyền truy cập.
         </p>
         <Link href="/meetings">
-          <button className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-lg shadow-blue-600/25 transition-all">
+          <button className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-lg shadow-primary/25 transition-all">
             Quay lại danh sách
           </button>
         </Link>
@@ -403,229 +586,237 @@ export function MeetingRoomClient() {
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
 
+  if (!hasJoined) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-6 p-4">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-2">
+          <Video className="w-8 h-8" />
+        </div>
+        <h1 className="text-3xl font-extrabold tracking-tight">{meeting.title}</h1>
+        <p className="text-muted-foreground text-sm max-w-md text-center">
+          Vui lòng chọn ngôn ngữ bạn sẽ sử dụng để nói trong cuộc họp này.
+          Hệ thống sẽ dùng ngôn ngữ này để nhận diện và hiển thị phụ đề.
+        </p>
+        
+        <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
+          <label className="text-sm font-semibold">Language you use in this call</label>
+          <select 
+            className="flex h-11 w-full rounded-xl border border-input bg-card text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+          >
+            <option value="vi">Tiếng Việt (Vietnamese)</option>
+            <option value="en">Tiếng Anh (English)</option>
+            <option value="ja">Tiếng Nhật (Japanese)</option>
+            <option value="ko">Tiếng Hàn (Korean)</option>
+            <option value="zh">Tiếng Trung (Chinese)</option>
+          </select>
+        </div>
+
+        <button 
+          onClick={handleJoinMeeting}
+          disabled={isJoining}
+          className="mt-6 px-8 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all w-full max-w-xs flex items-center justify-center gap-2"
+        >
+          {isJoining ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Đang tham gia...
+            </>
+          ) : (
+            'Join Meeting'
+          )}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full bg-bg-base text-text-primary flex flex-col overflow-hidden select-none">
+    <div className="h-full w-full bg-background text-foreground flex flex-col overflow-hidden select-none">
       {/* Top Header */}
-      <header className="h-14 px-6 bg-[#0E1526] border-b border-blue-950/60 flex items-center justify-between shrink-0 z-20">
+      <header className="h-16 px-6 bg-primary flex items-center justify-between shrink-0 z-20 shadow-md">
         <div className="flex items-center gap-4">
           <Link href="/meetings">
-            <button className="p-1.5 rounded-xl bg-[#131B2E] border border-blue-950 text-slate-400 hover:text-white hover:border-blue-800 transition-all">
+            <button className="p-2 rounded-xl bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 transition-all">
               <ArrowLeft className="w-4 h-4" />
             </button>
           </Link>
 
-          <div>
-            <h1 className="font-bold text-sm text-white tracking-tight leading-none">
-              {meeting.title}
-            </h1>
-            <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-blue-400" />
-                {new Date(meeting.created_at).toLocaleDateString()}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-blue-400" />
-                {new Date(meeting.created_at).toLocaleTimeString()}
-              </span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary-foreground text-primary flex items-center justify-center">
+              <Video className="w-5 h-5 fill-current" />
             </div>
+            <h1 className="font-extrabold text-lg text-primary-foreground tracking-tight">
+              Video Buddy
+            </h1>
+            <span className="text-primary-foreground/60 text-xs font-medium border-l border-primary-foreground/20 pl-3">
+              {meeting.title}
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setInviteModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 border border-blue-600/40 text-blue-300 hover:bg-blue-600/30 hover:text-blue-200 text-xs font-medium transition-all"
-            title="Mời thành viên"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Mời
-          </button>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-xl bg-[#131B2E] border border-blue-950 text-slate-400 hover:text-white hover:border-blue-800 transition-all"
-            title="Toggle Right Panel"
-          >
-            <ChevronRight
-              className={`w-4 h-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`}
-            />
-          </button>
+          {/* Nút Invite và Chat đã được di chuyển xuống thanh Control Bar */}
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden min-h-0 min-w-0">
-        {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
-        <div className="flex-1 bg-black relative flex flex-col overflow-hidden min-h-0 min-w-0">
-          <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
-            {token === '' ? (
-              <div className="text-text-secondary flex flex-col items-center justify-center h-full gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-accent" />
-                <p className="text-xs font-medium">Connecting to LiveKit WebRTC Server...</p>
-              </div>
-            ) : (
-              <LiveKitRoom
-                token={token}
-                serverUrl={livekitUrl}
-                connect={true}
-                audio={false}
-                data-lk-theme="default"
-                className="w-full h-full absolute inset-0 flex flex-col"
-                onDisconnected={() => {
-                  console.log('User left the meeting room.');
-                  router.push('/meetings');
-                }}
-                onError={(err) => {
-                  console.error('LiveKit connection error:', err);
-                  setLiveKitError(true);
-                }}
-              >
+        {token === '' ? (
+          <div className="flex-1 bg-background text-muted-foreground flex flex-col items-center justify-center w-full h-full gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-xs font-medium">Connecting to LiveKit WebRTC Server...</p>
+          </div>
+        ) : (
+          <LiveKitRoom
+            token={token}
+            serverUrl={livekitUrl}
+            connect={true}
+            audio={false}
+            data-lk-theme="default"
+            className="w-full h-full flex overflow-hidden"
+            onDisconnected={() => {
+              console.log('User left the meeting room.');
+              router.push('/meetings');
+            }}
+            onError={(err) => {
+              console.error('LiveKit connection error:', err);
+              setLiveKitError(true);
+            }}
+          >
+            {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
+            <div className="flex-1 bg-background relative flex flex-col overflow-hidden min-h-0 min-w-0 border-r border-border">
+              <RecordsListener onNewRecord={(r) => {
+                setRecordsHistory((prev) => {
+                  const newArr = [...prev];
+                  let found = false;
+                  // Try to find an existing interim record from this participant
+                  for (let i = newArr.length - 1; i >= 0; i--) {
+                    if (newArr[i].participant_identity === r.participant_identity && !newArr[i].is_final) {
+                      newArr[i] = { ...newArr[i], original_text: r.original_text, is_final: r.is_final };
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (!found) {
+                    newArr.push(r);
+                  }
+                  return newArr;
+                });
+              }} />
+              <div className="flex-1 relative w-full h-full min-h-0 min-w-0">
                 <LiveKitContent
                   onVADUpdate={handleVADUpdate}
                   participantName={participantName}
                   onTranscriptFinalized={handleTranscriptFinalized}
+                  onInviteClick={() => setInviteModalOpen(true)}
+                  onSidebarToggle={() => {
+                    if (!sidebarOpen) {
+                      setSidebarOpen(true);
+                      setActiveRightTab('chat');
+                    } else if (activeRightTab !== 'chat') {
+                      setActiveRightTab('chat');
+                    } else {
+                      setSidebarOpen(false);
+                    }
+                  }}
                 />
-              </LiveKitRoom>
-            )}
-          </div>
+              </div>
 
-          {/* LiveKit Offline Warning */}
-          {liveKitError && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
-              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt động bình thường. Mời
-              bạn chat ở khung bên phải nhé! 🚀
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Transcript + AI Assistant */}
-        {sidebarOpen && (
-          <aside className="w-80 md:w-96 bg-[#0E1526] border-l border-blue-950/60 flex flex-col shrink-0 overflow-hidden">
-            {/* 2 Tabs */}
-            <div className="flex items-center border-b border-blue-950/60 p-2 gap-1.5 bg-[#131B2E]/60">
-              <button
-                onClick={() => setActiveRightTab('transcript')}
-                className={`flex-1 py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                  activeRightTab === 'transcript'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Meeting Summary AI</span>
-              </button>
-
-              <button
-                onClick={() => setActiveRightTab('ai')}
-                className={`flex-1 py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                  activeRightTab === 'ai'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>AI Assistant</span>
-              </button>
+              {/* LiveKit Offline Warning */}
+              {liveKitError && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium flex items-center gap-2 backdrop-blur-sm">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                  LiveKit server chưa được cấu hình. Các tính năng AI RAG vẫn hoạt động bình thường. Mời
+                  bạn chat ở khung bên phải nhé! 🚀
+                </div>
+              )}
             </div>
 
-            {/* Tab Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {activeRightTab === 'transcript' && (
-                <PanelGroup direction="vertical" className="flex-1 overflow-hidden">
-                  <Panel defaultSize={60} minSize={30} className="flex flex-col bg-[#0E1526]">
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      {/* STT status bar */}
-                      <div className="px-3 py-2 border-b border-blue-950/60 flex items-center justify-between bg-[#131B2E]/20">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              vadIsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
-                            }`}
-                          />
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                            {vadIsConnected ? 'WS Connected' : 'WS Offline'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {vadIsListening ? (
-                            <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                              <Mic className="w-3 h-3" /> Đang thu
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                              <MicOff className="w-3 h-3" /> Bật mic để ghi
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            {/* Right Side: Transcript + AI Assistant */}
+            {sidebarOpen && (
+              <aside className="w-80 md:w-96 bg-card flex flex-col shrink-0 overflow-hidden shadow-2xl z-10">
+                {/* 3 Tabs */}
+                <div className="flex items-center p-3 gap-2 bg-card border-b border-border">
+                  <button
+                    onClick={() => setActiveRightTab('chat')}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'chat'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Chat</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveRightTab('records')}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'records'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Records</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveRightTab('transcript')}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'transcript'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Notes</span>
+                  </button>
 
-                      {/* Live interim text preview */}
-                      {vadInterimText && (
-                        <div className="px-3 py-2 border-b border-blue-950/60 bg-blue-500/5">
-                          <p className="text-[11px] text-blue-300 italic flex items-center gap-1.5">
-                            <Mic className="w-3 h-3 text-blue-400 animate-pulse" />
-                            {vadInterimText}
-                            <span className="inline-block w-1 h-3 bg-blue-400 animate-pulse ml-0.5" />
-                          </p>
-                        </div>
-                      )}
+                  <button
+                    onClick={() => setActiveRightTab('ai')}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeRightTab === 'ai'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>AI Agent</span>
+                  </button>
+                </div>
 
-                      {/* Transcript History Feed (Meeting Notes) */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white/5">
-                        {dbTranscripts.length === 0 && vadTranscriptHistory.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-8">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                              <FileText className="w-5 h-5 text-blue-400" />
+                {/* Tab Content */}
+                <div className="flex-1 flex flex-col overflow-hidden relative">
+                  <div className={`flex-1 flex-col bg-background ${activeRightTab === 'chat' ? 'flex' : 'hidden'}`}>
+                    <Chat style={{ width: '100%', height: '100%' }} />
+                  </div>
+
+                  <div className={`flex-1 flex-col overflow-y-auto ${activeRightTab === 'records' ? 'flex' : 'hidden'}`}>
+                    {/* Records view will go here */}
+                    <div className="p-4 flex flex-col gap-3">
+                      {recordsHistory.length === 0 ? (
+                        <div className="text-center text-muted-foreground text-sm mt-10">
+                          Chưa có bản ghi nào. Hãy bắt đầu nói!
+                        </div>
+                      ) : (
+                        recordsHistory.map((t, idx) => (
+                          <div key={idx} className={`bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 ${!t.is_final ? 'opacity-70' : 'opacity-100'}`}>
+                            <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
+                              <span>[{t.timestamp}] {t.participant_identity.replace('user_', 'User ')} {t.is_final ? '' : '(đang nói...)'}</span>
+                              <span className="opacity-50 font-normal">{t.language.toUpperCase()}</span>
                             </div>
-                            <div>
-                              <p className="text-xs font-semibold text-slate-300">
-                                Chưa có nội dung
-                              </p>
-                              <p className="text-[10px] text-slate-500 mt-1 max-w-[200px]">
-                                Bật mic trong thanh công cụ LiveKit và nói.
-                              </p>
-                            </div>
+                            <div className="text-foreground">{t.original_text}</div>
                           </div>
-                        ) : (
-                          <>
-                            {dbTranscripts.map((entry) => (
-                              <div key={entry.id} className="text-sm">
-                                <span className="font-bold text-blue-400 mr-2">
-                                  [{entry.speaker || 'User'}]
-                                </span>
-                                <span className="text-slate-300">{entry.content}</span>
-                              </div>
-                            ))}
-                            {vadTranscriptHistory
-                              .filter(
-                                (v) =>
-                                  !dbTranscripts.some((d) => (d.content || '').includes(v.vi_text))
-                              )
-                              .map((entry) => (
-                                <div key={entry.id} className="text-sm">
-                                  <span className="font-bold text-blue-400 mr-2">
-                                    [{entry.speaker || participantName}]
-                                  </span>
-                                  <span className="text-slate-300">{entry.vi_text}</span>
-                                </div>
-                              ))}
-                          </>
-                        )}
-                        <div ref={transcriptEndRef} />
-                      </div>
+                        ))
+                      )}
+                      <div ref={transcriptEndRef} />
                     </div>
-                  </Panel>
-
-                  <PanelResizeHandle className="h-1.5 bg-blue-950/60 hover:bg-blue-500/50 transition-colors cursor-row-resize" />
-
-                  <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0B101E]">
-                    <div className="p-3 border-b border-blue-950/60 bg-[#131B2E]/40 sticky top-0 z-10 flex items-center justify-between">
+                  </div>
+                  
+                  <div className={`flex-1 flex-col overflow-hidden bg-muted/30 ${activeRightTab === 'transcript' ? 'flex' : 'hidden'}`}>
+                    <div className="p-3 border-b border-border bg-card/80 sticky top-0 z-10 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                           <Zap className="w-3.5 h-3.5" />
-                          Follow-up Tasks
+                          Meeting Notes
                         </span>
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/30">
                           {actionItems.length}
                         </span>
                       </div>
@@ -633,7 +824,7 @@ export function MeetingRoomClient() {
                       <button
                         onClick={handleOpenJiraWorkspace}
                         disabled={isOpeningJira}
-                        className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-300 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+                        className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
                         title="Open Jira Board for this Meeting"
                       >
                         {isOpeningJira ? (
@@ -646,32 +837,31 @@ export function MeetingRoomClient() {
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2">
                       {actionItems.length === 0 ? (
-                        <div className="text-center py-6 text-slate-500 text-xs">
-                          Chưa có Follow-up Tasks nào được AI trích xuất.
+                        <div className="text-center py-6 text-muted-foreground text-xs">
+                          Chưa có Meeting Notes nào được AI trích xuất.
                         </div>
                       ) : (
                         actionItems.map((item: ActionItemResponse) => (
                           <div
                             key={item.id}
-                            className="text-xs p-2.5 rounded-lg bg-[#131B2E] border border-blue-950/80"
+                            className="text-xs p-2.5 rounded-lg bg-card border border-border"
                           >
                             <div className="flex items-start gap-2">
                               <div className="mt-0.5 shrink-0">
                                 <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    item.status === 'COMPLETED' ? 'bg-emerald-400' : 'bg-amber-400'
-                                  }`}
+                                  className={`w-2 h-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-success' : 'bg-warning'
+                                    }`}
                                 />
                               </div>
                               <div>
-                                <span className="font-bold text-emerald-300 bg-emerald-400/10 px-1.5 py-0.5 rounded mr-1.5">
+                                <span className="font-bold text-success bg-success/10 px-1.5 py-0.5 rounded mr-1.5">
                                   {item.title}
                                 </span>
-                                <span className="text-slate-300 leading-relaxed">
+                                <span className="text-foreground leading-relaxed">
                                   {item.description || ''}
                                 </span>
                                 {item.assignee_id && (
-                                  <span className="text-blue-400 ml-1.5">(@Assignee)</span>
+                                  <span className="text-primary ml-1.5">(@Assignee)</span>
                                 )}
                               </div>
                             </div>
@@ -679,67 +869,45 @@ export function MeetingRoomClient() {
                         ))
                       )}
                     </div>
-                  </Panel>
-                </PanelGroup>
-              )}
-
-              {activeRightTab === 'ai' && (
-                <div className="flex-1 flex flex-col overflow-hidden p-4">
-                  <div className="flex-1 space-y-3 overflow-y-auto">
-                    {aiMessages.map((msg, i) => (
-                      <div
-                        key={i}
-                        className={`p-3 rounded-xl border ${
-                          msg.isAi
-                            ? 'bg-indigo-950/30 border-indigo-500/40'
-                            : 'bg-[#131B2E] border-blue-950'
-                        } space-y-1`}
-                      >
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span
-                            className={`font-bold ${
-                              msg.isAi ? 'text-indigo-400' : 'text-blue-400'
-                            }`}
-                          >
-                            {msg.sender}
-                          </span>
-                          <span className="text-slate-500">{msg.time}</span>
-                        </div>
-                        <p className="text-xs text-slate-200 leading-relaxed">{msg.text}</p>
-                      </div>
-                    ))}
                   </div>
 
-                  <form
-                    onSubmit={handleSendAiQuery}
-                    className="flex items-center gap-2 pt-3 mt-3 border-t border-blue-950"
-                  >
-                    <input
-                      type="text"
-                      value={aiQueryMsg}
-                      onChange={(e) => setAiQueryMsg(e.target.value)}
-                      disabled={isAiLoading}
-                      placeholder={
-                        isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, transcript...'
-                      }
-                      className="flex-1 px-3 py-2 rounded-xl bg-[#131B2E] border border-indigo-950 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isAiLoading}
-                      className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      {isAiLoading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Zap className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </form>
+                  <div className={`flex-1 flex-col bg-background ${activeRightTab === 'ai' ? 'flex' : 'hidden'}`}>
+                    <div className="flex flex-col w-full h-full">
+                      <ul className="lk-chat-messages flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                        <div className="flex-1" />
+                        {aiMessages.map((msg, i) => (
+                          <li key={i} className="lk-chat-message flex flex-col gap-1">
+                            <div className="lk-meta flex items-center justify-between">
+                              <div className="lk-participant-name font-bold" style={{ color: msg.isAi ? 'var(--primary)' : 'var(--foreground)' }}>
+                                {msg.sender}
+                              </div>
+                              <div className="lk-timestamp text-muted-foreground">{msg.time}</div>
+                            </div>
+                            <div className={`lk-message-body p-3 rounded-2xl leading-relaxed ${msg.isAi ? 'bg-primary/10 text-foreground rounded-tl-sm' : 'bg-muted text-foreground rounded-tr-sm'}`}>
+                              {msg.text}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <form onSubmit={handleSendAiQuery} className="lk-chat-form shrink-0 border-t border-border p-3 mt-auto">
+                        <input
+                          type="text"
+                          value={aiQueryMsg}
+                          onChange={(e) => setAiQueryMsg(e.target.value)}
+                          disabled={isAiLoading}
+                          placeholder={isAiLoading ? 'Đang suy nghĩ...' : 'Hỏi về agenda, transcript...'}
+                          className="lk-form-control lk-chat-form-input w-full"
+                        />
+                        <button type="submit" disabled={isAiLoading} className="lk-button lk-chat-form-button">
+                          {isAiLoading ? '...' : 'Gửi'}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-          </aside>
+              </aside>
+            )}
+          </LiveKitRoom>
         )}
       </main>
 

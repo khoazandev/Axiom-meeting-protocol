@@ -91,21 +91,21 @@ export default function CreateMeetingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary p-6 md:p-10 flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-background text-foreground p-6 md:p-10 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header Back Button */}
         <Link
           href="/meetings"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Meetings</span>
         </Link>
 
-        <div className="bg-[#131B2E] border border-blue-950/80 rounded-3xl p-8 shadow-2xl space-y-6">
-          <div className="border-b border-blue-950/60 pb-5">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Deploy New Meeting</h1>
-            <p className="text-xs text-slate-400 mt-1">
+        <div className="bg-card border border-border rounded-3xl p-8 shadow-xl space-y-6">
+          <div className="border-b border-border pb-5">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Deploy New Meeting</h1>
+            <p className="text-xs text-muted-foreground mt-1">
               Configure a structured meeting for automated AI post-meeting analytics.
             </p>
           </div>
@@ -119,7 +119,7 @@ export default function CreateMeetingPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 Meeting Title
               </label>
               <input
@@ -128,32 +128,32 @@ export default function CreateMeetingPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Q3 Architecture Review & Security Gate"
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-blue-900/40 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
 
             {/* ── File Attachments ── */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <Paperclip className="w-3.5 h-3.5 text-emerald-400" />
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-primary" />
                   Tài liệu đính kèm
-                  <span className="text-slate-500 normal-case font-normal">(tùy chọn)</span>
+                  <span className="text-muted-foreground normal-case font-normal">(tùy chọn)</span>
                 </label>
                 {pendingFiles.length > 0 && (
-                  <span className="text-[10px] text-emerald-400 font-semibold">
+                  <span className="text-[10px] text-primary font-semibold">
                     {pendingFiles.length} file sẵn sàng
                   </span>
                 )}
               </div>
 
               {/* Drop zone */}
-              <label className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-950/10 cursor-pointer hover:border-emerald-500/60 hover:bg-emerald-950/20 transition-all group">
-                <Upload className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-emerald-400 font-semibold">
+              <label className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 cursor-pointer hover:border-primary/60 hover:bg-primary/10 transition-all group">
+                <Upload className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs text-primary font-semibold">
                   Click để chọn tài liệu
                 </span>
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[11px] text-muted-foreground">
                   PDF, Word (.docx), Excel (.xlsx), TXT — sẽ được upload sau khi tạo meeting
                 </span>
                 <input
@@ -172,25 +172,25 @@ export default function CreateMeetingPage() {
                   {pendingFiles.map((f) => (
                     <div
                       key={f.name}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0B0F19] border border-emerald-500/20"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted border border-border"
                     >
                       <span className="text-base">{getFileIcon(f.name)}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white font-medium truncate">{f.name}</p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-xs text-foreground font-medium truncate">{f.name}</p>
+                        <p className="text-[10px] text-muted-foreground">
                           {(f.size / 1024).toFixed(0)} KB
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeFile(f.name)}
-                        className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
-                  <p className="text-[10px] text-slate-500 text-center">
+                  <p className="text-[10px] text-muted-foreground text-center">
                     ✨ AI chatbot sẽ dùng các file này để trả lời câu hỏi trong cuộc họp
                   </p>
                 </div>
@@ -200,7 +200,7 @@ export default function CreateMeetingPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>

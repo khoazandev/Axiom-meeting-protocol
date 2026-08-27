@@ -98,7 +98,7 @@ export default function TasksPage() {
         <div className="flex items-center gap-3">
           <a
             href="/jira"
-            className="px-3.5 py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-1.5 rounded-xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-sm"
           >
             <Kanban className="w-3.5 h-3.5" />
             <span>Open Jira Workspaces</span>
@@ -178,7 +178,7 @@ export default function TasksPage() {
                   {colTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="p-4 rounded-xl bg-bg-card border border-border shadow-md hover:border-blue-500/40 transition-all space-y-3"
+                      className="p-4 rounded-xl bg-bg-card border border-border shadow-md hover:border-primary/40 transition-all space-y-3"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono text-accent font-semibold">

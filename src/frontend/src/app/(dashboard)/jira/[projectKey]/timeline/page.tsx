@@ -42,7 +42,7 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
   if (loading && !project) {
     return (
       <div className="flex items-center justify-center p-24">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
       <div className="p-12 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
         <h2 className="text-base font-bold text-text-primary">Project Not Found</h2>
-        <Link href="/jira" className="text-xs text-blue-400 hover:underline font-semibold">
+        <Link href="/jira" className="text-xs text-primary hover:underline font-semibold">
           Back to Spaces
         </Link>
       </div>
@@ -100,7 +100,7 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           sprint.status === 'ACTIVE'
-                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                            ? 'bg-blue-500/15 text-primary border border-blue-500/30'
                             : sprint.status === 'CLOSED'
                               ? 'bg-emerald-500/15 text-emerald-300'
                               : 'bg-bg-elevated text-text-muted'
@@ -141,7 +141,7 @@ export default function JiraTimelinePage({ params }: { params: Promise<{ project
                     >
                       <div className="flex items-center gap-2 truncate pr-2">
                         <IssueTypeIcon type={issue.type} />
-                        <span className="font-mono text-[11px] font-bold text-blue-400">
+                        <span className="font-mono text-[11px] font-bold text-primary">
                           {issue.key}
                         </span>
                         <span

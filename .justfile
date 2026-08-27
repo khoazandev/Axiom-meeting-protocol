@@ -13,7 +13,7 @@ backend-install:
 
 backend-dev:
     @echo "Starting backend development server..."
-    uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
+    uv run uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8001
 
 backend-test:
     @echo "Running backend tests..."

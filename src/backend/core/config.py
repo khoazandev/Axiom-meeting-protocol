@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     livekit_api_secret: str = "secret"
     livekit_url: str = ""
 
+    # API Keys
+    openai_api_key: str = ""
+    gemini_api_key: str = ""
+
     # JWT Authentication
     jwt_secret: str = "dev-secret-key-change-in-production-32bytesmin"
     jwt_algorithm: str = "HS256"

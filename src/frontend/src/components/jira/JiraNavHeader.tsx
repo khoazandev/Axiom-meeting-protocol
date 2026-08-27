@@ -59,7 +59,7 @@ export function JiraNavHeader({ project, onCreateIssueClick }: JiraNavHeaderProp
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateIssueClick}
-            className="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md"
+            className="px-4 py-2 rounded-xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4" />
             <span>Create Issue</span>
@@ -78,7 +78,7 @@ export function JiraNavHeader({ project, onCreateIssueClick }: JiraNavHeaderProp
               href={tab.href}
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
                 isActive
-                  ? 'bg-accent text-white shadow-xs'
+                  ? 'bg-accent text-foreground shadow-xs'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
               }`}
             >

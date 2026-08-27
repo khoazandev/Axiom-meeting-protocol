@@ -96,7 +96,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
     return (
       <aside className="w-14 bg-bg-card border-r border-border flex flex-col items-center py-3 justify-between shrink-0 select-none z-20 transition-all duration-200">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-foreground font-bold text-sm shadow-md">
             J
           </div>
           <button
@@ -134,7 +134,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
         {/* Top Header Section */}
         <div className="p-3.5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-foreground font-bold text-xs shadow-sm">
               <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
                 <path d="M11.53 2c0 2.4 1.97 4.35 4.39 4.35h2.89V3.53C18.81 2.69 18.12 2 17.28 2h-5.75zm0 5.67c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53h-5.75zm-6.24 5.66c0 2.4 1.97 4.35 4.39 4.35h2.89v-2.82c0-.85-.69-1.53-1.53-1.53H5.29zm0-5.66c0 2.4 1.97 4.35 4.39 4.35h2.89V9.2c0-.85-.69-1.53-1.53-1.53H5.29z" />
               </svg>
@@ -160,7 +160,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
               href="/jira"
               className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors font-medium"
             >
-              <Sparkles className="w-4 h-4 text-blue-500" />
+              <Sparkles className="w-4 h-4 text-primary" />
               <span>For you</span>
             </Link>
 
@@ -189,7 +189,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                       href={`/jira/${p.key}/board`}
                       className={`flex items-center justify-between px-2 py-1 rounded-md text-[11px] truncate transition-colors ${
                         currentProjectKey === p.key
-                          ? 'bg-blue-600/15 text-blue-500 font-semibold'
+                          ? 'bg-primary/15 text-primary font-semibold'
                           : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
                       }`}
                     >
@@ -225,7 +225,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                       href={`/jira/${p.key}/board`}
                       className={`flex items-center justify-between px-2 py-1 rounded-md text-[11px] truncate transition-colors ${
                         currentProjectKey === p.key
-                          ? 'bg-blue-600/15 text-blue-500 font-semibold'
+                          ? 'bg-primary/15 text-primary font-semibold'
                           : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
                       }`}
                     >
@@ -263,7 +263,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                 href={`/jira/${currentProjectKey}/timeline`}
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
               >
-                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                <Calendar className="w-3.5 h-3.5 text-primary" />
                 <span>Roadmap & Gantt</span>
               </Link>
             ) : (
@@ -299,7 +299,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                     href={`/jira/${proj.key}/board`}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors group ${
                       isActive
-                        ? 'bg-blue-600/15 text-blue-500 font-semibold border-l-2 border-blue-500'
+                        ? 'bg-primary/15 text-primary font-semibold border-l-2 border-blue-500'
                         : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                     }`}
                   >
@@ -307,7 +307,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                       className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
                         proj.meeting_id
                           ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/25'
-                          : 'bg-blue-500/15 text-blue-500 border border-blue-500/25'
+                          : 'bg-blue-500/15 text-primary border border-blue-500/25'
                       }`}
                     >
                       {proj.meeting_id ? '🎙️' : proj.key.substring(0, 2)}
@@ -428,7 +428,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
 
               <div className="p-3 rounded-xl bg-bg-elevated border border-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <Video className="w-4 h-4 text-blue-400" />
+                  <Video className="w-4 h-4 text-primary" />
                   <div>
                     <div className="font-bold text-text-primary">LiveKit WebRTC Server</div>
                     <div className="text-[11px] text-text-muted">
@@ -436,7 +436,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
                     </div>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-primary border border-primary/20">
                   Connected
                 </span>
               </div>
@@ -464,7 +464,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
             </p>
             <div className="p-3 rounded-xl bg-bg-elevated border border-border text-xs space-y-2">
               <div className="flex items-center gap-2 font-bold text-text-primary">
-                <Target className="w-4 h-4 text-blue-400" />
+                <Target className="w-4 h-4 text-primary" />
                 <span>Active Sprint Target</span>
               </div>
               <p className="text-text-muted text-[11px]">

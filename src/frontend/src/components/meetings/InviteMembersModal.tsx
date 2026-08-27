@@ -128,16 +128,16 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-[#0E1526] border border-blue-900/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-blue-900/40">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <Users className="w-5 h-5 text-blue-400" />
-            <h2 className="text-base font-bold text-white">Mời thành viên</h2>
+            <Users className="w-5 h-5 text-primary" />
+            <h2 className="text-base font-bold text-foreground">Mời thành viên</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -146,7 +146,7 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
         {/* Search */}
         <div className="px-5 pt-4 pb-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               ref={inputRef}
               type="text"
@@ -156,42 +156,42 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
                 if (!e.target.value.trim()) setSearchResults([]);
               }}
               placeholder="Tìm theo email hoặc tên..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#131B2E] border border-blue-900/50 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
             />
             {searching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 animate-spin" />
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
             )}
           </div>
         </div>
 
         {/* Feedback */}
         {feedback && (
-          <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-blue-950/50 border border-blue-900/30 text-xs text-blue-300 font-medium">
+          <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
             {feedback}
           </div>
         )}
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div className="mx-5 mb-3 rounded-xl bg-[#131B2E] border border-blue-900/30 overflow-hidden max-h-40 overflow-y-auto">
+          <div className="mx-5 mb-3 rounded-xl bg-muted border border-border overflow-hidden max-h-40 overflow-y-auto">
             {searchResults.map((user) => (
               <button
                 key={user.id}
                 onClick={() => handleAddMember(user)}
                 disabled={addingUserId === user.id}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-950/50 transition-all text-left group disabled:opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-primary/5 transition-all text-left group disabled:opacity-50"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white font-medium truncate">{user.full_name}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                  <p className="text-sm text-foreground font-medium truncate">{user.full_name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
                 </div>
                 {addingUserId === user.id ? (
-                  <Loader2 className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                  <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
                 ) : (
-                  <UserPlus className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors shrink-0" />
+                  <UserPlus className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                 )}
               </button>
             ))}
@@ -200,17 +200,17 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
 
         {/* No results */}
         {searchQuery.trim() && !searching && searchResults.length === 0 && (
-          <div className="mx-5 mb-3 px-4 py-3 rounded-xl bg-[#131B2E] border border-blue-900/30 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mx-5 mb-3 px-4 py-3 rounded-xl bg-muted border border-border text-center">
+            <p className="text-xs text-muted-foreground">
               Không tìm thấy user với &quot;{searchQuery}&quot;
             </p>
           </div>
         )}
 
         {/* Current Members */}
-        <div className="border-t border-blue-900/40">
+        <div className="border-t border-border">
           <div className="px-5 py-3">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Shield className="w-3 h-3" />
               Thành viên hiện tại ({members.length})
             </p>
@@ -219,34 +219,34 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
           <div className="px-5 pb-5 space-y-1 max-h-48 overflow-y-auto">
             {loadingMembers ? (
               <div className="flex items-center justify-center py-6">
-                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
               </div>
             ) : members.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">Chưa có thành viên nào</p>
+              <p className="text-xs text-muted-foreground text-center py-4">Chưa có thành viên nào</p>
             ) : (
               members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#131B2E]/60 group"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/60 group border border-transparent hover:border-border transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0 shadow-sm">
                     {member.role === 'HOST' ? '👑' : '👤'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">
+                    <p className="text-sm text-foreground font-medium truncate">
                       {member.user_id.slice(0, 8)}...
                     </p>
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                           member.role === 'HOST'
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'bg-blue-500/20 text-blue-300'
+                            ? 'bg-warning/20 text-warning-foreground'
+                            : 'bg-primary/10 text-primary'
                         }`}
                       >
                         {member.role}
                       </span>
-                      <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                         <CheckCircle2 className="w-2.5 h-2.5" />
                         {member.status}
                       </span>
@@ -256,7 +256,7 @@ export function InviteMembersModal({ meetingId, isOpen, onClose }: InviteMembers
                     <button
                       onClick={() => handleRemoveMember(member)}
                       disabled={removingMemberId === member.id}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
                       title="Xóa thành viên"
                     >
                       {removingMemberId === member.id ? (

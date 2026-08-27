@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { jiraApi, JiraProject } from '@/lib/api';
+import { jiraApi, JiraProject, Sprint } from '@/lib/api';
 import { JiraSidebar } from '@/components/jira/layout/JiraSidebar';
 import { JiraWorkspaceHeader } from '@/components/jira/layout/JiraWorkspaceHeader';
 import { JiraDocsView } from '@/components/jira/views/JiraDocsView';
@@ -13,6 +13,7 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
   const { projectKey } = use(params);
 
   const [project, setProject] = useState<JiraProject | null>(null);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -22,6 +23,9 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
         setLoading(true);
         const proj = await jiraApi.getProject(projectKey);
         setProject(proj);
+        
+        const sprintList = await jiraApi.getSprints(proj.key);
+        setSprints(sprintList);
       } catch (err) {
         console.error('Failed to load docs data:', err);
       } finally {
@@ -34,7 +38,7 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
   if (loading && !project) {
     return (
       <div className="flex items-center justify-center p-24">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -44,7 +48,7 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
       <div className="p-12 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
         <h2 className="text-base font-bold text-text-primary">Project Not Found</h2>
-        <Link href="/jira" className="text-xs text-blue-400 hover:underline font-semibold">
+        <Link href="/jira" className="text-xs text-primary hover:underline font-semibold">
           Back to Spaces
         </Link>
       </div>
@@ -64,7 +68,12 @@ export default function JiraDocsPage({ params }: { params: Promise<{ projectKey:
       </main>
 
       {showCreateModal && (
-        <CreateIssueModal projectId={project.id} onClose={() => setShowCreateModal(false)} />
+        <CreateIssueModal
+          projectId={project.id}
+          sprints={sprints}
+          onClose={() => setShowCreateModal(false)}
+          onIssueCreated={() => {}}
+        />
       )}
     </div>
   );

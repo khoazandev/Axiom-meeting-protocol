@@ -37,7 +37,7 @@ export function IssueCard({ issue, onClick, onDragStart }: IssueCardProps) {
 
       {/* Origin from Meeting tag if applicable */}
       {issue.transcript_segment_id && (
-        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-primary border border-primary/20">
           <Mic className="w-3 h-3" />
           <span>Meeting AI</span>
         </div>
@@ -47,7 +47,7 @@ export function IssueCard({ issue, onClick, onDragStart }: IssueCardProps) {
       <div className="flex items-center justify-between text-xs text-text-secondary pt-1">
         <div className="flex items-center gap-1.5">
           <IssueTypeIcon type={issue.type} />
-          <span className="font-mono font-bold text-[11px] text-text-secondary group-hover:text-blue-400 transition-colors">
+          <span className="font-mono font-bold text-[11px] text-text-secondary group-hover:text-primary transition-colors">
             {issue.key}
           </span>
         </div>
@@ -57,7 +57,7 @@ export function IssueCard({ issue, onClick, onDragStart }: IssueCardProps) {
           {/* Assignee Avatar */}
           <div
             title={issue.assignee_name || 'Unassigned'}
-            className="w-5 h-5 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-[9px] font-bold text-blue-300 uppercase shrink-0"
+            className="w-5 h-5 rounded-full bg-primary/30 border border-primary/40 flex items-center justify-center text-[9px] font-bold text-primary uppercase shrink-0"
           >
             {issue.assignee_name ? issue.assignee_name.slice(0, 2) : 'VK'}
           </div>

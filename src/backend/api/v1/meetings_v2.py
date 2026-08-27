@@ -282,22 +282,27 @@ class RagQueryResponse(_PydanticBaseModel):
     context_used: list[str]
 
 
+import uuid
+
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
 def get_meeting_token(
     meeting_id: str,
     participant_name: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
     _get_meeting_or_404(db, meeting_id)
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    token.with_identity(participant_name)
+    unique_identity = f"user_{current_user.id}"
+    token.with_identity(unique_identity)
     token.with_name(participant_name)
     token.with_grants(
         livekit_api.VideoGrants(
             room_join=True,
             room=f"meeting-{meeting_id}",
+            can_update_own_metadata=True,
         )
     )
     return TokenResponse(token=token.to_jwt())

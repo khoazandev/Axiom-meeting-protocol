@@ -278,7 +278,7 @@ export default function AdminPage() {
                   auditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-border/20">
                       <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded bg-accent-muted border border-blue-500/20 text-accent font-mono font-bold text-[10px]">
+                        <span className="px-2 py-0.5 rounded bg-accent-muted border border-primary/20 text-accent font-mono font-bold text-[10px]">
                           {log.action}
                         </span>
                       </td>

@@ -107,7 +107,7 @@ export function CompleteSprintModal({
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-success text-white hover:bg-success/90 disabled:opacity-50 transition-colors shadow-sm"
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-success text-foreground hover:bg-success/90 disabled:opacity-50 transition-colors shadow-sm"
             >
               {loading ? 'Completing...' : 'Complete Sprint'}
             </button>

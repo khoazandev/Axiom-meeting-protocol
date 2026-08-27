@@ -10,13 +10,12 @@ export function SecuritySection() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <FadeContent direction="left">
           <div className="space-y-6">
-            <p className="text-accent font-semibold text-sm tracking-wide uppercase">Security</p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-[-0.03em]">
               Absolute data sovereignty.
             </h2>
             <p className="text-lg text-muted-foreground font-medium leading-relaxed">
               Axiom runs entirely within your infrastructure. Meeting data, transcriptions, and AI
-              models — everything stays inside your network perimeter.
+              models stay inside your network perimeter.
             </p>
             <div className="space-y-4 pt-4">
               {SECURITY_ITEMS.map((item) => (

@@ -24,7 +24,6 @@ export default function LoginPage() {
 
     try {
       const tokens = await authApi.login(email, password);
-      localStorage.setItem('axiom_token', tokens.access_token);
       useAuthStore.setState({ token: tokens.access_token });
       const user = await authApi.me();
       const organizations = await organizationApi.list();
@@ -59,15 +58,20 @@ export default function LoginPage() {
             <label className="block text-sm font-medium text-text-secondary mb-2">
               {t.auth.email}
             </label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              className="w-full px-3 py-2.5 rounded-lg bg-bg-elevated border border-border text-text-primary placeholder-text-placeholder text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
-            />
+            <div className="flex rounded-lg overflow-hidden border border-border focus-within:ring-2 focus-within:ring-focus-ring transition-colors">
+              <input
+                type="text"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name"
+                className="flex-1 w-full px-3 py-2.5 bg-bg-elevated text-text-primary placeholder-text-placeholder text-sm focus:outline-none"
+              />
+              <span className="px-3 py-2.5 bg-muted text-text-secondary text-sm border-l border-border flex items-center font-medium">
+                @gmail.com
+              </span>
+            </div>
           </div>
 
           <div>

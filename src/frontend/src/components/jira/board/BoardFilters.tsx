@@ -50,7 +50,7 @@ export function BoardFilters({
           onClick={onOnlyMyIssuesToggle}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all shadow-2xs ${
             onlyMyIssues
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+              ? 'bg-primary text-foreground border-primary shadow-xs'
               : 'bg-bg-card text-text-secondary border-border hover:text-text-primary hover:border-blue-500/50'
           }`}
         >
@@ -65,7 +65,7 @@ export function BoardFilters({
               onClick={() => onTypeFilterChange(t)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 typeFilter === t
-                  ? 'bg-blue-600/15 text-blue-500 font-bold'
+                  ? 'bg-primary/15 text-primary font-bold'
                   : 'text-text-muted hover:text-text-primary'
               }`}
             >

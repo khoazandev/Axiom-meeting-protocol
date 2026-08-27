@@ -396,7 +396,7 @@ export function IssueDetailDrawer({
                 <button
                   type="submit"
                   disabled={!newSubtaskSummary.trim()}
-                  className="px-3 py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add</span>
@@ -448,7 +448,7 @@ export function IssueDetailDrawer({
                 <button
                   type="submit"
                   disabled={!newComment.trim()}
-                  className="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Send</span>

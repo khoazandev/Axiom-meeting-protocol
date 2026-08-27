@@ -99,7 +99,7 @@ export default function JiraBacklogPage({ params }: { params: Promise<{ projectK
   if (loading && !project) {
     return (
       <div className="flex items-center justify-center p-24">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -109,7 +109,7 @@ export default function JiraBacklogPage({ params }: { params: Promise<{ projectK
       <div className="p-12 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
         <h2 className="text-base font-bold text-text-primary">Project Not Found</h2>
-        <Link href="/jira" className="text-xs text-blue-400 hover:underline font-semibold">
+        <Link href="/jira" className="text-xs text-primary hover:underline font-semibold">
           Back to Spaces
         </Link>
       </div>
@@ -138,7 +138,7 @@ export default function JiraBacklogPage({ params }: { params: Promise<{ projectK
           </h2>
           <button
             onClick={handleCreateSprint}
-            className="px-3.5 py-1.5 rounded-xl bg-bg-card border border-border hover:border-blue-500 text-xs font-semibold text-text-primary hover:text-blue-400 transition-all flex items-center gap-1.5 shadow-xs"
+            className="px-3.5 py-1.5 rounded-xl bg-bg-card border border-border hover:border-blue-500 text-xs font-semibold text-text-primary hover:text-primary transition-all flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create Sprint</span>

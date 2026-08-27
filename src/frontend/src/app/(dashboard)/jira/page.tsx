@@ -139,7 +139,7 @@ export default function JiraOverviewPage() {
 
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 rounded-xl bg-primary hover:bg-blue-500 text-foreground text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Space</span>
@@ -157,7 +157,7 @@ export default function JiraOverviewPage() {
               onClick={() => setSelectedDeptFilter('ALL')}
               className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
                 selectedDeptFilter === 'ALL'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-primary text-foreground shadow-xs'
                   : 'bg-bg-card border border-border text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -169,7 +169,7 @@ export default function JiraOverviewPage() {
                 onClick={() => setSelectedDeptFilter(d.id)}
                 className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
                   selectedDeptFilter === d.id
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-primary text-foreground shadow-xs'
                     : 'bg-bg-card border border-border text-text-secondary hover:text-text-primary'
                 }`}
               >
@@ -182,14 +182,14 @@ export default function JiraOverviewPage() {
         {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center p-16">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         )}
 
         {/* Empty State */}
         {!loading && filteredProjects.length === 0 && (
           <div className="rounded-3xl border border-dashed border-border p-12 text-center space-y-4 max-w-lg mx-auto my-8">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-primary flex items-center justify-center mx-auto">
               <Kanban className="w-6 h-6" />
             </div>
             <div className="space-y-1">
@@ -201,7 +201,7 @@ export default function JiraOverviewPage() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-primary hover:bg-blue-500 text-foreground text-xs font-semibold transition-all inline-flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Space</span>
@@ -221,16 +221,16 @@ export default function JiraOverviewPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-sm ${
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-foreground shadow-sm ${
                         project.meeting_id
                           ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                          : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                          : 'bg-gradient-to-br from-primary to-primary/80'
                       }`}
                     >
                       {project.meeting_id ? '🎙️' : project.key.slice(0, 2)}
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-text-primary group-hover:text-blue-500 transition-colors">
+                      <h3 className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">
                         {project.name}
                       </h3>
                       <span className="font-mono text-[11px] font-semibold text-text-muted">
@@ -255,7 +255,7 @@ export default function JiraOverviewPage() {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted group-hover:text-blue-500 transition-colors font-medium">
+              <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted group-hover:text-primary transition-colors font-medium">
                 <span>Open Active Board</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -346,7 +346,7 @@ export default function JiraOverviewPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !name || !key}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-primary hover:bg-blue-500 text-foreground text-xs font-bold transition-all disabled:opacity-50"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Space'}
                 </button>

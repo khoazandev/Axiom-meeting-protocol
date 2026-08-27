@@ -10,9 +10,9 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Axiom — Họp thông minh',
+  title: 'Axiom - Intelligent Meetings',
   description:
-    'Họp video trực tuyến với AI ghi chú tự động, phụ đề thời gian thực và biên bản họp tự động. Không phụ thuộc cloud bên ngoài.',
+    'On-premise video conferencing with native AI intelligence. Enforce agendas, transcribe securely, and capture structural data.',
   manifest: '/manifest.json',
   keywords: [
     'họp trực tuyến',
@@ -23,16 +23,16 @@ export const metadata: Metadata = {
     'WebRTC',
   ],
   openGraph: {
-    title: 'Axiom — Họp thông minh',
-    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
+    title: 'Axiom - Intelligent Meetings',
+    description: 'On-premise video conferencing with native AI intelligence.',
     type: 'website',
-    locale: 'vi_VN',
+    locale: 'en_US',
     siteName: 'Axiom',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Axiom — Họp thông minh',
-    description: 'Họp video trực tuyến với AI ghi chú tự động. Không phụ thuộc cloud bên ngoài.',
+    title: 'Axiom - Intelligent Meetings',
+    description: 'On-premise video conferencing with native AI intelligence.',
   },
   robots: {
     index: true,
@@ -46,16 +46,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${plusJakarta.variable} h-full antialiased dark`}>
+    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Anti-FOUC: set theme class before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('axiom_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='dark'||!t)document.documentElement.classList.add('dark');else if(t==='system'){if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}})();`,
+            __html: `(function(){var t=localStorage.getItem('axiom_theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light'||!t)document.documentElement.classList.remove('dark');else if(t==='system'){if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}})();`,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-bg-base text-text-primary">
+      <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>
