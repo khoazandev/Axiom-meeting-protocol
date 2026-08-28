@@ -50,6 +50,8 @@ class MeetingMemberResponse(BaseModel):
     status: str
     joined_at: datetime | None = None
     created_at: datetime
+    user_name: str | None = None
+    user_email: str | None = None
 
     model_config = {"from_attributes": True}
 

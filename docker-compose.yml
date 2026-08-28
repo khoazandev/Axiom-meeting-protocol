@@ -94,7 +94,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       - livekit
-    command: uv run python -m src.backend.agent start
+    volumes:
+      - hf_cache:/home/appuser/.cache/huggingface
+    command: python -m src.backend.agent start
 
 
   # ─── Redis (for future AI queue pipeline) ────────────────────
@@ -111,3 +113,4 @@ services:
 
 volumes:
   postgres_data:
+  hf_cache:

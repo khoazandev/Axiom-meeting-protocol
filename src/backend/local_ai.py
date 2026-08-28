@@ -8,12 +8,33 @@ from livekit import rtc
 from livekit.agents import stt
 from faster_whisper import WhisperModel
 
+_global_whisper_model = None
+_global_vad = None
+
+def preload_models():
+    """Load models in a separate thread to avoid blocking event loop"""
+    global _global_whisper_model, _global_vad
+    if _global_whisper_model is None:
+        _global_whisper_model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
+    if _global_vad is None:
+        from livekit.plugins import silero
+        _global_vad = silero.VAD.load(min_silence_duration=1.0)
+
+def get_vad():
+    global _global_vad
+    if _global_vad is None:
+        preload_models()
+    return _global_vad
+
 class FasterWhisperSTT(stt.STT):
-    def __init__(self, model_size="tiny", language="vi"):
+    def __init__(self, model_size: str = "large-v3-turbo", language: str = "en"):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
-        # Use int8 quantization on CPU for fast execution
-        self._model = WhisperModel(model_size, device="cpu", compute_type="int8")
         self._language = language
+        
+        global _global_whisper_model
+        if _global_whisper_model is None:
+            _global_whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        self._model = _global_whisper_model
 
     async def _recognize_impl(
         self,
@@ -179,36 +200,8 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
 
         async def _recognize_interim_loop() -> None:
             """periodically recognize speech from the buffer while speaking"""
-            while True:
-                await asyncio.sleep(0.5)  # Every 500ms
-                if self._is_speaking and len(self._speech_buffer) > 0:
-                    # Make a copy of the current buffer
-                    current_frames = list(self._speech_buffer)
-                    # Don't transcribe if buffer is too short (e.g. less than 0.5s)
-                    # Assuming 10ms frames, 50 frames = 500ms
-                    if len(current_frames) < 30:
-                        continue
-                        
-                    merged_frames = utils.merge_frames(current_frames)
-                    try:
-                        t_event = await self._wrapped_stt.recognize(
-                            buffer=merged_frames,
-                            language=self._language,
-                            conn_options=self._wrapped_stt_conn_options,
-                        )
-                        if len(t_event.alternatives) > 0 and t_event.alternatives[0].text:
-                            text = t_event.alternatives[0].text.strip()
-                            if text and text != self._latest_interim:
-                                self._latest_interim = text
-                                self._event_ch.send_nowait(
-                                    SpeechEvent(
-                                        type=SpeechEventType.INTERIM_TRANSCRIPT,
-                                        alternatives=[t_event.alternatives[0]],
-                                    )
-                                )
-                    except Exception as e:
-                        import logging
-                        logging.getLogger("realtime-stt").warning(f"Interim error: {e}")
+            # Disabled as per user request to only translate/transcribe when stopping speech (reduces CPU load)
+            pass
 
         async def _recognize_vad() -> None:
             """recognize speech from vad events"""

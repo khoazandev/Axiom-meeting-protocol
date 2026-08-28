@@ -180,8 +180,10 @@ def list_meeting_members(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
+    from sqlalchemy.orm import joinedload
     return (
         db.query(MeetingMember)
+        .options(joinedload(MeetingMember.user))
         .filter(MeetingMember.meeting_id == meeting_id)
         .all()
     )

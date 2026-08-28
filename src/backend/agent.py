@@ -105,6 +105,20 @@ async def process_translation(state: AgentState, source_text: str, source_partic
         translated_text = translated_text.strip()
         logger.info(f"Translated to {target_lang}: {translated_text}")
         
+        # Publish translation to frontend via DataChannel
+        translation_payload = {
+            "type": "translation",
+            "original_text": source_text,
+            "translated_text": translated_text,
+            "from_language": source_lang,
+            "to_language": target_lang,
+            "participant_identity": source_participant.identity
+        }
+        await state.ctx.room.local_participant.publish_data(
+            json.dumps(translation_payload).encode("utf-8"),
+            topic="translations"
+        )
+        
         # 2. Get TTS Source and lock
         logger.info(f"Getting TTS track for {target_lang}...")
         audio_source = await state.get_or_create_tts_track(target_lang)
@@ -151,8 +165,18 @@ async def entrypoint(ctx: JobContext):
     load_dotenv(dotenv_path, override=True)
     logger.info(f"Babel Fish Agent starting... API KEY starts with: {os.getenv('OPENAI_API_KEY', '')[:10]}")
     
+    # Connect immediately to prevent LiveKit 10s watchdog timeout
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
     state = AgentState(ctx)
+
+    models_ready = asyncio.Event()
+    async def load_models_task():
+        logger.info("Preloading STT and VAD models in background thread...")
+        await asyncio.to_thread(local_ai.preload_models)
+        models_ready.set()
+        logger.info("Models preloaded successfully.")
+        
+    asyncio.create_task(load_models_task())
 
     # Initialize preferences for participants already in the room
     logger.info(f"Agent connected. Remote participants: {len(ctx.room.remote_participants)}")
@@ -167,12 +191,13 @@ async def entrypoint(ctx: JobContext):
             }
             logger.info(f"Initial prefs for {p.identity}: {state.participant_prefs[p.identity]}")
 
+    # target_lang: Ngôn ngữ user đang sử dụng và là ngôn ngữ đích muốn dịch ra
     def get_participant_language(p: rtc.RemoteParticipant) -> str:
         """Extract language from participant metadata or fallback to 'vi'"""
         try:
-            if p.metadata:
+            if p and p.metadata:
                 meta = json.loads(p.metadata)
-                return meta.get("language_used_in_call", "vi")
+                return meta.get("target_lang", "vi")
         except:
             pass
         return "vi"
@@ -189,75 +214,93 @@ async def entrypoint(ctx: JobContext):
         logger.info(f"Updated preferences for {participant.identity}: {state.participant_prefs[participant.identity]}")
 
     async def handle_track(track: rtc.Track, participant: rtc.RemoteParticipant):
+        logger.info(f"Waiting for AI models to finish loading before processing track from {participant.identity}...")
+        await models_ready.wait()
+        
         lang = get_participant_language(participant)
         logger.info(f"Participant {participant.identity} using language: {lang}")
-        
         audio_stream = rtc.AudioStream(track)
+        
         # Create STT plugin specific to this user's language using local Faster-Whisper
         stt_plugin = local_ai.RealtimeStreamAdapter(
-            stt=local_ai.FasterWhisperSTT(model_size="large-v3", language=lang),
-            vad=silero.VAD.load(min_silence_duration=2.5)
+            stt=local_ai.FasterWhisperSTT(model_size="large-v3-turbo", language=lang),
+            vad=local_ai.get_vad()
         )
         stt_stream = stt_plugin.stream()
         
         async def feed_stt():
-            async for event in audio_stream:
-                stt_stream.push_frame(event.frame)
-            stt_stream.end_input()
+            try:
+                frame_count = 0
+                async for event in audio_stream:
+                    if frame_count == 0:
+                        logger.info(f"Received first audio frame. Sample rate: {event.frame.sample_rate}, Channels: {event.frame.num_channels}")
+                    frame_count += 1
+                    if frame_count % 100 == 0:
+                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity}")
+                    stt_stream.push_frame(event.frame)
+                stt_stream.end_input()
+            except Exception as e:
+                logger.error(f"Error in feed_stt for {participant.identity}: {e}", exc_info=True)
                 
         asyncio.create_task(feed_stt())
 
-        async for event in stt_stream:
-            is_final = event.type == stt.SpeechEventType.FINAL_TRANSCRIPT
-            is_interim = event.type == stt.SpeechEventType.INTERIM_TRANSCRIPT
-            
-            if is_final or is_interim:
-                if not event.alternatives:
-                    continue
-                text = event.alternatives[0].text
+        try:
+            async for event in stt_stream:
+                is_final = event.type == stt.SpeechEventType.FINAL_TRANSCRIPT
+                is_interim = event.type == stt.SpeechEventType.INTERIM_TRANSCRIPT
                 
-                logger.info(f"STT Event: type={event.type}, text='{text}'")
-                
-                if not text.strip():
-                    continue
-                
-                detected_lang = getattr(event.alternatives[0], "language", None) or lang
-
-                # 1. Pipeline 1: Original Transcript -> Records
-                record_payload = {
-                    "type": "original_transcript",
-                    "participant_identity": participant.identity,
-                    "original_text": text,
-                    "language": detected_lang,
-                    "is_final": is_final
-                }
-                await ctx.room.local_participant.publish_data(
-                    json.dumps(record_payload).encode("utf-8"),
-                    topic="records"
-                )
-                
-                # 2. Pipeline 2: Speech Translation (ONLY when finalized)
-                if is_final:
-                    # Find all users who want translation FROM this language
-                    target_langs = set()
-                    logger.info(f"Checking targets for lang {detected_lang}. Prefs: {state.participant_prefs}")
-                    for pid, pref in state.participant_prefs.items():
-                        if pref.get("translation_enabled") and pref.get("translation_source") == detected_lang:
-                            # What is their target language?
-                            p = ctx.room.remote_participants.get(pid)
-                            if p:
-                                t_lang = get_participant_language(p)
-                                logger.info(f"Participant {pid} wants translation. Target lang: {t_lang}")
-                                # Only translate if target != source
-                                if t_lang != detected_lang:
-                                    target_langs.add(t_lang)
-                            else:
-                                logger.warning(f"Participant {pid} not found in remote_participants!")
+                if is_final or is_interim:
+                    if not event.alternatives:
+                        continue
+                    text = event.alternatives[0].text
                     
-                    logger.info(f"Target languages found: {target_langs}")
-                    for t_lang in target_langs:
-                        logger.info(f"Dispatching translation ({detected_lang} -> {t_lang})")
-                        asyncio.create_task(process_translation(state, text, participant, t_lang, source_lang=detected_lang))
+                    logger.info(f"STT Event: type={event.type}, text='{text}'")
+                    
+                    if not text.strip():
+                        continue
+                    
+                    detected_lang = getattr(event.alternatives[0], "language", None) or lang
+
+                    # 1. Pipeline 1: Original Transcript -> Records
+                    record_payload = {
+                        "type": "original_transcript",
+                        "participant_identity": participant.identity,
+                        "original_text": text,
+                        "language": detected_lang,
+                        "is_final": is_final
+                    }
+                    logger.info(f"Publishing record via DataChannel (topic=records): {record_payload}")
+                    await ctx.room.local_participant.publish_data(
+                        json.dumps(record_payload).encode("utf-8"),
+                        topic="records"
+                    )
+                    
+                    # 2. Pipeline 2: Speech Translation (ONLY when finalized)
+                    if is_final:
+                        # Find all users who want translation FROM this language
+                        target_langs = set()
+                        logger.info(f"Checking targets for lang {detected_lang}. Prefs: {state.participant_prefs}")
+                        for pid, pref in state.participant_prefs.items():
+                            if pref["translation_enabled"] and pref["translation_source"] == detected_lang:
+                                target_p = next((p for p in ctx.room.remote_participants.values() if p.identity == pid), None)
+                                logger.info(f"DEBUG: Found target_p for {pid}: {target_p}. Remote participants: {[p.identity for p in ctx.room.remote_participants.values()]}")
+                                if target_p:
+                                    logger.info(f"DEBUG: target_p.metadata is: {target_p.metadata}")
+                                lang_t = get_participant_language(target_p)
+                                logger.info(f"DEBUG: get_participant_language({target_p}) returned: {lang_t}")
+                                target_langs.add(lang_t)
+                                
+                        logger.info(f"Target languages for translation: {target_langs}")
+                        
+                        # Translate to each required language
+                        for t_lang in target_langs:
+                            if t_lang and t_lang != detected_lang:
+                                asyncio.create_task(
+                                    handle_translation_and_tts(text, detected_lang, t_lang, participant)
+                                )
+        except Exception as e:
+            logger.error(f"Error in stt_stream processing for {participant.identity}: {e}", exc_info=True)
+
 
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):

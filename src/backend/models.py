@@ -344,6 +344,14 @@ class MeetingMember(database.Base):
     meeting = relationship("Meeting", back_populates="members")
     user = relationship("User")
 
+    @property
+    def user_name(self) -> str | None:
+        return self.user.full_name if self.user else None
+
+    @property
+    def user_email(self) -> str | None:
+        return self.user.email if self.user else None
+
 
 # ---------------------------------------------------------------------------
 # Organization Invitations

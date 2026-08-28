@@ -1,23 +1,31 @@
 import { useEffect } from 'react';
 import { useRoomContext, useLocalParticipant, useTracks } from '@livekit/components-react';
 import { Track, RemoteAudioTrack } from 'livekit-client';
+import { create } from 'zustand';
+
+export const useTranslationStore = create<{
+  enabled: boolean;
+  sourceLang: string;
+  setEnabled: (e: boolean) => void;
+  setSourceLang: (l: string) => void;
+}>((set) => ({
+  enabled: false,
+  sourceLang: 'en',
+  setEnabled: (e) => set({ enabled: e }),
+  setSourceLang: (l) => set({ sourceLang: l }),
+}));
 
 export function useTranslationAudioMuting() {
-  const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const audioTracks = useTracks([Track.Source.Microphone]);
+  const { enabled: isTranslationEnabled, sourceLang: translationSourceLang } = useTranslationStore();
 
   useEffect(() => {
     if (!localParticipant) return;
 
-    const attrs = localParticipant.attributes;
-    const isTranslationEnabled = attrs['translation_enabled'] === 'true';
-    const translationSourceLang = attrs['translation_source'];
-
     audioTracks.forEach((trackRef) => {
-      // We only want to mute remote participants
       if (trackRef.participant.identity === localParticipant.identity) return;
-      if (trackRef.participant.identity.startsWith('agent-')) return; // Don't mute the AI agent itself
+      if (trackRef.participant.identity.startsWith('agent-')) return; 
 
       const track = trackRef.publication?.track as RemoteAudioTrack | undefined;
       if (!track || typeof track.setVolume !== 'function') return;
@@ -25,23 +33,26 @@ export function useTranslationAudioMuting() {
       try {
         let shouldMute = false;
 
+        console.log(`[AudioMuting] Checking ${trackRef.participant.identity}. My Translation: ${isTranslationEnabled} (source: ${translationSourceLang})`);
+
         if (isTranslationEnabled && translationSourceLang && trackRef.participant.metadata) {
           const metadata = JSON.parse(trackRef.participant.metadata);
-          // If the remote participant is speaking the language we are translating from, mute them!
-          if (metadata.language_used_in_call === translationSourceLang) {
+          if (metadata.target_lang === translationSourceLang) {
             shouldMute = true;
           }
         }
 
+        console.log(`[AudioMuting] Result for ${trackRef.participant.identity}: Mute=${shouldMute}`);
+        
         if (shouldMute) {
           track.setVolume(0);
         } else {
           track.setVolume(1.0);
         }
       } catch (err) {
-        // Safe fallback if metadata is not JSON
+        console.error(`[AudioMuting] Error processing track for ${trackRef.participant.identity}:`, err);
         track.setVolume(1.0);
       }
     });
-  }, [localParticipant, localParticipant.attributes, audioTracks]);
+  }, [localParticipant, audioTracks, isTranslationEnabled, translationSourceLang]);
 }

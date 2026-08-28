@@ -23,6 +23,9 @@ dependencies = [
     "livekit-agents>=1.7.0",
     "livekit-plugins-openai>=1.7.0",
     "livekit-plugins-silero>=1.7.0",
+    "edge-tts>=6.1.12",
+    "faster-whisper>=1.2.1",
+    "ctranslate2>=4.3.1",
 ]
 
 [project.optional-dependencies]

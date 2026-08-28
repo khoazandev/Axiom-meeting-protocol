@@ -110,7 +110,7 @@ def get_meeting_token(
     unique_identity = f"user_{current_user.id}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
-    token.with_metadata(json.dumps({"language_used_in_call": language}))
+    token.with_metadata(json.dumps({"target_lang": language}))
     token.with_ttl(timedelta(hours=8))
     token.with_grants(
         api.VideoGrants(

@@ -21,6 +21,10 @@ import {
   MessageSquare,
   PhoneOff,
   Globe,
+  User,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -42,14 +46,16 @@ import {
   type RagSource,
   type ActionItemResponse,
   type TranscriptResponse,
+  type MeetingMember,
   ApiRequestError,
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADController';
-import { useTranslationAudioMuting } from '@/hooks/useTranslationAudioMuting';
+import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTranslationAudioMuting';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
+import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useRoomContext, useConnectionState } from '@livekit/components-react';
 import { ConnectionState } from 'livekit-client';
 
@@ -57,8 +63,7 @@ function SpeechTranslationControl() {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const [isOpen, setIsOpen] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [sourceLang, setSourceLang] = useState('en'); // Default translate from English
+  const { enabled, sourceLang, setEnabled, setSourceLang } = useTranslationStore();
 
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
@@ -127,11 +132,18 @@ export interface RecordEntry {
   is_final: boolean;
 }
 
-function RecordsListener({ onNewRecord }: { onNewRecord: (r: RecordEntry) => void }) {
+function RecordsListener({ 
+  onNewRecord,
+  onTranscriptFinalized 
+}: { 
+  onNewRecord: (r: RecordEntry) => void;
+  onTranscriptFinalized?: (text: string, timestamp: string) => void;
+}) {
   useDataChannel('records', (msg) => {
     try {
       const payload = msg.payload || msg; // Handle both v1 and v2 formats
       const text = new TextDecoder().decode(payload as Uint8Array);
+      console.log("[DataChannel] Received record payload:", text);
       const data = JSON.parse(text);
       if (data.type === 'original_transcript') {
         const timeStr = new Date().toLocaleTimeString([], {
@@ -146,6 +158,10 @@ function RecordsListener({ onNewRecord }: { onNewRecord: (r: RecordEntry) => voi
           language: data.language,
           is_final: data.is_final,
         });
+        
+        if (data.is_final && onTranscriptFinalized) {
+          onTranscriptFinalized(data.original_text, timeStr);
+        }
       }
     } catch (e) {
       console.warn('Failed to parse record data', e);
@@ -194,7 +210,6 @@ class LiveKitTileErrorBoundary extends React.Component<
 function LiveKitContent({
   onVADUpdate,
   participantName,
-  onTranscriptFinalized,
   onInviteClick,
   onSidebarToggle,
 }: {
@@ -206,13 +221,11 @@ function LiveKitContent({
     transcriptHistory: TranscriptHistoryEntry[];
   }) => void;
   participantName: string;
-  onTranscriptFinalized?: (entry: TranscriptHistoryEntry) => void;
   onInviteClick: () => void;
   onSidebarToggle: () => void;
 }) {
   const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(
-    participantName,
-    onTranscriptFinalized
+    participantName
   );
 
   // Activate translation audio muting hook
@@ -351,16 +364,13 @@ export function MeetingRoomClient() {
   const transcriptSequenceRef = useRef(1);
 
   const handleTranscriptFinalized = useCallback(
-    async (entry: TranscriptHistoryEntry) => {
+    async (text: string, timestamp: string) => {
       if (!meetingId) return;
       try {
         const currentSequence = transcriptSequenceRef.current++;
-        const contentStr = entry.en_text
-          ? `[VI] ${entry.vi_text}\n[EN] ${entry.en_text}`
-          : entry.vi_text;
         await meetingsApi.saveTranscript(meetingId, {
-          content: contentStr,
-          start_time: entry.timestamp,
+          content: text,
+          start_time: timestamp,
           end_time: new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -400,18 +410,27 @@ export function MeetingRoomClient() {
   // Action Items and Transcripts state
   const [actionItems, setActionItems] = useState<ActionItemResponse[]>([]);
   const [dbTranscripts, setDbTranscripts] = useState<TranscriptResponse[]>([]);
+  const [meetingMembers, setMeetingMembers] = useState<MeetingMember[]>([]);
+
+  // Edit Task state
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ title: string; assignee_id: string; deadline: string }>({ 
+    title: '', assignee_id: '', deadline: '' 
+  });
 
   // Poll for action items
   useEffect(() => {
     if (!meetingId) return;
     const fetchActionItems = async () => {
       try {
-        const [items, transcripts] = await Promise.all([
+        const [items, transcripts, members] = await Promise.all([
           meetingsApi.getActionItems(meetingId),
           meetingsApi.getTranscripts(meetingId),
+          meetingsApi.getMembers(meetingId),
         ]);
         setActionItems(items);
         setDbTranscripts(transcripts);
+        setMeetingMembers(members);
       } catch (err) {
         console.error('Failed to fetch meeting content:', err);
       }
@@ -421,6 +440,48 @@ export function MeetingRoomClient() {
     const interval = setInterval(fetchActionItems, 5000);
     return () => clearInterval(interval);
   }, [meetingId]);
+
+  const handleSaveEdit = async (taskId: string) => {
+    if (!meetingId) return;
+    try {
+      const payload: any = { title: editForm.title };
+      if (editForm.assignee_id) payload.assignee_id = editForm.assignee_id;
+      if (editForm.deadline) payload.deadline = new Date(editForm.deadline).toISOString();
+      
+      await meetingsApi.updateFollowUpTask(meetingId, taskId, payload);
+      setEditingTaskId(null);
+      // Cập nhật local state ngay lập tức cho mượt
+      setActionItems(prev => prev.map(item => {
+        if (item.id === taskId) {
+          const assigneeName = meetingMembers.find(m => m.user_id === editForm.assignee_id)?.user_name || item.assignee_name;
+          return { ...item, title: editForm.title, assignee_id: editForm.assignee_id, assignee_name: assigneeName, deadline: payload.deadline } as any;
+        }
+        return item;
+      }));
+    } catch (err) {
+      console.error('Failed to update task:', err);
+    }
+  };
+
+  const handleStartEdit = (item: any) => {
+    setEditingTaskId(item.id);
+    let defaultDeadline = '';
+    const dl = item.deadline || item.due_date;
+    if (dl) {
+      // Format to YYYY-MM-DDThh:mm for datetime-local
+      try {
+        const d = new Date(dl);
+        // Adjust for local timezone offset
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        defaultDeadline = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+      } catch (e) {}
+    }
+    setEditForm({
+      title: item.title,
+      assignee_id: item.assignee_id || '',
+      deadline: defaultDeadline,
+    });
+  };
 
   const [isOpeningJira, setIsOpeningJira] = useState(false);
   const handleOpenJiraWorkspace = async () => {
@@ -695,6 +756,7 @@ export function MeetingRoomClient() {
             {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
             <div className="flex-1 bg-background relative flex flex-col overflow-hidden min-h-0 min-w-0 border-r border-border">
               <RecordsListener
+                onTranscriptFinalized={handleTranscriptFinalized}
                 onNewRecord={(r) => {
                   setRecordsHistory((prev) => {
                     const newArr = [...prev];
@@ -717,6 +779,7 @@ export function MeetingRoomClient() {
                     if (!found) {
                       newArr.push(r);
                     }
+                    console.log("[RecordsListener] Updated records history array length:", newArr.length);
                     return newArr;
                   });
                 }}
@@ -725,7 +788,6 @@ export function MeetingRoomClient() {
                 <LiveKitContent
                   onVADUpdate={handleVADUpdate}
                   participantName={participantName}
-                  onTranscriptFinalized={handleTranscriptFinalized}
                   onInviteClick={() => setInviteModalOpen(true)}
                   onSidebarToggle={() => {
                     if (!sidebarOpen) {
@@ -815,7 +877,21 @@ export function MeetingRoomClient() {
                   >
                     {/* Records view will go here */}
                     <div className="p-4 flex flex-col gap-3">
-                      {recordsHistory.length === 0 ? (
+                      {dbTranscripts.map((t, idx) => (
+                        <div
+                          key={`db-${t.id || idx}`}
+                          className="bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 opacity-100 border border-primary/20"
+                        >
+                          <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
+                            <span>
+                              [{t.start_time || ''}] {t.speaker_name || 'User'}
+                            </span>
+                            <span className="opacity-50 font-normal">VI</span>
+                          </div>
+                          <div className="text-foreground">{t.content}</div>
+                        </div>
+                      ))}
+                      {recordsHistory.length === 0 && dbTranscripts.length === 0 ? (
                         <div className="text-center text-muted-foreground text-sm mt-10">
                           Chưa có bản ghi nào. Hãy bắt đầu nói!
                         </div>
@@ -881,26 +957,91 @@ export function MeetingRoomClient() {
                             key={item.id}
                             className="text-xs p-2.5 rounded-lg bg-card border border-border"
                           >
-                            <div className="flex items-start gap-2">
-                              <div className="mt-0.5 shrink-0">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    item.status === 'COMPLETED' ? 'bg-success' : 'bg-warning'
-                                  }`}
+                            {editingTaskId === item.id ? (
+                              <div className="flex flex-col gap-3">
+                                <input
+                                  type="text"
+                                  className="w-full text-sm p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
+                                  value={editForm.title}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                                  placeholder="Tiêu đề task..."
                                 />
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                  <select
+                                    className="flex-1 text-xs p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
+                                    value={editForm.assignee_id}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, assignee_id: e.target.value }))}
+                                  >
+                                    <option value="">-- Chọn người phụ trách --</option>
+                                    {meetingMembers.map(m => (
+                                      <option key={m.user_id} value={m.user_id}>{m.user_name || m.user_email || 'Người dùng ẩn danh'}</option>
+                                    ))}
+                                  </select>
+                                  <CustomDateTimePicker
+                                    value={editForm.deadline}
+                                    onChange={(val) => setEditForm(prev => ({ ...prev, deadline: val }))}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2 mt-2">
+                                  <button
+                                    onClick={() => setEditingTaskId(null)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-md text-xs font-medium transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5" /> Hủy
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveEdit(item.id)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md text-xs font-medium transition-colors shadow-sm"
+                                  >
+                                    <Check className="w-3.5 h-3.5" /> Lưu
+                                  </button>
+                                </div>
                               </div>
-                              <div>
-                                <span className="font-bold text-success bg-success/10 px-1.5 py-0.5 rounded mr-1.5">
-                                  {item.title}
-                                </span>
-                                <span className="text-foreground leading-relaxed">
-                                  {item.description || ''}
-                                </span>
-                                {item.assignee_id && (
-                                  <span className="text-primary ml-1.5">(@Assignee)</span>
-                                )}
+                            ) : (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-start gap-2">
+                                  <div className="mt-1.5 shrink-0">
+                                    <div
+                                      className={`w-2 h-2 rounded-full ${
+                                        item.status === 'CONFIRMED' ? 'bg-success' : 'bg-warning'
+                                      }`}
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-bold text-success bg-success/10 px-1.5 py-0.5 rounded mr-1.5">
+                                      {item.title}
+                                    </span>
+                                    <span className="text-foreground leading-relaxed">
+                                      {item.description || ''}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between border-t border-border/50 pt-2 mt-1">
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {item.assignee_name || 'Chưa gán'}
+                                    </span>
+                                    <span className="text-border">|</span>
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {/* ActionItemResponse has due_date, FollowUpTask has deadline. Handle both. */}
+                                      {(item as any).deadline || item.due_date ? new Date((item as any).deadline || item.due_date).toLocaleString('vi-VN', {
+                                        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                                      }) : 'Không có hạn'}
+                                    </span>
+                                  </div>
+                                  <div 
+                                    onClick={() => handleStartEdit(item)}
+                                    className="w-4 h-4 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-muted-foreground hover:text-primary" 
+                                    title="Chỉnh sửa task"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         ))
                       )}
