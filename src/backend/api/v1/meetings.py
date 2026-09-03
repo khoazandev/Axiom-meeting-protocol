@@ -102,9 +102,17 @@ def get_meeting_token(
     meeting_id: str, 
     participant_name: str,
     language: str = "vi",
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """Generate a LiveKit access token for a meeting room."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise NotFoundException(resource="Meeting")
+    if meeting.status == models.MeetingStatusEnum.COMPLETED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Cuộc họp đã kết thúc. Không thể tham gia lại.")
+
     settings = get_settings()
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     unique_identity = f"user_{current_user.id}"

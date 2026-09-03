@@ -33,21 +33,26 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 480
     refresh_token_expire_days: int = 7
 
-    # Ollama / LLM
-    ollama_base_url: str = ""
-    ollama_model: str = ""  # auto-detect if empty
-    ollama_timeout: int = 90
+    # OpenRouter / LLM
+    openrouter_api_key: str = ""
+    llm_fallback_models: list[str] = [
+        "gemma4:12b"
+    ]
+    task_extractor_model: str = "task-extractor"
+    decision_extractor_model: str = "decision-extractor"
+    ollama_base_url: str = "http://host.docker.internal:11434"
 
-    # STT & Realtime AI Models
+    # STT Models
     stt_whisper_model: str = "large-v3"
     stt_ollama_model: str = "qwen2.5:0.5b"
     trans_vi_en_model: str = "Helsinki-NLP/opus-mt-vi-en"
     trans_en_vi_model: str = "Helsinki-NLP/opus-mt-en-vi"
 
-    # AI Action Item Extraction
-    extraction_model: str = "qwen3:0.6b"
+    # AI Extractor Settings
     extraction_timeout: int = 900
     extraction_max_transcript_chars: int = 6000
+    
+    # Task Extractor Prompt
     extraction_system_prompt: str = (
         "You are a senior product manager. Your job is to extract all action items from meeting transcripts.\n\n"
         "For each action item you identify, extract:\n"
@@ -67,9 +72,8 @@ class Settings(BaseSettings):
         "If no action items found, return: []"
     )
 
-    # Follow-up Task Extraction (task-extractor model)
-    task_extractor_model: str = "lamphat03102004/task-extractor01"
-    task_extractor_timeout: int = 900
+    # Decision Extractor Settings
+    decision_extractor_timeout: int = 900
 
     # Bot Test Scenario
     bot_test_script_delay_seconds: float = 2.0

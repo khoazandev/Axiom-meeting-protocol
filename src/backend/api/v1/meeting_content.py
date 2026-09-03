@@ -16,6 +16,8 @@ from src.backend.models import (
     FollowUpTaskStatusEnum,
     FollowUpTaskSourceEnum,
     MeetingChatMessage,
+    MeetingDecision,
+    MeetingDecisionStatusEnum,
     MeetingSummary,
     TranscriptSegment,
     User,
@@ -94,6 +96,25 @@ class FollowUpTaskResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MeetingDecisionResponse(BaseModel):
+    id: str
+    meeting_id: str
+    description: str
+    status: str
+    rationale: str | None = None
+    proposer_id: str | None = None
+    proposer_name: str | None = None
+    created_at: datetime.datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MeetingDecisionUpdate(BaseModel):
+    description: str | None = None
+    status: str | None = None
+    proposer_id: str | None = None
+
+
 class ChatMessageCreate(BaseModel):
     content: str
 
@@ -145,6 +166,9 @@ def add_transcript_segment(
         from src.backend.services.task_extractor import (
             task_extractor_service, sync_extracted_tasks, query_pending_tasks,
         )
+        from src.backend.services.decision_extractor import (
+            decision_extractor_service, sync_extracted_decisions, query_pending_decisions,
+        )
         from src.backend.services.punctuation_restorer import PunctuationRestorer
         from src.backend.models import FollowUpTaskSourceEnum
 
@@ -180,29 +204,34 @@ def add_transcript_segment(
                 text = restorer.restore(batch_segments)
                 _log.info("Restored text (%d chars): %s", len(text) if text else 0, (text or "")[:200])
                 if text:
-                    # Query pending tasks from DB
-                    pending = query_pending_tasks(bg_db, meeting_id)
-                    _log.info("Pending tasks for context: %d", len(pending))
+                    # Query pending items from DB
+                    pending_tasks_list = query_pending_tasks(bg_db, meeting_id)
+                    pending_decisions_list = query_pending_decisions(bg_db, meeting_id)
+                    _log.info("Pending context: %d tasks, %d decisions", len(pending_tasks_list), len(pending_decisions_list))
 
-                    # Run blocking Ollama call in executor
+                    # Run blocking Ollama calls in executor in parallel
                     import asyncio
                     loop = asyncio.get_running_loop()
-                    extracted = await loop.run_in_executor(
-                        None, task_extractor_service.extract, text, pending
+                    
+                    extracted_tasks, extracted_decisions = await asyncio.gather(
+                        task_extractor_service.extract(text, pending_tasks_list),
+                        decision_extractor_service.extract(text, pending_decisions_list)
                     )
-                    _log.info("Extracted %d tasks: %s", len(extracted), extracted)
-                    if extracted:
-                        synced = sync_extracted_tasks(
-                            bg_db, meeting_id, extracted,
+                    
+                    _log.info("Extracted %d tasks, %d decisions", len(extracted_tasks), len(extracted_decisions))
+                    
+                    if extracted_tasks:
+                        synced_tasks = sync_extracted_tasks(
+                            bg_db, meeting_id, extracted_tasks,
                             source=FollowUpTaskSourceEnum.AI_REALTIME,
                             segment_ids=batch,
                         )
-                        _log.info("Synced %d follow-up tasks to DB", len(extracted))
+                        _log.info("Synced %d follow-up tasks to DB", len(extracted_tasks))
 
                         # Broadcast tasks_preview so frontend shows them immediately
-                        if synced:
+                        if synced_tasks:
                             tasks_data = []
-                            for t in synced:
+                            for t in synced_tasks:
                                 tasks_data.append({
                                     "id": t.id,
                                     "meeting_id": t.meeting_id,
@@ -219,9 +248,34 @@ def add_transcript_segment(
                                 await meeting_events_manager.broadcast(
                                     meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
                                 )
-                                _log.info("Broadcast tasks_preview with %d tasks", len(tasks_data))
                             except Exception:
-                                _log.debug("Could not broadcast tasks_preview event")
+                                _log.debug("Could not broadcast tasks preview")
+                                
+                    if extracted_decisions:
+                        synced_decisions = sync_extracted_decisions(
+                            bg_db, meeting_id, extracted_decisions,
+                            segment_ids=batch,
+                        )
+                        _log.info("Synced %d decisions to DB", len(extracted_decisions))
+
+                        if synced_decisions:
+                            decisions_data = []
+                            for d in synced_decisions:
+                                decisions_data.append({
+                                    "id": d.id,
+                                    "meeting_id": d.meeting_id,
+                                    "description": d.description,
+                                    "status": d.status.value if d.status else "PROPOSED",
+                                    "transcript_segment_id": d.transcript_segment_id,
+                                    "proposer_id": d.proposer_id,
+                                    "proposer_name": getattr(d, 'proposer').full_name if getattr(d, 'proposer', None) else None,
+                                })
+                            try:
+                                await meeting_events_manager.broadcast(
+                                    meeting_id, {"type": "decisions_preview", "data": {"decisions": decisions_data}}
+                                )
+                            except Exception as e:
+                                _log.debug("Could not broadcast decisions preview")
                 else:
                     _log.warning("Restored text is empty, skipping extraction")
             except Exception as exc:
@@ -291,11 +345,21 @@ def get_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    _get_meeting_or_404(db, meeting_id)
+    meeting = _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
     summary = db.query(MeetingSummary).filter(MeetingSummary.meeting_id == meeting_id).first()
     if not summary:
+        from src.backend.models import MeetingStatusEnum
+        if meeting.status == MeetingStatusEnum.COMPLETED:
+            summary = MeetingSummary(
+                meeting_id=meeting_id,
+                summary="Cuộc họp không có nội dung trao đổi hoặc hệ thống không thể tổng hợp.",
+            )
+            db.add(summary)
+            db.commit()
+            db.refresh(summary)
+            return summary
         raise NotFoundException("Summary")
     return summary
 
@@ -349,6 +413,76 @@ def list_follow_up_tasks(
         .filter(FollowUpTask.meeting_id == meeting_id)
         .all()
     )
+
+
+@router.get("/decisions", response_model=list[MeetingDecisionResponse])
+def list_decisions(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    _get_meeting_or_404(db, meeting_id)
+    from sqlalchemy.orm import joinedload
+    return (
+        db.query(MeetingDecision)
+        .options(joinedload(MeetingDecision.proposer))
+        .filter(MeetingDecision.meeting_id == meeting_id)
+        .order_by(MeetingDecision.created_at)
+        .all()
+    )
+
+
+@router.patch("/decisions/{decision_id}", response_model=MeetingDecisionResponse)
+def update_decision(
+    meeting_id: str,
+    decision_id: str,
+    payload: MeetingDecisionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    _get_meeting_or_404(db, meeting_id)
+    
+    decision = (
+        db.query(MeetingDecision)
+        .filter(MeetingDecision.id == decision_id, MeetingDecision.meeting_id == meeting_id)
+        .first()
+    )
+    if not decision:
+        raise NotFoundException("Decision")
+        
+    if payload.description is not None:
+        decision.description = payload.description
+    if payload.status is not None:
+        decision.status = MeetingDecisionStatusEnum(payload.status)
+    if payload.proposer_id is not None:
+        decision.proposer_id = payload.proposer_id
+        
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+@router.delete("/decisions/{decision_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_decision(
+    meeting_id: str,
+    decision_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Delete a meeting decision."""
+    _get_meeting_or_404(db, meeting_id)
+
+    decision = (
+        db.query(MeetingDecision)
+        .filter(MeetingDecision.id == decision_id, MeetingDecision.meeting_id == meeting_id)
+        .first()
+    )
+    if not decision:
+        raise NotFoundException("Decision")
+
+    db.delete(decision)
+    db.commit()
+    return None
 
 
 @router.patch("/follow-up-tasks/{item_id}", response_model=FollowUpTaskResponse)

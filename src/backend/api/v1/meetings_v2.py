@@ -257,7 +257,7 @@ def remove_meeting_member(
 from pydantic import BaseModel as _PydanticBaseModel
 from livekit import api as livekit_api
 from src.backend.core.config import get_settings
-from src.backend.services.ollama_service import build_rag_answer
+from src.backend.services.chat_service import build_rag_answer
 
 
 class TokenResponse(_PydanticBaseModel):
@@ -294,7 +294,10 @@ def get_meeting_token(
     current_user: User = Depends(deps.get_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
-    _get_meeting_or_404(db, meeting_id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+    if meeting.status == MeetingStatusEnum.COMPLETED:
+        raise ForbiddenException("Cuộc họp đã kết thúc. Không thể tham gia lại.")
+
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     unique_identity = f"user_{current_user.id}"
@@ -311,7 +314,7 @@ def get_meeting_token(
 
 
 @router.post("/{meeting_id}/rag/query", response_model=RagQueryResponse)
-def rag_query(
+async def rag_query(
     meeting_id: str,
     payload: RagQueryRequest,
     db: Session = Depends(get_db),
@@ -325,7 +328,7 @@ def rag_query(
     if meeting.description:
         sources.append({"type": "agenda", "snippet": meeting.description})
 
-    answer = build_rag_answer(
+    answer = await build_rag_answer(
         question=payload.question,
         sources=sources,
         live_transcript=payload.live_transcript,

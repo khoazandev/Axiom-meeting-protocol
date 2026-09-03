@@ -9,7 +9,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 export interface MeetingEvent {
-  type: 'meeting_ended' | 'tasks_preview' | 'tasks_extracting';
+  type: 'meeting_ended' | 'tasks_preview' | 'tasks_extracting' | 'decisions_preview';
   data: any;
 }
 
@@ -18,6 +18,7 @@ interface UseMeetingEventsOptions {
   onMeetingEnded?: (data: any) => void;
   onTasksPreview?: (data: any) => void;
   onTasksExtracting?: (data: any) => void;
+  onDecisionsPreview?: (data: any) => void;
   enabled?: boolean;
 }
 
@@ -26,6 +27,7 @@ export function useMeetingEvents({
   onMeetingEnded,
   onTasksPreview,
   onTasksExtracting,
+  onDecisionsPreview,
   enabled = true,
 }: UseMeetingEventsOptions) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -62,6 +64,10 @@ export function useMeetingEvents({
               console.log('[MeetingEvents] Tasks preview event received');
               onTasksPreview?.(parsed.data);
               break;
+            case 'decisions_preview':
+              console.log('[MeetingEvents] Decisions preview event received');
+              onDecisionsPreview?.(parsed.data);
+              break;
             case 'tasks_extracting':
               console.log('[MeetingEvents] Tasks extracting event:', parsed.data);
               onTasksExtracting?.(parsed.data);
@@ -93,7 +99,7 @@ export function useMeetingEvents({
     } catch (err) {
       console.error('[MeetingEvents] Failed to connect:', err);
     }
-  }, [meetingId, enabled, onMeetingEnded, onTasksPreview, onTasksExtracting]);
+  }, [meetingId, enabled, onMeetingEnded, onTasksPreview, onTasksExtracting, onDecisionsPreview]);
 
   useEffect(() => {
     connect();

@@ -2,28 +2,40 @@ import requests
 import time
 import re
 import datetime
+import sys
+
+# Khắc phục lỗi hiển thị Unicode trên Windows console
+sys.stdout.reconfigure(encoding='utf-8')
 
 # Cấu hình API Backend (Docker đang map cổng 8001 ra ngoài)
 BASE_URL = "http://localhost:8001/api/v1"
 
 CONVERSATION = [
-    ("Sếp Hoàng", "Chào mọi người. Chúng ta bắt đầu cuộc họp về chiến dịch marketing quý 4 nhé. Tiến độ hiện tại ra sao rồi?"),
-    ("Alice", "Chào sếp. Em đã lên xong sườn nội dung cho các bài đăng mạng xã hội rồi ạ."),
-    ("Sếp Hoàng", "Tốt lắm. Alice, em hãy hoàn thiện toàn bộ hình ảnh và lên lịch đăng bài trước thứ Năm tuần sau nhé."),
-    ("Alice", "Vâng ạ. Em sẽ làm việc với team thiết kế để chốt hình ảnh ạ."),
-    ("Sếp Hoàng", "Thế còn phần ngân sách chạy quảng cáo thì sao, Bob?"),
-    ("Bob", "Dạ em đang xem lại báo cáo chi phí của quý trước. Khoảng chiều nay sẽ có con số dự tính."),
-    ("Sếp Hoàng", "Đồng ý. Bob, em hãy lập chi tiết kế hoạch chạy quảng cáo trên Facebook và Google, gửi báo cáo cho anh vào sáng thứ Sáu tuần sau nhé."),
-    ("Bob", "Rõ rồi sếp. Em sẽ hoàn thành kế hoạch chạy quảng cáo đúng hạn ạ."),
-    ("Sếp Hoàng", "Tuyệt vời. Mọi người nhớ cập nhật trạng thái công việc lên hệ thống. Cuộc họp kết thúc tại đây."),
-    ("Alice", "Dạ vâng, chào sếp và mọi người.")
+    # Mở đầu và thảo luận tính năng mới
+    ("Khoa", "Chào mọi người. Chúng ta bắt đầu cuộc họp về lộ trình phát triển Q4 nhé. Hôm nay mình sẽ tập trung vào tính năng AI Assistant."),
+    ("Phát", "Chào anh Khoa. Em đã xem qua tài liệu thiết kế ban đầu rồi, phần AI khá hứa hẹn."),
+    ("Nguyên", "Chào mọi người. Về phía backend, em thấy chúng ta cần cân nhắc chi phí khi dùng API của OpenAI hoặc OpenRouter."),
+    ("Khoa", "Đúng vậy. Nguyên, em hãy làm một bảng so sánh chi phí giữa các mô hình như GPT-4o-mini và Llama 3 trước thứ Sáu này nhé."),
+    ("Nguyên", "Vâng ạ, em sẽ làm và gửi lên nhóm luôn. Còn về giao diện chat thì sao ạ?"),
+    ("Phát", "Phần UI em dự định làm giống một cái sidebar trượt từ phải sang. Khoa thấy sao?"),
+    ("Khoa", "Anh đồng ý. Chúng ta quyết định sẽ dùng thiết kế sidebar cho AI Chatbot thay vì popup nhé. Phát nhớ cập nhật lại Figma."),
+    ("Phát", "Dạ rõ. Em sẽ hoàn thiện thiết kế UI/UX cho sidebar trong ngày mai."),
+    
+    # Chuyển sang thảo luận về module trích xuất
+    ("Khoa", "Tiếp theo là phần trích xuất Task và Decision tự động. Tiến độ thế nào rồi?"),
+    ("Nguyên", "Em đã viết xong luồng cho Task Extractor, chạy khá mượt với model free.")
 ]
 
 def get_speaker_tokens(speakers):
     """Register and return auth tokens for a list of speaker names."""
     tokens = {}
     for speaker in speakers:
-        email = f"{speaker.lower().replace(' ', '_').replace('ế', 'e').replace('ọ', 'o')}@gmail.com"
+        # Xử lý tên để tạo email hợp lệ
+        # Hàm đơn giản để bỏ dấu cho vài cái tên cơ bản
+        name_normalized = speaker.lower().replace(' ', '_')
+        name_normalized = name_normalized.replace('phát', 'phat').replace('nguyên', 'nguyen').replace('khoa', 'khoa')
+        
+        email = f"{name_normalized}@gmail.com"
         password = "password123"
         
         # Thử login trước
@@ -41,7 +53,10 @@ def get_speaker_tokens(speakers):
         })
         
         resp = requests.post(f"{BASE_URL}/auth/login", json={"email": email, "password": password})
-        tokens[speaker] = resp.json()["access_token"]
+        if resp.status_code == 200:
+            tokens[speaker] = resp.json()["access_token"]
+        else:
+            print(f"[!] Lỗi khi login cho {speaker}: {resp.text}")
         
     return tokens
 
@@ -63,14 +78,18 @@ def main():
     unique_speakers = list(set([s for s, t in CONVERSATION]))
     tokens = get_speaker_tokens(unique_speakers)
     
-    print("\n[*] Bắt đầu gửi hội thoại...\n")
+    print("\n[*] Bắt đầu gửi hội thoại (10 câu)...\n")
     
     for i, (speaker, text) in enumerate(CONVERSATION, 1):
+        if speaker not in tokens:
+            print(f"[!] Bỏ qua câu của {speaker} vì không có token.")
+            continue
+            
         headers = {"Authorization": f"Bearer {tokens[speaker]}"}
         
         now = datetime.datetime.now()
         start_time = now.strftime("%H:%M:%S")
-        end_time = (now + datetime.timedelta(seconds=2)).strftime("%H:%M:%S")
+        end_time = (now + datetime.timedelta(seconds=3)).strftime("%H:%M:%S")
         
         payload = {
             "content": text,
@@ -87,16 +106,15 @@ def main():
         )
         
         if resp.status_code == 201:
-            print(f"> [{speaker}]: {text}")
+            print(f"> [{i}/30] [{speaker}]: {text}")
         else:
             print(f"[!] Lỗi gửi câu {i}: {resp.status_code} - {resp.text}")
             
-        # Dừng 2 giây giữa mỗi câu để Backend kịp lưu (và cứ 5 câu sẽ kích hoạt AI)
-        time.sleep(2)
+        # Dừng 5 giây giữa mỗi câu để Backend kịp xử lý và tránh Rate Limit
+        time.sleep(5)
         
-    print("\n[+] Đã gửi xong 10 câu!")
-    print("[+] Bạn hãy quay lại màn hình trình duyệt, chờ khoảng vài giây (vì mô hình AI đang chạy nền).")
-    print("[+] Các task sẽ tự động hiển thị trên Tab Note!")
+    print("\n[+] Đã gửi xong 10 câu hội thoại!")
+    print("[+] Hãy kiểm tra trên giao diện Web để xem các Task và Decision được trích xuất nhé.")
 
 if __name__ == "__main__":
     main()

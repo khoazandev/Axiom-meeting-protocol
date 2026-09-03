@@ -36,7 +36,7 @@ def _require_host(db: Session, meeting_id: str, user_id: str):
 
 
 @router.post("/{meeting_id}/end")
-def end_meeting_endpoint(
+async def end_meeting_endpoint(
     meeting_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -68,5 +68,5 @@ def end_meeting_endpoint(
     # Execute end meeting flow
     from src.backend.services.meeting_end_service import end_meeting
 
-    result = end_meeting(db, meeting_id, current_user.id)
+    result = await end_meeting(db, meeting_id, current_user.id)
     return result

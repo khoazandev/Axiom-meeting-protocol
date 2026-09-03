@@ -81,6 +81,12 @@ class FollowUpTaskSourceEnum(str, enum.Enum):
     MANUAL = "MANUAL"
 
 
+class MeetingDecisionStatusEnum(str, enum.Enum):
+    PROPOSED = "PROPOSED"
+    AGREED = "AGREED"
+    REJECTED = "REJECTED"
+
+
 class OrgInvitationStatusEnum(str, enum.Enum):
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
@@ -311,6 +317,9 @@ class Meeting(database.Base):
     members = relationship(
         "MeetingMember", back_populates="meeting", cascade="all, delete-orphan"
     )
+    decisions = relationship(
+        "MeetingDecision", back_populates="meeting", cascade="all, delete-orphan"
+    )
 
 
 class MeetingMember(database.Base):
@@ -496,6 +505,39 @@ class FollowUpTask(database.Base):
 
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
+
+
+class MeetingDecision(database.Base):
+    __tablename__ = "meeting_decisions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(
+        String, ForeignKey("meetings.id"), nullable=False, index=True
+    )
+    transcript_segment_id = Column(
+        String, ForeignKey("transcript_segments.id"), nullable=True
+    )
+    proposer_id = Column(String, ForeignKey("users.id"), nullable=True)
+    description = Column(Text, nullable=False)
+    status = Column(
+        Enum(MeetingDecisionStatusEnum),
+        default=MeetingDecisionStatusEnum.PROPOSED,
+        nullable=False,
+    )
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    meeting = relationship("Meeting", back_populates="decisions")
+    transcript_segment = relationship("TranscriptSegment")
+    proposer = relationship("User", foreign_keys=[proposer_id])
+
+    @property
+    def proposer_name(self) -> str | None:
+        return self.proposer.full_name if self.proposer else None
 
 
 class KnowledgeChunk(database.Base):

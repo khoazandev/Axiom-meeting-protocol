@@ -133,6 +133,18 @@ export default function CreateMeetingPage() {
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
+            
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Agenda Outline (Optional)
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="e.g. 1. Review Q3 Metrics\n2. Vote on New Architecture"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary/50 transition-colors min-h-[100px] resize-y"
+              />
+            </div>
 
             {/* ── File Attachments ── */}
             <div>

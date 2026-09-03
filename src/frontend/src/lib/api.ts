@@ -311,6 +311,10 @@ export const meetingsApi = {
     return apiFetch<Meeting[]>(`/api/v1/meetings?skip=${skip}&limit=${limit}`, { signal });
   },
 
+  getMeetingSummary(meetingId: string): Promise<any> {
+    return apiFetch<any>(`/api/v1/meetings/${meetingId}/summary`);
+  },
+
   /** Get a single meeting by ID. */
   get(id: number | string, signal?: AbortSignal): Promise<Meeting> {
     return apiFetch<Meeting>(`/api/v1/meetings/${id}`, { signal });
@@ -423,6 +427,30 @@ export const meetingsApi = {
   /** @deprecated Use getFollowUpTasks instead */
   getActionItems(meetingId: number | string): Promise<any[]> {
     return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
+  },
+
+  /** Get decisions for a meeting. */
+  getDecisions(meetingId: number | string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/decisions`);
+  },
+
+  /** Update a decision (HOST only). */
+  updateDecision(
+    meetingId: number | string,
+    decisionId: string,
+    data: { description?: string; status?: string; proposer_id?: string }
+  ): Promise<any> {
+    return apiFetch<any>(`/api/v1/meetings/${meetingId}/decisions/${decisionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Delete a decision (HOST only). */
+  deleteDecision(meetingId: number | string, decisionId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/meetings/${meetingId}/decisions/${decisionId}`, {
+      method: 'DELETE',
+    });
   },
 
   /** Get transcripts for a meeting. */

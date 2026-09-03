@@ -14,10 +14,10 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import requests
 from sqlalchemy.orm import Session
 
 from src.backend.core.config import get_settings
+from src.backend.core.llm import generate_json
 from src.backend.models import (
     FollowUpTask,
     FollowUpTaskSourceEnum,
@@ -81,7 +81,7 @@ def query_pending_tasks(db: Session, meeting_id: str) -> list[dict]:
 class TaskExtractorService:
     """Wrapper for Ollama task-extractor-v2 model (qwen3:8b based)."""
 
-    def extract(
+    async def extract(
         self,
         transcript_text: str,
         pending_tasks: list[dict] | None = None,
@@ -98,12 +98,7 @@ class TaskExtractorService:
         """
         settings = get_settings()
 
-        if not settings.ollama_base_url:
-            logger.warning("Ollama base URL not configured, skipping extraction")
-            return []
-
-        base_url = settings.ollama_base_url.rstrip("/")
-        timeout = max(settings.task_extractor_timeout, 300)
+        # (Removed openrouter_api_key check to support local AI)
 
         try:
             # ── Build prompt payload ──────────────────────────────────
@@ -130,51 +125,34 @@ class TaskExtractorService:
             # [C] RAG: Find similar past corrections
             corrections_section = self._build_corrections_section(transcript_text)
 
-            # Combine
-            user_content = time_context + pending_section + transcript_section + corrections_section
+            system_instructions = (
+                "You are an AI meeting assistant. Your task is to extract actionable follow-up tasks from the meeting transcript.\n"
+                "You MUST output a valid JSON array of objects, and absolutely nothing else. Do not wrap in markdown or backticks.\n"
+                "Format of each object:\n"
+                "{\n"
+                '  "task_id": null (if new task) or id (if updating pending task),\n'
+                '  "task": "description of the task",\n'
+                '  "assignee": "Name of assignee" or null,\n'
+                '  "deadline": "YYYY-MM-DD" or null,\n'
+                '  "status": "CONFIRMED" or "NOT_CONFIRMED"\n'
+                "}\n\n"
+            )
 
-            payload = {
-                "model": settings.task_extractor_model,
-                "messages": [
-                    {"role": "user", "content": user_content},
-                ],
-                "stream": False,
-                "options": {"temperature": 0.0, "top_p": 0.1},
-            }
+            # Combine
+            user_content = system_instructions + time_context + pending_section + transcript_section + corrections_section
 
             logger.info(
-                "Calling Ollama chat model=%s (timeout=%ds, transcript=%d chars, pending=%d tasks)",
-                settings.task_extractor_model,
-                timeout,
+                "Calling OpenRouter model fallback list (transcript=%d chars, pending=%d tasks)",
                 len(transcript_text),
                 len(pending_tasks) if pending_tasks else 0,
             )
-            response = requests.post(
-                f"{base_url}/api/chat", json=payload, timeout=timeout,
-            )
-            response.raise_for_status()
-            msg = response.json().get("message", {})
-            content = msg.get("content", "").strip()
-            thinking = msg.get("thinking", "").strip()
+            raw_response = await generate_json([settings.task_extractor_model], user_content)
 
-            # Qwen3 models put reasoning in 'thinking' and JSON in 'content'
-            raw = content or thinking
-            if not raw:
-                logger.warning("Model %s returned empty response", settings.task_extractor_model)
-                return []
-            logger.info(
-                "Model %s response (content=%d chars, thinking=%d chars)",
-                settings.task_extractor_model, len(content), len(thinking),
-            )
-            return self._parse_response(raw)
+            if raw_response and isinstance(raw_response, list):
+                return self._validate_items(raw_response)
+            
+            return []
 
-        except requests.exceptions.ConnectionError:
-            logger.warning("Ollama not reachable for task extraction")
-        except requests.exceptions.Timeout:
-            logger.warning(
-                "Ollama timeout during task extraction (model=%s, timeout=%ds)",
-                settings.task_extractor_model, timeout,
-            )
         except Exception as exc:
             logger.error("Task extraction error: %s", exc)
 

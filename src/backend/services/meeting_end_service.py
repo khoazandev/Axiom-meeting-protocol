@@ -9,13 +9,14 @@ When host ends a meeting:
 5. Meeting status update to COMPLETED
 """
 
+import json
 import logging
 from typing import Optional
 
-import requests
 from sqlalchemy.orm import Session
 
 from src.backend.core.config import get_settings
+from src.backend.core.llm import generate_text
 from src.backend.models import (
     FollowUpTask,
     FollowUpTaskSourceEnum,
@@ -31,6 +32,11 @@ from src.backend.services.task_extractor import (
     query_pending_tasks,
     sync_extracted_tasks,
     task_extractor_service,
+)
+from src.backend.services.decision_extractor import (
+    query_pending_decisions,
+    sync_extracted_decisions,
+    decision_extractor_service,
 )
 from src.backend.services.turn_accumulator import turn_accumulator
 
@@ -60,59 +66,92 @@ def _collect_full_transcript(db: Session, meeting_id: str) -> tuple[str, list]:
     return punctuated_text, segments
 
 
-def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str) -> Optional[MeetingSummary]:
+async def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str) -> Optional[MeetingSummary]:
     """
-    Generate meeting summary using qwen model via Ollama.
-
-    Returns:
-        MeetingSummary object or None if generation fails.
+    Generate meeting summary using the Combiner AI pattern.
+    Takes [Tasks] and [Decisions] and generates a Markdown Table.
     """
     settings = get_settings()
 
-    if not settings.ollama_base_url or not transcript_text.strip():
-        return None
+    if not transcript_text.strip():
+        logger.warning("No transcript available for summary")
+        fallback_summary = MeetingSummary(
+            meeting_id=meeting_id,
+            summary="Cuộc họp không có nội dung trao đổi hoặc chưa được ghi âm (Không có transcript).",
+        )
+        db.add(fallback_summary)
+        db.commit()
+        db.refresh(fallback_summary)
+        return fallback_summary
+
+    # Gather data for combiner
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    title = meeting.title if meeting else "Unknown"
+    agenda = meeting.description if meeting and meeting.description else "No agenda provided"
+
+    tasks = query_pending_tasks(db, meeting_id)
+    decisions = query_pending_decisions(db, meeting_id)
+
+    tasks_json = json.dumps(tasks, ensure_ascii=False, indent=2)
+    decisions_json = json.dumps(decisions, ensure_ascii=False, indent=2)
 
     system_prompt = (
-        "You are a professional meeting secretary. Summarize the following meeting transcript.\n\n"
-        "Provide:\n"
-        "1. A concise summary of the meeting (2-4 paragraphs)\n"
-        "2. Key points discussed (bullet points)\n"
-        "3. Key decisions made (bullet points)\n\n"
-        "Format your response as:\n"
-        "SUMMARY:\n<summary text>\n\n"
-        "KEY POINTS:\n<bullet points>\n\n"
-        "DECISIONS:\n<bullet points>\n\n"
-        "Write in the same language as the transcript. Be concise and accurate."
+        "You are an expert AI meeting assistant. Your task is to generate a comprehensive Meeting Note based on the provided meeting transcript, extracted decisions, and extracted tasks.\n\n"
+        "You MUST format the output strictly as a structured Markdown document using headings and lists, following the exact structure below.\n\n"
+        "In the \"Summary\" section, you MUST explicitly highlight and categorize key points into:\n"
+        "- **Facts**: Important information stated during the meeting.\n"
+        "- **Problems**: Issues, roadblocks, or concerns raised.\n"
+        "- **Questions**: Unanswered questions or topics needing further clarification.\n\n"
+        "### Output Format (Markdown Document)\n\n"
+        "# [Insert Meeting Name here]\n\n"
+        "## A - THÔNG TIN (INFORMATION)\n"
+        "- **Ngày họp (Date)**: [Insert Date]\n"
+        "- **Thành phần tham dự (Attendance)**: [List of attendees]\n"
+        "- **Nội dung chính (Agenda Outline)**:\n"
+        "  - [Topic 1]\n"
+        "  - [Topic 2]\n\n"
+        "## B - HÀNH ĐỘNG (ACTION)\n"
+        "- **Mục tiêu (Goal)**: [Main objective of the meeting]\n\n"
+        "### 1. Tóm tắt nội dung (Summary)\n"
+        "**Facts (Sự thật/Thông tin quan trọng)**:\n"
+        "- [Fact 1]\n"
+        "- [Fact 2]\n\n"
+        "**Problems (Vấn đề/Khó khăn)**:\n"
+        "- [Problem 1]\n"
+        "- [Problem 2]\n\n"
+        "**Questions (Câu hỏi/Chưa rõ)**:\n"
+        "- [Question 1]\n"
+        "- [Question 2]\n\n"
+        "### 2. Các quyết định đã chốt (Decisions Made)\n"
+        "- [List all decisions from the Decision Extractor]\n\n"
+        "### 3. Các công việc cần làm (Action Items)\n"
+        "- [List all tasks from Task Extractor format: Who - Task - Deadline]\n\n"
+        "Write the content in Vietnamese."
+    )
+
+    user_prompt = (
+        f"Meeting Title: {title}\n"
+        f"Agenda Outline:\n{agenda}\n\n"
+        f"EXTRACTED_DECISIONS:\n{decisions_json}\n\n"
+        f"EXTRACTED_TASKS:\n{tasks_json}\n\n"
+        f"Transcript:\n{transcript_text[:8000]}"
     )
 
     try:
-        from src.backend.services.ollama_service import get_active_model
-
-        model_name = get_active_model()
-
-        response = requests.post(
-            f"{settings.ollama_base_url.rstrip('/')}/api/generate",
-            json={
-                "model": model_name,
-                "system": system_prompt,
-                "prompt": f"Meeting transcript:\n\n{transcript_text[:8000]}",
-                "stream": False,
-                "options": {
-                    "temperature": 0.3,
-                    "top_p": 0.9,
-                    "num_predict": 2000,
-                },
-            },
-            timeout=settings.ollama_timeout,
-        )
-        response.raise_for_status()
-        raw = response.json().get("response", "").strip()
-
+        raw = await generate_text(settings.llm_fallback_models, system_prompt + "\n\n" + user_prompt, max_tokens=2500)
+        
         if not raw:
-            return None
+            fallback_summary = MeetingSummary(
+                meeting_id=meeting_id,
+                summary="AI không thể tạo bản tóm tắt cho cuộc họp này.",
+            )
+            db.add(fallback_summary)
+            db.commit()
+            db.refresh(fallback_summary)
+            return fallback_summary
 
         # Parse structured response
-        summary_text, key_points, decisions = _parse_summary_response(raw)
+        summary_text, key_points, decisions_text = _parse_summary_response(raw)
 
         # Check if summary already exists for this meeting
         existing = db.query(MeetingSummary).filter(
@@ -122,30 +161,32 @@ def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str
         if existing:
             existing.summary = summary_text
             existing.key_points = key_points
-            existing.decisions = decisions
+            existing.decisions = decisions_text
             db.commit()
             db.refresh(existing)
             return existing
 
-        summary = MeetingSummary(
+        summary_obj = MeetingSummary(
             meeting_id=meeting_id,
             summary=summary_text,
             key_points=key_points,
-            decisions=decisions,
+            decisions=decisions_text,
         )
-        db.add(summary)
+        db.add(summary_obj)
         db.commit()
-        db.refresh(summary)
-        return summary
+        db.refresh(summary_obj)
+        return summary_obj
 
-    except requests.exceptions.ConnectionError:
-        logger.warning("Ollama not reachable for summary generation")
-    except requests.exceptions.Timeout:
-        logger.warning("Ollama timeout during summary generation")
     except Exception as exc:
         logger.error("Summary generation error: %s", exc)
-
-    return None
+        fallback_summary = MeetingSummary(
+            meeting_id=meeting_id,
+            summary="Đã xảy ra lỗi trong quá trình tổng hợp nội dung cuộc họp bằng AI.",
+        )
+        db.add(fallback_summary)
+        db.commit()
+        db.refresh(fallback_summary)
+        return fallback_summary
 
 
 def _parse_summary_response(raw: str) -> tuple[str, Optional[str], Optional[str]]:
@@ -155,28 +196,11 @@ def _parse_summary_response(raw: str) -> tuple[str, Optional[str], Optional[str]
     # Strip thinking tags
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
 
+    # In the Combiner AI pattern, the LLM outputs a Markdown Table directly.
+    # We store the entire table in the `summary` column.
     summary = raw
     key_points = None
     decisions = None
-
-    # Try to parse structured format
-    summary_match = re.search(
-        r"SUMMARY:\s*\n(.*?)(?=KEY POINTS:|DECISIONS:|$)", raw, re.DOTALL | re.IGNORECASE
-    )
-    if summary_match:
-        summary = summary_match.group(1).strip()
-
-    key_points_match = re.search(
-        r"KEY POINTS:\s*\n(.*?)(?=DECISIONS:|$)", raw, re.DOTALL | re.IGNORECASE
-    )
-    if key_points_match:
-        key_points = key_points_match.group(1).strip()
-
-    decisions_match = re.search(
-        r"DECISIONS:\s*\n(.*?)$", raw, re.DOTALL | re.IGNORECASE
-    )
-    if decisions_match:
-        decisions = decisions_match.group(1).strip()
 
     return summary, key_points, decisions
 
@@ -221,7 +245,7 @@ def _close_livekit_room(meeting_id: str) -> bool:
     return False
 
 
-def end_meeting(
+async def end_meeting(
     db: Session,
     meeting_id: str,
     host_user_id: str,
@@ -246,29 +270,50 @@ def end_meeting(
         Dict with summary and follow_up_tasks data.
     """
     # 1. Flush remaining turns from accumulator
-    turn_accumulator.flush(meeting_id)
+    remaining_ids = turn_accumulator.flush(meeting_id)
 
-    # 2. Collect full transcript with punctuation
-    transcript_text, segments = _collect_full_transcript(db, meeting_id)
-
-    # 3. Full task extraction with pending tasks context
-    follow_up_tasks = []
-    if transcript_text:
-        segment_ids = [s.id for s in segments]
-        pending = query_pending_tasks(db, meeting_id)
-        extracted = task_extractor_service.extract(transcript_text, pending)
-        if extracted:
-            created = sync_extracted_tasks(
-                db, meeting_id, extracted,
-                source=FollowUpTaskSourceEnum.AI_FULL,
-                segment_ids=segment_ids,
+    # 2. Extract tasks and decisions only for remaining segments (if any)
+    if remaining_ids:
+        from sqlalchemy.orm import joinedload
+        remaining_segments = (
+            db.query(TranscriptSegment)
+            .options(joinedload(TranscriptSegment.speaker))
+            .filter(TranscriptSegment.id.in_(remaining_ids))
+            .order_by(TranscriptSegment.sequence)
+            .all()
+        )
+        restorer = PunctuationRestorer()
+        remaining_text = restorer.restore(remaining_segments)
+        
+        if remaining_text:
+            pending_tasks_list = query_pending_tasks(db, meeting_id)
+            pending_decisions_list = query_pending_decisions(db, meeting_id)
+            
+            import asyncio
+            extracted_tasks, extracted_decisions = await asyncio.gather(
+                task_extractor_service.extract(remaining_text, pending_tasks_list),
+                decision_extractor_service.extract(remaining_text, pending_decisions_list)
             )
-            follow_up_tasks.extend(created)
+            
+            if extracted_tasks:
+                sync_extracted_tasks(
+                    db, meeting_id, extracted_tasks,
+                    source=FollowUpTaskSourceEnum.AI_REALTIME,
+                    segment_ids=remaining_ids,
+                )
+            if extracted_decisions:
+                sync_extracted_decisions(
+                    db, meeting_id, extracted_decisions,
+                    segment_ids=remaining_ids,
+                )
+
+    # 3. Collect full transcript for the summary
+    transcript_text, segments = _collect_full_transcript(db, meeting_id)
 
     # 4. Generate meeting summary
     summary = None
     if transcript_text:
-        summary = _generate_meeting_summary(db, meeting_id, transcript_text)
+        summary = await _generate_meeting_summary(db, meeting_id, transcript_text)
 
     # 5. Close LiveKit room
     _close_livekit_room(meeting_id)

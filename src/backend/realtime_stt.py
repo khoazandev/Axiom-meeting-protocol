@@ -27,8 +27,7 @@ import os
 
 
 def _get_ollama_url():
-    base = get_settings().ollama_base_url
-    return f"{base.rstrip('/')}/api/generate" if base else None
+    return None
 
 
 OLLAMA_URL = _get_ollama_url()
