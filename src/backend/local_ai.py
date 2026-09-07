@@ -23,7 +23,7 @@ def preload_models():
     if _global_vad is None:
         from livekit.plugins import silero
         _global_vad = silero.VAD.load(
-            min_speech_duration=0.35,
+            min_speech_duration=0.2,
             min_silence_duration=0.45,
             activation_threshold=0.5,
         )
@@ -86,28 +86,32 @@ class FasterWhisperSTT(stt.STT):
         def transcribe():
             dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.012 or dur_sec < 0.35:
+            if rms < 0.005 or dur_sec < 0.2:
                 logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
                 return ""
 
             logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f})...")
-            segments, info = self._model.transcribe(
-                audio_float32,
-                beam_size=1,
-                temperature=0.0,
-                language=lang_code,
-                condition_on_previous_text=False,
-                vad_filter=True,
-                vad_parameters=dict(min_silence_duration_ms=250),
-                no_speech_threshold=0.6,
-                logprob_threshold=-1.0
-            )
-            valid_segments = []
-            for segment in segments:
-                if getattr(segment, "no_speech_prob", 0) > 0.6:
-                    continue
-                valid_segments.append(segment.text)
-            res = " ".join(valid_segments).strip()
+            try:
+                segments, info = self._model.transcribe(
+                    audio_float32,
+                    beam_size=1,
+                    temperature=0.0,
+                    language=lang_code,
+                    condition_on_previous_text=False,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=250),
+                    no_speech_threshold=0.6,
+                    log_prob_threshold=-1.0
+                )
+                valid_segments = []
+                for segment in segments:
+                    if getattr(segment, "no_speech_prob", 0) > 0.6:
+                        continue
+                    valid_segments.append(segment.text)
+                res = " ".join(valid_segments).strip()
+            except Exception as e:
+                logger.error(f"Error in transcribe: {e}", exc_info=True)
+                return ""
 
             # Hallucination filter for silence in Vietnamese & English
             hallucinations = [
@@ -287,28 +291,31 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                     total_samples = sum(f.samples_per_channel for f in event.frames)
                     sample_rate = event.frames[0].sample_rate
                     dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
-                    if dur_sec < 0.35:
+                    if dur_sec < 0.2:
                         vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
                         continue
 
-                    merged_frames = utils.merge_frames(event.frames)
-                    t_event = await self._wrapped_stt.recognize(
-                        buffer=merged_frames,
-                        language=self._language,
-                        conn_options=self._wrapped_stt_conn_options,
-                    )
-
-                    if len(t_event.alternatives) == 0:
-                        continue
-                    elif not t_event.alternatives[0].text:
-                        continue
-
-                    self._event_ch.send_nowait(
-                        SpeechEvent(
-                            type=SpeechEventType.FINAL_TRANSCRIPT,
-                            alternatives=[t_event.alternatives[0]],
+                    try:
+                        merged_frames = utils.merge_frames(event.frames)
+                        t_event = await self._wrapped_stt.recognize(
+                            buffer=merged_frames,
+                            language=self._language,
+                            conn_options=self._wrapped_stt_conn_options,
                         )
-                    )
+
+                        if len(t_event.alternatives) == 0:
+                            continue
+                        elif not t_event.alternatives[0].text:
+                            continue
+
+                        self._event_ch.send_nowait(
+                            SpeechEvent(
+                                type=SpeechEventType.FINAL_TRANSCRIPT,
+                                alternatives=[t_event.alternatives[0]],
+                            )
+                        )
+                    except Exception as err:
+                        vad_logger.error(f"Error recognizing speech event: {err}", exc_info=True)
 
         tasks = [
             asyncio.create_task(_forward_input(), name="forward_input"),
