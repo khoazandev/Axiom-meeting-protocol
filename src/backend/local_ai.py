@@ -240,7 +240,10 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
 
         async def _recognize_vad() -> None:
             """recognize speech from vad events"""
+            import logging
+            vad_logger = logging.getLogger("local-ai.vad")
             async for event in vad_stream:
+                vad_logger.info(f"VAD Event received: type={event.type}")
                 if event.type == VADEventType.START_OF_SPEECH:
                     self._is_speaking = True
                     self._speech_buffer = []

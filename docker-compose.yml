@@ -47,6 +47,8 @@ services:
       # Follow-up Task Extraction
       TASK_EXTRACTOR_MODEL: ${TASK_EXTRACTOR_MODEL:-lamphat03102004/task-extractor01}
       TASK_EXTRACTOR_TIMEOUT: ${TASK_EXTRACTOR_TIMEOUT:-900}
+    volumes:
+      - ./src/backend:/app/src/backend
     depends_on:
       postgres:
         condition: service_healthy

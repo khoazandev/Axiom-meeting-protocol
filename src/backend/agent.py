@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Dict, Optional, Set
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -246,7 +247,10 @@ async def entrypoint(ctx: JobContext):
                         logger.info(f"Received first audio frame. Sample rate: {event.frame.sample_rate}, Channels: {event.frame.num_channels}")
                     frame_count += 1
                     if frame_count % 100 == 0:
-                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity}")
+                        pcm = np.frombuffer(event.frame.data, dtype=np.int16)
+                        rms = float(np.sqrt(np.mean(pcm.astype(np.float32)**2))) if len(pcm) > 0 else 0.0
+                        max_amp = int(np.max(np.abs(pcm))) if len(pcm) > 0 else 0
+                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity} (frame RMS={rms:.2f}, peak={max_amp})")
                     stt_stream.push_frame(event.frame)
                 stt_stream.end_input()
             except Exception as e:

@@ -311,6 +311,26 @@ def get_meeting_token(
             can_update_own_metadata=True,
         )
     )
+
+    # Automatically ensure AI Agent is dispatched to the room
+    try:
+        def _auto_dispatch():
+            async def _inner():
+                try:
+                    http_url = settings.livekit_url.replace("ws://", "http://").replace("wss://", "https://")
+                    lk = livekit_api.LiveKitAPI(http_url, settings.livekit_api_key, settings.livekit_api_secret)
+                    req = livekit_api.CreateAgentDispatchRequest(room=f"meeting-{meeting_id}", agent_name="")
+                    await lk.agent_dispatch.create_dispatch(req)
+                    await lk.aclose()
+                except Exception:
+                    pass
+            import asyncio
+            asyncio.run(_inner())
+        import threading
+        threading.Thread(target=_auto_dispatch, daemon=True).start()
+    except Exception as e:
+        logger.warning(f"Failed to auto-dispatch agent for meeting {meeting_id}: {e}")
+
     return TokenResponse(token=token.to_jwt())
 
 

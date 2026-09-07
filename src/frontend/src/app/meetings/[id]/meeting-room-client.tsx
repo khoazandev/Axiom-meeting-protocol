@@ -862,7 +862,7 @@ export function MeetingRoomClient() {
             token={token}
             serverUrl={livekitUrl}
             connect={true}
-            audio={false}
+            audio={true}
             data-lk-theme="default"
             className="w-full h-full flex overflow-hidden"
             onDisconnected={() => {
