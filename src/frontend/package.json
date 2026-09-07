@@ -25,6 +25,7 @@
     "@ricky0123/vad-web": "^0.0.30",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "gsap": "^3.15.0",
     "livekit-client": "^2.21.0",
     "lucide-react": "^1.27.0",
