@@ -35,9 +35,13 @@ def get_vad():
     return _global_vad
 
 class FasterWhisperSTT(stt.STT):
-    def __init__(self, model_size: Optional[str] = None, language: str = "en"):
+    def __init__(self, model_size: Optional[str] = None, language: Optional[str] = None):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
         self._language = language
+        self._initial_prompt = (
+            "Cuộc họp trực tuyến Axiom. Bàn về công việc, kế hoạch, dự án, tiến độ, báo cáo, "
+            "Jira sprint, nhiệm vụ. Ghi rõ tiếng Việt có dấu chuẩn xác hoặc tiếng Anh chính xác."
+        )
         
         target_model = model_size or os.getenv("WHISPER_MODEL_SIZE", "small")
         cpu_threads = int(os.getenv("WHISPER_CPU_THREADS", "6"))
@@ -62,7 +66,7 @@ class FasterWhisperSTT(stt.STT):
             # Handle empty buffer
             return stt.SpeechEvent(
                 type=stt.SpeechEventType.FINAL_TRANSCRIPT,
-                alternatives=[stt.SpeechData(text="", language=language or self._language, confidence=0.0)]
+                alternatives=[stt.SpeechData(text="", language=language or self._language or "vi", confidence=0.0)]
             )
             
         input_rate = frames[0].sample_rate
@@ -88,21 +92,24 @@ class FasterWhisperSTT(stt.STT):
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
             if rms < 0.005 or dur_sec < 0.2:
                 logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
-                return ""
+                return "", "vi"
 
-            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f})...")
+            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f}, lang_hint={lang_code})...")
             try:
                 segments, info = self._model.transcribe(
                     audio_float32,
-                    beam_size=1,
+                    beam_size=2,
+                    best_of=2,
                     temperature=0.0,
                     language=lang_code,
                     condition_on_previous_text=False,
                     vad_filter=True,
                     vad_parameters=dict(min_silence_duration_ms=250),
                     no_speech_threshold=0.6,
-                    log_prob_threshold=-1.0
+                    log_prob_threshold=-1.0,
+                    initial_prompt=self._initial_prompt
                 )
+                detected = getattr(info, "language", None) or lang_code or "vi"
                 valid_segments = []
                 for segment in segments:
                     if getattr(segment, "no_speech_prob", 0) > 0.6:
@@ -111,7 +118,7 @@ class FasterWhisperSTT(stt.STT):
                 res = " ".join(valid_segments).strip()
             except Exception as e:
                 logger.error(f"Error in transcribe: {e}", exc_info=True)
-                return ""
+                return "", "vi"
 
             # Hallucination filter for silence in Vietnamese & English
             hallucinations = [
@@ -130,86 +137,31 @@ class FasterWhisperSTT(stt.STT):
             lower_res = res.lower().strip()
             if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.03:
                 logger.info(f"Suppressed silence hallucination: '{res}'")
-                return ""
+                return "", detected
 
             # Filter out single characters or punctuation
             import re
             cleaned = re.sub(r'[^\w\s]', '', res).strip()
             if len(cleaned) <= 1:
                 logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
-                return ""
+                return "", detected
 
-            logger.info(f"Transcribe thread finished: '{res}'")
-            return res
+            logger.info(f"Transcribe thread finished (detected={detected}): '{res}'")
+            return res, detected
             
-        text = await loop.run_in_executor(None, transcribe)
-        logger.info(f"Transcribe executor returned: '{text}'")
+        text, detected_lang = await loop.run_in_executor(None, transcribe)
+        logger.info(f"Transcribe executor returned: text='{text}', lang='{detected_lang}'")
 
         return stt.SpeechEvent(
             type=stt.SpeechEventType.FINAL_TRANSCRIPT,
             alternatives=[
                 stt.SpeechData(
                     text=text,
-                    language=lang_code,
+                    language=detected_lang,
                     confidence=1.0
                 )
             ]
         )
-
-
-async def synthesize_edge_tts(text: str, target_lang: str, audio_source: rtc.AudioSource):
-    """
-    Synthesize text using Edge-TTS and push directly to AudioSource.
-    """
-    voice_map = {
-        "vi": "vi-VN-HoaiMyNeural",
-        "en": "en-US-AriaNeural",
-        "ja": "ja-JP-NanamiNeural",
-        "ko": "ko-KR-SunHiNeural",
-        "zh": "zh-CN-XiaoxiaoNeural"
-    }
-    voice = voice_map.get(target_lang, "en-US-AriaNeural")
-    
-    communicate = edge_tts.Communicate(text, voice)
-    mp3_data = b''
-    async for chunk in communicate.stream():
-        if chunk['type'] == 'audio':
-            mp3_data += chunk['data']
-            
-    if not mp3_data:
-        return
-        
-    container = av.open(io.BytesIO(mp3_data))
-    stream = container.streams.audio[0]
-    resampler = av.AudioResampler(format='s16', layout='mono', rate=24000)
-    
-    pcm_data = b''
-    for frame in container.decode(stream):
-        frame.pts = None
-        for r_frame in resampler.resample(frame):
-            pcm_data += r_frame.to_ndarray().tobytes()
-            
-    for r_frame in resampler.resample(None):
-        pcm_data += r_frame.to_ndarray().tobytes()
-        
-    # Chunk PCM data to audio frames
-    bytes_per_sample = 2
-    # Standard chunk is 10ms at 24000Hz = 240 samples = 480 bytes
-    chunk_size = 240 * bytes_per_sample
-    
-    for i in range(0, len(pcm_data), chunk_size):
-        chunk = pcm_data[i:i+chunk_size]
-        if len(chunk) < chunk_size:
-            # Pad with zeros
-            chunk += b'\x00' * (chunk_size - len(chunk))
-        
-        frame = rtc.AudioFrame(
-            data=chunk,
-            sample_rate=24000,
-            num_channels=1,
-            samples_per_channel=240
-        )
-        await audio_source.capture_frame(frame)
 
 
 import asyncio

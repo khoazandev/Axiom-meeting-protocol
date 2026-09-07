@@ -31,29 +31,7 @@ export function useTranslationAudioMuting() {
       const track = trackRef.publication?.track as RemoteAudioTrack | undefined;
       if (!track || typeof track.setVolume !== 'function') return;
 
-      try {
-        let shouldMute = false;
-
-        console.log(
-          `[AudioMuting] Checking ${trackRef.participant.identity}. My Translation: ${isTranslationEnabled} (source: ${translationSourceLang})`
-        );
-
-        if (isTranslationEnabled && translationSourceLang && trackRef.participant.metadata) {
-          const metadata = JSON.parse(trackRef.participant.metadata);
-          if (metadata.target_lang === translationSourceLang) {
-            shouldMute = true;
-          }
-        }
-
-        console.log(
-          `[AudioMuting] Result for ${trackRef.participant.identity}: Mute=${shouldMute}`
-        );
-
-        if (shouldMute) {
-          track.setVolume(0);
-        } else {
-          track.setVolume(1.0);
-        }
+        track.setVolume(1.0);
       } catch (err) {
         console.error(
           `[AudioMuting] Error processing track for ${trackRef.participant.identity}:`,
