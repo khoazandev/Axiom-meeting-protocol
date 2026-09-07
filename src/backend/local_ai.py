@@ -92,12 +92,13 @@ class FasterWhisperSTT(stt.STT):
             dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
             peak = float(np.max(np.abs(audio_float32))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.008 or dur_sec < 0.35 or peak < 0.01:
-                logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, peak={peak:.4f}, dur={dur_sec:.2f}s), skipping silence.")
+            if rms < 0.012 or dur_sec < 0.40 or peak < 0.035:
+                logger.info(f"Audio energy too low (RMS={rms:.5f}, peak={peak:.4f}, dur={dur_sec:.2f}s), skipping silence.")
                 return "", "vi"
 
-            # Normalize audio to -1 dBFS (peak ~0.89) to maximize Whisper's tone and phoneme clarity
-            normalized_audio = audio_float32 * (0.89 / peak)
+            # Normalize audio with max 5.0x gain to prevent amplifying background hiss
+            gain = min(0.89 / peak, 5.0) if peak > 0 else 1.0
+            normalized_audio = audio_float32 * gain
 
             # Quick bilingual language determination: STRICTLY between 'vi' and 'en'
             try:
@@ -162,6 +163,9 @@ class FasterWhisperSTT(stt.STT):
                 "chúc các bạn xem video vui vẻ",
                 "thank you for watching",
                 "thanks for watching",
+                "thank you very much",
+                "thank you",
+                "good day",
                 "subtitles by",
                 "see you next time",
                 "see you in the next",
@@ -176,9 +180,12 @@ class FasterWhisperSTT(stt.STT):
                 "you",
             ]
             lower_res = res.lower().strip()
-            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.035:
-                logger.info(f"Suppressed silence hallucination: '{res}'")
-                return "", detected
+            clean_token = re.sub(r'[^\w\s]', '', lower_res).strip()
+            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) or clean_token in ["thank you", "good day", "you", "bye"]:
+                if rms < 0.045:
+                    logger.info(f"Suppressed silence hallucination: '{res}' (RMS={rms:.4f})")
+                    return "", detected
+
 
             # Filter out single characters or punctuation
             cleaned = re.sub(r'[^\w\s]', '', res).strip()
@@ -271,8 +278,14 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                 total_samples = sum(f.samples_per_channel for f in self._speech_buffer)
                 sample_rate = self._speech_buffer[0].sample_rate if self._speech_buffer else 16000
                 dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
-
                 if dur_sec < 0.6:
+                    continue
+
+                # Skip if speech buffer contains only silence or dead mic (RMS < 15)
+                raw_bytes = b"".join(f.data for f in self._speech_buffer[-15:])
+                pcm16 = np.frombuffer(raw_bytes, dtype=np.int16)
+                buf_rms = float(np.sqrt(np.mean(pcm16.astype(np.float32)**2))) if len(pcm16) > 0 else 0
+                if buf_rms < 15.0:
                     continue
 
                 # 1. Check 5-second forced segmentation cap (prevents audio buffer bloat on long speech)
