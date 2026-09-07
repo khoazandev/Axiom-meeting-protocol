@@ -39,8 +39,9 @@ class FasterWhisperSTT(stt.STT):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
         self._language = language
         self._initial_prompt = (
-            "Cuộc họp trao đổi công việc, dự án công nghệ, báo cáo tiến độ, sprint Jira. "
-            "Song ngữ tiếng Việt và English. Giao tiếp rõ ràng, chính xác."
+            "Chào mọi người, trong cuộc họp hôm nay chúng ta sẽ review tiến độ sprint, "
+            "thảo luận các task trên Jira và bàn về kế hoạch triển khai dự án. "
+            "Let's start the meeting and review the updates."
         )
         
         target_model = model_size or os.getenv("WHISPER_MODEL_SIZE", "small")
@@ -90,21 +91,30 @@ class FasterWhisperSTT(stt.STT):
         def transcribe():
             dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.008 or dur_sec < 0.35:
-                logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
+            peak = float(np.max(np.abs(audio_float32))) if len(audio_float32) > 0 else 0.0
+            if rms < 0.008 or dur_sec < 0.35 or peak < 0.01:
+                logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, peak={peak:.4f}, dur={dur_sec:.2f}s), skipping silence.")
                 return "", "vi"
 
-            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f}, lang_hint={lang_code})...")
+            # Normalize audio to -1 dBFS (peak ~0.89) to maximize Whisper's tone and phoneme clarity
+            normalized_audio = audio_float32 * (0.89 / peak)
+
+            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f}, peak={peak:.4f}, lang_hint={lang_code})...")
             try:
                 segments, info = self._model.transcribe(
-                    audio_float32,
+                    normalized_audio,
                     beam_size=1,
                     best_of=1,
                     temperature=0.0,
                     language=lang_code,
                     condition_on_previous_text=False,
                     vad_filter=True,
-                    vad_parameters=dict(min_silence_duration_ms=350),
+                    vad_parameters=dict(
+                        threshold=0.5,
+                        min_speech_duration_ms=250,
+                        min_silence_duration_ms=350,
+                        speech_pad_ms=150,
+                    ),
                     no_speech_threshold=0.5,
                     log_prob_threshold=-0.8,
                     compression_ratio_threshold=2.2,

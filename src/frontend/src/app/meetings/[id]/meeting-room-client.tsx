@@ -63,8 +63,7 @@ import { ConnectionState } from 'livekit-client';
 function SpeechTranslationControl() {
   const room = useRoomContext();
   const connectionState = useConnectionState();
-  const [isOpen, setIsOpen] = useState(false);
-  const { enabled, sourceLang, setEnabled, setSourceLang } = useTranslationStore();
+  const { enabled, setEnabled } = useTranslationStore();
 
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
@@ -72,54 +71,31 @@ function SpeechTranslationControl() {
       room.localParticipant
         .setAttributes({
           translation_enabled: enabled ? 'true' : 'false',
-          translation_source: sourceLang,
+          translation_source: 'auto',
         })
         .catch((e) => console.warn('Failed to set attributes', e));
     }
-  }, [enabled, sourceLang, room, connectionState]);
+  }, [enabled, room, connectionState]);
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`lk-button ${enabled ? 'bg-primary/20 text-primary border border-primary/50' : ''}`}
-        title="Speech Translation"
-      >
-        <Globe className="w-5 h-5" style={enabled ? {} : { color: '#000000', stroke: '#000000' }} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-64 bg-card border border-border shadow-2xl rounded-xl p-4 z-50 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-sm">Speech Translation</span>
-            <button
-              onClick={() => setEnabled(!enabled)}
-              className={`w-10 h-5 rounded-full relative transition-colors ${enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-            >
-              <div
-                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`}
-              />
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-muted-foreground">Translate from</label>
-            <select
-              disabled={!enabled}
-              value={sourceLang}
-              onChange={(e) => setSourceLang(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="vi">Tiếng Việt</option>
-              <option value="en">English</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="zh">Chinese</option>
-            </select>
-          </div>
-        </div>
+    <button
+      onClick={() => setEnabled(!enabled)}
+      className={`lk-button w-10 h-10 shrink-0 relative transition-all duration-200 flex items-center justify-center rounded-xl ${
+        enabled
+          ? 'bg-primary/20 text-primary border border-primary/50 shadow-sm ring-2 ring-primary/20'
+          : 'opacity-70 hover:opacity-100 text-muted-foreground'
+      }`}
+      title={
+        enabled
+          ? 'Phụ đề song ngữ (VI ⮂ EN): Đang BẬT - Nhấn để Tắt'
+          : 'Phụ đề song ngữ (VI ⮂ EN): Đang TẮT - Nhấn để Bật'
+      }
+    >
+      <Globe className="w-5 h-5" />
+      {enabled && (
+        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
       )}
-    </div>
+    </button>
   );
 }
 
@@ -270,8 +246,21 @@ function LiveKitContent({
   participantName: string;
   onInviteClick: () => void;
   onSidebarToggle: () => void;
-  latestRecord?: RecordEntry | null;
+  latestRecord?: {
+    id?: string;
+    timestamp: string;
+    speaker?: string;
+    participant_identity?: string;
+    participant_name?: string;
+    text?: string;
+    original_text?: string;
+    translated_text?: string;
+    language: string;
+    to_language?: string;
+    is_final: boolean;
+  } | null;
 }) {
+  const { enabled: subtitlesEnabled } = useTranslationStore();
   const { streamData, interimText, isListening, isConnected, transcriptHistory } =
     useVADController(participantName);
 
@@ -304,12 +293,18 @@ function LiveKitContent({
         </LiveKitTileErrorBoundary>
 
         {/* Floating Live Subtitle Overlay */}
-        {latestRecord && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pointer-events-none transition-all duration-300">
-            <div className="bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-3.5 shadow-2xl text-center space-y-1">
+        {subtitlesEnabled && latestRecord && (latestRecord.text || latestRecord.original_text) && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pointer-events-none transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
+            <div className="bg-black/85 backdrop-blur-xl border border-white/20 rounded-2xl p-3.5 shadow-2xl text-center space-y-1">
               <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-white/70">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{latestRecord.participant_identity.replace('user_', 'User ')}</span>
+                <span className="truncate max-w-[200px]">
+                  {latestRecord.speaker ||
+                    latestRecord.participant_name ||
+                    (latestRecord.participant_identity
+                      ? latestRecord.participant_identity.replace('user_', 'User ')
+                      : 'Người tham gia')}
+                </span>
                 <span className="text-white/40">•</span>
                 <span className="uppercase text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">
                   {latestRecord.language || 'VI'}
@@ -324,7 +319,7 @@ function LiveKitContent({
                 )}
               </div>
               <p className="text-sm md:text-base font-semibold text-white tracking-wide leading-snug">
-                {latestRecord.original_text}
+                {latestRecord.text || latestRecord.original_text}
               </p>
               {latestRecord.translated_text && (
                 <div className="pt-1.5 mt-1 border-t border-white/10 flex items-center justify-center gap-1.5 text-xs md:text-sm text-cyan-300 font-medium">
@@ -1031,7 +1026,7 @@ export function MeetingRoomClient() {
                   onVADUpdate={handleVADUpdate}
                   participantName={participantName}
                   onInviteClick={() => setInviteModalOpen(true)}
-                  latestRecord={recordsHistory[recordsHistory.length - 1] || null}
+                  latestRecord={displayedRecords[displayedRecords.length - 1] || null}
                   onSidebarToggle={() => {
                     if (!sidebarOpen) {
                       setSidebarOpen(true);
