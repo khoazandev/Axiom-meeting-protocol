@@ -1,38 +1,30 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ManagerCurlyBracketSidebar,
   ManagerNavKey,
   MANAGER_NAV_SECTIONS,
-} from "@/components/manager/ManagerCurlyBracketSidebar";
-import { ManagerMeetingsTab } from "@/components/manager/ManagerMeetingsTab";
-import { ManagerKanbanTaskTab } from "@/components/manager/ManagerKanbanTaskTab";
-import { ManagerTeamTab } from "@/components/manager/ManagerTeamTab";
-import { ManagerAnalyticsTab } from "@/components/manager/ManagerAnalyticsTab";
-import { ManagerCalendarTab } from "@/components/manager/ManagerCalendarTab";
-import { UserProfileModal, generateInitialsAvatar } from "@/components/profile/UserProfileModal";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import Logo from "@/components/Logo";
-import {
-  Video,
-  Clock,
-  Bell,
-  CheckCircle2,
-  Building2,
-  Search,
-  User,
-} from "lucide-react";
+} from '@/components/manager/ManagerCurlyBracketSidebar';
+import { ManagerMeetingsTab } from '@/components/manager/ManagerMeetingsTab';
+import { ManagerKanbanTaskTab } from '@/components/manager/ManagerKanbanTaskTab';
+import { ManagerTeamTab } from '@/components/manager/ManagerTeamTab';
+import { ManagerAnalyticsTab } from '@/components/manager/ManagerAnalyticsTab';
+import { ManagerCalendarTab } from '@/components/manager/ManagerCalendarTab';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import Logo from '@/components/Logo';
+import { Video, Clock, Bell, CheckCircle2, Building2, Search, User } from 'lucide-react';
 
 export default function ManagerWorkspacePage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<ManagerNavKey>("meetings");
+  const [activeTab, setActiveTab] = useState<ManagerNavKey>('meetings');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [timeStr, setTimeStr] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [timeStr, setTimeStr] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const showToast = (msg: string) => {
@@ -42,7 +34,7 @@ export default function ManagerWorkspacePage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push('/login');
   };
 
   // Clock ticker matching Sovereign style
@@ -50,10 +42,10 @@ export default function ManagerWorkspacePage() {
     const update = () => {
       const now = new Date();
       setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         })
       );
@@ -64,13 +56,11 @@ export default function ManagerWorkspacePage() {
   }, []);
 
   const currentSection =
-    MANAGER_NAV_SECTIONS.find((s) => s.id === activeTab) ||
-    MANAGER_NAV_SECTIONS[0];
+    MANAGER_NAV_SECTIONS.find((s) => s.id === activeTab) || MANAGER_NAV_SECTIONS[0];
   const CurrentIcon = currentSection.icon;
 
   const currentAvatar =
-    user?.avatar_url ||
-    generateInitialsAvatar(user?.full_name || "Trần Minh Khoa");
+    user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Trần Minh Khoa');
 
   return (
     <div className="min-h-screen bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-blue-500 selection:text-white antialiased">
@@ -106,7 +96,7 @@ export default function ManagerWorkspacePage() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-slate-800 dark:text-slate-100">
-              {timeStr || "14:55:00"} ICT
+              {timeStr || '14:55:00'} ICT
             </span>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
@@ -137,7 +127,7 @@ export default function ManagerWorkspacePage() {
           {/* Quick Meeting Action */}
           <button
             type="button"
-            onClick={() => setActiveTab("meetings")}
+            onClick={() => setActiveTab('meetings')}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <Video size={14} />
@@ -147,9 +137,7 @@ export default function ManagerWorkspacePage() {
           {/* Notification Button */}
           <button
             type="button"
-            onClick={() =>
-              showToast("Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp")
-            }
+            onClick={() => showToast('Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp')}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative"
             title="Thông báo nội bộ"
           >
@@ -169,13 +157,13 @@ export default function ManagerWorkspacePage() {
             <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all">
               <img
                 src={currentAvatar}
-                alt={user?.full_name || "Trần Minh Khoa"}
+                alt={user?.full_name || 'Trần Minh Khoa'}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors">
-                {user?.full_name || "Trần Minh Khoa"}
+                {user?.full_name || 'Trần Minh Khoa'}
               </div>
               <div className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase">
                 TRƯỞNG PHÒNG
@@ -207,7 +195,7 @@ export default function ManagerWorkspacePage() {
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {currentSection.sublabel} • Phím tắt chuyển nhanh:{" "}
+                {currentSection.sublabel} • Phím tắt chuyển nhanh:{' '}
                 <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                   {currentSection.shortcut}
                 </kbd>
@@ -227,12 +215,12 @@ export default function ManagerWorkspacePage() {
                   onClick={() => setActiveTab(sec.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isSelected
-                      ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50"
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <Icon size={14} />
-                  <span>{sec.label.split(" ")[0]}</span>
+                  <span>{sec.label.split(' ')[0]}</span>
                 </button>
               );
             })}
@@ -241,25 +229,15 @@ export default function ManagerWorkspacePage() {
 
         {/* Tab View Container - 100% Full Width, EXACTLY 1 SIDEBAR */}
         <div className="w-full transition-opacity duration-200">
-          {activeTab === "meetings" && (
-            <ManagerMeetingsTab onNotify={showToast} />
-          )}
+          {activeTab === 'meetings' && <ManagerMeetingsTab onNotify={showToast} />}
 
-          {activeTab === "kanban" && (
-            <ManagerKanbanTaskTab onNotify={showToast} />
-          )}
+          {activeTab === 'kanban' && <ManagerKanbanTaskTab onNotify={showToast} />}
 
-          {activeTab === "calendar" && (
-            <ManagerCalendarTab onNotify={showToast} />
-          )}
+          {activeTab === 'calendar' && <ManagerCalendarTab onNotify={showToast} />}
 
-          {activeTab === "team" && (
-            <ManagerTeamTab onNotify={showToast} />
-          )}
+          {activeTab === 'team' && <ManagerTeamTab onNotify={showToast} />}
 
-          {activeTab === "analytics" && (
-            <ManagerAnalyticsTab onNotify={showToast} />
-          )}
+          {activeTab === 'analytics' && <ManagerAnalyticsTab onNotify={showToast} />}
         </div>
       </main>
 

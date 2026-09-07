@@ -18,14 +18,15 @@ export const useTranslationStore = create<{
 export function useTranslationAudioMuting() {
   const { localParticipant } = useLocalParticipant();
   const audioTracks = useTracks([Track.Source.Microphone]);
-  const { enabled: isTranslationEnabled, sourceLang: translationSourceLang } = useTranslationStore();
+  const { enabled: isTranslationEnabled, sourceLang: translationSourceLang } =
+    useTranslationStore();
 
   useEffect(() => {
     if (!localParticipant) return;
 
     audioTracks.forEach((trackRef) => {
       if (trackRef.participant.identity === localParticipant.identity) return;
-      if (trackRef.participant.identity.startsWith('agent-')) return; 
+      if (trackRef.participant.identity.startsWith('agent-')) return;
 
       const track = trackRef.publication?.track as RemoteAudioTrack | undefined;
       if (!track || typeof track.setVolume !== 'function') return;
@@ -33,7 +34,9 @@ export function useTranslationAudioMuting() {
       try {
         let shouldMute = false;
 
-        console.log(`[AudioMuting] Checking ${trackRef.participant.identity}. My Translation: ${isTranslationEnabled} (source: ${translationSourceLang})`);
+        console.log(
+          `[AudioMuting] Checking ${trackRef.participant.identity}. My Translation: ${isTranslationEnabled} (source: ${translationSourceLang})`
+        );
 
         if (isTranslationEnabled && translationSourceLang && trackRef.participant.metadata) {
           const metadata = JSON.parse(trackRef.participant.metadata);
@@ -42,15 +45,20 @@ export function useTranslationAudioMuting() {
           }
         }
 
-        console.log(`[AudioMuting] Result for ${trackRef.participant.identity}: Mute=${shouldMute}`);
-        
+        console.log(
+          `[AudioMuting] Result for ${trackRef.participant.identity}: Mute=${shouldMute}`
+        );
+
         if (shouldMute) {
           track.setVolume(0);
         } else {
           track.setVolume(1.0);
         }
       } catch (err) {
-        console.error(`[AudioMuting] Error processing track for ${trackRef.participant.identity}:`, err);
+        console.error(
+          `[AudioMuting] Error processing track for ${trackRef.participant.identity}:`,
+          err
+        );
         track.setVolume(1.0);
       }
     });

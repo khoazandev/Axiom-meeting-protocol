@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
+import React from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 export default function DocHeader({
   title,
@@ -39,7 +39,7 @@ export default function DocHeader({
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
           className="text-[28px] sm:text-[34px] font-black text-slate-900 tracking-tight leading-snug mb-3"
         >
           {title}
@@ -49,7 +49,7 @@ export default function DocHeader({
           <motion.p
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.08, ease: "easeOut" }}
+            transition={{ duration: 0.35, delay: 0.08, ease: 'easeOut' }}
             className="text-[15px] sm:text-[16px] text-slate-600 leading-relaxed max-w-3xl"
           >
             {description}

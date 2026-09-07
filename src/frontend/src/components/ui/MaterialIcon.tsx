@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { MatIcon, MatIconProps } from "./MatIcon";
+import { MatIcon, MatIconProps } from './MatIcon';
 
 export type MaterialIconName = string;
 export type MaterialIconProps = MatIconProps;

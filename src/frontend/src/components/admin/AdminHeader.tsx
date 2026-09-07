@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import React from 'react';
+import Link from 'next/link';
+import { MaterialIcon } from '@/components/ui/MaterialIcon';
 
 interface AdminHeaderProps {
   onOpenInviteModal: () => void;
@@ -41,7 +41,8 @@ export function AdminHeader({ onOpenInviteModal, onExportReport }: AdminHeaderPr
               <MaterialIcon name="auto_awesome" className="w-5 h-5 text-blue-500" />
             </h1>
             <p className="text-[13px] text-slate-500 font-medium max-w-2xl mt-0.5">
-              Điều hành kỷ luật cuộc họp, cơ cấu phòng ban, giám sát radar thời gian thực và kiểm toán an ninh thông tin chuẩn On-Premise.
+              Điều hành kỷ luật cuộc họp, cơ cấu phòng ban, giám sát radar thời gian thực và kiểm
+              toán an ninh thông tin chuẩn On-Premise.
             </p>
           </div>
         </div>
@@ -70,7 +71,10 @@ export function AdminHeader({ onOpenInviteModal, onExportReport }: AdminHeaderPr
             href="/meetings/create"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-[12.5px] font-semibold transition-all shadow-xs hover:shadow-md cursor-pointer group"
           >
-            <MaterialIcon name="bolt" className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+            <MaterialIcon
+              name="bolt"
+              className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform"
+            />
             <span>Tạo Họp Lãnh Đạo</span>
           </Link>
         </div>

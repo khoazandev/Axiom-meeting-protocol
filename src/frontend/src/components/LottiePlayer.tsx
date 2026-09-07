@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React from "react";
-import dynamic from "next/dynamic";
+import React from 'react';
+import dynamic from 'next/dynamic';
 
 const LottieComponent = dynamic(
   () =>
-    import("lottie-react").then((mod) => {
+    import('lottie-react').then((mod) => {
       const Component = (mod as any).Lottie || (mod as any).default || mod;
       return { default: Component as React.ComponentType<any> };
     }),

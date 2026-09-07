@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Video,
   Kanban,
@@ -12,16 +12,11 @@ import {
   ChevronRight,
   LogOut,
   User,
-} from "lucide-react";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { generateInitialsAvatar } from "@/components/profile/UserProfileModal";
+} from 'lucide-react';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type ManagerNavKey =
-  | "meetings"
-  | "kanban"
-  | "calendar"
-  | "team"
-  | "analytics";
+export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'analytics';
 
 export interface ManagerNavSectionItem {
   id: ManagerNavKey;
@@ -35,45 +30,45 @@ export interface ManagerNavSectionItem {
 
 export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
   {
-    id: "meetings",
-    label: "Cuộc Họp Phòng Ban",
-    sublabel: "Live SFU & Điều hành phòng họp",
+    id: 'meetings',
+    label: 'Cuộc Họp Phòng Ban',
+    sublabel: 'Live SFU & Điều hành phòng họp',
     icon: Video,
-    badge: "1 Live",
-    badgeColor: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-    shortcut: "⌘1",
+    badge: '1 Live',
+    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    shortcut: '⌘1',
   },
   {
-    id: "kanban",
-    label: "Bảng Nhiệm Vụ AI",
-    sublabel: "Quản trị task & phân bổ sprint",
+    id: 'kanban',
+    label: 'Bảng Nhiệm Vụ AI',
+    sublabel: 'Quản trị task & phân bổ sprint',
     icon: Kanban,
-    badge: "6 Tasks",
-    badgeColor: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-    shortcut: "⌘2",
+    badge: '6 Tasks',
+    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    shortcut: '⌘2',
   },
   {
-    id: "calendar",
-    label: "Lịch Trình Nội Bộ",
-    sublabel: "Daily Standup & Sprint Planning",
+    id: 'calendar',
+    label: 'Lịch Trình Nội Bộ',
+    sublabel: 'Daily Standup & Sprint Planning',
     icon: Calendar,
-    shortcut: "⌘3",
+    shortcut: '⌘3',
   },
   {
-    id: "team",
-    label: "Nhân Sự Phòng Ban",
-    sublabel: "12 thành viên & phân công việc",
+    id: 'team',
+    label: 'Nhân Sự Phòng Ban',
+    sublabel: '12 thành viên & phân công việc',
     icon: Users,
-    badge: "12 TV",
-    badgeColor: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-    shortcut: "⌘4",
+    badge: '12 TV',
+    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    shortcut: '⌘4',
   },
   {
-    id: "analytics",
-    label: "Sức Khỏe Kỷ Luật",
-    sublabel: "Tải công việc & Agenda Gate",
+    id: 'analytics',
+    label: 'Sức Khỏe Kỷ Luật',
+    sublabel: 'Tải công việc & Agenda Gate',
     icon: BarChart3,
-    shortcut: "⌘5",
+    shortcut: '⌘5',
   },
 ];
 
@@ -100,7 +95,7 @@ export function ManagerCurlyBracketSidebar({
   // Keyboard navigation (Esc, ⌘1-5)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isPinned) {
+      if (e.key === 'Escape' && !isPinned) {
         setIsOpen(false);
       }
       if (e.metaKey || e.ctrlKey) {
@@ -116,8 +111,8 @@ export function ManagerCurlyBracketSidebar({
         }
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPinned, onSelectTab]);
 
   const handleMouseEnter = () => {
@@ -140,8 +135,7 @@ export function ManagerCurlyBracketSidebar({
   const isVisible = isOpen || isPinned;
 
   const currentAvatar =
-    user?.avatar_url ||
-    generateInitialsAvatar(user?.full_name || "Trần Minh Khoa");
+    user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Trần Minh Khoa');
 
   return (
     <>
@@ -171,8 +165,8 @@ export function ManagerCurlyBracketSidebar({
       <aside
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-50 transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
           isVisible
-            ? "translate-x-0 opacity-100 pointer-events-auto"
-            : "-translate-x-24 opacity-0 pointer-events-none"
+            ? 'translate-x-0 opacity-100 pointer-events-auto'
+            : '-translate-x-24 opacity-0 pointer-events-none'
         }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -211,16 +205,16 @@ export function ManagerCurlyBracketSidebar({
                     onClick={() => onSelectTab(section.id)}
                     className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer relative group ${
                       isActive
-                        ? "bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.45)] ring-2 ring-white/50 dark:ring-blue-400/50 scale-105 z-10"
-                        : "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/90 dark:hover:bg-slate-800/90 hover:scale-105"
+                        ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.45)] ring-2 ring-white/50 dark:ring-blue-400/50 scale-105 z-10'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/90 dark:hover:bg-slate-800/90 hover:scale-105'
                     }`}
                     title={`${section.label} (${section.shortcut})`}
-                    aria-current={isActive ? "page" : undefined}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <Icon
                       size={20}
                       className={`transition-transform duration-200 ${
-                        isActive ? "text-white" : "group-hover:scale-110"
+                        isActive ? 'text-white' : 'group-hover:scale-110'
                       }`}
                     />
 
@@ -278,7 +272,7 @@ export function ManagerCurlyBracketSidebar({
             >
               <img
                 src={currentAvatar}
-                alt={user?.full_name || "Manager"}
+                alt={user?.full_name || 'Manager'}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
               />
               <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-slate-900" />
@@ -290,10 +284,10 @@ export function ManagerCurlyBracketSidebar({
               onClick={() => setIsPinned(!isPinned)}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
                 isPinned
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-400/40"
-                  : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-400/40'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
-              title={isPinned ? "Bỏ ghim (Tự động ẩn khi rời chuột)" : "Ghim cố định menu"}
+              title={isPinned ? 'Bỏ ghim (Tự động ẩn khi rời chuột)' : 'Ghim cố định menu'}
             >
               {isPinned ? (
                 <Pin className="w-3.5 h-3.5 fill-current" />

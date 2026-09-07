@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { ReactNode } from "react";
-import { motion } from "framer-motion";
+import { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 
 export default function DocSection({
   title,
@@ -18,8 +18,8 @@ export default function DocSection({
       className="mb-10 scroll-mt-24 relative"
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       {title && (
         <h2 className="text-[20px] sm:text-[22px] font-bold text-slate-900 mb-4 tracking-tight flex items-center gap-2 group">

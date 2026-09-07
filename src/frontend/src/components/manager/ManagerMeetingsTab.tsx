@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { meetingsApi } from "@/lib/api";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { meetingsApi } from '@/lib/api';
 import {
   Video,
   MicOff,
@@ -18,15 +18,15 @@ import {
   ExternalLink,
   Search,
   CheckCircle2,
-} from "lucide-react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { MOCK_EXECUTIVE_MANDATES, ExecutiveMandate } from "@/lib/workloadProtocolData";
+} from 'lucide-react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { MOCK_EXECUTIVE_MANDATES, ExecutiveMandate } from '@/lib/workloadProtocolData';
 
 export interface DepartmentMeeting {
   id: string;
   title: string;
   roomCode: string;
-  status: "LIVE" | "UPCOMING" | "ENDED";
+  status: 'LIVE' | 'UPCOMING' | 'ENDED';
   host: {
     name: string;
     avatar: string;
@@ -47,98 +47,108 @@ export interface DepartmentMeeting {
 
 const INITIAL_MEETINGS: DepartmentMeeting[] = [
   {
-    id: "mtg-eng-01",
-    title: "Sprint 42 Architecture & Protocol Review",
-    roomCode: "ENG-SPRINT-42",
-    status: "LIVE",
+    id: 'mtg-eng-01',
+    title: 'Sprint 42 Architecture & Protocol Review',
+    roomCode: 'ENG-SPRINT-42',
+    status: 'LIVE',
     host: {
-      name: "Trần Minh Khoa",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      name: 'Trần Minh Khoa',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     },
-    startTime: "14:00 - 15:30",
-    duration: "45 phút đã trôi qua",
+    startTime: '14:00 - 15:30',
+    duration: '45 phút đã trôi qua',
     attendeesCount: 8,
     maxAttendees: 12,
     agendaApproved: true,
     aiTranscriptionActive: true,
     attendees: [
       {
-        id: "att-1",
-        name: "Alex Rivera",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        role: "Senior AI Engineer",
+        id: 'att-1',
+        name: 'Alex Rivera',
+        avatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        role: 'Senior AI Engineer',
       },
       {
-        id: "att-2",
-        name: "Lê Thị Hồng",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
-        role: "Frontend Lead",
+        id: 'att-2',
+        name: 'Lê Thị Hồng',
+        avatar:
+          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+        role: 'Frontend Lead',
       },
       {
-        id: "att-3",
-        name: "Phạm Quốc Bảo",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        role: "DevOps Engineer",
+        id: 'att-3',
+        name: 'Phạm Quốc Bảo',
+        avatar:
+          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+        role: 'DevOps Engineer',
       },
       {
-        id: "att-4",
-        name: "Đặng Thùy Dung",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-        role: "QA Automation",
+        id: 'att-4',
+        name: 'Đặng Thùy Dung',
+        avatar:
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+        role: 'QA Automation',
       },
     ],
   },
   {
-    id: "mtg-eng-02",
-    title: "Daily Engineering Sync & Blocker Clearing",
-    roomCode: "ENG-DAILY-SYNC",
-    status: "UPCOMING",
+    id: 'mtg-eng-02',
+    title: 'Daily Engineering Sync & Blocker Clearing',
+    roomCode: 'ENG-DAILY-SYNC',
+    status: 'UPCOMING',
     host: {
-      name: "Trần Minh Khoa",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      name: 'Trần Minh Khoa',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     },
-    startTime: "16:30 - 17:00",
-    duration: "30 phút",
+    startTime: '16:30 - 17:00',
+    duration: '30 phút',
     attendeesCount: 6,
     maxAttendees: 10,
     agendaApproved: true,
     aiTranscriptionActive: false,
     attendees: [
       {
-        id: "att-1",
-        name: "Alex Rivera",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        role: "Senior AI Engineer",
+        id: 'att-1',
+        name: 'Alex Rivera',
+        avatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        role: 'Senior AI Engineer',
       },
       {
-        id: "att-5",
-        name: "Vũ Hải Đăng",
-        avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
-        role: "Backend Specialist",
+        id: 'att-5',
+        name: 'Vũ Hải Đăng',
+        avatar:
+          'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
+        role: 'Backend Specialist',
       },
     ],
   },
   {
-    id: "mtg-eng-03",
-    title: "1-on-1 Mentorship & Career Path: Alex Rivera",
-    roomCode: "ENG-1ON1-ALEX",
-    status: "UPCOMING",
+    id: 'mtg-eng-03',
+    title: '1-on-1 Mentorship & Career Path: Alex Rivera',
+    roomCode: 'ENG-1ON1-ALEX',
+    status: 'UPCOMING',
     host: {
-      name: "Trần Minh Khoa",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      name: 'Trần Minh Khoa',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     },
-    startTime: "Ngày mai, 09:30",
-    duration: "45 phút",
+    startTime: 'Ngày mai, 09:30',
+    duration: '45 phút',
     attendeesCount: 2,
     maxAttendees: 2,
     agendaApproved: false,
     aiTranscriptionActive: false,
     attendees: [
       {
-        id: "att-1",
-        name: "Alex Rivera",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        role: "Senior AI Engineer",
+        id: 'att-1',
+        name: 'Alex Rivera',
+        avatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        role: 'Senior AI Engineer',
       },
     ],
   },
@@ -151,14 +161,14 @@ interface ManagerMeetingsTabProps {
 export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const router = useRouter();
   const [meetings, setMeetings] = useState<DepartmentMeeting[]>(INITIAL_MEETINGS);
-  const [searchFilter, setSearchFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<DepartmentMeeting | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newRoomCode, setNewRoomCode] = useState("");
+  const [newTitle, setNewTitle] = useState('');
+  const [newRoomCode, setNewRoomCode] = useState('');
   const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
   const [engMandates, setEngMandates] = useState<ExecutiveMandate[]>(
-    MOCK_EXECUTIVE_MANDATES.filter((m) => m.targetDepartment === "ENG")
+    MOCK_EXECUTIVE_MANDATES.filter((m) => m.targetDepartment === 'ENG')
   );
 
   const handleInheritMandate = (mandate: ExecutiveMandate) => {
@@ -176,9 +186,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   // Host Controls Handlers
   const handleToggleTranscription = (id: string) => {
     setMeetings((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, aiTranscriptionActive: !m.aiTranscriptionActive } : m
-      )
+      prev.map((m) => (m.id === id ? { ...m, aiTranscriptionActive: !m.aiTranscriptionActive } : m))
     );
     const target = meetings.find((m) => m.id === id);
     onNotify(
@@ -197,10 +205,8 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   };
 
   const handleApproveAgenda = (id: string) => {
-    setMeetings((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, agendaApproved: true } : m))
-    );
-    onNotify("Đã phê duyệt Agenda cuộc họp! Phòng họp đủ điều kiện bắt đầu.");
+    setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, agendaApproved: true } : m)));
+    onNotify('Đã phê duyệt Agenda cuộc họp! Phòng họp đủ điều kiện bắt đầu.');
   };
 
   const handleJoinRoom = async (mtg: DepartmentMeeting) => {
@@ -209,12 +215,13 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
       // Create or join real meeting in backend database
       const created = await meetingsApi.create({
         title: mtg.title,
-        agenda: "Kế hoạch chi tiết và phân công nhiệm vụ khối Kỹ thuật (Sprint Review & AI Protocol).",
+        agenda:
+          'Kế hoạch chi tiết và phân công nhiệm vụ khối Kỹ thuật (Sprint Review & AI Protocol).',
       });
       onNotify(`Đang kết nối vào phòng họp: ${created.title}`);
       router.push(`/meetings/${created.id}`);
     } catch (err) {
-      console.warn("Could not create backend meeting, routing to room code:", err);
+      console.warn('Could not create backend meeting, routing to room code:', err);
       router.push(`/meetings/${mtg.id}`);
     } finally {
       setIsJoiningRoom(null);
@@ -228,72 +235,76 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     try {
       const created = await meetingsApi.create({
         title: newTitle.trim(),
-        agenda: "Nghị quyết và kế hoạch triển khai sprint của khối kỹ thuật.",
+        agenda: 'Nghị quyết và kế hoạch triển khai sprint của khối kỹ thuật.',
       });
 
       const newMtg: DepartmentMeeting = {
         id: created.id,
         title: created.title,
         roomCode: `ENG-${created.id.slice(0, 6).toUpperCase()}`,
-        status: "UPCOMING",
+        status: 'UPCOMING',
         host: {
-          name: "Trần Minh Khoa",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+          name: 'Trần Minh Khoa',
+          avatar:
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
         },
-        startTime: "Hôm nay, 17:30",
-        duration: "45 phút",
+        startTime: 'Hôm nay, 17:30',
+        duration: '45 phút',
         attendeesCount: 1,
         maxAttendees: 8,
         agendaApproved: true,
         aiTranscriptionActive: true,
         attendees: [
           {
-            id: "att-host",
-            name: "Trần Minh Khoa",
-            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-            role: "Trưởng Khối Kỹ Thuật",
+            id: 'att-host',
+            name: 'Trần Minh Khoa',
+            avatar:
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+            role: 'Trưởng Khối Kỹ Thuật',
           },
         ],
       };
 
       setMeetings([newMtg, ...meetings]);
       setIsCreateModalOpen(false);
-      setNewTitle("");
-      setNewRoomCode("");
+      setNewTitle('');
+      setNewRoomCode('');
       onNotify(`Đã khởi tạo phòng họp: ${created.title}`);
       router.push(`/meetings/${created.id}`);
     } catch (err) {
-      console.error("Failed to create meeting on server:", err);
+      console.error('Failed to create meeting on server:', err);
       // Fallback local
       const newMtg: DepartmentMeeting = {
         id: `mtg-eng-${Date.now()}`,
         title: newTitle,
         roomCode: newRoomCode || `ENG-${Math.floor(1000 + Math.random() * 9000)}`,
-        status: "UPCOMING",
+        status: 'UPCOMING',
         host: {
-          name: "Trần Minh Khoa",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+          name: 'Trần Minh Khoa',
+          avatar:
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
         },
-        startTime: "Hôm nay, 17:30",
-        duration: "45 phút",
+        startTime: 'Hôm nay, 17:30',
+        duration: '45 phút',
         attendeesCount: 4,
         maxAttendees: 8,
         agendaApproved: true,
         aiTranscriptionActive: true,
         attendees: [
           {
-            id: "att-1",
-            name: "Alex Rivera",
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-            role: "Senior AI Engineer",
+            id: 'att-1',
+            name: 'Alex Rivera',
+            avatar:
+              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+            role: 'Senior AI Engineer',
           },
         ],
       };
 
       setMeetings([newMtg, ...meetings]);
       setIsCreateModalOpen(false);
-      setNewTitle("");
-      setNewRoomCode("");
+      setNewTitle('');
+      setNewRoomCode('');
       onNotify(`Đã lên lịch cuộc họp phòng ban: ${newMtg.title}`);
     }
   };
@@ -312,16 +323,14 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Chủ trì phòng ban có quyền kiểm duyệt Agenda, quản lý mic/cam và kích hoạt AI trích xuất nghị quyết.
+            Chủ trì phòng ban có quyền kiểm duyệt Agenda, quản lý mic/cam và kích hoạt AI trích xuất
+            nghị quyết.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchFilter}
@@ -354,7 +363,8 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                 Nghị Quyết Ban Lãnh Đạo Cần Kế Thừa Vào Cuộc Họp Khối (Cascade Directives)
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                AI phát hiện <strong>{engMandates.length} Quyết Sách Chiến Lược</strong> từ Cuộc họp Cấp cao của Chủ Tịch giao cho Khối Kỹ Thuật.
+                AI phát hiện <strong>{engMandates.length} Quyết Sách Chiến Lược</strong> từ Cuộc họp
+                Cấp cao của Chủ Tịch giao cho Khối Kỹ Thuật.
               </p>
             </div>
           </div>
@@ -375,7 +385,10 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                     {m.allocatedHours}h ({m.storyPoints} SP)
                   </span>
                 </div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate" title={m.title}>
+                <div
+                  className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate"
+                  title={m.title}
+                >
                   {m.title}
                 </div>
                 <div className="text-[10px] text-slate-400 truncate">
@@ -398,15 +411,15 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
       {/* Meeting Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {filteredMeetings.map((mtg) => {
-          const isLive = mtg.status === "LIVE";
+          const isLive = mtg.status === 'LIVE';
 
           return (
             <div
               key={mtg.id}
               className={`rounded-2xl border transition-all p-5 flex flex-col justify-between ${
                 isLive
-                  ? "bg-gradient-to-br from-white via-white to-blue-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20 border-blue-300/80 dark:border-blue-800/80 shadow-md shadow-blue-500/5"
-                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                  ? 'bg-gradient-to-br from-white via-white to-blue-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20 border-blue-300/80 dark:border-blue-800/80 shadow-md shadow-blue-500/5'
+                  : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               {/* Meeting Header */}
@@ -485,12 +498,15 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                     <span
                       className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                         mtg.aiTranscriptionActive
-                          ? "bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                          ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                       }`}
                     >
-                      <Sparkles size={11} className={mtg.aiTranscriptionActive ? "animate-spin text-purple-600" : ""} />
-                      {mtg.aiTranscriptionActive ? "AI Live Rec" : "AI Sẵn Sàng"}
+                      <Sparkles
+                        size={11}
+                        className={mtg.aiTranscriptionActive ? 'animate-spin text-purple-600' : ''}
+                      />
+                      {mtg.aiTranscriptionActive ? 'AI Live Rec' : 'AI Sẵn Sàng'}
                     </span>
                   </div>
                 </div>
@@ -509,8 +525,8 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                     disabled={isJoiningRoom === mtg.id}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-colors shadow-xs cursor-pointer ${
                       isLive
-                        ? "bg-emerald-600 hover:bg-emerald-700"
-                        : "bg-blue-600 hover:bg-blue-700"
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
                     {isJoiningRoom === mtg.id ? (
@@ -520,7 +536,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                     ) : (
                       <Play size={14} />
                     )}
-                    <span>{isLive ? "Vào Phòng Chủ Trì" : "Bắt Đầu Phòng"}</span>
+                    <span>{isLive ? 'Vào Phòng Chủ Trì' : 'Bắt Đầu Phòng'}</span>
                   </button>
 
                   <button
@@ -546,13 +562,13 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                     onClick={() => handleToggleTranscription(mtg.id)}
                     className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                       mtg.aiTranscriptionActive
-                        ? "bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 text-purple-600 dark:text-purple-300"
-                        : "border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+                        ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 text-purple-600 dark:text-purple-300'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
                     }`}
                     title={
                       mtg.aiTranscriptionActive
-                        ? "Tắt AI Ghi Âm & Nghị Quyết"
-                        : "Bật AI Ghi Âm & Nghị Quyết"
+                        ? 'Tắt AI Ghi Âm & Nghị Quyết'
+                        : 'Bật AI Ghi Âm & Nghị Quyết'
                     }
                   >
                     <Sparkles size={15} />
@@ -615,7 +631,8 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                   Kỷ luật phòng ban tự động
                 </div>
                 <p className="text-[11px] text-blue-600/80 dark:text-blue-400">
-                  Cuộc họp sẽ tự động kích hoạt Agenda Gatekeeper và AI Assistant tổng hợp Action Items gửi về Bảng Kanban.
+                  Cuộc họp sẽ tự động kích hoạt Agenda Gatekeeper và AI Assistant tổng hợp Action
+                  Items gửi về Bảng Kanban.
                 </p>
               </div>
 

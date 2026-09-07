@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Video,
   CheckSquare,
@@ -12,16 +12,11 @@ import {
   PinOff,
   ChevronRight,
   LogOut,
-} from "lucide-react";
-import { generateInitialsAvatar } from "@/components/profile/UserProfileModal";
+} from 'lucide-react';
+import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type MemberSectionKey =
-  | "meetings"
-  | "tasks"
-  | "jira"
-  | "calendar"
-  | "knowledge"
-  | "settings";
+  'meetings' | 'tasks' | 'jira' | 'calendar' | 'knowledge' | 'settings';
 
 export interface MemberNavSectionItem {
   id: MemberSectionKey;
@@ -35,58 +30,58 @@ export interface MemberNavSectionItem {
 
 export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
   {
-    id: "meetings",
-    label: "Cuộc Họp & Radar",
-    sublabel: "Live SFU & Vào họp nhanh",
+    id: 'meetings',
+    label: 'Cuộc Họp & Radar',
+    sublabel: 'Live SFU & Vào họp nhanh',
     icon: Video,
-    badge: "1 Live",
-    badgeColor: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-    shortcut: "⌘1",
+    badge: '1 Live',
+    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    shortcut: '⌘1',
   },
   {
-    id: "tasks",
-    label: "Nhiệm Vụ AI Của Tôi",
-    sublabel: "Action items bóc tách sau họp",
+    id: 'tasks',
+    label: 'Nhiệm Vụ AI Của Tôi',
+    sublabel: 'Action items bóc tách sau họp',
     icon: CheckSquare,
-    badge: "3 Mới",
-    badgeColor: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-    shortcut: "⌘2",
+    badge: '3 Mới',
+    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    shortcut: '⌘2',
   },
   {
-    id: "jira",
-    label: "Mini Jira Workspace",
-    sublabel: "Bảng Agile Sprint Kanban 4 cột",
+    id: 'jira',
+    label: 'Mini Jira Workspace',
+    sublabel: 'Bảng Agile Sprint Kanban 4 cột',
     icon: Kanban,
-    badge: "SMA",
-    badgeColor: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-    shortcut: "⌘3",
+    badge: 'SMA',
+    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    shortcut: '⌘3',
   },
   {
-    id: "calendar",
-    label: "Lịch Trình Cá Nhân",
-    sublabel: "Daily Standup, 1-on-1 & Sprint",
+    id: 'calendar',
+    label: 'Lịch Trình Cá Nhân',
+    sublabel: 'Daily Standup, 1-on-1 & Sprint',
     icon: Calendar,
-    shortcut: "⌘4",
+    shortcut: '⌘4',
   },
   {
-    id: "knowledge",
-    label: "Kho Tri Thức AI (RAG)",
-    sublabel: "Tra cứu nghị quyết & hỏi đáp AI",
+    id: 'knowledge',
+    label: 'Kho Tri Thức AI (RAG)',
+    sublabel: 'Tra cứu nghị quyết & hỏi đáp AI',
     icon: BookOpen,
-    badge: "RAG",
-    badgeColor: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-    shortcut: "⌘5",
+    badge: 'RAG',
+    badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    shortcut: '⌘5',
   },
   {
-    id: "settings",
-    label: "Cài Đặt & Thiết Bị",
-    sublabel: "Microphone, Camera & Hồ sơ",
+    id: 'settings',
+    label: 'Cài Đặt & Thiết Bị',
+    sublabel: 'Microphone, Camera & Hồ sơ',
     icon: Settings,
-    shortcut: "⌘6",
+    shortcut: '⌘6',
   },
 ];
 
-import { useAuthStore } from "@/lib/store/useAuthStore";
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 interface MemberCurlyBracketSidebarProps {
   activeSection: MemberSectionKey;
@@ -113,7 +108,7 @@ export function MemberCurlyBracketSidebar({
   // Keyboard navigation (Esc, ⌘1-6)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isPinned) {
+      if (e.key === 'Escape' && !isPinned) {
         setIsOpen(false);
       }
       if (e.metaKey || e.ctrlKey) {
@@ -130,8 +125,8 @@ export function MemberCurlyBracketSidebar({
         }
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPinned, onSelectSection]);
 
   // Mouse hover handlers with graceful debounce
@@ -182,8 +177,8 @@ export function MemberCurlyBracketSidebar({
       <aside
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-50 transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
           isVisible
-            ? "translate-x-0 opacity-100 pointer-events-auto"
-            : "-translate-x-24 opacity-0 pointer-events-none"
+            ? 'translate-x-0 opacity-100 pointer-events-auto'
+            : '-translate-x-24 opacity-0 pointer-events-none'
         }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -222,16 +217,16 @@ export function MemberCurlyBracketSidebar({
                     onClick={() => onSelectSection(section.id)}
                     className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer relative group ${
                       isActive
-                        ? "bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.45)] ring-2 ring-white/50 dark:ring-blue-400/50 scale-105 z-10"
-                        : "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/90 dark:hover:bg-slate-800/90 hover:scale-105"
+                        ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.45)] ring-2 ring-white/50 dark:ring-blue-400/50 scale-105 z-10'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/90 dark:hover:bg-slate-800/90 hover:scale-105'
                     }`}
                     title={`${section.label} (${section.shortcut})`}
-                    aria-current={isActive ? "page" : undefined}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <Icon
                       size={20}
                       className={`transition-transform duration-200 ${
-                        isActive ? "text-white" : "group-hover:scale-110"
+                        isActive ? 'text-white' : 'group-hover:scale-110'
                       }`}
                     />
 
@@ -288,11 +283,8 @@ export function MemberCurlyBracketSidebar({
               title="Xem & Chỉnh sửa hồ sơ cá nhân / avatar"
             >
               <img
-                src={
-                  user?.avatar_url ||
-                  generateInitialsAvatar(user?.full_name || "Alex Rivera")
-                }
-                alt={user?.full_name || "Alex Rivera"}
+                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Alex Rivera')}
+                alt={user?.full_name || 'Alex Rivera'}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
               />
               <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-slate-900" />
@@ -304,10 +296,10 @@ export function MemberCurlyBracketSidebar({
               onClick={() => setIsPinned(!isPinned)}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
                 isPinned
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-400/40"
-                  : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-400/40'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
-              title={isPinned ? "Bỏ ghim (Tự động ẩn khi rời chuột)" : "Ghim cố định menu"}
+              title={isPinned ? 'Bỏ ghim (Tự động ẩn khi rời chuột)' : 'Ghim cố định menu'}
             >
               {isPinned ? (
                 <Pin className="w-3.5 h-3.5 fill-current" />

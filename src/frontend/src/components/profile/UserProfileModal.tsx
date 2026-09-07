@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState, useRef, useEffect } from "react";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { authApi } from "@/lib/api";
+import React, { useState, useRef, useEffect } from 'react';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { authApi } from '@/lib/api';
 import {
   X,
   Upload,
@@ -18,17 +18,17 @@ import {
   CheckCircle2,
   RotateCcw,
   Briefcase,
-} from "lucide-react";
+} from 'lucide-react';
 
 /**
  * Generate a crisp, high-resolution vector SVG initials avatar based on user's name.
  * Uses a deterministic executive gradient palette based on name hash.
  */
 export function generateInitialsAvatar(name: string): string {
-  const trimmed = (name || "User").trim();
+  const trimmed = (name || 'User').trim();
   const parts = trimmed.split(/\s+/).filter(Boolean);
 
-  let initials = "AX";
+  let initials = 'AX';
   if (parts.length >= 2) {
     initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   } else if (trimmed.length > 0) {
@@ -37,13 +37,13 @@ export function generateInitialsAvatar(name: string): string {
 
   // Curated modern enterprise linear gradients
   const gradients = [
-    { c1: "#2563eb", c2: "#1d4ed8" }, // Sapphire Blue
-    { c1: "#059669", c2: "#047857" }, // Forest Emerald
-    { c1: "#7c3aed", c2: "#6d28d9" }, // Electric Violet
-    { c1: "#ea580c", c2: "#c2410c" }, // Vibrant Amber
-    { c1: "#0891b2", c2: "#0e7490" }, // Deep Cyan
-    { c1: "#db2777", c2: "#be185d" }, // Rose Ruby
-    { c1: "#4f46e5", c2: "#3730a3" }, // Indigo Slate
+    { c1: '#2563eb', c2: '#1d4ed8' }, // Sapphire Blue
+    { c1: '#059669', c2: '#047857' }, // Forest Emerald
+    { c1: '#7c3aed', c2: '#6d28d9' }, // Electric Violet
+    { c1: '#ea580c', c2: '#c2410c' }, // Vibrant Amber
+    { c1: '#0891b2', c2: '#0e7490' }, // Deep Cyan
+    { c1: '#db2777', c2: '#be185d' }, // Rose Ruby
+    { c1: '#4f46e5', c2: '#3730a3' }, // Indigo Slate
   ];
 
   let hash = 0;
@@ -78,15 +78,15 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form States - All editable in a single unified page
-  const [fullName, setFullName] = useState(user?.full_name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState("0912 345 678 (Ext: 104)");
-  const [department, setDepartment] = useState("Khối Kỹ Thuật (Engineering)");
-  const [title, setTitle] = useState("Senior AI Engineer");
-  const [bio, setBio] = useState("Chuyên gia xử lý âm thanh thời gian thực & WebRTC SFU");
+  const [fullName, setFullName] = useState(user?.full_name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState('0912 345 678 (Ext: 104)');
+  const [department, setDepartment] = useState('Khối Kỹ Thuật (Engineering)');
+  const [title, setTitle] = useState('Senior AI Engineer');
+  const [bio, setBio] = useState('Chuyên gia xử lý âm thanh thời gian thực & WebRTC SFU');
 
   // Avatar state
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [isCustomUpload, setIsCustomUpload] = useState(false);
 
   // UI States
@@ -96,9 +96,9 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   // Sync state whenever user or modal opens
   useEffect(() => {
     if (user && isOpen) {
-      const currentName = user.full_name || "";
+      const currentName = user.full_name || '';
       setFullName(currentName);
-      setEmail(user.email || "");
+      setEmail(user.email || '');
 
       // Check existing custom local storage or infer from role
       const stored = localStorage.getItem(`axiom_profile_${user.id || user.email}`);
@@ -113,26 +113,26 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
           // ignore error
         }
       } else {
-        if (user.email === "admin@axiom.com") {
-          setDepartment("Ban Giám Đốc / Hội Đồng Quản Trị");
-          setTitle("Chủ Tịch & Tổng Giám Đốc Điều Hành (CEO)");
-          setBio("Toàn quyền kiểm soát và điều hành hệ thống Axiom DX-OS.");
-          setPhone("0908 888 999 (Ext: 001)");
-        } else if (user.email === "manager.khoa@axiom.com") {
-          setDepartment("Khối Kỹ Thuật (Engineering)");
-          setTitle("Trưởng Khối Kỹ Thuật");
-          setBio("Quản trị phòng ban, phân bổ task & điều phối sprint dự án.");
-          setPhone("0918 234 567 (Ext: 102)");
+        if (user.email === 'admin@axiom.com') {
+          setDepartment('Ban Giám Đốc / Hội Đồng Quản Trị');
+          setTitle('Chủ Tịch & Tổng Giám Đốc Điều Hành (CEO)');
+          setBio('Toàn quyền kiểm soát và điều hành hệ thống Axiom DX-OS.');
+          setPhone('0908 888 999 (Ext: 001)');
+        } else if (user.email === 'manager.khoa@axiom.com') {
+          setDepartment('Khối Kỹ Thuật (Engineering)');
+          setTitle('Trưởng Khối Kỹ Thuật');
+          setBio('Quản trị phòng ban, phân bổ task & điều phối sprint dự án.');
+          setPhone('0918 234 567 (Ext: 102)');
         } else {
-          setDepartment("Khối Kỹ Thuật (Engineering)");
-          setTitle("Kỹ Sư Trí Tuệ Nhân Tạo (AI Engineer)");
-          setBio("Chuyên trách Whisper STT & LLM Meeting Protocol Pipeline.");
-          setPhone("0912 345 678 (Ext: 104)");
+          setDepartment('Khối Kỹ Thuật (Engineering)');
+          setTitle('Kỹ Sư Trí Tuệ Nhân Tạo (AI Engineer)');
+          setBio('Chuyên trách Whisper STT & LLM Meeting Protocol Pipeline.');
+          setPhone('0912 345 678 (Ext: 104)');
         }
       }
 
       // If user already has a custom uploaded avatar (data URL image or external non-svg image)
-      if (user.avatar_url && !user.avatar_url.includes("image/svg+xml")) {
+      if (user.avatar_url && !user.avatar_url.includes('image/svg+xml')) {
         setAvatarUrl(user.avatar_url);
         setIsCustomUpload(true);
       } else {
@@ -155,7 +155,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   const handleResetToAutoAvatar = () => {
     setIsCustomUpload(false);
     setAvatarUrl(generateInitialsAvatar(fullName));
-    onNotify?.("Đã chuyển về Avatar tự động theo tên!");
+    onNotify?.('Đã chuyển về Avatar tự động theo tên!');
   };
 
   // Handle local file upload and downscale to lightweight base64
@@ -163,8 +163,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      onNotify?.("Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WebP)!");
+    if (!file.type.startsWith('image/')) {
+      onNotify?.('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WebP)!');
       return;
     }
 
@@ -175,8 +175,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
       const img = new Image();
       img.onload = () => {
         // Create canvas to downscale image to crisp 256x256
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
         const size = 256;
         canvas.width = size;
         canvas.height = size;
@@ -189,30 +189,30 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
           ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
 
           // Export as optimized JPEG/WebP data url (< 35KB)
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           setAvatarUrl(dataUrl);
           setIsCustomUpload(true);
-          onNotify?.("Tải ảnh đại diện thành công!");
+          onNotify?.('Tải ảnh đại diện thành công!');
         }
         setIsUploading(false);
       };
       img.onerror = () => {
         setIsUploading(false);
-        onNotify?.("Không thể đọc tệp hình ảnh. Vui lòng thử lại!");
+        onNotify?.('Không thể đọc tệp hình ảnh. Vui lòng thử lại!');
       };
       img.src = event.target?.result as string;
     };
 
     reader.readAsDataURL(file);
     // Clear input so same file can be selected again
-    e.target.value = "";
+    e.target.value = '';
   };
 
   // Save all profile information
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!fullName.trim()) {
-      onNotify?.("Họ và tên không được để trống!");
+      onNotify?.('Họ và tên không được để trống!');
       return;
     }
 
@@ -245,16 +245,16 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
         );
       }
 
-      onNotify?.("Đã cập nhật toàn bộ thông tin cá nhân và avatar thành công!");
+      onNotify?.('Đã cập nhật toàn bộ thông tin cá nhân và avatar thành công!');
       onClose();
     } catch (err) {
-      console.error("Failed to update profile:", err);
+      console.error('Failed to update profile:', err);
       // Fallback: update store locally even if network hiccups
       updateUser({
         full_name: fullName.trim(),
         avatar_url: finalAvatar,
       });
-      onNotify?.("Đã lưu thông tin hồ sơ của bạn!");
+      onNotify?.('Đã lưu thông tin hồ sơ của bạn!');
       onClose();
     } finally {
       setIsSaving(false);
@@ -264,11 +264,11 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   if (!isOpen) return null;
 
   const roleLabel =
-    user?.email === "admin@axiom.com"
-      ? "CHỦ TỊCH / OWNER"
-      : user?.email === "manager.khoa@axiom.com"
-      ? "TRƯỞNG PHÒNG / MANAGER"
-      : "THÀNH VIÊN / MEMBER";
+    user?.email === 'admin@axiom.com'
+      ? 'CHỦ TỊCH / OWNER'
+      : user?.email === 'manager.khoa@axiom.com'
+        ? 'TRƯỞNG PHÒNG / MANAGER'
+        : 'THÀNH VIÊN / MEMBER';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -350,7 +350,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                 </div>
 
                 <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Mặc định hệ thống tự sinh avatar chữ cái đại diện theo họ tên của bạn. Bạn cũng có thể tải ảnh tùy thích từ thiết bị.
+                  Mặc định hệ thống tự sinh avatar chữ cái đại diện theo họ tên của bạn. Bạn cũng có
+                  thể tải ảnh tùy thích từ thiết bị.
                 </p>
 
                 {/* Quick Action Buttons */}

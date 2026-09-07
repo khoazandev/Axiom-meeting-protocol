@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   CurlyBracketSidebar,
   AdminSectionKey,
   NAV_SECTIONS,
-} from "@/components/admin/CurlyBracketSidebar";
-import { OverviewPulseTab } from "@/components/admin/OverviewPulseTab";
-import { MembersDirectoryTab } from "@/components/admin/MembersDirectoryTab";
-import { DepartmentsTab } from "@/components/admin/DepartmentsTab";
-import { ProtocolPoliciesTab } from "@/components/admin/ProtocolPoliciesTab";
-import { AuditSecurityTab } from "@/components/admin/AuditSecurityTab";
-import { WebhooksIntegrationTab } from "@/components/admin/WebhooksIntegrationTab";
-import { UserProfileModal, generateInitialsAvatar } from "@/components/profile/UserProfileModal";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { MatIcon } from "@/components/ui/MatIcon";
-import Logo from "@/components/Logo";
+} from '@/components/admin/CurlyBracketSidebar';
+import { OverviewPulseTab } from '@/components/admin/OverviewPulseTab';
+import { MembersDirectoryTab } from '@/components/admin/MembersDirectoryTab';
+import { DepartmentsTab } from '@/components/admin/DepartmentsTab';
+import { ProtocolPoliciesTab } from '@/components/admin/ProtocolPoliciesTab';
+import { AuditSecurityTab } from '@/components/admin/AuditSecurityTab';
+import { WebhooksIntegrationTab } from '@/components/admin/WebhooksIntegrationTab';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { MatIcon } from '@/components/ui/MatIcon';
+import Logo from '@/components/Logo';
 
 import {
   MOCK_PULSE_METRICS,
@@ -33,16 +33,16 @@ import {
   DepartmentNode,
   ProtocolPolicySettings,
   EnterpriseWebhookItem,
-} from "@/lib/mockAdminData";
+} from '@/lib/mockAdminData';
 
 export default function StandaloneAdminCenterPage() {
   const router = useRouter();
   const { user } = useAuthStore();
 
   // Navigation State
-  const [activeSection, setActiveSection] = useState<AdminSectionKey>("overview");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [timeStr, setTimeStr] = useState("");
+  const [activeSection, setActiveSection] = useState<AdminSectionKey>('overview');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeStr, setTimeStr] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Data States
@@ -55,9 +55,10 @@ export default function StandaloneAdminCenterPage() {
   const [webhooks, setWebhooks] = useState<EnterpriseWebhookItem[]>(MOCK_WEBHOOKS);
 
   // Quick Join Radar Modal State
-  const [selectedMeetingForJoin, setSelectedMeetingForJoin] =
-    useState<LiveRadarMeeting | null>(null);
-  const [joinMode, setJoinMode] = useState<"audit" | "intervene">("audit");
+  const [selectedMeetingForJoin, setSelectedMeetingForJoin] = useState<LiveRadarMeeting | null>(
+    null
+  );
+  const [joinMode, setJoinMode] = useState<'audit' | 'intervene'>('audit');
 
   // Global Toast Feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -73,10 +74,10 @@ export default function StandaloneAdminCenterPage() {
     const update = () => {
       const now = new Date();
       setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         })
       );
@@ -89,41 +90,36 @@ export default function StandaloneAdminCenterPage() {
   // ── Tab Switching Handler (Chế độ Phân trang độc lập - Siêu nhẹ, mượt mà) ──
   const handleSelectSection = (section: AdminSectionKey) => {
     setActiveSection(section);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const currentSection =
-    NAV_SECTIONS.find((s) => s.id === activeSection) || NAV_SECTIONS[0];
+  const currentSection = NAV_SECTIONS.find((s) => s.id === activeSection) || NAV_SECTIONS[0];
 
   // ── Members Handlers ──
   const handleUpdateRole = (memberId: string, newRole: OrgRole) => {
     setMembers((prev: OrgMemberItem[]) =>
-      prev.map((m: OrgMemberItem) =>
-        m.id === memberId ? { ...m, role: newRole } : m
-      )
+      prev.map((m: OrgMemberItem) => (m.id === memberId ? { ...m, role: newRole } : m))
     );
     const target = members.find((m: OrgMemberItem) => m.id === memberId);
     const roleNames: Record<OrgRole, string> = {
-      OWNER: "CHỦ TỊCH",
-      ADMIN: "QUẢN TRỊ VIÊN",
-      MANAGER: "TRƯỞNG PHÒNG",
-      MEMBER: "NHÂN VIÊN",
+      OWNER: 'CHỦ TỊCH',
+      ADMIN: 'QUẢN TRỊ VIÊN',
+      MANAGER: 'TRƯỞNG PHÒNG',
+      MEMBER: 'NHÂN VIÊN',
     };
     showToast(
-      `Đã đổi vai trò của ${target?.fullName || "thành viên"} thành ${roleNames[newRole] || newRole}`
+      `Đã đổi vai trò của ${target?.fullName || 'thành viên'} thành ${roleNames[newRole] || newRole}`
     );
   };
 
   const handleToggleStatus = (memberId: string) => {
     setMembers((prev: OrgMemberItem[]) =>
       prev.map((m: OrgMemberItem) =>
-        m.id === memberId
-          ? { ...m, status: m.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" }
-          : m
+        m.id === memberId ? { ...m, status: m.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' } : m
       )
     );
     const target = members.find((m: OrgMemberItem) => m.id === memberId);
-    const newStatus = target?.status === "ACTIVE" ? "Đình chỉ" : "Kích hoạt";
+    const newStatus = target?.status === 'ACTIVE' ? 'Đình chỉ' : 'Kích hoạt';
     showToast(`Đã ${newStatus} tài khoản của ${target?.fullName}`);
   };
 
@@ -139,12 +135,12 @@ export default function StandaloneAdminCenterPage() {
       email: newMember.email,
       department: newMember.department,
       role: newMember.role,
-      status: "ACTIVE",
-      lastActive: "Chưa đăng nhập",
+      status: 'ACTIVE',
+      lastActive: 'Chưa đăng nhập',
       meetingsCount: 0,
       avatarUrl: undefined,
-      title: "Chuyên viên mới",
-      joinedDate: "Hôm nay",
+      title: 'Chuyên viên mới',
+      joinedDate: 'Hôm nay',
     };
     setMembers([created, ...members]);
     showToast(`Đã gửi thư mời và cấp quyền ban đầu cho ${newMember.fullName}`);
@@ -152,7 +148,7 @@ export default function StandaloneAdminCenterPage() {
 
   // ── Department Handlers ──
   const handleAddDepartment = (
-    newDept: Omit<DepartmentNode, "id" | "memberCount" | "activeMeetingsCount">
+    newDept: Omit<DepartmentNode, 'id' | 'memberCount' | 'activeMeetingsCount'>
   ) => {
     const created: DepartmentNode = {
       ...newDept,
@@ -167,13 +163,11 @@ export default function StandaloneAdminCenterPage() {
   // ── Policy Handlers ──
   const handleSavePolicies = (updated: ProtocolPolicySettings) => {
     setPolicies(updated);
-    showToast("Đã lưu và áp dụng toàn bộ chính sách kỷ luật cuộc họp vào hệ thống!");
+    showToast('Đã lưu và áp dụng toàn bộ chính sách kỷ luật cuộc họp vào hệ thống!');
   };
 
   // ── Webhook Handlers ──
-  const handleAddWebhook = (
-    newWh: Omit<EnterpriseWebhookItem, "id" | "successRate">
-  ) => {
+  const handleAddWebhook = (newWh: Omit<EnterpriseWebhookItem, 'id' | 'successRate'>) => {
     const created: EnterpriseWebhookItem = {
       ...newWh,
       id: `wh-${Date.now()}`,
@@ -184,31 +178,24 @@ export default function StandaloneAdminCenterPage() {
   };
 
   const handleToggleWebhook = (id: string) => {
-    setWebhooks((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, isActive: !w.isActive } : w))
-    );
-    showToast("Đã cập nhật trạng thái hoạt động của webhook");
+    setWebhooks((prev) => prev.map((w) => (w.id === id ? { ...w, isActive: !w.isActive } : w)));
+    showToast('Đã cập nhật trạng thái hoạt động của webhook');
   };
 
   const handleDeleteWebhook = (id: string) => {
     setWebhooks((prev) => prev.filter((w) => w.id !== id));
-    showToast("Đã xóa cấu hình endpoint webhook");
+    showToast('Đã xóa cấu hình endpoint webhook');
   };
 
   // ── Quick Join Radar Handler ──
-  const handleQuickJoin = (
-    meeting: LiveRadarMeeting,
-    mode: "audit" | "intervene" = "audit"
-  ) => {
+  const handleQuickJoin = (meeting: LiveRadarMeeting, mode: 'audit' | 'intervene' = 'audit') => {
     setSelectedMeetingForJoin(meeting);
     setJoinMode(mode);
   };
 
   const handleProceedJoin = () => {
     if (!selectedMeetingForJoin) return;
-    router.push(
-      `/meetings/${selectedMeetingForJoin.id}?role=OWNER&mode=${joinMode}`
-    );
+    router.push(`/meetings/${selectedMeetingForJoin.id}?role=OWNER&mode=${joinMode}`);
   };
 
   return (
@@ -217,7 +204,7 @@ export default function StandaloneAdminCenterPage() {
       <CurlyBracketSidebar
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
-        onOpenInviteModal={() => handleSelectSection("members")}
+        onOpenInviteModal={() => handleSelectSection('members')}
         onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
@@ -242,7 +229,7 @@ export default function StandaloneAdminCenterPage() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-slate-800 dark:text-slate-100">
-              {timeStr || "14:55:00"} ICT
+              {timeStr || '14:55:00'} ICT
             </span>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
@@ -280,17 +267,14 @@ export default function StandaloneAdminCenterPage() {
           >
             <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all">
               <img
-                src={
-                  user?.avatar_url ||
-                  generateInitialsAvatar(user?.full_name || "Chủ Tịch")
-                }
-                alt={user?.full_name || "Chủ Tịch"}
+                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Chủ Tịch')}
+                alt={user?.full_name || 'Chủ Tịch'}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors">
-                {user?.full_name || "System Admin"}
+                {user?.full_name || 'System Admin'}
               </div>
               <div className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase">
                 CHỦ TỊCH / CEO
@@ -335,13 +319,13 @@ export default function StandaloneAdminCenterPage() {
                 onClick={() => handleSelectSection(s.id)}
                 className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   activeSection === s.id
-                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title={`${s.label} (${s.shortcut})`}
               >
                 <MatIcon name={s.icon} size={15} />
-                <span>{s.label.split(" & ")[0]}</span>
+                <span>{s.label.split(' & ')[0]}</span>
               </button>
             ))}
           </div>
@@ -349,7 +333,7 @@ export default function StandaloneAdminCenterPage() {
 
         {/* Tab View Container: Only the Active Tab is rendered! */}
         <div key={activeSection} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {activeSection === "overview" && (
+          {activeSection === 'overview' && (
             <OverviewPulseTab
               metrics={pulseMetrics}
               liveMeetings={liveMeetings}
@@ -357,7 +341,7 @@ export default function StandaloneAdminCenterPage() {
             />
           )}
 
-          {activeSection === "members" && (
+          {activeSection === 'members' && (
             <MembersDirectoryTab
               members={members}
               departments={departments.map((d) => d.name)}
@@ -367,7 +351,7 @@ export default function StandaloneAdminCenterPage() {
             />
           )}
 
-          {activeSection === "departments" && (
+          {activeSection === 'departments' && (
             <DepartmentsTab
               departments={departments}
               onAddDepartment={handleAddDepartment}
@@ -375,18 +359,13 @@ export default function StandaloneAdminCenterPage() {
             />
           )}
 
-          {activeSection === "policies" && (
-            <ProtocolPoliciesTab
-              initialPolicies={policies}
-              onSavePolicies={handleSavePolicies}
-            />
+          {activeSection === 'policies' && (
+            <ProtocolPoliciesTab initialPolicies={policies} onSavePolicies={handleSavePolicies} />
           )}
 
-          {activeSection === "audit" && (
-            <AuditSecurityTab logs={auditLogs} />
-          )}
+          {activeSection === 'audit' && <AuditSecurityTab logs={auditLogs} />}
 
-          {activeSection === "webhooks" && (
+          {activeSection === 'webhooks' && (
             <WebhooksIntegrationTab
               webhooks={webhooks}
               onAddWebhook={handleAddWebhook}
@@ -411,27 +390,27 @@ export default function StandaloneAdminCenterPage() {
             <div className="flex items-center gap-3 mb-5">
               <div
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs ${
-                  joinMode === "audit"
-                    ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                    : "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
+                  joinMode === 'audit'
+                    ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'
+                    : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
                 }`}
               >
                 <MatIcon
-                  name={joinMode === "audit" ? "headset_mic" : "record_voice_over"}
+                  name={joinMode === 'audit' ? 'headset_mic' : 'record_voice_over'}
                   size={24}
                 />
               </div>
               <div>
                 <span
                   className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                    joinMode === "audit"
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300"
+                    joinMode === 'audit'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
                   }`}
                 >
-                  {joinMode === "audit"
-                    ? "Chế độ Dự thính Ẩn danh (Silent Audit)"
-                    : "Chế độ Điều hành Cấp cao (Executive Chair)"}
+                  {joinMode === 'audit'
+                    ? 'Chế độ Dự thính Ẩn danh (Silent Audit)'
+                    : 'Chế độ Điều hành Cấp cao (Executive Chair)'}
                 </span>
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-1">
                   {selectedMeetingForJoin.title}
@@ -455,29 +434,35 @@ export default function StandaloneAdminCenterPage() {
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Thời lượng hiện tại:</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  {selectedMeetingForJoin.duration || `${selectedMeetingForJoin.durationMinutes} phút`}
+                  {selectedMeetingForJoin.duration ||
+                    `${selectedMeetingForJoin.durationMinutes} phút`}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Số lượng người tham gia:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">
-                  {selectedMeetingForJoin.participantsCount || selectedMeetingForJoin.participantCount} người
+                  {selectedMeetingForJoin.participantsCount ||
+                    selectedMeetingForJoin.participantCount}{' '}
+                  người
                 </span>
               </div>
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 text-[11.5px] leading-relaxed">
-                {joinMode === "audit" ? (
+                {joinMode === 'audit' ? (
                   <p className="text-blue-600 dark:text-blue-400 flex items-start gap-1.5">
                     <MatIcon name="info" size={16} className="shrink-0 mt-0.5" />
                     <span>
-                      Khi dự thính ẩn danh, micro và camera của bạn sẽ bị vô hiệu hóa mặc định. Bạn có thể kiểm tra âm thanh và tiến độ họp mà không làm phiền thành viên.
+                      Khi dự thính ẩn danh, micro và camera của bạn sẽ bị vô hiệu hóa mặc định. Bạn
+                      có thể kiểm tra âm thanh và tiến độ họp mà không làm phiền thành viên.
                     </span>
                   </p>
                 ) : (
                   <p className="text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
                     <MatIcon name="warning" size={16} className="shrink-0 mt-0.5" />
                     <span>
-                      Bạn sẽ tham gia với tư cách Lãnh đạo cao nhất (OWNER). Hệ thống sẽ thông báo cho chủ tọa về sự hiện diện của ban quản trị để điều hành hoặc can thiệp xử lý.
+                      Bạn sẽ tham gia với tư cách Lãnh đạo cao nhất (OWNER). Hệ thống sẽ thông báo
+                      cho chủ tọa về sự hiện diện của ban quản trị để điều hành hoặc can thiệp xử
+                      lý.
                     </span>
                   </p>
                 )}
@@ -515,7 +500,11 @@ export default function StandaloneAdminCenterPage() {
       {/* ── FLOATING TOAST FEEDBACK ── */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-2xl border border-slate-800 dark:border-slate-200 text-xs font-semibold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-200">
-          <MatIcon name="check_circle" size={18} className="text-emerald-400 dark:text-emerald-600" />
+          <MatIcon
+            name="check_circle"
+            size={18}
+            className="text-emerald-400 dark:text-emerald-600"
+          />
           <span>{toastMessage}</span>
         </div>
       )}

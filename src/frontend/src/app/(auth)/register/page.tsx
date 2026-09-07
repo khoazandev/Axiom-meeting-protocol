@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { authApi, organizationApi } from "@/lib/api";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { useLanguageStore } from "@/lib/store/useLanguageStore";
-import Logo from "@/components/Logo";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import AuthLivelyStage from "@/components/auth/AuthLivelyStage";
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { authApi, organizationApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
+import Logo from '@/components/Logo';
+import { MaterialIcon } from '@/components/ui/MaterialIcon';
+import AuthLivelyStage from '@/components/auth/AuthLivelyStage';
 
 // Password strength calculation helper
 function getPasswordStrength(pass: string): { score: number; label: string; color: string } {
-  if (!pass) return { score: 0, label: "", color: "" };
+  if (!pass) return { score: 0, label: '', color: '' };
   let score = 0;
   if (pass.length >= 6) score += 1;
   if (pass.length >= 8) score += 1;
@@ -22,14 +22,14 @@ function getPasswordStrength(pass: string): { score: number; label: string; colo
 
   switch (score) {
     case 1:
-      return { score: 1, label: "Mật khẩu yếu", color: "bg-rose-500 text-rose-600" };
+      return { score: 1, label: 'Mật khẩu yếu', color: 'bg-rose-500 text-rose-600' };
     case 2:
-      return { score: 2, label: "Trung bình", color: "bg-amber-500 text-amber-600" };
+      return { score: 2, label: 'Trung bình', color: 'bg-amber-500 text-amber-600' };
     case 3:
-      return { score: 3, label: "Khá an toàn", color: "bg-blue-500 text-blue-600" };
+      return { score: 3, label: 'Khá an toàn', color: 'bg-blue-500 text-blue-600' };
     case 4:
     default:
-      return { score: 4, label: "Rất mạnh", color: "bg-emerald-500 text-emerald-600" };
+      return { score: 4, label: 'Rất mạnh', color: 'bg-emerald-500 text-emerald-600' };
   }
 }
 
@@ -38,11 +38,11 @@ export default function RegisterPage() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const { t } = useLanguageStore();
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [organizationName, setOrganizationName] = useState("");
+  const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +52,7 @@ export default function RegisterPage() {
     const randomNum = Math.floor(Math.random() * 9000) + 1000;
     setFullName(`Kỹ sư Demo ${randomNum}`);
     setEmail(`testuser${randomNum}@axiom.internal`);
-    setPassword("Axiom@2026");
+    setPassword('Axiom@2026');
     setOrganizationName(`Tập đoàn Công nghệ ${randomNum}`);
   };
 
@@ -80,15 +80,17 @@ export default function RegisterPage() {
       const organizations = await organizationApi.list();
       setAuth(user, tokens.access_token, organizations, initialOrg || organizations[0]);
 
-      if (user.role === "OWNER" || user.role === "ADMIN") {
-        router.push("/admin");
-      } else if (user.role === "MANAGER") {
-        router.push("/manager");
+      if (user.role === 'OWNER' || user.role === 'ADMIN') {
+        router.push('/admin');
+      } else if (user.role === 'MANAGER') {
+        router.push('/manager');
       } else {
-        router.push("/member");
+        router.push('/member');
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.");
+      setError(
+        err instanceof Error ? err.message : 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.'
+      );
     } finally {
       setLoading(false);
     }
@@ -97,14 +99,14 @@ export default function RegisterPage() {
   // Generate workspace preview slug with clean Vietnamese diacritics stripping
   const workspaceSlug = organizationName.trim()
     ? organizationName
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[đĐ]/g, "d")
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-    : "axiom-internal";
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+    : 'axiom-internal';
 
   return (
     <div className="min-h-screen bg-[#F6F8FC] flex flex-col justify-between relative overflow-hidden selection:bg-[#4F7BF7]/20">
@@ -167,7 +169,7 @@ export default function RegisterPage() {
                   <motion.div
                     layoutId="auth-mode-pill"
                     className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200/80"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                   />
                 </div>
               </div>
@@ -263,15 +265,15 @@ export default function RegisterPage() {
                       className="text-[11px] font-medium text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <MaterialIcon
-                        name={showPassword ? "visibility_off" : "visibility"}
+                        name={showPassword ? 'visibility_off' : 'visibility'}
                         className="w-3.5 h-3.5"
                       />
-                      <span>{showPassword ? "Ẩn" : "Hiện"}</span>
+                      <span>{showPassword ? 'Ẩn' : 'Hiện'}</span>
                     </button>
                   </div>
                   <div className="relative">
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       required
                       autoComplete="new-password"
                       minLength={6}
@@ -295,15 +297,15 @@ export default function RegisterPage() {
                             key={step}
                             className={`flex-1 rounded-full transition-all duration-300 ${
                               step <= passwordStrength.score
-                                ? passwordStrength.color.split(" ")[0]
-                                : "bg-slate-200"
+                                ? passwordStrength.color.split(' ')[0]
+                                : 'bg-slate-200'
                             }`}
                           />
                         ))}
                       </div>
                       <span
                         className={`text-[10px] font-semibold ${
-                          passwordStrength.color.split(" ")[1] || "text-slate-400"
+                          passwordStrength.color.split(' ')[1] || 'text-slate-400'
                         }`}
                       >
                         {passwordStrength.label}

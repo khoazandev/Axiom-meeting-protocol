@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import LottiePlayer from "@/components/LottiePlayer";
-import animCredentials from "@/public/images/Person writing credentials.json";
-import animHi from "@/public/images/Hi Hola.json";
-import { MaterialIcon, MaterialIconName } from "@/components/ui/MaterialIcon";
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import LottiePlayer from '@/components/LottiePlayer';
+import animCredentials from '@/public/images/Person writing credentials.json';
+import animHi from '@/public/images/Hi Hola.json';
+import { MaterialIcon, MaterialIconName } from '@/components/ui/MaterialIcon';
 
 interface AuthLivelyStageProps {
-  mode: "login" | "register";
+  mode: 'login' | 'register';
 }
 
 /* 3D-like candy floating icon with bouncy spring physics & interactive hover */
@@ -44,7 +44,7 @@ function InteractiveCandyBadge({
       transition={{
         duration: 3.6 + delay,
         repeat: Infinity,
-        ease: "easeInOut",
+        ease: 'easeInOut',
         delay,
       }}
       whileHover={{ scale: 1.12, rotate: 0 }}
@@ -80,52 +80,52 @@ function InteractiveCandyBadge({
 
 const LOGIN_TIPS = [
   {
-    title: "Trợ lý Axiom AI",
-    text: "Đã sẵn sàng cho cuộc họp hôm nay chưa? AI đã chuẩn bị sẵn sàng MoM rồi đấy! ✨",
-    tag: "AI MoM • Tự động",
+    title: 'Trợ lý Axiom AI',
+    text: 'Đã sẵn sàng cho cuộc họp hôm nay chưa? AI đã chuẩn bị sẵn sàng MoM rồi đấy! ✨',
+    tag: 'AI MoM • Tự động',
   },
   {
-    title: "LiveKit SFU Audio",
-    text: "Họp WebRTC nội bộ với độ trễ siêu thấp <15ms, chất lượng âm thanh HD. 🎧",
-    tag: "Độ trễ 12ms",
+    title: 'LiveKit SFU Audio',
+    text: 'Họp WebRTC nội bộ với độ trễ siêu thấp <15ms, chất lượng âm thanh HD. 🎧',
+    tag: 'Độ trễ 12ms',
   },
   {
-    title: "Kiểm duyệt Nghị trình",
-    text: "Agenda Gate bắt buộc mục tiêu rõ ràng, triệt tiêu 100% cuộc họp vô bổ. 🎯",
-    tag: "Agenda Gate",
+    title: 'Kiểm duyệt Nghị trình',
+    text: 'Agenda Gate bắt buộc mục tiêu rõ ràng, triệt tiêu 100% cuộc họp vô bổ. 🎯',
+    tag: 'Agenda Gate',
   },
   {
-    title: "Chủ quyền Dữ liệu",
-    text: "Toàn bộ âm thanh và văn bản lưu trữ On-Premise, không rò rỉ ra ngoài. 🛡️",
-    tag: "Bảo mật AES-256",
+    title: 'Chủ quyền Dữ liệu',
+    text: 'Toàn bộ âm thanh và văn bản lưu trữ On-Premise, không rò rỉ ra ngoài. 🛡️',
+    tag: 'Bảo mật AES-256',
   },
 ];
 
 const REGISTER_TIPS = [
   {
-    title: "Khởi tạo Không gian số",
-    text: "Tạo Workspace bảo mật tuyệt đối cho tổ chức của bạn chỉ trong 30 giây! 🚀",
-    tag: "Setup nhanh",
+    title: 'Khởi tạo Không gian số',
+    text: 'Tạo Workspace bảo mật tuyệt đối cho tổ chức của bạn chỉ trong 30 giây! 🚀',
+    tag: 'Setup nhanh',
   },
   {
-    title: "Tên miền Tổ chức riêng",
-    text: "Sở hữu địa chỉ phòng họp nội bộ chuyên nghiệp axiom.internal/{workspace}. 🌐",
-    tag: "Custom Slug",
+    title: 'Tên miền Tổ chức riêng',
+    text: 'Sở hữu địa chỉ phòng họp nội bộ chuyên nghiệp axiom.internal/{workspace}. 🌐',
+    tag: 'Custom Slug',
   },
   {
-    title: "AI Cục bộ Qwen 2.5",
-    text: "Bóc tách giọng nói Faster-Whisper và tự động xuất việc sang Mini Jira. ⚡",
-    tag: "Qwen 2.5 Local",
+    title: 'AI Cục bộ Qwen 2.5',
+    text: 'Bóc tách giọng nói Faster-Whisper và tự động xuất việc sang Mini Jira. ⚡',
+    tag: 'Qwen 2.5 Local',
   },
   {
-    title: "Họp không giật lag",
-    text: "Kiến trúc SFU Mesh tối ưu băng thông cho phòng họp đông người. 📈",
-    tag: "SFU Architecture",
+    title: 'Họp không giật lag',
+    text: 'Kiến trúc SFU Mesh tối ưu băng thông cho phòng họp đông người. 📈',
+    tag: 'SFU Architecture',
   },
 ];
 
 export default function AuthLivelyStage({ mode }: AuthLivelyStageProps) {
-  const isLogin = mode === "login";
+  const isLogin = mode === 'login';
   const tips = isLogin ? LOGIN_TIPS : REGISTER_TIPS;
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -147,7 +147,7 @@ export default function AuthLivelyStage({ mode }: AuthLivelyStageProps) {
       {/* Interactive Floating Speech Bubble with Click-to-Cycle */}
       <motion.div
         animate={{ y: [-4, 4, -4] }}
-        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setTipIndex((prev) => (prev + 1) % tips.length)}
         className="relative mb-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl px-5 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.06)] max-w-[390px] z-20 cursor-pointer hover:border-blue-300 transition-colors group"
       >
@@ -183,7 +183,7 @@ export default function AuthLivelyStage({ mode }: AuthLivelyStageProps) {
               <span
                 key={i}
                 className={`h-1 rounded-full transition-all duration-300 ${
-                  i === tipIndex ? "w-4 bg-blue-600" : "w-1 bg-slate-200"
+                  i === tipIndex ? 'w-4 bg-blue-600' : 'w-1 bg-slate-200'
                 }`}
               />
             ))}
@@ -279,11 +279,11 @@ export default function AuthLivelyStage({ mode }: AuthLivelyStageProps) {
           {[40, 75, 50, 95, 60, 85, 45, 90, 65, 80, 50].map((h, i) => (
             <motion.span
               key={i}
-              animate={{ height: ["4px", `${(h / 100) * 14}px`, "4px"] }}
+              animate={{ height: ['4px', `${(h / 100) * 14}px`, '4px'] }}
               transition={{
                 duration: 0.75 + (i % 3) * 0.2,
                 repeat: Infinity,
-                ease: "easeInOut",
+                ease: 'easeInOut',
                 delay: i * 0.07,
               }}
               className="w-1 bg-[#2563EB] rounded-full inline-block"

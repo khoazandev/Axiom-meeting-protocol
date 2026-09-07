@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Users,
   UserPlus,
@@ -17,42 +17,40 @@ import {
   Layers,
   Send,
   Plus,
-} from "lucide-react";
-import { MatIcon } from "@/components/ui/MatIcon";
+} from 'lucide-react';
+import { MatIcon } from '@/components/ui/MatIcon';
 import {
   INITIAL_ENG_MEMBERS,
   MemberCapacityWorkload,
   DecomposedTask,
   WorkloadStatus,
-} from "@/lib/workloadProtocolData";
+} from '@/lib/workloadProtocolData';
 
 interface ManagerTeamTabProps {
   onNotify: (msg: string) => void;
 }
 
 export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
-  const [members, setMembers] = useState<MemberCapacityWorkload[]>(
-    INITIAL_ENG_MEMBERS
-  );
-  const [searchQuery, setSearchQuery] = useState("");
+  const [members, setMembers] = useState<MemberCapacityWorkload[]>(INITIAL_ENG_MEMBERS);
+  const [searchQuery, setSearchQuery] = useState('');
   const [capacityFilter, setCapacityFilter] = useState<
-    "ALL" | "OVERLOADED" | "OPTIMAL" | "ZERO_TASK"
-  >("ALL");
+    'ALL' | 'OVERLOADED' | 'OPTIMAL' | 'ZERO_TASK'
+  >('ALL');
 
   // Invite Modal State
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [inviteTitle, setInviteTitle] = useState("");
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteTitle, setInviteTitle] = useState('');
 
   // Rebalance / Quick-Assign Modal State
   const [selectedMemberForAssign, setSelectedMemberForAssign] =
     useState<MemberCapacityWorkload | null>(null);
   const [taskToAssignTitle, setTaskToAssignTitle] = useState(
-    "Viết Test Suite E2E chịu tải 500 CCU Audio Rooms"
+    'Viết Test Suite E2E chịu tải 500 CCU Audio Rooms'
   );
   const [taskEstimatedHours, setTaskEstimatedHours] = useState(14);
-  const [taskPriority, setTaskPriority] = useState<"CRITICAL" | "HIGH" | "MEDIUM">("HIGH");
+  const [taskPriority, setTaskPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM'>('HIGH');
 
   // Filtered members by search and capacity filter
   const filtered = members.filter((m) => {
@@ -63,9 +61,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
     if (!matchSearch) return false;
 
-    if (capacityFilter === "OVERLOADED") return m.workloadStatus === "OVERLOADED";
-    if (capacityFilter === "OPTIMAL") return m.workloadStatus === "OPTIMAL";
-    if (capacityFilter === "ZERO_TASK") return m.workloadStatus === "ZERO_TASK";
+    if (capacityFilter === 'OVERLOADED') return m.workloadStatus === 'OVERLOADED';
+    if (capacityFilter === 'OPTIMAL') return m.workloadStatus === 'OPTIMAL';
+    if (capacityFilter === 'ZERO_TASK') return m.workloadStatus === 'ZERO_TASK';
     return true;
   });
 
@@ -74,7 +72,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
   const totalMaxCapacity = members.length * 40;
   const teamAverageLoad = Math.round((totalHours / totalMaxCapacity) * 100);
   const zeroTaskCount = members.filter((m) => m.activeTasksCount === 0).length;
-  const overloadedCount = members.filter((m) => m.workloadStatus === "OVERLOADED").length;
+  const overloadedCount = members.filter((m) => m.workloadStatus === 'OVERLOADED').length;
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,26 +82,27 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       id: `mem-${Date.now()}`,
       name: inviteName,
       email: inviteEmail,
-      title: inviteTitle || "Kỹ Sư Phần Mềm",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-      departmentCode: "ENG",
-      departmentName: "Khối Kỹ Thuật",
-      status: "ONLINE",
+      title: inviteTitle || 'Kỹ Sư Phần Mềm',
+      avatar:
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+      departmentCode: 'ENG',
+      departmentName: 'Khối Kỹ Thuật',
+      status: 'ONLINE',
       weeklyMeetingHours: 4.0,
       activeTasksCount: 0,
       completedTasksCount: 0,
       estimatedTaskHours: 0,
       totalCommittedHours: 4.0,
       capacityPercent: 10,
-      workloadStatus: "ZERO_TASK",
+      workloadStatus: 'ZERO_TASK',
       tasks: [],
     };
 
     setMembers([newMem, ...members]);
     setIsInviteOpen(false);
-    setInviteEmail("");
-    setInviteName("");
-    setInviteTitle("");
+    setInviteEmail('');
+    setInviteName('');
+    setInviteTitle('');
     onNotify(`Đã gửi thư mời gia nhập Khối Kỹ Thuật tới: ${newMem.email}`);
   };
 
@@ -114,15 +113,15 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
     const newTask: DecomposedTask = {
       id: `tsk-${Date.now()}`,
       title: taskToAssignTitle,
-      mandateOriginCode: "MANDATE-Q3-01",
-      mandateOriginTitle: "Hạ Tầng Realtime Audio & On-premise Security",
-      meetingOrigin: "Họp Sprint 42 Kỹ Thuật (Phân rã Nghị Quyết HĐQT)",
+      mandateOriginCode: 'MANDATE-Q3-01',
+      mandateOriginTitle: 'Hạ Tầng Realtime Audio & On-premise Security',
+      meetingOrigin: 'Họp Sprint 42 Kỹ Thuật (Phân rã Nghị Quyết HĐQT)',
       assigneeName: selectedMemberForAssign.name,
       assigneeEmail: selectedMemberForAssign.email,
       estimatedHours: taskEstimatedHours,
       priority: taskPriority,
-      status: "IN_PROGRESS",
-      deadline: "Thứ Sáu tới",
+      status: 'IN_PROGRESS',
+      deadline: 'Thứ Sáu tới',
     };
 
     setMembers((prev) =>
@@ -133,11 +132,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         const newTotalCommitted = m.weeklyMeetingHours + newEstimatedHours;
         const newCapacityPercent = Math.round((newTotalCommitted / 40) * 100);
         const newStatus: WorkloadStatus =
-          newCapacityPercent > 100
-            ? "OVERLOADED"
-            : newCapacityPercent >= 80
-            ? "FULL"
-            : "OPTIMAL";
+          newCapacityPercent > 100 ? 'OVERLOADED' : newCapacityPercent >= 80 ? 'FULL' : 'OPTIMAL';
 
         return {
           ...m,
@@ -163,7 +158,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
     // Find available member (0 task or lowest capacity)
     const availableMem = members.find((m) => m.activeTasksCount === 0);
     if (!availableMem) {
-      onNotify("Hiện không có nhân sự trống việc (0 task) để điều chuyển ngay!");
+      onNotify('Hiện không có nhân sự trống việc (0 task) để điều chuyển ngay!');
       return;
     }
 
@@ -185,7 +180,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
             estimatedTaskHours: newEstimated,
             totalCommittedHours: newTotal,
             capacityPercent: newCap,
-            workloadStatus: newCap > 100 ? "OVERLOADED" : "OPTIMAL",
+            workloadStatus: newCap > 100 ? 'OVERLOADED' : 'OPTIMAL',
           };
         }
         if (m.id === availableMem.id) {
@@ -204,7 +199,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
             estimatedTaskHours: newEstimated,
             totalCommittedHours: newTotal,
             capacityPercent: newCap,
-            workloadStatus: "OPTIMAL",
+            workloadStatus: 'OPTIMAL',
           };
         }
         return m;
@@ -216,14 +211,14 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
     );
   };
 
-  const getStatusDot = (st: MemberCapacityWorkload["status"]) => {
+  const getStatusDot = (st: MemberCapacityWorkload['status']) => {
     switch (st) {
-      case "ONLINE":
-        return { color: "bg-emerald-500", text: "Trực tuyến" };
-      case "IN_MEETING":
-        return { color: "bg-purple-500 animate-pulse", text: "Đang họp" };
+      case 'ONLINE':
+        return { color: 'bg-emerald-500', text: 'Trực tuyến' };
+      case 'IN_MEETING':
+        return { color: 'bg-purple-500 animate-pulse', text: 'Đang họp' };
       default:
-        return { color: "bg-slate-400", text: "Ngoại tuyến" };
+        return { color: 'bg-slate-400', text: 'Ngoại tuyến' };
     }
   };
 
@@ -241,8 +236,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <span>Đội Ngũ Khối Kỹ Thuật (Engineering Team)</span>
             </h1>
             <p className="text-xs text-slate-300 max-w-2xl mt-1 leading-relaxed">
-              Theo dõi phân bổ tải theo thời gian thực (0, 1 hoặc nhiều task), nhận diện nguy cơ quá tải (Burnout)
-              hoặc nhân sự chưa được phân bổ công việc sau cuộc họp để kịp thời cân bằng.
+              Theo dõi phân bổ tải theo thời gian thực (0, 1 hoặc nhiều task), nhận diện nguy cơ quá
+              tải (Burnout) hoặc nhân sự chưa được phân bổ công việc sau cuộc họp để kịp thời cân
+              bằng.
             </p>
           </div>
 
@@ -264,9 +260,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <span>Tải Trung Bình Khối</span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-mono text-white">
-                {teamAverageLoad}%
-              </span>
+              <span className="text-2xl font-black font-mono text-white">{teamAverageLoad}%</span>
               <span className="text-[11px] text-emerald-400 font-bold">● Tối ưu</span>
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5">
@@ -280,14 +274,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <span>Nhân Sự Quá Tải</span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-mono text-rose-300">
-                {overloadedCount}
-              </span>
+              <span className="text-2xl font-black font-mono text-rose-300">{overloadedCount}</span>
               <span className="text-[11px] text-rose-300 font-bold">(&gt;100% tải)</span>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              Cần san sẻ bớt công việc
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Cần san sẻ bớt công việc</div>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
@@ -301,9 +291,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               </span>
               <span className="text-[11px] text-emerald-300 font-bold">(50-85%)</span>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              Năng suất cao, bền vững
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Năng suất cao, bền vững</div>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
@@ -312,14 +300,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <span>Chưa Có Task (Rảnh)</span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black font-mono text-amber-300">
-                {zeroTaskCount}
-              </span>
+              <span className="text-2xl font-black font-mono text-amber-300">{zeroTaskCount}</span>
               <span className="text-[11px] text-amber-300 font-bold">0 Task</span>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
-              Sẵn sàng nhận việc mới
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Sẵn sàng nhận việc mới</div>
           </div>
         </div>
       </div>
@@ -331,11 +315,11 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
           <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <button
               type="button"
-              onClick={() => setCapacityFilter("ALL")}
+              onClick={() => setCapacityFilter('ALL')}
               className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "ALL"
-                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'ALL'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Tất cả thành viên"
             >
@@ -344,11 +328,11 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("OVERLOADED")}
+              onClick={() => setCapacityFilter('OVERLOADED')}
               className={`w-32 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "OVERLOADED"
-                  ? "bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'OVERLOADED'
+                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Nhân sự quá tải"
             >
@@ -357,11 +341,11 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("OPTIMAL")}
+              onClick={() => setCapacityFilter('OPTIMAL')}
               className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "OPTIMAL"
-                  ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'OPTIMAL'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Nhân sự tải tối ưu"
             >
@@ -370,11 +354,11 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("ZERO_TASK")}
+              onClick={() => setCapacityFilter('ZERO_TASK')}
               className={`w-32 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "ZERO_TASK"
-                  ? "bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'ZERO_TASK'
+                  ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Nhân sự chưa có task nào"
             >
@@ -385,10 +369,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
         {/* Search */}
         <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
@@ -403,7 +384,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map((mem) => {
           const st = getStatusDot(mem.status);
-          const isOverloaded = mem.workloadStatus === "OVERLOADED";
+          const isOverloaded = mem.workloadStatus === 'OVERLOADED';
           const isZeroTask = mem.activeTasksCount === 0;
 
           return (
@@ -411,10 +392,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               key={mem.id}
               className={`bg-white dark:bg-slate-900 rounded-2xl border p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${
                 isOverloaded
-                  ? "border-rose-300/80 dark:border-rose-800/80 ring-1 ring-rose-200 dark:ring-rose-900/40"
+                  ? 'border-rose-300/80 dark:border-rose-800/80 ring-1 ring-rose-200 dark:ring-rose-900/40'
                   : isZeroTask
-                  ? "border-amber-300/80 dark:border-amber-800/80 ring-1 ring-amber-200/50 dark:ring-amber-900/30"
-                  : "border-slate-200/80 dark:border-slate-800"
+                    ? 'border-amber-300/80 dark:border-amber-800/80 ring-1 ring-amber-200/50 dark:ring-amber-900/30'
+                    : 'border-slate-200/80 dark:border-slate-800'
               }`}
             >
               <div>
@@ -439,9 +420,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                       <p className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate">
                         {mem.title}
                       </p>
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {mem.email}
-                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">{mem.email}</p>
                     </div>
                   </div>
 
@@ -450,17 +429,13 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                     <span
                       className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
                         isOverloaded
-                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                           : isZeroTask
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                       }`}
                     >
-                      {isOverloaded
-                        ? "QUÁ TẢI"
-                        : isZeroTask
-                        ? "0 TASK (RẢNH)"
-                        : "TỐI ƯU"}
+                      {isOverloaded ? 'QUÁ TẢI' : isZeroTask ? '0 TASK (RẢNH)' : 'TỐI ƯU'}
                     </span>
                   </div>
                 </div>
@@ -475,10 +450,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                     <span
                       className={`font-mono font-black text-xs ${
                         isOverloaded
-                          ? "text-rose-600 dark:text-rose-400"
+                          ? 'text-rose-600 dark:text-rose-400'
                           : isZeroTask
-                          ? "text-slate-500"
-                          : "text-emerald-600 dark:text-emerald-400"
+                            ? 'text-slate-500'
+                            : 'text-emerald-600 dark:text-emerald-400'
                       }`}
                     >
                       {mem.capacityPercent}% ({mem.totalCommittedHours}h / 40h)
@@ -489,10 +464,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         isOverloaded
-                          ? "bg-rose-500"
+                          ? 'bg-rose-500'
                           : isZeroTask
-                          ? "bg-slate-400"
-                          : "bg-emerald-500"
+                            ? 'bg-slate-400'
+                            : 'bg-emerald-500'
                       }`}
                       style={{ width: `${Math.min(mem.capacityPercent, 100)}%` }}
                     />
@@ -500,7 +475,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-0.5">
                     <span>{mem.weeklyMeetingHours}h họp tuần</span>
-                    <span>{mem.estimatedTaskHours}h cam kết ({mem.activeTasksCount} tasks)</span>
+                    <span>
+                      {mem.estimatedTaskHours}h cam kết ({mem.activeTasksCount} tasks)
+                    </span>
                   </div>
                 </div>
 
@@ -520,11 +497,17 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                           key={tsk.id}
                           className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 text-[11px] space-y-1"
                         >
-                          <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={tsk.title}>
+                          <div
+                            className="font-semibold text-slate-800 dark:text-slate-200 truncate"
+                            title={tsk.title}
+                          >
                             {tsk.title}
                           </div>
                           <div className="flex items-center justify-between text-[10px] text-slate-400">
-                            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono font-bold truncate max-w-[150px]" title={tsk.mandateOriginTitle}>
+                            <span
+                              className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono font-bold truncate max-w-[150px]"
+                              title={tsk.mandateOriginTitle}
+                            >
                               <MatIcon name="account_tree" className="text-[12px]" />
                               <span>{tsk.mandateOriginCode}</span>
                             </span>
@@ -693,8 +676,14 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-[11px] flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
                 <span>
-                  Sau khi giao, tải của {selectedMemberForAssign.name} sẽ tăng lên{" "}
-                  <strong>{Math.round(((selectedMemberForAssign.weeklyMeetingHours + taskEstimatedHours) / 40) * 100)}% (Mức Tối Ưu)</strong>.
+                  Sau khi giao, tải của {selectedMemberForAssign.name} sẽ tăng lên{' '}
+                  <strong>
+                    {Math.round(
+                      ((selectedMemberForAssign.weeklyMeetingHours + taskEstimatedHours) / 40) * 100
+                    )}
+                    % (Mức Tối Ưu)
+                  </strong>
+                  .
                 </span>
               </div>
             </div>

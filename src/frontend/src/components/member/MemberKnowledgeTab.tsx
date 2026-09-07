@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   BookOpen,
   Search,
@@ -11,7 +11,7 @@ import {
   Clock,
   ExternalLink,
   ChevronRight,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface KnowledgeItem {
   id: string;
@@ -24,28 +24,31 @@ interface KnowledgeItem {
 
 const SAMPLE_KNOWLEDGE_BASE: KnowledgeItem[] = [
   {
-    id: "kb-01",
-    meetingTitle: "Sprint 42 Architecture & Protocol Review",
-    dateStr: "Hôm qua, 15:30",
-    speaker: "Trần Minh Khoa (Trưởng Phòng)",
-    topic: "LiveKit Audio Egress & S3 Buffer",
-    content: "Alex cần đảm bảo audio egress không lưu file thô quá 24h trên local container, toàn bộ sau khi Whisper STT trích xuất xong phải mã hóa AES-256.",
+    id: 'kb-01',
+    meetingTitle: 'Sprint 42 Architecture & Protocol Review',
+    dateStr: 'Hôm qua, 15:30',
+    speaker: 'Trần Minh Khoa (Trưởng Phòng)',
+    topic: 'LiveKit Audio Egress & S3 Buffer',
+    content:
+      'Alex cần đảm bảo audio egress không lưu file thô quá 24h trên local container, toàn bộ sau khi Whisper STT trích xuất xong phải mã hóa AES-256.',
   },
   {
-    id: "kb-02",
-    meetingTitle: "Quy Chế Kỷ Luật Cuộc Họp Axiom DX-OS",
-    dateStr: "02/09/2026",
-    speaker: "Nguyễn Thế Khang (Chủ Tịch)",
-    topic: "Agenda Gatekeeper & Thời Lượng Họp",
-    content: "Cuộc họp nội bộ không được vượt quá 45 phút, Daily Standup cố định 15 phút. Nếu không có Agenda đính kèm trước 2 tiếng, hệ thống sẽ tự động hủy phòng.",
+    id: 'kb-02',
+    meetingTitle: 'Quy Chế Kỷ Luật Cuộc Họp Axiom DX-OS',
+    dateStr: '02/09/2026',
+    speaker: 'Nguyễn Thế Khang (Chủ Tịch)',
+    topic: 'Agenda Gatekeeper & Thời Lượng Họp',
+    content:
+      'Cuộc họp nội bộ không được vượt quá 45 phút, Daily Standup cố định 15 phút. Nếu không có Agenda đính kèm trước 2 tiếng, hệ thống sẽ tự động hủy phòng.',
   },
   {
-    id: "kb-03",
-    meetingTitle: "Sprint 41 Retrospective",
-    dateStr: "28/08/2026",
-    speaker: "Alex Rivera",
-    topic: "Tối Ưu Độ Trễ Whisper CTranslate2",
-    content: "Đã chuyển đổi model sang int8 quantization, giảm mức tiêu thụ RAM từ 4GB xuống 1.2GB và tăng tốc xử lý STT gấp 2.8 lần.",
+    id: 'kb-03',
+    meetingTitle: 'Sprint 41 Retrospective',
+    dateStr: '28/08/2026',
+    speaker: 'Alex Rivera',
+    topic: 'Tối Ưu Độ Trễ Whisper CTranslate2',
+    content:
+      'Đã chuyển đổi model sang int8 quantization, giảm mức tiêu thụ RAM từ 4GB xuống 1.2GB và tăng tốc xử lý STT gấp 2.8 lần.',
   },
 ];
 
@@ -54,7 +57,7 @@ interface MemberKnowledgeTabProps {
 }
 
 export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [isAsking, setIsAsking] = useState(false);
 
@@ -65,20 +68,28 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
     setIsAsking(true);
     setTimeout(() => {
       setIsAsking(false);
-      if (query.toLowerCase().includes("hạn") || query.toLowerCase().includes("livekit") || query.toLowerCase().includes("alex")) {
+      if (
+        query.toLowerCase().includes('hạn') ||
+        query.toLowerCase().includes('livekit') ||
+        query.toLowerCase().includes('alex')
+      ) {
         setAiAnswer(
           "Theo cuộc họp 'Sprint 42 Architecture Review', Trưởng phòng Trần Minh Khoa yêu cầu Alex Rivera hoàn thành triển khai LiveKit Audio Egress trước 18:00 hôm nay và cấu hình tự động upload lên S3."
         );
-      } else if (query.toLowerCase().includes("standup") || query.toLowerCase().includes("thời gian") || query.toLowerCase().includes("bao nhiêu")) {
+      } else if (
+        query.toLowerCase().includes('standup') ||
+        query.toLowerCase().includes('thời gian') ||
+        query.toLowerCase().includes('bao nhiêu')
+      ) {
         setAiAnswer(
-          "Theo Quy chế Kỷ luật Axiom DX-OS, cuộc họp Daily Standup được quy định cố định tối đa 15 phút, các cuộc họp nội bộ phòng ban tối đa 45 phút."
+          'Theo Quy chế Kỷ luật Axiom DX-OS, cuộc họp Daily Standup được quy định cố định tối đa 15 phút, các cuộc họp nội bộ phòng ban tối đa 45 phút.'
         );
       } else {
         setAiAnswer(
           `Dựa trên các biên bản họp đã lưu trữ: Vấn đề "${query}" đã được ghi nhận trong các biên bản họp kỹ thuật khối gần nhất. Mọi hành động liên quan đang được phân bổ trên Bảng Jira (SMA).`
         );
       }
-      onNotify("AI đã trích xuất câu trả lời từ dữ liệu biên bản họp!");
+      onNotify('AI đã trích xuất câu trả lời từ dữ liệu biên bản họp!');
     }, 800);
   };
 
@@ -97,7 +108,8 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Tìm kiếm nội dung đã nói trong cuộc họp, tra cứu nghị quyết mà không cần phải xem lại cả giờ video.
+            Tìm kiếm nội dung đã nói trong cuộc họp, tra cứu nghị quyết mà không cần phải xem lại cả
+            giờ video.
           </p>
         </div>
       </div>
@@ -111,7 +123,10 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
 
         <form onSubmit={handleAskAi} className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
             <input
               type="text"
               value={query}
@@ -125,11 +140,7 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
             disabled={isAsking || !query.trim()}
             className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs cursor-pointer shrink-0 flex items-center gap-1.5"
           >
-            {isAsking ? (
-              <span className="animate-spin">⏳</span>
-            ) : (
-              <Sparkles size={14} />
-            )}
+            {isAsking ? <span className="animate-spin">⏳</span> : <Sparkles size={14} />}
             <span>Hỏi AI</span>
           </button>
         </form>
@@ -176,7 +187,10 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
               </div>
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Chủ đề: <strong className="text-slate-600 dark:text-slate-400">{item.topic}</strong></span>
+                <span>
+                  Chủ đề:{' '}
+                  <strong className="text-slate-600 dark:text-slate-400">{item.topic}</strong>
+                </span>
                 <button
                   type="button"
                   onClick={() => onNotify(`Đã mở toàn bộ bản gỡ băng của: ${item.meetingTitle}`)}

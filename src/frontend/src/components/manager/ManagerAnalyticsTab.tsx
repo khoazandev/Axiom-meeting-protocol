@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React from "react";
+import React from 'react';
 import {
   BarChart3,
   Flame,
@@ -12,7 +12,7 @@ import {
   HeartPulse,
   ShieldCheck,
   Zap,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface ManagerAnalyticsTabProps {
   onNotify: (msg: string) => void;
@@ -20,15 +20,11 @@ interface ManagerAnalyticsTabProps {
 
 export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
   const handleExemptStandup = (memberName: string) => {
-    onNotify(
-      `Đã phê duyệt miễn họp Standup 3 ngày cho ${memberName} để giảm tải kiệt sức!`
-    );
+    onNotify(`Đã phê duyệt miễn họp Standup 3 ngày cho ${memberName} để giảm tải kiệt sức!`);
   };
 
   const handleConvertToAsync = (memberName: string) => {
-    onNotify(
-      `Đã chuyển chế độ họp của ${memberName} sang Báo Cáo Văn Bản Async!`
-    );
+    onNotify(`Đã chuyển chế độ họp của ${memberName} sang Báo Cáo Văn Bản Async!`);
   };
 
   return (
@@ -46,7 +42,8 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Theo dõi kỷ luật cuộc họp, tỷ lệ hoàn thành Action Items và bảo vệ nhân sự kỹ thuật khỏi tình trạng kiệt sức (Meeting Fatigue).
+            Theo dõi kỷ luật cuộc họp, tỷ lệ hoàn thành Action Items và bảo vệ nhân sự kỹ thuật khỏi
+            tình trạng kiệt sức (Meeting Fatigue).
           </p>
         </div>
 
@@ -68,9 +65,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
               <FileCheck size={16} />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">
-            96.2%
-          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">96.2%</div>
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             <TrendingUp size={12} />
             +4.1% so với tháng trước
@@ -86,9 +81,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
               <Clock size={16} />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">
-            91.5%
-          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">91.5%</div>
           <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-1">
             <TrendingUp size={12} />
             Đúng tiêu chuẩn &lt; 3 phút trễ
@@ -104,9 +97,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
               <Zap size={16} />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">
-            34 phút
-          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">34 phút</div>
           <p className="text-[11px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
             Tiết kiệm 16 phút/cuộc họp
           </p>
@@ -121,9 +112,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
               <CheckCircle2 size={16} />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">
-            89.4%
-          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">89.4%</div>
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             88/98 Action Items xong đúng hạn
           </p>
@@ -148,7 +137,8 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                Theo tiêu chuẩn kỹ thuật Axiom DX-OS, kỹ sư dành quá 15 giờ/tuần vào các cuộc họp sẽ bị giảm 40% khả năng tập trung lập trình (Deep Work).
+                Theo tiêu chuẩn kỹ thuật Axiom DX-OS, kỹ sư dành quá 15 giờ/tuần vào các cuộc họp sẽ
+                bị giảm 40% khả năng tập trung lập trình (Deep Work).
               </p>
             </div>
 
@@ -176,7 +166,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => handleExemptStandup("Alex Rivera")}
+                  onClick={() => handleExemptStandup('Alex Rivera')}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
                 >
                   Miễn Họp Standup 3 Ngày
@@ -184,7 +174,7 @@ export function ManagerAnalyticsTab({ onNotify }: ManagerAnalyticsTabProps) {
 
                 <button
                   type="button"
-                  onClick={() => handleConvertToAsync("Alex Rivera")}
+                  onClick={() => handleConvertToAsync('Alex Rivera')}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
                 >
                   Chuyển Sang Async

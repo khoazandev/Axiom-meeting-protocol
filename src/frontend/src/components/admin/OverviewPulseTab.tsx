@@ -1,21 +1,17 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { AdminPulseMetrics, LiveRadarMeeting } from "@/lib/mockAdminData";
+import React from 'react';
+import Link from 'next/link';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { AdminPulseMetrics, LiveRadarMeeting } from '@/lib/mockAdminData';
 
 interface OverviewPulseTabProps {
   metrics: AdminPulseMetrics;
   liveMeetings: LiveRadarMeeting[];
-  onQuickJoin: (meeting: LiveRadarMeeting, mode?: "audit" | "intervene") => void;
+  onQuickJoin: (meeting: LiveRadarMeeting, mode?: 'audit' | 'intervene') => void;
 }
 
-export function OverviewPulseTab({
-  metrics,
-  liveMeetings,
-  onQuickJoin,
-}: OverviewPulseTabProps) {
+export function OverviewPulseTab({ metrics, liveMeetings, onQuickJoin }: OverviewPulseTabProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* ── 4 Top Executive Pulse KPI Cards ── */}
@@ -138,7 +134,8 @@ export function OverviewPulseTab({
                 </h3>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Đặc quyền Giám sát Tối cao: Dự thính âm thanh kiểm toán hoặc tham gia điều hành trực tiếp
+                Đặc quyền Giám sát Tối cao: Dự thính âm thanh kiểm toán hoặc tham gia điều hành trực
+                tiếp
               </p>
             </div>
 
@@ -185,25 +182,34 @@ export function OverviewPulseTab({
                         <span>{meeting.duration || `${meeting.durationMinutes} phút`}</span>
                       </span>
                       <span>•</span>
-                      <span>Chủ trì: <strong className="text-slate-700 dark:text-slate-300">{meeting.hostName}</strong></span>
+                      <span>
+                        Chủ trì:{' '}
+                        <strong className="text-slate-700 dark:text-slate-300">
+                          {meeting.hostName}
+                        </strong>
+                      </span>
                       <span>•</span>
                       <span className="flex items-center gap-1 font-mono">
                         <MatIcon name="group" className="text-[14px]" />
-                        <span>{meeting.participantsCount || meeting.participantCount} người tham gia</span>
+                        <span>
+                          {meeting.participantsCount || meeting.participantCount} người tham gia
+                        </span>
                       </span>
                     </div>
 
                     {/* Participants Avatars + Soundwave Simulation */}
                     <div className="flex items-center gap-3 pt-1">
                       <div className="flex -space-x-1.5 overflow-hidden">
-                        {(meeting.participants || [meeting.hostAvatar]).map((avatar: string, idx: number) => (
-                          <img
-                            key={idx}
-                            src={avatar}
-                            alt="Thành viên"
-                            className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 object-cover"
-                          />
-                        ))}
+                        {(meeting.participants || [meeting.hostAvatar]).map(
+                          (avatar: string, idx: number) => (
+                            <img
+                              key={idx}
+                              src={avatar}
+                              alt="Thành viên"
+                              className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 object-cover"
+                            />
+                          )
+                        )}
                       </div>
 
                       {/* Equalizer Waveform */}
@@ -223,17 +229,20 @@ export function OverviewPulseTab({
                   <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
                     {/* Silent Audit button */}
                     <button
-                      onClick={() => onQuickJoin(meeting, "audit")}
+                      onClick={() => onQuickJoin(meeting, 'audit')}
                       className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 transition-all active:scale-95"
                       title="Dự thính âm thanh ẩn danh để kiểm toán chất lượng cuộc họp mà không bật mic/camera"
                     >
-                      <MatIcon name="headset_mic" className="text-[16px] text-blue-600 dark:text-blue-400" />
+                      <MatIcon
+                        name="headset_mic"
+                        className="text-[16px] text-blue-600 dark:text-blue-400"
+                      />
                       <span>Dự thính Ẩn danh</span>
                     </button>
 
                     {/* Executive Intervene button */}
                     <button
-                      onClick={() => onQuickJoin(meeting, "intervene")}
+                      onClick={() => onQuickJoin(meeting, 'intervene')}
                       className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95"
                       title="Tham gia phòng họp với quyền Chủ tọa Lãnh đạo cao nhất"
                     >
@@ -271,7 +280,8 @@ export function OverviewPulseTab({
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hệ thống giám sát tự động của Qwen 2.5 AI đảm bảo mọi cuộc họp đều có Agenda rõ ràng và trích xuất Action Items.
+              Hệ thống giám sát tự động của Qwen 2.5 AI đảm bảo mọi cuộc họp đều có Agenda rõ ràng
+              và trích xuất Action Items.
             </p>
 
             {/* Checklist */}

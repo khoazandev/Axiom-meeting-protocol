@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { AxiomSelect } from "@/components/ui/AxiomSelect";
-import { SecurityAuditEntry } from "@/lib/mockAdminData";
+import React, { useState } from 'react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { AxiomSelect } from '@/components/ui/AxiomSelect';
+import { SecurityAuditEntry } from '@/lib/mockAdminData';
 
 interface AuditSecurityTabProps {
   logs: SecurityAuditEntry[];
 }
 
 export function AuditSecurityTab({ logs }: AuditSecurityTabProps) {
-  const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [filterSeverity, setFilterSeverity] = useState<string>("ALL");
-  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
 
   const filteredLogs = logs.filter((log) => {
     const matchSearch =
@@ -21,44 +21,41 @@ export function AuditSecurityTab({ logs }: AuditSecurityTabProps) {
       log.userEmail.toLowerCase().includes(search.toLowerCase()) ||
       log.details.toLowerCase().includes(search.toLowerCase()) ||
       log.ipAddress.toLowerCase().includes(search.toLowerCase());
-    const matchCategory =
-      filterCategory === "ALL" || log.category === filterCategory;
-    const matchSeverity =
-      filterSeverity === "ALL" || log.severity === filterSeverity;
+    const matchCategory = filterCategory === 'ALL' || log.category === filterCategory;
+    const matchSeverity = filterSeverity === 'ALL' || log.severity === filterSeverity;
     return matchSearch && matchCategory && matchSeverity;
   });
 
   const handleExportCsv = () => {
-    const header =
-      "ID,Timestamp,Category,Severity,User,Email,IP,Action,Details\n";
+    const header = 'ID,Timestamp,Category,Severity,User,Email,IP,Action,Details\n';
     const rows = filteredLogs
       .map(
         (l) =>
           `"${l.id}","${l.timestamp}","${l.category}","${l.severity}","${l.userName}","${l.userEmail}","${l.ipAddress}","${l.action}","${l.details.replace(/"/g, '""')}"`
       )
-      .join("\n");
+      .join('\n');
 
-    const blob = new Blob(["\uFEFF" + header + rows], {
-      type: "text/csv;charset=utf-8;",
+    const blob = new Blob(['\uFEFF' + header + rows], {
+      type: 'text/csv;charset=utf-8;',
     });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
-    link.setAttribute("download", `axiom-security-audit-${Date.now()}.csv`);
+    link.setAttribute('download', `axiom-security-audit-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const getSeverityBadge = (severity: "INFO" | "WARN" | "CRITICAL") => {
+  const getSeverityBadge = (severity: 'INFO' | 'WARN' | 'CRITICAL') => {
     switch (severity) {
-      case "CRITICAL":
-        return "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300/80 dark:border-rose-700 font-extrabold";
-      case "WARN":
-        return "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80 dark:border-amber-700 font-bold";
-      case "INFO":
+      case 'CRITICAL':
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300/80 dark:border-rose-700 font-extrabold';
+      case 'WARN':
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80 dark:border-amber-700 font-bold';
+      case 'INFO':
       default:
-        return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium";
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium';
     }
   };
 
@@ -81,7 +78,8 @@ export function AuditSecurityTab({ logs }: AuditSecurityTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Ghi nhận toàn bộ thao tác phân quyền, thay đổi cấu hình kỷ luật và truy xuất dữ liệu theo chuẩn ISO/IEC 27001.
+            Ghi nhận toàn bộ thao tác phân quyền, thay đổi cấu hình kỷ luật và truy xuất dữ liệu
+            theo chuẩn ISO/IEC 27001.
           </p>
         </div>
 
@@ -117,11 +115,11 @@ export function AuditSecurityTab({ logs }: AuditSecurityTabProps) {
             value={filterCategory}
             onChange={setFilterCategory}
             options={[
-              { value: "ALL", label: "Tất cả Phân loại", icon: "category" },
-              { value: "RBAC", label: "RBAC & Phân quyền", icon: "shield_person" },
-              { value: "POLICY", label: "Chính sách & Kỷ luật", icon: "gavel" },
-              { value: "MEETING", label: "Họp & Phòng họp", icon: "video_camera_front" },
-              { value: "DATA", label: "Xuất & Tải Dữ liệu", icon: "download" },
+              { value: 'ALL', label: 'Tất cả Phân loại', icon: 'category' },
+              { value: 'RBAC', label: 'RBAC & Phân quyền', icon: 'shield_person' },
+              { value: 'POLICY', label: 'Chính sách & Kỷ luật', icon: 'gavel' },
+              { value: 'MEETING', label: 'Họp & Phòng họp', icon: 'video_camera_front' },
+              { value: 'DATA', label: 'Xuất & Tải Dữ liệu', icon: 'download' },
             ]}
             width="175px"
             variant="connected"
@@ -133,10 +131,28 @@ export function AuditSecurityTab({ logs }: AuditSecurityTabProps) {
             value={filterSeverity}
             onChange={setFilterSeverity}
             options={[
-              { value: "ALL", label: "Tất cả Mức độ", icon: "filter_list" },
-              { value: "CRITICAL", label: "CRITICAL", description: "Nghiêm trọng", badge: "Cấp 1", badgeClass: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
-              { value: "WARN", label: "WARN", description: "Cảnh báo", badge: "Cấp 2", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
-              { value: "INFO", label: "INFO", description: "Thông tin", badge: "Cấp 3", badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
+              { value: 'ALL', label: 'Tất cả Mức độ', icon: 'filter_list' },
+              {
+                value: 'CRITICAL',
+                label: 'CRITICAL',
+                description: 'Nghiêm trọng',
+                badge: 'Cấp 1',
+                badgeClass: 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
+              },
+              {
+                value: 'WARN',
+                label: 'WARN',
+                description: 'Cảnh báo',
+                badge: 'Cấp 2',
+                badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+              },
+              {
+                value: 'INFO',
+                label: 'INFO',
+                description: 'Thông tin',
+                badge: 'Cấp 3',
+                badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+              },
             ]}
             width="150px"
             variant="connected"
