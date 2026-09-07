@@ -49,7 +49,7 @@ export function HeroSection() {
               </Link>
             </ClickSpark>
             <Link
-              href="/meetings"
+              href="/member"
               className={cn(
                 buttonVariants({
                   variant: 'outline',
@@ -59,7 +59,7 @@ export function HeroSection() {
                 })
               )}
             >
-              View Dashboard
+              View Workspace
             </Link>
           </div>
         </FadeContent>

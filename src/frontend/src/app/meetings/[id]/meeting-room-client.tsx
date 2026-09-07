@@ -493,7 +493,14 @@ export function MeetingRoomClient() {
       if (actionItems.length > 0) {
         await jiraApi.syncMeetingTasksToJira(meetingId, { target_project_id: project.id });
       }
-      router.push(`/jira/${project.key}/board`);
+      const role = user?.role;
+      if (role === 'OWNER' || role === 'ADMIN') {
+        router.push('/admin');
+      } else if (role === 'MANAGER') {
+        router.push('/manager');
+      } else {
+        router.push('/member?tab=jira');
+      }
     } catch (err) {
       console.error('Failed to open Jira workspace:', err);
     } finally {
@@ -528,6 +535,17 @@ export function MeetingRoomClient() {
         });
     }
   }, [user]);
+
+  const handleExitMeeting = useCallback(() => {
+    const role = user?.role;
+    if (role === 'OWNER' || role === 'ADMIN') {
+      router.push('/admin');
+    } else if (role === 'MANAGER') {
+      router.push('/manager');
+    } else {
+      router.push('/member?tab=meetings');
+    }
+  }, [user, router]);
 
   // Load meeting data
   useEffect(() => {
@@ -644,11 +662,12 @@ export function MeetingRoomClient() {
         <p className="text-muted-foreground text-sm max-w-md">
           Meeting không tồn tại hoặc bạn không có quyền truy cập.
         </p>
-        <Link href="/meetings">
-          <button className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-lg shadow-primary/25 transition-all">
-            Quay lại danh sách
-          </button>
-        </Link>
+        <button
+          onClick={handleExitMeeting}
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-lg shadow-primary/25 transition-all cursor-pointer"
+        >
+          Quay lại bàn làm việc
+        </button>
       </div>
     );
   }
@@ -705,11 +724,13 @@ export function MeetingRoomClient() {
       {/* Top Header */}
       <header className="h-16 px-6 bg-primary flex items-center justify-between shrink-0 z-20 shadow-md">
         <div className="flex items-center gap-4">
-          <Link href="/meetings">
-            <button className="p-2 rounded-xl bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 transition-all">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </Link>
+          <button
+            onClick={handleExitMeeting}
+            className="p-2 rounded-xl bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 transition-all cursor-pointer"
+            title="Rời phòng họp & Về bàn làm việc"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
 
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary-foreground text-primary flex items-center justify-center">
@@ -746,7 +767,7 @@ export function MeetingRoomClient() {
             className="w-full h-full flex overflow-hidden"
             onDisconnected={() => {
               console.log('User left the meeting room.');
-              router.push('/meetings');
+              handleExitMeeting();
             }}
             onError={(err) => {
               console.error('LiveKit connection error:', err);

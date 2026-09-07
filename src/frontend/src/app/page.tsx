@@ -1,29 +1,17 @@
-'use client';
+import { HomeNavbar } from "@/components/home/HomeNavbar";
+import { HeroSection } from "@/components/home/HeroSection";
+import { StickyFeatureShowcase } from "@/components/home/StickyFeatureShowcase";
+import { ChatAssistantFooter } from "@/components/home/ChatAssistantFooter";
 
-import {
-  Navbar,
-  HeroSection,
-  TrustedBySection,
-  FeaturesSection,
-  HowItWorksSection,
-  SecuritySection,
-  CtaSection,
-  Footer,
-} from './(marketing)/_sections';
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-accent/20 selection:text-foreground">
-      <Navbar />
-      <main className="flex-1">
+    <div className="min-h-screen bg-[#f6f8fc] selection:bg-[#4F7BF7]/20">
+      <HomeNavbar />
+      <main>
         <HeroSection />
-        <TrustedBySection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <SecuritySection />
-        <CtaSection />
+        <StickyFeatureShowcase />
       </main>
-      <Footer />
+      <ChatAssistantFooter />
     </div>
   );
 }
