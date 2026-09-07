@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -128,6 +128,7 @@ import { useDataChannel } from '@livekit/components-react';
 export interface RecordEntry {
   timestamp: string;
   participant_identity: string;
+  participant_name?: string;
   original_text: string;
   translated_text?: string;
   language: string;
@@ -158,6 +159,7 @@ function RecordsListener({
         onNewRecord({
           timestamp: timeStr,
           participant_identity: data.participant_identity,
+          participant_name: data.participant_name,
           original_text: data.original_text,
           language: data.language || 'vi',
           is_final: data.is_final,
@@ -170,6 +172,7 @@ function RecordsListener({
         onNewRecord({
           timestamp: timeStr,
           participant_identity: data.participant_identity,
+          participant_name: data.participant_name,
           original_text: data.original_text,
           translated_text: data.translated_text,
           language: data.from_language || 'vi',
@@ -197,6 +200,7 @@ function RecordsListener({
         onNewRecord({
           timestamp: timeStr,
           participant_identity: data.participant_identity,
+          participant_name: data.participant_name,
           original_text: data.original_text,
           translated_text: data.translated_text,
           language: data.from_language || 'vi',
@@ -638,6 +642,105 @@ export function MeetingRoomClient() {
     }
   }, [user, router]);
 
+  const getSpeakerDisplayName = useCallback(
+    (identity?: string, name?: string) => {
+      if (name && !name.startsWith('user_') && !name.startsWith('User-') && !name.startsWith('User ')) {
+        return name;
+      }
+      const cleanId = identity ? identity.replace(/^user_/, '') : '';
+      // Match with meeting members
+      const member = meetingMembers.find((m) => m.user_id === cleanId || m.id === cleanId);
+      if (member?.user_name) return member.user_name;
+      // Match with current logged in user
+      if (user && (user.id === cleanId || !cleanId)) {
+        return user.full_name || participantName;
+      }
+      if (participantName && !participantName.startsWith('User-')) {
+        return participantName;
+      }
+      return name || (cleanId ? `User ${cleanId.slice(0, 6)}` : 'Người tham gia');
+    },
+    [meetingMembers, user, participantName]
+  );
+
+  const displayedRecords = useMemo(() => {
+    const merged: Array<{
+      id: string;
+      timestamp: string;
+      speaker: string;
+      text: string;
+      translated_text?: string;
+      language: string;
+      to_language?: string;
+      is_final: boolean;
+    }> = [];
+
+    // 1. Add DB transcripts first (past session history)
+    dbTranscripts.forEach((dt, idx) => {
+      merged.push({
+        id: `db-${dt.id || idx}`,
+        timestamp: dt.start_time || '',
+        speaker: dt.speaker_name || getSpeakerDisplayName(dt.user_id),
+        text: dt.content,
+        language: 'VI',
+        is_final: true,
+      });
+    });
+
+    // 2. Merge recordsHistory from realtime LiveKit DataChannel
+    recordsHistory.forEach((rh, idx) => {
+      const rhText = rh.original_text.trim();
+      if (!rhText) return;
+
+      const speakerName = getSpeakerDisplayName(rh.participant_identity, rh.participant_name);
+
+      // Check if this record already exists in merged (from DB transcripts)
+      const existingIdx = merged.findIndex((m) => {
+        const mText = m.text.trim();
+        return (
+          mText === rhText ||
+          (mText.length > 6 && rhText.length > 6 && (mText.includes(rhText) || rhText.includes(mText)))
+        );
+      });
+
+      if (existingIdx !== -1) {
+        // Update the existing record with translation, correct speaker name, and language
+        merged[existingIdx] = {
+          ...merged[existingIdx],
+          speaker: speakerName,
+          translated_text: rh.translated_text || merged[existingIdx].translated_text,
+          language: (rh.language || 'vi').toUpperCase(),
+          to_language: (rh.to_language || 'en').toUpperCase(),
+          is_final: rh.is_final,
+        };
+      } else {
+        merged.push({
+          id: `rt-${idx}-${rh.timestamp}`,
+          timestamp: rh.timestamp,
+          speaker: speakerName,
+          text: rh.original_text,
+          translated_text: rh.translated_text,
+          language: (rh.language || 'vi').toUpperCase(),
+          to_language: (rh.to_language || 'en').toUpperCase(),
+          is_final: rh.is_final,
+        });
+      }
+    });
+
+    return merged;
+  }, [dbTranscripts, recordsHistory, getSpeakerDisplayName]);
+
+  // Auto-scroll Records view when new records arrive
+  useEffect(() => {
+    if (displayedRecords.length > 0) {
+      const timer = setTimeout(
+        () => transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }),
+        100
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [displayedRecords.length]);
+
   // Load meeting data
   useEffect(() => {
     const controller = new AbortController();
@@ -889,6 +992,7 @@ export function MeetingRoomClient() {
                         ) {
                           newArr[i] = {
                             ...newArr[i],
+                            participant_name: r.participant_name || newArr[i].participant_name,
                             translated_text: r.translated_text,
                             to_language: r.to_language,
                           };
@@ -906,6 +1010,7 @@ export function MeetingRoomClient() {
                       ) {
                         newArr[i] = {
                           ...newArr[i],
+                          participant_name: r.participant_name || newArr[i].participant_name,
                           original_text: r.original_text,
                           translated_text: r.translated_text || newArr[i].translated_text,
                           is_final: r.is_final,
@@ -1015,46 +1120,32 @@ export function MeetingRoomClient() {
                   >
                     {/* Records view will go here */}
                     <div className="p-4 flex flex-col gap-3">
-                      {dbTranscripts.map((t, idx) => (
-                        <div
-                          key={`db-${t.id || idx}`}
-                          className="bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 opacity-100 border border-primary/20"
-                        >
-                          <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
-                            <span>
-                              [{t.start_time || ''}] {t.speaker_name || 'User'}
-                            </span>
-                            <span className="opacity-50 font-normal">VI</span>
-                          </div>
-                          <div className="text-foreground">{t.content}</div>
-                        </div>
-                      ))}
-                      {recordsHistory.length === 0 && dbTranscripts.length === 0 ? (
+                      {displayedRecords.length === 0 ? (
                         <div className="text-center text-muted-foreground text-sm mt-10">
                           Chưa có bản ghi nào. Hãy bắt đầu nói!
                         </div>
                       ) : (
-                        recordsHistory.map((t, idx) => (
+                        displayedRecords.map((t) => (
                           <div
-                            key={idx}
-                            className={`bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 ${!t.is_final ? 'opacity-70' : 'opacity-100'}`}
+                            key={t.id}
+                            className={`bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 border border-primary/20 ${!t.is_final ? 'opacity-70' : 'opacity-100'}`}
                           >
                             <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
                               <span>
-                                [{t.timestamp}] {t.participant_identity.replace('user_', 'User ')}{' '}
+                                [{t.timestamp}] {t.speaker}{' '}
                                 {t.is_final ? '' : '(đang nói...)'}
                               </span>
-                              <span className="opacity-50 font-normal">
-                                {t.language.toUpperCase()}
+                              <span className="opacity-70 font-semibold text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
+                                {t.language}
                               </span>
                             </div>
-                            <div className="text-foreground font-medium">{t.original_text}</div>
+                            <div className="text-foreground font-medium">{t.text}</div>
                             {t.translated_text && (
                               <div className="mt-2 pt-2 border-t border-border/50 flex items-start gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/60 dark:bg-blue-950/30 p-2 rounded-md">
                                 <Globe className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500" />
                                 <div className="flex-1">
                                   <span className="text-[10px] uppercase font-bold text-blue-500 mr-1.5 tracking-wider">
-                                    [{t.to_language?.toUpperCase() || 'EN'}]
+                                    [{t.to_language || 'EN'}]
                                   </span>
                                   <span>{t.translated_text}</span>
                                 </div>

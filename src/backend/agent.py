@@ -87,7 +87,8 @@ async def process_translation(state: AgentState, source_text: str, source_partic
             "translated_text": translated_text,
             "from_language": source_lang,
             "to_language": target_lang,
-            "participant_identity": source_participant.identity
+            "participant_identity": source_participant.identity,
+            "participant_name": source_participant.name or source_participant.identity
         }
         await state.ctx.room.local_participant.publish_data(
             json.dumps(translation_payload).encode("utf-8"),
@@ -98,6 +99,7 @@ async def process_translation(state: AgentState, source_text: str, source_partic
         record_update = {
             "type": "translation_record",
             "participant_identity": source_participant.identity,
+            "participant_name": source_participant.name or source_participant.identity,
             "original_text": source_text,
             "translated_text": translated_text,
             "from_language": source_lang,
@@ -223,11 +225,14 @@ async def entrypoint(ctx: JobContext):
                         continue
                     
                     detected_lang = getattr(event.alternatives[0], "language", None) or lang or "vi"
+                    if detected_lang not in ("vi", "en"):
+                        detected_lang = "vi"
 
                     # 1. Pipeline 1: Original Transcript -> Records
                     record_payload = {
                         "type": "original_transcript",
                         "participant_identity": participant.identity,
+                        "participant_name": participant.name or participant.identity,
                         "original_text": text,
                         "language": detected_lang,
                         "is_final": is_final

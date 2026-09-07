@@ -23,9 +23,9 @@ def preload_models():
     if _global_vad is None:
         from livekit.plugins import silero
         _global_vad = silero.VAD.load(
-            min_speech_duration=0.2,
-            min_silence_duration=0.45,
-            activation_threshold=0.5,
+            min_speech_duration=0.25,
+            min_silence_duration=0.5,
+            activation_threshold=0.6,
         )
 
 def get_vad():
@@ -39,8 +39,8 @@ class FasterWhisperSTT(stt.STT):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
         self._language = language
         self._initial_prompt = (
-            "Cuộc họp trực tuyến Axiom. Bàn về công việc, kế hoạch, dự án, tiến độ, báo cáo, "
-            "Jira sprint, nhiệm vụ. Ghi rõ tiếng Việt có dấu chuẩn xác hoặc tiếng Anh chính xác."
+            "Cuộc họp trao đổi công việc, dự án công nghệ, báo cáo tiến độ, sprint Jira. "
+            "Song ngữ tiếng Việt và English. Giao tiếp rõ ràng, chính xác."
         )
         
         target_model = model_size or os.getenv("WHISPER_MODEL_SIZE", "small")
@@ -90,7 +90,7 @@ class FasterWhisperSTT(stt.STT):
         def transcribe():
             dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.005 or dur_sec < 0.2:
+            if rms < 0.008 or dur_sec < 0.35:
                 logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
                 return "", "vi"
 
@@ -98,21 +98,37 @@ class FasterWhisperSTT(stt.STT):
             try:
                 segments, info = self._model.transcribe(
                     audio_float32,
-                    beam_size=2,
-                    best_of=2,
+                    beam_size=1,
+                    best_of=1,
                     temperature=0.0,
                     language=lang_code,
                     condition_on_previous_text=False,
                     vad_filter=True,
-                    vad_parameters=dict(min_silence_duration_ms=250),
-                    no_speech_threshold=0.6,
-                    log_prob_threshold=-1.0,
+                    vad_parameters=dict(min_silence_duration_ms=350),
+                    no_speech_threshold=0.5,
+                    log_prob_threshold=-0.8,
+                    compression_ratio_threshold=2.2,
                     initial_prompt=self._initial_prompt
                 )
-                detected = getattr(info, "language", None) or lang_code or "vi"
+                
+                # Check bilingual language: STRICTLY 'vi' or 'en'
+                detected_raw = getattr(info, "language", None) or lang_code or "vi"
+                all_probs = dict(getattr(info, "all_language_probs", []) or [])
+                vi_prob = all_probs.get("vi", 0.0)
+                en_prob = all_probs.get("en", 0.0)
+                
+                if detected_raw in ("vi", "en"):
+                    detected = detected_raw
+                else:
+                    # Detected other language (e.g., 'zh', 'fr', 'ja', 'cy', 'ko')
+                    if max(vi_prob, en_prob) < 0.20:
+                        logger.info(f"Discarding foreign/hallucinated speech (detected={detected_raw}, vi_prob={vi_prob:.2f}, en_prob={en_prob:.2f})")
+                        return "", "vi"
+                    detected = "vi" if vi_prob >= en_prob else "en"
+
                 valid_segments = []
                 for segment in segments:
-                    if getattr(segment, "no_speech_prob", 0) > 0.6:
+                    if getattr(segment, "no_speech_prob", 0) > 0.5:
                         continue
                     valid_segments.append(segment.text)
                 res = " ".join(valid_segments).strip()
@@ -120,7 +136,13 @@ class FasterWhisperSTT(stt.STT):
                 logger.error(f"Error in transcribe: {e}", exc_info=True)
                 return "", "vi"
 
-            # Hallucination filter for silence in Vietnamese & English
+            # 1. Script filter: discard any CJK, Cyrillic, Arabic scripts immediately
+            import re
+            if re.search(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff]', res):
+                logger.info(f"Discarded non-Latin/Vietnamese script: '{res}'")
+                return "", detected
+
+            # 2. Hallucination filter for silence in Vietnamese & English
             hallucinations = [
                 "hãy subscribe cho kênh ghiền mì gõ",
                 "hãy subscribe cho kênh",
@@ -129,24 +151,30 @@ class FasterWhisperSTT(stt.STT):
                 "thank you for watching",
                 "thanks for watching",
                 "subtitles by",
+                "see you next time",
+                "see you in the next",
+                "see you again",
+                "oh god damn",
+                "oh, god, damn",
+                "oh my god",
+                "c'est lui",
                 "bye",
                 "bye!",
                 "bye bye",
                 "you",
             ]
             lower_res = res.lower().strip()
-            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.03:
+            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.035:
                 logger.info(f"Suppressed silence hallucination: '{res}'")
                 return "", detected
 
             # Filter out single characters or punctuation
-            import re
             cleaned = re.sub(r'[^\w\s]', '', res).strip()
             if len(cleaned) <= 1:
                 logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
                 return "", detected
 
-            logger.info(f"Transcribe thread finished (detected={detected}): '{res}'")
+            logger.info(f"Transcribe thread finished (detected={detected}, raw={detected_raw}, vi={vi_prob:.2f}, en={en_prob:.2f}): '{res}'")
             return res, detected
             
         text, detected_lang = await loop.run_in_executor(None, transcribe)
@@ -243,7 +271,7 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                     total_samples = sum(f.samples_per_channel for f in event.frames)
                     sample_rate = event.frames[0].sample_rate
                     dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
-                    if dur_sec < 0.2:
+                    if dur_sec < 0.3:
                         vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
                         continue
 
