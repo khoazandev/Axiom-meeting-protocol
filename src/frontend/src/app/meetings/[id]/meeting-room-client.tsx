@@ -297,7 +297,11 @@ function LiveKitContent({
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pointer-events-none transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
             <div className="bg-black/85 backdrop-blur-xl border border-white/20 rounded-2xl p-3.5 shadow-2xl text-center space-y-1">
               <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-white/70">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    latestRecord.is_final ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
                 <span className="truncate max-w-[200px]">
                   {latestRecord.speaker ||
                     latestRecord.participant_name ||
@@ -305,6 +309,11 @@ function LiveKitContent({
                       ? latestRecord.participant_identity.replace('user_', 'User ')
                       : 'Người tham gia')}
                 </span>
+                {!latestRecord.is_final && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-medium">
+                    đang nói...
+                  </span>
+                )}
                 <span className="text-white/40">•</span>
                 <span className="uppercase text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">
                   {latestRecord.language || 'VI'}
@@ -318,8 +327,15 @@ function LiveKitContent({
                   </>
                 )}
               </div>
-              <p className="text-sm md:text-base font-semibold text-white tracking-wide leading-snug">
+              <p
+                className={`text-sm md:text-base font-semibold text-white tracking-wide leading-snug ${
+                  !latestRecord.is_final ? 'opacity-90 italic' : ''
+                }`}
+              >
                 {latestRecord.text || latestRecord.original_text}
+                {!latestRecord.is_final && (
+                  <span className="inline-block w-1.5 h-3.5 ml-1 align-middle bg-primary animate-pulse" />
+                )}
               </p>
               {latestRecord.translated_text && (
                 <div className="pt-1.5 mt-1 border-t border-white/10 flex items-center justify-center gap-1.5 text-xs md:text-sm text-cyan-300 font-medium">

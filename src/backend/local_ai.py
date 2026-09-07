@@ -205,6 +205,7 @@ class FasterWhisperSTT(stt.STT):
 
 
 import asyncio
+from collections import deque
 from typing import Optional, Any, AsyncIterable
 from livekit import rtc
 from livekit.agents import utils
@@ -228,8 +229,10 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
         self._wrapped_stt_conn_options = conn_options
         self._language = language
         self._speech_buffer = []
+        self._pre_buffer = deque(maxlen=25)  # ~500ms pre-speech audio buffer to preserve initial syllables
         self._is_speaking = False
         self._latest_interim = ""
+        self._stt_lock = asyncio.Lock()
 
     async def _metrics_monitor_task(self, event_aiter: AsyncIterable[SpeechEvent]) -> None:
         async for _ in event_aiter:
@@ -248,13 +251,86 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                 
                 if self._is_speaking:
                     self._speech_buffer.append(input)
+                else:
+                    self._pre_buffer.append(input)
 
             vad_stream.end_input()
 
         async def _recognize_interim_loop() -> None:
-            """periodically recognize speech from the buffer while speaking"""
-            # Disabled as per user request to only translate/transcribe when stopping speech (reduces CPU load)
-            pass
+            """periodically recognize speech from the buffer while speaking (sub-second interim updates)"""
+            import logging
+            interim_logger = logging.getLogger("local-ai.interim")
+            while True:
+                await asyncio.sleep(0.45)
+                if not self._is_speaking or not self._speech_buffer:
+                    continue
+
+                if self._stt_lock.locked():
+                    continue
+
+                total_samples = sum(f.samples_per_channel for f in self._speech_buffer)
+                sample_rate = self._speech_buffer[0].sample_rate if self._speech_buffer else 16000
+                dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
+
+                if dur_sec < 0.6:
+                    continue
+
+                # 1. Check 5-second forced segmentation cap (prevents audio buffer bloat on long speech)
+                if dur_sec >= 5.0:
+                    async with self._stt_lock:
+                        try:
+                            frames_to_finalize = list(self._speech_buffer)
+                            merged = utils.merge_frames(frames_to_finalize)
+                            t_event = await self._wrapped_stt.recognize(
+                                buffer=merged,
+                                language=self._language,
+                                conn_options=self._wrapped_stt_conn_options,
+                            )
+                            if t_event.alternatives and t_event.alternatives[0].text.strip():
+                                interim_logger.info(f"5s cap finalized: '{t_event.alternatives[0].text}'")
+                                self._event_ch.send_nowait(
+                                    SpeechEvent(
+                                        type=SpeechEventType.FINAL_TRANSCRIPT,
+                                        alternatives=[t_event.alternatives[0]],
+                                    )
+                                )
+                            # Keep last 300ms overlap to ensure phoneme continuity for next segment
+                            keep_samples = int(sample_rate * 0.3)
+                            trimmed = []
+                            acc = 0
+                            for f in reversed(self._speech_buffer):
+                                trimmed.insert(0, f)
+                                acc += f.samples_per_channel
+                                if acc >= keep_samples:
+                                    break
+                            self._speech_buffer = trimmed
+                            self._latest_interim = ""
+                        except Exception as e:
+                            interim_logger.error(f"Error in 5s cap finalization: {e}", exc_info=True)
+                    continue
+
+                # 2. Normal interim update: stream partial text to UI
+                async with self._stt_lock:
+                    try:
+                        frames_to_use = list(self._speech_buffer)
+                        merged = utils.merge_frames(frames_to_use)
+                        t_event = await self._wrapped_stt.recognize(
+                            buffer=merged,
+                            language=self._language,
+                            conn_options=self._wrapped_stt_conn_options,
+                        )
+                        if t_event.alternatives and t_event.alternatives[0].text.strip():
+                            text = t_event.alternatives[0].text.strip()
+                            if text != self._latest_interim:
+                                self._latest_interim = text
+                                self._event_ch.send_nowait(
+                                    SpeechEvent(
+                                        type=SpeechEventType.INTERIM_TRANSCRIPT,
+                                        alternatives=[t_event.alternatives[0]],
+                                    )
+                                )
+                    except Exception as e:
+                        interim_logger.error(f"Error recognizing interim speech: {e}", exc_info=True)
 
         async def _recognize_vad() -> None:
             """recognize speech from vad events"""
@@ -265,49 +341,52 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                     vad_logger.info(f"VAD Event received: type={event.type}")
                 if event.type == VADEventType.START_OF_SPEECH:
                     self._is_speaking = True
-                    self._speech_buffer = []
+                    # Pre-populate speech buffer with the pre-buffer frames to catch initial syllables
+                    self._speech_buffer = list(self._pre_buffer)
                     self._latest_interim = ""
                     self._event_ch.send_nowait(SpeechEvent(SpeechEventType.START_OF_SPEECH))
                 elif event.type == VADEventType.END_OF_SPEECH:
                     self._is_speaking = False
-                    self._speech_buffer = []
+                    self._latest_interim = ""
                     self._event_ch.send_nowait(
                         SpeechEvent(
                             type=SpeechEventType.END_OF_SPEECH,
                         )
                     )
 
-                    if not event.frames:
+                    frames_to_finalize = list(self._speech_buffer) if self._speech_buffer else (list(event.frames) if event.frames else [])
+                    self._speech_buffer = []
+
+                    if not frames_to_finalize:
                         continue
 
-                    total_samples = sum(f.samples_per_channel for f in event.frames)
-                    sample_rate = event.frames[0].sample_rate
+                    total_samples = sum(f.samples_per_channel for f in frames_to_finalize)
+                    sample_rate = frames_to_finalize[0].sample_rate if frames_to_finalize else 16000
                     dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
                     if dur_sec < 0.3:
                         vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
                         continue
 
-                    try:
-                        merged_frames = utils.merge_frames(event.frames)
-                        t_event = await self._wrapped_stt.recognize(
-                            buffer=merged_frames,
-                            language=self._language,
-                            conn_options=self._wrapped_stt_conn_options,
-                        )
-
-                        if len(t_event.alternatives) == 0:
-                            continue
-                        elif not t_event.alternatives[0].text:
-                            continue
-
-                        self._event_ch.send_nowait(
-                            SpeechEvent(
-                                type=SpeechEventType.FINAL_TRANSCRIPT,
-                                alternatives=[t_event.alternatives[0]],
+                    async with self._stt_lock:
+                        try:
+                            merged_frames = utils.merge_frames(frames_to_finalize)
+                            t_event = await self._wrapped_stt.recognize(
+                                buffer=merged_frames,
+                                language=self._language,
+                                conn_options=self._wrapped_stt_conn_options,
                             )
-                        )
-                    except Exception as err:
-                        vad_logger.error(f"Error recognizing speech event: {err}", exc_info=True)
+
+                            if len(t_event.alternatives) == 0 or not t_event.alternatives[0].text.strip():
+                                continue
+
+                            self._event_ch.send_nowait(
+                                SpeechEvent(
+                                    type=SpeechEventType.FINAL_TRANSCRIPT,
+                                    alternatives=[t_event.alternatives[0]],
+                                )
+                            )
+                        except Exception as err:
+                            vad_logger.error(f"Error recognizing speech event: {err}", exc_info=True)
 
         tasks = [
             asyncio.create_task(_forward_input(), name="forward_input"),
@@ -319,6 +398,7 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
         finally:
             await utils.aio.cancel_and_wait(*tasks)
             await vad_stream.aclose()
+
 
 
 class RealtimeStreamAdapter(STT):
