@@ -544,7 +544,7 @@ class KnowledgeDocument(database.Base):
     __tablename__ = "knowledge_documents"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     meeting_id = Column(String, ForeignKey("meetings.id"), nullable=True, index=True)
     uploaded_by_id = Column(String, ForeignKey("users.id"), nullable=False)
     filename = Column(String, nullable=False)
@@ -553,7 +553,7 @@ class KnowledgeDocument(database.Base):
     vector_status = Column(String, default="READY")
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
-    workspace = relationship("Workspace")
+    organization = relationship("Organization")
     meeting = relationship("Meeting")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
 
