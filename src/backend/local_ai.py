@@ -99,14 +99,35 @@ class FasterWhisperSTT(stt.STT):
             # Normalize audio to -1 dBFS (peak ~0.89) to maximize Whisper's tone and phoneme clarity
             normalized_audio = audio_float32 * (0.89 / peak)
 
-            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f}, peak={peak:.4f}, lang_hint={lang_code})...")
+            # Quick bilingual language determination: STRICTLY between 'vi' and 'en'
             try:
+                if lang_code in ("vi", "en"):
+                    target_lang = lang_code
+                    vi_prob, en_prob = (1.0, 0.0) if lang_code == "vi" else (0.0, 1.0)
+                else:
+                    _, _, all_probs = self._model.detect_language(normalized_audio)
+                    prob_dict = dict(all_probs)
+                    vi_prob = prob_dict.get("vi", 0.0)
+                    en_prob = prob_dict.get("en", 0.0)
+                    
+                    if en_prob > 0.35 and en_prob > vi_prob * 1.5:
+                        target_lang = "en"
+                    elif vi_prob > 0.15:
+                        target_lang = "vi"
+                    elif en_prob > vi_prob:
+                        target_lang = "en"
+                    else:
+                        target_lang = "vi"
+
+                logger.info(f"Bilingual STT selected language: '{target_lang}' (vi_prob={vi_prob:.2f}, en_prob={en_prob:.2f}, hint={lang_code}, dur={dur_sec:.2f}s, RMS={rms:.4f})")
+
+                # Transcribe constrained strictly to target_lang (vi or en)
                 segments, info = self._model.transcribe(
                     normalized_audio,
                     beam_size=1,
                     best_of=1,
                     temperature=0.0,
-                    language=lang_code,
+                    language=target_lang,
                     condition_on_previous_text=False,
                     vad_filter=True,
                     vad_parameters=dict(
@@ -120,21 +141,7 @@ class FasterWhisperSTT(stt.STT):
                     compression_ratio_threshold=2.2,
                     initial_prompt=self._initial_prompt
                 )
-                
-                # Check bilingual language: STRICTLY 'vi' or 'en'
-                detected_raw = getattr(info, "language", None) or lang_code or "vi"
-                all_probs = dict(getattr(info, "all_language_probs", []) or [])
-                vi_prob = all_probs.get("vi", 0.0)
-                en_prob = all_probs.get("en", 0.0)
-                
-                if detected_raw in ("vi", "en"):
-                    detected = detected_raw
-                else:
-                    # Detected other language (e.g., 'zh', 'fr', 'ja', 'cy', 'ko')
-                    if max(vi_prob, en_prob) < 0.20:
-                        logger.info(f"Discarding foreign/hallucinated speech (detected={detected_raw}, vi_prob={vi_prob:.2f}, en_prob={en_prob:.2f})")
-                        return "", "vi"
-                    detected = "vi" if vi_prob >= en_prob else "en"
+                detected = target_lang
 
                 valid_segments = []
                 for segment in segments:
@@ -145,6 +152,7 @@ class FasterWhisperSTT(stt.STT):
             except Exception as e:
                 logger.error(f"Error in transcribe: {e}", exc_info=True)
                 return "", "vi"
+
 
             # 1. Script filter: discard any CJK, Cyrillic, Arabic scripts immediately
             import re
@@ -184,7 +192,7 @@ class FasterWhisperSTT(stt.STT):
                 logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
                 return "", detected
 
-            logger.info(f"Transcribe thread finished (detected={detected}, raw={detected_raw}, vi={vi_prob:.2f}, en={en_prob:.2f}): '{res}'")
+            logger.info(f"Transcribe thread finished (detected={detected}, vi={vi_prob:.2f}, en={en_prob:.2f}): '{res}'")
             return res, detected
             
         text, detected_lang = await loop.run_in_executor(None, transcribe)
