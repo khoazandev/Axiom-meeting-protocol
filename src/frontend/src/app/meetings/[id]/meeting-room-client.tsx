@@ -351,8 +351,6 @@ function LiveKitContent({
           </DisconnectButton>
         </div>
       </div>
-
-      <RoomAudioRenderer />
     </div>
   );
 }

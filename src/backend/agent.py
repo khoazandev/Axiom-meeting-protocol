@@ -192,6 +192,14 @@ async def entrypoint(ctx: JobContext):
     # Initialize preferences for participants already in the room
     logger.info(f"Agent connected. Remote participants: {len(ctx.room.remote_participants)}")
     for p in ctx.room.remote_participants.values():
+        if (
+            p.identity.startswith("agent-")
+            or "agent" in p.identity.lower()
+            or getattr(p, "kind", None) == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT
+        ):
+            logger.info(f"Skipping agent participant: {p.identity}")
+            continue
+
         logger.info(f"Found participant: {p.identity}, attributes: {p.attributes}, metadata: {p.metadata}")
         if p.attributes:
             enabled = p.attributes.get("translation_enabled") == "true"
@@ -318,6 +326,19 @@ async def entrypoint(ctx: JobContext):
 
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
+        # Strictly ignore audio tracks from any agent or TTS track to prevent feedback loops
+        if (
+            participant.identity.startswith("agent-")
+            or "agent" in participant.identity.lower()
+            or getattr(participant, "kind", None) == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT
+        ):
+            logger.info(f"Ignoring audio from agent participant: {participant.identity}")
+            return
+
+        if publication and publication.name and (publication.name.startswith("tts_") or "tts" in publication.name.lower()):
+            logger.info(f"Ignoring TTS publication track: {publication.name}")
+            return
+
         if track.kind == rtc.TrackKind.KIND_AUDIO:
             logger.info(f"Subscribed to audio track from {participant.identity}")
             

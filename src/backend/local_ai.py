@@ -22,7 +22,11 @@ def preload_models():
         _global_whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8", cpu_threads=cpu_threads)
     if _global_vad is None:
         from livekit.plugins import silero
-        _global_vad = silero.VAD.load(min_silence_duration=0.5)
+        _global_vad = silero.VAD.load(
+            min_speech_duration=0.35,
+            min_silence_duration=0.45,
+            activation_threshold=0.5,
+        )
 
 def get_vad():
     global _global_vad
@@ -80,37 +84,55 @@ class FasterWhisperSTT(stt.STT):
         # Run transcription in a thread to not block event loop
         loop = asyncio.get_event_loop()
         def transcribe():
-            # Check if audio has sufficient energy (RMS) to avoid hallucinating on background mic noise
+            dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.005:
-                logger.info(f"Audio energy too low (RMS={rms:.5f}), skipping silence.")
+            if rms < 0.012 or dur_sec < 0.35:
+                logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
                 return ""
 
-            logger.info(f"Transcribe thread starting (duration: {len(audio_float32)/16000:.2f}s, RMS={rms:.4f})...")
+            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f})...")
             segments, info = self._model.transcribe(
                 audio_float32,
                 beam_size=1,
+                temperature=0.0,
                 language=lang_code,
                 condition_on_previous_text=False,
                 vad_filter=True,
-                vad_parameters=dict(min_silence_duration_ms=300)
+                vad_parameters=dict(min_silence_duration_ms=250),
+                no_speech_threshold=0.6,
+                logprob_threshold=-1.0
             )
             valid_segments = []
             for segment in segments:
-                if getattr(segment, "no_speech_prob", 0) > 0.65:
+                if getattr(segment, "no_speech_prob", 0) > 0.6:
                     continue
                 valid_segments.append(segment.text)
             res = " ".join(valid_segments).strip()
 
-            # Hallucination filter for silence in Vietnamese
+            # Hallucination filter for silence in Vietnamese & English
             hallucinations = [
                 "hãy subscribe cho kênh ghiền mì gõ",
                 "hãy subscribe cho kênh",
                 "cảm ơn các bạn đã theo dõi",
-                "chúc các bạn xem video vui vẻ"
+                "chúc các bạn xem video vui vẻ",
+                "thank you for watching",
+                "thanks for watching",
+                "subtitles by",
+                "bye",
+                "bye!",
+                "bye bye",
+                "you",
             ]
-            if any(h in res.lower() for h in hallucinations) and rms < 0.02:
+            lower_res = res.lower().strip()
+            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.03:
                 logger.info(f"Suppressed silence hallucination: '{res}'")
+                return ""
+
+            # Filter out single characters or punctuation
+            import re
+            cleaned = re.sub(r'[^\w\s]', '', res).strip()
+            if len(cleaned) <= 1:
+                logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
                 return ""
 
             logger.info(f"Transcribe thread finished: '{res}'")
@@ -243,7 +265,8 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
             import logging
             vad_logger = logging.getLogger("local-ai.vad")
             async for event in vad_stream:
-                vad_logger.info(f"VAD Event received: type={event.type}")
+                if event.type != VADEventType.INFERENCE_DONE:
+                    vad_logger.info(f"VAD Event received: type={event.type}")
                 if event.type == VADEventType.START_OF_SPEECH:
                     self._is_speaking = True
                     self._speech_buffer = []
@@ -257,6 +280,16 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                             type=SpeechEventType.END_OF_SPEECH,
                         )
                     )
+
+                    if not event.frames:
+                        continue
+
+                    total_samples = sum(f.samples_per_channel for f in event.frames)
+                    sample_rate = event.frames[0].sample_rate
+                    dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
+                    if dur_sec < 0.35:
+                        vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
+                        continue
 
                     merged_frames = utils.merge_frames(event.frames)
                     t_event = await self._wrapped_stt.recognize(

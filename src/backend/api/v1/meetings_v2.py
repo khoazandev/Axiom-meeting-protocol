@@ -319,11 +319,31 @@ def get_meeting_token(
                 try:
                     http_url = settings.livekit_url.replace("ws://", "http://").replace("wss://", "https://")
                     lk = livekit_api.LiveKitAPI(http_url, settings.livekit_api_key, settings.livekit_api_secret)
-                    req = livekit_api.CreateAgentDispatchRequest(room=f"meeting-{meeting_id}", agent_name="")
-                    await lk.agent_dispatch.create_dispatch(req)
+                    room_name = f"meeting-{meeting_id}"
+                    try:
+                        participants = await lk.room.list_participants(livekit_api.ListParticipantsRequest(room=room_name))
+                        has_agent = any(
+                            p.identity.startswith("agent-")
+                            or "agent" in p.identity.lower()
+                            or getattr(p, "kind", None) == livekit_api.ParticipantKind.PARTICIPANT_KIND_AGENT
+                            for p in participants.participants
+                        )
+                    except Exception:
+                        has_agent = False
+
+                    if not has_agent:
+                        try:
+                            dispatches = await lk.agent_dispatch.list_dispatch(room_name)
+                            has_dispatch = len(dispatches) > 0
+                        except Exception:
+                            has_dispatch = False
+
+                        if not has_dispatch:
+                            req = livekit_api.CreateAgentDispatchRequest(room=room_name, agent_name="")
+                            await lk.agent_dispatch.create_dispatch(req)
                     await lk.aclose()
-                except Exception:
-                    pass
+                except Exception as ex:
+                    logger.debug(f"Agent dispatch check error: {ex}")
             import asyncio
             asyncio.run(_inner())
         import threading
