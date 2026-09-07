@@ -31,13 +31,13 @@ export function useTranslationAudioMuting() {
       const track = trackRef.publication?.track as RemoteAudioTrack | undefined;
       if (!track || typeof track.setVolume !== 'function') return;
 
+      try {
         track.setVolume(1.0);
       } catch (err) {
         console.error(
           `[AudioMuting] Error processing track for ${trackRef.participant.identity}:`,
           err
         );
-        track.setVolume(1.0);
       }
     });
   }, [localParticipant, audioTracks, isTranslationEnabled, translationSourceLang]);
