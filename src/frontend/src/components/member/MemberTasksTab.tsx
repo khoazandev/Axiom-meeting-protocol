@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { MatIcon } from "@/components/ui/MatIcon";
 import { getAuthHeaders } from "@/lib/api";
+import { getStoredMemberTasks } from "@/lib/workloadProtocolData";
 
 interface RemoteTask {
   id: string;
@@ -129,6 +130,34 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
       } catch (err) {
         console.error("Failed to load tasks from API:", err);
       } finally {
+        const stored = getStoredMemberTasks();
+        if (stored.length > 0) {
+          const storedMapped: MemberTask[] = stored.map((s) => ({
+            id: s.id,
+            title: s.title,
+            meetingTitle: s.meetingOrigin,
+            meetingId: s.mandateOriginCode,
+            mandateOrigin: s.mandateOriginTitle || "Chỉ đạo cấp cao",
+            assignee: s.assigneeName,
+            priority:
+              s.priority === "CRITICAL" || s.priority === "HIGH"
+                ? "HIGH"
+                : s.priority === "MEDIUM"
+                ? "MEDIUM"
+                : "LOW",
+            status:
+              s.status === "DONE"
+                ? "COMPLETED"
+                : s.status === "IN_PROGRESS"
+                ? "IN_PROGRESS"
+                : "TODO",
+            dueDate: s.deadline || "Tuần này",
+          }));
+          setTasks((prev) => [
+            ...storedMapped,
+            ...prev.filter((p) => !storedMapped.some((sm) => sm.id === p.id)),
+          ]);
+        }
         setIsLoading(false);
       }
     }

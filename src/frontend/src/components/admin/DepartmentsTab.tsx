@@ -10,6 +10,7 @@ import {
   DepartmentCapacityMetric,
   ExecutiveMandate,
   MemberCapacityWorkload,
+  getStoredMandates,
 } from "@/lib/workloadProtocolData";
 
 interface DepartmentsTabProps {
@@ -29,9 +30,13 @@ export function DepartmentsTab({
   const [deptList, setDeptList] = useState<DepartmentCapacityMetric[]>(
     MOCK_DEPARTMENTS_CAPACITY
   );
-  const [mandates, setMandates] = useState<ExecutiveMandate[]>(
-    MOCK_EXECUTIVE_MANDATES
+  const [mandates, setMandates] = useState<ExecutiveMandate[]>(() =>
+    getStoredMandates()
   );
+
+  React.useEffect(() => {
+    setMandates(getStoredMandates());
+  }, []);
   const [capacityFilter, setCapacityFilter] = useState<
     "ALL" | "OVERLOADED_OR_FULL" | "OPTIMAL" | "AVAILABLE"
   >("ALL");

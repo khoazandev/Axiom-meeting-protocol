@@ -585,3 +585,81 @@ export const MOCK_DEPARTMENTS_CAPACITY: DepartmentCapacityMetric[] = [
     mandates: [],
   },
 ];
+
+// ── 5. Helper Utilities for Post-Meeting Cascade Storage ──
+
+export const DEPARTMENT_OPTIONS: Array<{
+  code: DepartmentCode;
+  name: string;
+  managerName: string;
+  defaultHours: number;
+}> = [
+  { code: "ENG", name: "Khối Kỹ Thuật (Engineering & AI)", managerName: "Trần Minh Khoa", defaultHours: 40 },
+  { code: "PROD", name: "Khối Sản Phẩm & UX (Product Design)", managerName: "Lê Thị Hồng Nhung", defaultHours: 25 },
+  { code: "BIZ", name: "Khối Phát Triển Thị Trường (Enterprise Sales)", managerName: "Hoàng Gia Bảo", defaultHours: 30 },
+  { code: "OPS", name: "Khối Vận Hành & Bảo Mật (SecOps & IT)", managerName: "Nguyễn Thị Mai", defaultHours: 20 },
+];
+
+export const TEAM_MEMBERS_DIRECTORY = [
+  { id: "mem-01", name: "Alex Vance", email: "alex.vance@axiom.com", role: "Senior Frontend Engineer", dept: "ENG" },
+  { id: "mem-02", name: "Trần Minh Khoa", email: "khoa.tran@axiom.com", role: "Lead System Architect", dept: "ENG" },
+  { id: "mem-03", name: "Elena Rostova", email: "elena.r@axiom.com", role: "QA & Performance Specialist", dept: "ENG" },
+  { id: "mem-04", name: "Nguyễn Văn Toàn", email: "toan.nguyen@axiom.com", role: "Mobile Engineer", dept: "ENG" },
+  { id: "mem-05", name: "Vũ Hải Đăng", email: "dang.vu@axiom.com", role: "DevOps & Infrastructure", dept: "ENG" },
+  { id: "mem-06", name: "Phạm Thu Trang", email: "trang.pham@axiom.com", role: "Product Manager", dept: "PROD" },
+];
+
+const STORAGE_MANDATES_KEY = "axiom_executive_mandates_v1";
+const STORAGE_TASKS_KEY = "axiom_decomposed_tasks_v1";
+
+export function getStoredMandates(): ExecutiveMandate[] {
+  if (typeof window === "undefined") return MOCK_EXECUTIVE_MANDATES;
+  try {
+    const raw = localStorage.getItem(STORAGE_MANDATES_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_MANDATES_KEY, JSON.stringify(MOCK_EXECUTIVE_MANDATES));
+      return MOCK_EXECUTIVE_MANDATES;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_EXECUTIVE_MANDATES;
+  } catch {
+    return MOCK_EXECUTIVE_MANDATES;
+  }
+}
+
+export function addStoredMandates(newMandates: ExecutiveMandate[]): ExecutiveMandate[] {
+  if (typeof window === "undefined") return newMandates;
+  try {
+    const current = getStoredMandates();
+    const updated = [...newMandates, ...current];
+    localStorage.setItem(STORAGE_MANDATES_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return newMandates;
+  }
+}
+
+export function getStoredMemberTasks(): DecomposedTask[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_TASKS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addStoredMemberTasks(newTasks: DecomposedTask[]): DecomposedTask[] {
+  if (typeof window === "undefined") return newTasks;
+  try {
+    const current = getStoredMemberTasks();
+    const updated = [...newTasks, ...current];
+    localStorage.setItem(STORAGE_TASKS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return newTasks;
+  }
+}
+
