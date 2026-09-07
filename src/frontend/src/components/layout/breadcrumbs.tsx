@@ -41,8 +41,8 @@ export function Breadcrumbs() {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/meetings" className="text-muted-foreground hover:text-foreground">
-              Dashboard
+            <Link href="/member" className="text-muted-foreground hover:text-foreground">
+              Workspace
             </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>

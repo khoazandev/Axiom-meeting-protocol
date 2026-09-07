@@ -46,13 +46,17 @@ import {
   Clock,
   FileText,
   GitBranch,
+  UserCircle,
+  Users,
 } from 'lucide-react';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, activeOrganization, organizations, setActiveOrganization, logout } = useAuthStore();
   const { isMobile, state } = useSidebar();
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   const handleLogout = () => {
     logout();
@@ -67,21 +71,29 @@ export function AppSidebar() {
   ];
 
   const navJira = [
-    { title: 'Jira Projects', url: '/jira', icon: Kanban, badge: null },
-    { title: 'Project Board', url: '/jira/SMA/board', icon: LayoutGrid, badge: null },
-    { title: 'Backlog & Sprints', url: '/jira/SMA/backlog', icon: ListTodo, badge: null },
-    { title: 'Roadmap & Timeline', url: '/jira/SMA/timeline', icon: Clock, badge: null },
-    { title: 'Docs & Specs', url: '/jira/SMA/docs', icon: FileText, badge: null },
-    { title: 'Development', url: '/jira/SMA/development', icon: GitBranch, badge: null },
+    { title: 'Jira Projects', url: '/member?tab=jira', icon: Kanban, badge: null },
+    { title: 'Project Board', url: '/member?tab=jira', icon: LayoutGrid, badge: null },
+    { title: 'Backlog & Sprints', url: '/member?tab=jira', icon: ListTodo, badge: null },
   ];
 
+  const isOwner = user?.email === 'admin@axiom.com';
+  const isManager = user?.email === 'manager.khoa@axiom.com';
+  const isMember = !isOwner && !isManager;
+
   const navSystem = [
-    { title: 'Admin Center', url: '/admin', icon: ShieldCheck, badge: 'Gov' },
+    ...(isOwner ? [{ title: 'Admin Center', url: '/admin', icon: ShieldCheck, badge: 'Gov' }] : []),
+    ...(isManager ? [{ title: 'Bàn Làm Việc Manager', url: '/manager', icon: ShieldCheck, badge: 'Lead' }] : []),
+    ...(isMember ? [{ title: 'Bàn Làm Việc Thành Viên', url: '/member', icon: ShieldCheck, badge: 'User' }] : []),
     { title: 'Settings', url: '/settings', icon: Settings, badge: null },
   ];
 
-  const userName = user?.full_name || 'Axiom Member';
-  const userEmail = user?.email || 'member@axiom.ai';
+  const userName = user?.full_name || 'Alex Rivera (Kỹ sư AI / Thành viên)';
+  const userEmail = user?.email || 'alex@axiom.com';
+  const roleLabel = isOwner
+    ? 'CHỦ TỊCH / CEO'
+    : isManager
+      ? 'TRƯỞNG PHÒNG'
+      : 'THÀNH VIÊN (MEMBER)';
   const userInitials = (
     userName
       .split(' ')
@@ -258,14 +270,14 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user?.avatar_url || ''} alt={userName} />
+                    <AvatarImage src={user?.avatar_url || generateInitialsAvatar(userName)} alt={userName} />
                     <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{userName}</span>
-                    <span className="truncate text-xs text-sidebar-foreground/70">{userEmail}</span>
+                    <span className="truncate text-[10.5px] font-bold text-blue-600 dark:text-blue-400">{roleLabel}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -279,7 +291,7 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user?.avatar_url || ''} alt={userName} />
+                      <AvatarImage src={user?.avatar_url || generateInitialsAvatar(userName)} alt={userName} />
                       <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
                         {userInitials}
                       </AvatarFallback>
@@ -287,21 +299,43 @@ export function AppSidebar() {
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{userName}</span>
                       <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">{roleLabel}</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onClick={() => setIsProfileOpen(true)}
+                  className="cursor-pointer"
+                >
+                  <UserCircle className="mr-2 h-4 w-4 text-blue-500" />
+                  <span className="font-medium">Hồ Sơ & Đổi Avatar</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => router.push('/settings')}
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  Account Settings
+                  Cài Đặt Hệ Thống
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer">
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Administration
-                </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer">
+                    <ShieldCheck className="mr-2 h-4 w-4 text-amber-500" />
+                    Trung Tâm Quản Trị (Admin Center)
+                  </DropdownMenuItem>
+                )}
+                {isManager && (
+                  <DropdownMenuItem onClick={() => router.push('/manager')} className="cursor-pointer">
+                    <ShieldCheck className="mr-2 h-4 w-4 text-blue-500" />
+                    Bàn Làm Việc Trưởng Phòng
+                  </DropdownMenuItem>
+                )}
+                {!isOwner && !isManager && (
+                  <DropdownMenuItem onClick={() => router.push('/member')} className="cursor-pointer">
+                    <Users className="mr-2 h-4 w-4 text-emerald-500" />
+                    Bàn Làm Việc Thành Viên
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
@@ -317,6 +351,12 @@ export function AppSidebar() {
       </SidebarFooter>
 
       <SidebarRail />
+
+      {/* Profile & Avatar Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
     </Sidebar>
   );
 }

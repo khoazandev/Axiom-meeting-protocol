@@ -54,8 +54,8 @@ export function Navbar() {
           >
             Process
           </Link>
-          <Link href="/meetings" className="hover:text-foreground transition-colors duration-200">
-            Dashboard
+          <Link href="/member" className="hover:text-foreground transition-colors duration-200">
+            Workspace
           </Link>
         </nav>
       </div>

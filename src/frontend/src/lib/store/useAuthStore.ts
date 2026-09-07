@@ -6,6 +6,7 @@ export interface User {
   email: string;
   full_name: string;
   avatar_url?: string | null;
+  role?: string | null;
   provider: string;
   is_active: boolean;
 }
@@ -31,6 +32,7 @@ interface AuthState {
   ) => void;
   setActiveOrganization: (organization: Organization) => void;
   setOrganizations: (organizations: Organization[]) => void;
+  updateUser: (partialUser: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -54,6 +56,11 @@ export const useAuthStore = create<AuthState>()(
         set({ activeOrganization: organization });
       },
       setOrganizations: (organizations) => set({ organizations }),
+      updateUser: (partialUser) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partialUser } : null,
+        }));
+      },
       logout: () => {
         set({ user: null, token: null, activeOrganization: null, organizations: [] });
       },

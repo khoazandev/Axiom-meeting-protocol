@@ -1,22 +1,33 @@
 'use client';
 
-import { useLanguageStore } from '@/lib/store/useLanguageStore';
-import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
-export default function CalendarPage() {
-  const { t } = useLanguageStore();
+export default function CalendarRedirectPage() {
+  const router = useRouter();
+  const { user, token } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    const role = user?.role;
+    if (role === 'MANAGER') {
+      router.replace('/manager?tab=calendar');
+    } else if (role === 'OWNER' || role === 'ADMIN') {
+      router.replace('/admin');
+    } else {
+      router.replace('/member?tab=calendar');
+    }
+  }, [user, token, router]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 border-b border-border pb-5">
-        <CalendarIcon className="w-5 h-5 text-accent" />
-        <h1 className="text-lg font-semibold text-text-primary">{t.calendar.title}</h1>
-      </div>
-
-      <div className="p-12 rounded-xl bg-bg-card border border-border text-center space-y-3">
-        <Sparkles className="w-8 h-8 text-accent mx-auto animate-pulse" />
-        <h3 className="text-sm font-semibold text-text-primary">{t.calendar.noEvents}</h3>
-        <p className="text-sm text-text-secondary max-w-sm mx-auto">{t.calendar.subTitle}</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F8FC] dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-500 font-medium">Đang chuyển tiếp tới lịch trình...</p>
       </div>
     </div>
   );

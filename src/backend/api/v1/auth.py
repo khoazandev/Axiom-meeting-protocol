@@ -11,7 +11,7 @@ from src.backend.core.security import (
 )
 from src.backend.database import get_db
 from src.backend.models import User
-from src.backend.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
+from src.backend.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,9 +19,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 import re
 
 def normalize_email(email: str) -> str:
-    # Remove any trailing @gmail.com (even if repeated)
-    email = re.sub(r'(@gmail\.com)+$', '', email.strip(), flags=re.IGNORECASE)
-    return email + "@gmail.com"
+    cleaned = email.strip().lower()
+    if "@" not in cleaned:
+        return cleaned + "@gmail.com"
+    return cleaned
 
 
 @router.post("/register", response_model=UserResponse)
@@ -59,3 +60,22 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+@router.put("/me", response_model=UserResponse)
+def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.full_name is not None:
+        trimmed = payload.full_name.strip()
+        if trimmed:
+            current_user.full_name = trimmed
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+

@@ -424,7 +424,6 @@
   transform: scale(1.05) !important;
 }
 
-/* Arrow Icon via text content */
 .lk-chat-entry .lk-button::after,
 .lk-chat-form button[type='submit']::after,
 .lk-chat button[type='submit']::after {
@@ -437,3 +436,32 @@
   transform: translate(-50%, -50%) !important;
   display: block !important;
 }
+
+/* ── Google Material Symbols Global Configuration ── */
+.material-symbols-rounded,
+.material-symbols-outlined {
+  font-weight: normal;
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+}
+

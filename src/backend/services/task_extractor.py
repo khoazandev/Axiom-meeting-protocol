@@ -133,8 +133,18 @@ class TaskExtractorService:
             # Combine
             user_content = time_context + pending_section + transcript_section + corrections_section
 
+            from src.backend.services.ollama_service import get_active_model
+            model_to_use = get_active_model() or settings.task_extractor_model
+
+            if "task-extractor" not in model_to_use:
+                user_content += (
+                    "\n\n[YÊU CẦU ĐẶC BIỆT: Hãy trích xuất tất cả action items và TRẢ VỀ DUY NHẤT MỘT JSON ARRAY HỢP LỆ. "
+                    'Cấu trúc: [{"task": "Mô tả ngắn gọn việc cần làm", "assignee": "Tên người phụ trách", "deadline": "YYYY-MM-DD", "status": "TODO"}]. '
+                    "TUYỆT ĐỐI KHÔNG VIẾT ĐOẠN VĂN ĐÀM THOẠI HAY GIẢI THÍCH, CHỈ TRẢ VỀ JSON ARRAY.]"
+                )
+
             payload = {
-                "model": settings.task_extractor_model,
+                "model": model_to_use,
                 "messages": [
                     {"role": "user", "content": user_content},
                 ],
@@ -144,7 +154,7 @@ class TaskExtractorService:
 
             logger.info(
                 "Calling Ollama chat model=%s (timeout=%ds, transcript=%d chars, pending=%d tasks)",
-                settings.task_extractor_model,
+                model_to_use,
                 timeout,
                 len(transcript_text),
                 len(pending_tasks) if pending_tasks else 0,

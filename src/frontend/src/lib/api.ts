@@ -27,6 +27,7 @@ export interface Meeting {
 export interface MeetingCreate {
   title: string;
   description?: string | null;
+  agenda?: string | null;
   scheduled_at?: string | null;
   organization_id?: string | null;
   department_id?: string | null;
@@ -37,6 +38,7 @@ export interface User {
   email: string;
   full_name: string;
   avatar_url?: string | null;
+  role?: string | null;
   provider: string;
   is_active: boolean;
 }
@@ -88,6 +90,7 @@ export interface ActionItemResponse {
   description: string | null;
   status: string;
   assignee_id?: string | null;
+  assignee_name?: string | null;
   due_date?: string | null;
   created_at: string;
 }
@@ -251,6 +254,13 @@ export const authApi = {
 
   me(): Promise<User> {
     return apiFetch<User>('/api/v1/auth/me');
+  },
+
+  updateMe(data: { full_name?: string; avatar_url?: string }): Promise<User> {
+    return apiFetch<User>('/api/v1/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   },
 };
 

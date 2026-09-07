@@ -94,13 +94,13 @@ export default function CreateMeetingPage() {
     <div className="min-h-screen bg-background text-foreground p-6 md:p-10 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header Back Button */}
-        <Link
-          href="/meetings"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Meetings</span>
-        </Link>
+          <span>Quay lại</span>
+        </button>
 
         <div className="bg-card border border-border rounded-3xl p-8 shadow-xl space-y-6">
           <div className="border-b border-border pb-5">
