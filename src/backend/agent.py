@@ -102,9 +102,6 @@ async def process_translation(state: AgentState, source_text: str, source_partic
             if chunk.delta and chunk.delta.content:
                 translated_text += chunk.delta.content
         
-        translated_text = translated_text.strip()
-        logger.info(f"Translated to {target_lang}: {translated_text}")
-        
         # Publish translation to frontend via DataChannel
         translation_payload = {
             "type": "translation",
@@ -117,6 +114,21 @@ async def process_translation(state: AgentState, source_text: str, source_partic
         await state.ctx.room.local_participant.publish_data(
             json.dumps(translation_payload).encode("utf-8"),
             topic="translations"
+        )
+        
+        # Also broadcast to "records" topic so Records tab and subtitles show translation immediately
+        record_update = {
+            "type": "translation_record",
+            "participant_identity": source_participant.identity,
+            "original_text": source_text,
+            "translated_text": translated_text,
+            "from_language": source_lang,
+            "to_language": target_lang,
+            "is_final": True
+        }
+        await state.ctx.room.local_participant.publish_data(
+            json.dumps(record_update).encode("utf-8"),
+            topic="records"
         )
         
         # 2. Get TTS Source and lock
@@ -277,18 +289,18 @@ async def entrypoint(ctx: JobContext):
                     
                     # 2. Pipeline 2: Speech Translation (ONLY when finalized)
                     if is_final:
-                        # Find all users who want translation FROM this language
+                        # Find all users who want translation
                         target_langs = set()
                         logger.info(f"Checking targets for lang {detected_lang}. Prefs: {state.participant_prefs}")
                         for pid, pref in state.participant_prefs.items():
-                            if pref["translation_enabled"] and pref["translation_source"] == detected_lang:
+                            if pref.get("translation_enabled"):
                                 target_p = next((p for p in ctx.room.remote_participants.values() if p.identity == pid), None)
-                                logger.info(f"DEBUG: Found target_p for {pid}: {target_p}. Remote participants: {[p.identity for p in ctx.room.remote_participants.values()]}")
-                                if target_p:
-                                    logger.info(f"DEBUG: target_p.metadata is: {target_p.metadata}")
-                                lang_t = get_participant_language(target_p)
-                                logger.info(f"DEBUG: get_participant_language({target_p}) returned: {lang_t}")
-                                target_langs.add(lang_t)
+                                lang_t = get_participant_language(target_p) if target_p else "vi"
+                                if lang_t and lang_t != detected_lang:
+                                    target_langs.add(lang_t)
+                                else:
+                                    fallback_t = "en" if detected_lang == "vi" else "vi"
+                                    target_langs.add(fallback_t)
                                 
                         logger.info(f"Target languages for translation: {target_langs}")
                         
@@ -296,7 +308,7 @@ async def entrypoint(ctx: JobContext):
                         for t_lang in target_langs:
                             if t_lang and t_lang != detected_lang:
                                 asyncio.create_task(
-                                    handle_translation_and_tts(text, detected_lang, t_lang, participant)
+                                    process_translation(state, text, participant, t_lang, detected_lang)
                                 )
         except Exception as e:
             logger.error(f"Error in stt_stream processing for {participant.identity}: {e}", exc_info=True)

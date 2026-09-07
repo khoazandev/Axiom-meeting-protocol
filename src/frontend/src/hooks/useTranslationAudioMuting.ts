@@ -9,8 +9,8 @@ export const useTranslationStore = create<{
   setEnabled: (e: boolean) => void;
   setSourceLang: (l: string) => void;
 }>((set) => ({
-  enabled: false,
-  sourceLang: 'en',
+  enabled: true,
+  sourceLang: 'vi',
   setEnabled: (e) => set({ enabled: e }),
   setSourceLang: (l) => set({ sourceLang: l }),
 }));

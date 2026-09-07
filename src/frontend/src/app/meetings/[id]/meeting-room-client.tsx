@@ -129,7 +129,9 @@ export interface RecordEntry {
   timestamp: string;
   participant_identity: string;
   original_text: string;
+  translated_text?: string;
   language: string;
+  to_language?: string;
   is_final: boolean;
 }
 
@@ -144,9 +146,49 @@ function RecordsListener({
     try {
       const payload = msg.payload || msg; // Handle both v1 and v2 formats
       const text = new TextDecoder().decode(payload as Uint8Array);
-      console.log('[DataChannel] Received record payload:', text);
+      console.log('[DataChannel records] Received:', text);
       const data = JSON.parse(text);
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+
       if (data.type === 'original_transcript') {
+        onNewRecord({
+          timestamp: timeStr,
+          participant_identity: data.participant_identity,
+          original_text: data.original_text,
+          language: data.language || 'vi',
+          is_final: data.is_final,
+        });
+
+        if (data.is_final && onTranscriptFinalized) {
+          onTranscriptFinalized(data.original_text, timeStr);
+        }
+      } else if (data.type === 'translation_record') {
+        onNewRecord({
+          timestamp: timeStr,
+          participant_identity: data.participant_identity,
+          original_text: data.original_text,
+          translated_text: data.translated_text,
+          language: data.from_language || 'vi',
+          to_language: data.to_language || 'en',
+          is_final: true,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to parse record data', e);
+    }
+  });
+
+  useDataChannel('translations', (msg) => {
+    try {
+      const payload = msg.payload || msg;
+      const text = new TextDecoder().decode(payload as Uint8Array);
+      console.log('[DataChannel translations] Received:', text);
+      const data = JSON.parse(text);
+      if (data.type === 'translation' && data.original_text) {
         const timeStr = new Date().toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -156,18 +198,17 @@ function RecordsListener({
           timestamp: timeStr,
           participant_identity: data.participant_identity,
           original_text: data.original_text,
-          language: data.language,
-          is_final: data.is_final,
+          translated_text: data.translated_text,
+          language: data.from_language || 'vi',
+          to_language: data.to_language || 'en',
+          is_final: true,
         });
-
-        if (data.is_final && onTranscriptFinalized) {
-          onTranscriptFinalized(data.original_text, timeStr);
-        }
       }
     } catch (e) {
-      console.warn('Failed to parse record data', e);
+      console.warn('Failed to parse translation data', e);
     }
   });
+
   return null;
 }
 
@@ -213,6 +254,7 @@ function LiveKitContent({
   participantName,
   onInviteClick,
   onSidebarToggle,
+  latestRecord,
 }: {
   onVADUpdate: (data: {
     streamData: TranslationStream | null;
@@ -224,6 +266,7 @@ function LiveKitContent({
   participantName: string;
   onInviteClick: () => void;
   onSidebarToggle: () => void;
+  latestRecord?: RecordEntry | null;
 }) {
   const { streamData, interimText, isListening, isConnected, transcriptHistory } =
     useVADController(participantName);
@@ -255,6 +298,39 @@ function LiveKitContent({
           </GridLayout>
           <RoomAudioRenderer />
         </LiveKitTileErrorBoundary>
+
+        {/* Floating Live Subtitle Overlay */}
+        {latestRecord && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pointer-events-none transition-all duration-300">
+            <div className="bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-3.5 shadow-2xl text-center space-y-1">
+              <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-white/70">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{latestRecord.participant_identity.replace('user_', 'User ')}</span>
+                <span className="text-white/40">•</span>
+                <span className="uppercase text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">
+                  {latestRecord.language || 'VI'}
+                </span>
+                {latestRecord.translated_text && (
+                  <>
+                    <span className="text-white/40">➔</span>
+                    <span className="uppercase text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {latestRecord.to_language?.toUpperCase() || 'EN'}
+                    </span>
+                  </>
+                )}
+              </div>
+              <p className="text-sm md:text-base font-semibold text-white tracking-wide leading-snug">
+                {latestRecord.original_text}
+              </p>
+              {latestRecord.translated_text && (
+                <div className="pt-1.5 mt-1 border-t border-white/10 flex items-center justify-center gap-1.5 text-xs md:text-sm text-cyan-300 font-medium">
+                  <Globe className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                  <span>{latestRecord.translated_text}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Control Bar */}
@@ -805,6 +881,24 @@ export function MeetingRoomClient() {
                 onNewRecord={(r) => {
                   setRecordsHistory((prev) => {
                     const newArr = [...prev];
+                    // If this is a translation, merge into existing record
+                    if (r.translated_text) {
+                      for (let i = newArr.length - 1; i >= 0; i--) {
+                        if (
+                          newArr[i].participant_identity === r.participant_identity &&
+                          (newArr[i].original_text === r.original_text ||
+                            !newArr[i].translated_text)
+                        ) {
+                          newArr[i] = {
+                            ...newArr[i],
+                            translated_text: r.translated_text,
+                            to_language: r.to_language,
+                          };
+                          return newArr;
+                        }
+                      }
+                    }
+
                     let found = false;
                     // Try to find an existing interim record from this participant
                     for (let i = newArr.length - 1; i >= 0; i--) {
@@ -815,6 +909,7 @@ export function MeetingRoomClient() {
                         newArr[i] = {
                           ...newArr[i],
                           original_text: r.original_text,
+                          translated_text: r.translated_text || newArr[i].translated_text,
                           is_final: r.is_final,
                         };
                         found = true;
@@ -824,10 +919,6 @@ export function MeetingRoomClient() {
                     if (!found) {
                       newArr.push(r);
                     }
-                    console.log(
-                      '[RecordsListener] Updated records history array length:',
-                      newArr.length
-                    );
                     return newArr;
                   });
                 }}
@@ -837,6 +928,7 @@ export function MeetingRoomClient() {
                   onVADUpdate={handleVADUpdate}
                   participantName={participantName}
                   onInviteClick={() => setInviteModalOpen(true)}
+                  latestRecord={recordsHistory[recordsHistory.length - 1] || null}
                   onSidebarToggle={() => {
                     if (!sidebarOpen) {
                       setSidebarOpen(true);
@@ -958,7 +1050,18 @@ export function MeetingRoomClient() {
                                 {t.language.toUpperCase()}
                               </span>
                             </div>
-                            <div className="text-foreground">{t.original_text}</div>
+                            <div className="text-foreground font-medium">{t.original_text}</div>
+                            {t.translated_text && (
+                              <div className="mt-2 pt-2 border-t border-border/50 flex items-start gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/60 dark:bg-blue-950/30 p-2 rounded-md">
+                                <Globe className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500" />
+                                <div className="flex-1">
+                                  <span className="text-[10px] uppercase font-bold text-blue-500 mr-1.5 tracking-wider">
+                                    [{t.to_language?.toUpperCase() || 'EN'}]
+                                  </span>
+                                  <span>{t.translated_text}</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))
                       )}

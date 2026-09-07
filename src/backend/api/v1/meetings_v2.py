@@ -286,10 +286,13 @@ class RagQueryResponse(_PydanticBaseModel):
 
 import uuid
 
+import json
+
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
 def get_meeting_token(
     meeting_id: str,
     participant_name: str,
+    language: str = "vi",
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
@@ -300,6 +303,7 @@ def get_meeting_token(
     unique_identity = f"user_{current_user.id}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
+    token.with_metadata(json.dumps({"target_lang": language}))
     token.with_grants(
         livekit_api.VideoGrants(
             room_join=True,

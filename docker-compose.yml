@@ -16,7 +16,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U axiom' ]
+      test: ['CMD-SHELL', 'pg_isready -U axiom']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -87,17 +87,19 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     environment:
       - LIVEKIT_URL=ws://livekit:7880
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     depends_on:
       - livekit
     volumes:
       - hf_cache:/home/appuser/.cache/huggingface
     command: python -m src.backend.agent start
-
 
   # ─── Redis (for future AI queue pipeline) ────────────────────
   redis:
@@ -106,7 +108,7 @@ services:
     ports:
       - '16379:6379'
     healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3
