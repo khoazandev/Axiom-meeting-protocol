@@ -1,15 +1,13 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { AxiomSelect } from "@/components/ui/AxiomSelect";
-import { EnterpriseWebhookItem } from "@/lib/mockAdminData";
+import React, { useState } from 'react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { AxiomSelect } from '@/components/ui/AxiomSelect';
+import { EnterpriseWebhookItem } from '@/lib/mockAdminData';
 
 interface WebhooksIntegrationTabProps {
   webhooks: EnterpriseWebhookItem[];
-  onAddWebhook: (
-    newWh: Omit<EnterpriseWebhookItem, "id" | "successRate">
-  ) => void;
+  onAddWebhook: (newWh: Omit<EnterpriseWebhookItem, 'id' | 'successRate'>) => void;
   onToggleWebhook: (id: string) => void;
   onDeleteWebhook: (id: string) => void;
 }
@@ -21,15 +19,15 @@ export function WebhooksIntegrationTab({
   onDeleteWebhook,
 }: WebhooksIntegrationTabProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [targetUrl, setTargetUrl] = useState("");
+  const [name, setName] = useState('');
+  const [targetUrl, setTargetUrl] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([
-    "meeting.finished",
-    "task.created",
+    'meeting.finished',
+    'task.created',
   ]);
 
   // Simulator State
-  const [simEvent, setSimEvent] = useState("meeting.finished");
+  const [simEvent, setSimEvent] = useState('meeting.finished');
   const [isSimulating, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<{
     status: number;
@@ -39,11 +37,11 @@ export function WebhooksIntegrationTab({
   } | null>(null);
 
   const availableEvents = [
-    { code: "meeting.started", label: "Khi cuộc họp bắt đầu" },
-    { code: "meeting.finished", label: "Khi cuộc họp kết thúc" },
-    { code: "task.created", label: "Khi AI trích xuất task mới" },
-    { code: "task.completed", label: "Khi task hoàn thành trên Jira" },
-    { code: "mom.published", label: "Khi biên bản MoM được phát hành" },
+    { code: 'meeting.started', label: 'Khi cuộc họp bắt đầu' },
+    { code: 'meeting.finished', label: 'Khi cuộc họp kết thúc' },
+    { code: 'task.created', label: 'Khi AI trích xuất task mới' },
+    { code: 'task.completed', label: 'Khi task hoàn thành trên Jira' },
+    { code: 'mom.published', label: 'Khi biên bản MoM được phát hành' },
   ];
 
   const handleToggleEvent = (code: string) => {
@@ -58,20 +56,19 @@ export function WebhooksIntegrationTab({
     e.preventDefault();
     if (!name.trim() || !targetUrl.trim() || selectedEvents.length === 0) return;
 
-    const randomKey =
-      "whsec_live_" + Math.random().toString(36).substring(2, 16);
+    const randomKey = 'whsec_live_' + Math.random().toString(36).substring(2, 16);
     onAddWebhook({
       name: name.trim(),
       targetUrl: targetUrl.trim(),
       events: selectedEvents,
       secretKey: randomKey,
       isActive: true,
-      lastTriggered: "Vừa tạo",
+      lastTriggered: 'Vừa tạo',
     });
 
-    setName("");
-    setTargetUrl("");
-    setSelectedEvents(["meeting.finished", "task.created"]);
+    setName('');
+    setTargetUrl('');
+    setSelectedEvents(['meeting.finished', 'task.created']);
     setIsAddModalOpen(false);
   };
 
@@ -84,29 +81,28 @@ export function WebhooksIntegrationTab({
       setSimResult({
         status: 200,
         latencyMs: Math.floor(Math.random() * 25) + 12,
-        timestamp: new Date().toLocaleTimeString("vi-VN"),
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
         payload: {
           event: simEvent,
-          organization_id: "Axiom-Enterprise",
+          organization_id: 'Axiom-Enterprise',
           timestamp: new Date().toISOString(),
           data:
-            simEvent === "meeting.finished"
+            simEvent === 'meeting.finished'
               ? {
-                  meeting_id: "meet-exec-2026-09",
-                  title: "Review Sprint & Kế Hoạch Q4",
+                  meeting_id: 'meet-exec-2026-09',
+                  title: 'Review Sprint & Kế Hoạch Q4',
                   duration_seconds: 2450,
                   participants_count: 8,
-                  mom_summary_url:
-                    "https://axiom.internal/meetings/meet-exec-2026-09/mom",
+                  mom_summary_url: 'https://axiom.internal/meetings/meet-exec-2026-09/mom',
                   extracted_tasks_count: 6,
                 }
               : {
-                  task_id: "task-ai-901",
-                  title: "Triển khai bản vá bảo mật WebRTC LiveKit",
-                  assignee_email: "khoa.tran@axiom.internal",
-                  due_date: "2026-09-12",
-                  priority: "HIGH",
-                  source_meeting: "Review Sprint & Kế Hoạch Q4",
+                  task_id: 'task-ai-901',
+                  title: 'Triển khai bản vá bảo mật WebRTC LiveKit',
+                  assignee_email: 'khoa.tran@axiom.internal',
+                  due_date: '2026-09-12',
+                  priority: 'HIGH',
+                  source_meeting: 'Review Sprint & Kế Hoạch Q4',
                 },
         },
       });
@@ -132,7 +128,8 @@ export function WebhooksIntegrationTab({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Bắn sự kiện tự động khi có cuộc họp kết thúc hoặc AI tạo task sang hệ thống bên ngoài của doanh nghiệp.
+            Bắn sự kiện tự động khi có cuộc họp kết thúc hoặc AI tạo task sang hệ thống bên ngoài
+            của doanh nghiệp.
           </p>
         </div>
 
@@ -155,23 +152,19 @@ export function WebhooksIntegrationTab({
           >
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-2.5">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {wh.name}
-                </h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">{wh.name}</h3>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                     wh.isActive
-                      ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {wh.isActive ? "Đang lắng nghe" : "Tạm dừng"}
+                  {wh.isActive ? 'Đang lắng nghe' : 'Tạm dừng'}
                 </span>
                 <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
-                  Thành công:{" "}
-                  <strong className="text-slate-700 dark:text-slate-300">
-                    {wh.successRate}%
-                  </strong>
+                  Thành công:{' '}
+                  <strong className="text-slate-700 dark:text-slate-300">{wh.successRate}%</strong>
                 </span>
               </div>
 
@@ -198,7 +191,7 @@ export function WebhooksIntegrationTab({
                 onClick={() => onToggleWebhook(wh.id)}
                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
-                {wh.isActive ? "Tạm dừng" : "Kích hoạt"}
+                {wh.isActive ? 'Tạm dừng' : 'Kích hoạt'}
               </button>
               <button
                 type="button"
@@ -224,7 +217,8 @@ export function WebhooksIntegrationTab({
                 Trình Giả Lập Kiểm Thử Webhook (Live Webhook Simulator)
               </h3>
               <p className="text-xs text-slate-400">
-                Thử nghiệm gửi payload mẫu trực tiếp tới các hệ sinh thái bên ngoài để kiểm tra kết nối.
+                Thử nghiệm gửi payload mẫu trực tiếp tới các hệ sinh thái bên ngoài để kiểm tra kết
+                nối.
               </p>
             </div>
           </div>
@@ -234,9 +228,13 @@ export function WebhooksIntegrationTab({
               value={simEvent}
               onChange={setSimEvent}
               options={[
-                { value: "meeting.finished", label: "Sự kiện: meeting.finished", icon: "video_camera_front" },
-                { value: "task.created", label: "Sự kiện: task.created", icon: "task_alt" },
-                { value: "mom.published", label: "Sự kiện: mom.published", icon: "description" },
+                {
+                  value: 'meeting.finished',
+                  label: 'Sự kiện: meeting.finished',
+                  icon: 'video_camera_front',
+                },
+                { value: 'task.created', label: 'Sự kiện: task.created', icon: 'task_alt' },
+                { value: 'mom.published', label: 'Sự kiện: mom.published', icon: 'description' },
               ]}
               minWidth="220px"
               variant="connected"
@@ -253,11 +251,7 @@ export function WebhooksIntegrationTab({
                 <span>Đang gửi ping...</span>
               ) : (
                 <>
-                  <MatIcon
-                    name="bolt"
-                    filled
-                    className="text-amber-300 text-[16px]"
-                  />
+                  <MatIcon name="bolt" filled className="text-amber-300 text-[16px]" />
                   <span>Gửi Thử Nghiệm Ping</span>
                 </>
               )}
@@ -271,9 +265,7 @@ export function WebhooksIntegrationTab({
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800 text-slate-400">
               <span className="flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <strong className="text-emerald-400">
-                  HTTP {simResult.status} OK
-                </strong>
+                <strong className="text-emerald-400">HTTP {simResult.status} OK</strong>
                 <span>• Thời gian phản hồi: {simResult.latencyMs}ms</span>
               </span>
               <span>{simResult.timestamp}</span>
@@ -285,9 +277,8 @@ export function WebhooksIntegrationTab({
           </div>
         ) : (
           <div className="mt-4 p-6 rounded-xl bg-slate-950/60 border border-slate-800/80 text-center text-slate-500 text-xs">
-            Nhấn nút{" "}
-            <strong className="text-slate-300">&quot;Gửi Thử Nghiệm Ping&quot;</strong>{" "}
-            ở trên để kiểm tra đường truyền và xem mẫu dữ liệu JSON được hệ thống DX-OS xuất ra.
+            Nhấn nút <strong className="text-slate-300">&quot;Gửi Thử Nghiệm Ping&quot;</strong> ở
+            trên để kiểm tra đường truyền và xem mẫu dữ liệu JSON được hệ thống DX-OS xuất ra.
           </div>
         )}
       </div>
@@ -364,9 +355,7 @@ export function WebhooksIntegrationTab({
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>{ev.label}</span>
-                      <span className="font-mono text-[11px] text-slate-400">
-                        ({ev.code})
-                      </span>
+                      <span className="font-mono text-[11px] text-slate-400">({ev.code})</span>
                     </label>
                   ))}
                 </div>

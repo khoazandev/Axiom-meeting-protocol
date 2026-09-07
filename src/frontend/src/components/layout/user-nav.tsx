@@ -61,7 +61,11 @@ export function UserNav() {
               <p className="text-sm font-semibold leading-none">{name}</p>
               <p className="text-xs leading-none text-muted-foreground">{email}</p>
               <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
-                {isOwner ? 'CHỦ TỊCH / OWNER' : isManager ? 'TRƯỞNG PHÒNG / MANAGER' : 'THÀNH VIÊN / MEMBER'}
+                {isOwner
+                  ? 'CHỦ TỊCH / OWNER'
+                  : isManager
+                    ? 'TRƯỞNG PHÒNG / MANAGER'
+                    : 'THÀNH VIÊN / MEMBER'}
               </span>
             </div>
           </DropdownMenuLabel>
@@ -79,19 +83,25 @@ export function UserNav() {
             {isOwner && (
               <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer">
                 <Shield className="mr-2 h-4 w-4 text-amber-500" />
-                <span className="font-medium text-amber-600 dark:text-amber-400">Admin Center (Chủ tịch)</span>
+                <span className="font-medium text-amber-600 dark:text-amber-400">
+                  Admin Center (Chủ tịch)
+                </span>
               </DropdownMenuItem>
             )}
             {isManager && (
               <DropdownMenuItem onClick={() => router.push('/manager')} className="cursor-pointer">
                 <Shield className="mr-2 h-4 w-4 text-blue-500" />
-                <span className="font-medium text-blue-600 dark:text-blue-400">Bàn Làm Việc Manager</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">
+                  Bàn Làm Việc Manager
+                </span>
               </DropdownMenuItem>
             )}
             {isMember && (
               <DropdownMenuItem onClick={() => router.push('/member')} className="cursor-pointer">
                 <Users className="mr-2 h-4 w-4 text-emerald-500" />
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">Bàn Làm Việc Member</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                  Bàn Làm Việc Member
+                </span>
               </DropdownMenuItem>
             )}
           </DropdownMenuGroup>
@@ -107,10 +117,7 @@ export function UserNav() {
       </DropdownMenu>
 
       {/* User Profile & Avatar Modal */}
-      <UserProfileModal
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-      />
+      <UserProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </>
   );
 }

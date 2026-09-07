@@ -1,6 +1,6 @@
-import Sidebar from "@/components/docs/Sidebar";
-import { HomeNavbar } from "@/components/home/HomeNavbar";
-import DocToc from "@/components/docs/DocToc";
+import Sidebar from '@/components/docs/Sidebar';
+import { HomeNavbar } from '@/components/home/HomeNavbar';
+import DocToc from '@/components/docs/DocToc';
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Building2,
@@ -24,7 +24,7 @@ import {
   X,
   Loader2,
   Award,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   DepartmentCode,
   StrategicPriority,
@@ -34,10 +34,10 @@ import {
   TEAM_MEMBERS_DIRECTORY,
   addStoredMandates,
   addStoredMemberTasks,
-} from "@/lib/workloadProtocolData";
-import { meetingsApi, jiraApi, type ActionItemResponse, type MeetingEndResponse } from "@/lib/api";
+} from '@/lib/workloadProtocolData';
+import { meetingsApi, jiraApi, type ActionItemResponse, type MeetingEndResponse } from '@/lib/api';
 
-export type MeetingLevelMode = "EXECUTIVE" | "DEPARTMENT";
+export type MeetingLevelMode = 'EXECUTIVE' | 'DEPARTMENT';
 
 interface EditableActionItem {
   id: string;
@@ -52,7 +52,7 @@ interface EditableActionItem {
   assigneeName: string;
   assigneeEmail: string;
   deadline: string;
-  status: "TODO" | "IN_PROGRESS" | "DONE";
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE';
 }
 
 interface PostMeetingCascadeModalProps {
@@ -75,12 +75,12 @@ export function PostMeetingCascadeModal({
   onComplete,
 }: PostMeetingCascadeModalProps) {
   // Determine default mode from user role
-  const isExecutiveUser = userRole === "OWNER" || userRole === "ADMIN";
+  const isExecutiveUser = userRole === 'OWNER' || userRole === 'ADMIN';
   const [meetingMode, setMeetingMode] = useState<MeetingLevelMode>(
-    isExecutiveUser ? "EXECUTIVE" : "DEPARTMENT"
+    isExecutiveUser ? 'EXECUTIVE' : 'DEPARTMENT'
   );
 
-  const [activeTab, setActiveTab] = useState<"cascade" | "mom">("cascade");
+  const [activeTab, setActiveTab] = useState<'cascade' | 'mom'>('cascade');
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncingJira, setIsSyncingJira] = useState(false);
   const [isPublishingMandates, setIsPublishingMandates] = useState(false);
@@ -112,7 +112,7 @@ export function PostMeetingCascadeModal({
         const res: MeetingEndResponse = await meetingsApi.endMeeting(meetingId);
         if (res?.summary) {
           setSummaryData({
-            content: res.summary.content || "",
+            content: res.summary.content || '',
             key_points: res.summary.key_points || null,
             decisions: res.summary.decisions || null,
           });
@@ -124,111 +124,117 @@ export function PostMeetingCascadeModal({
           const mapped: EditableActionItem[] = tasksFromBackend.map((t, idx) => ({
             id: t.id || `task-${idx}-${Date.now()}`,
             title: t.title,
-            description: t.description || "",
-            targetDept: (idx % 2 === 0 ? "ENG" : "PROD") as DepartmentCode,
-            priority: (idx === 0 ? "CRITICAL" : "HIGH") as StrategicPriority,
+            description: t.description || '',
+            targetDept: (idx % 2 === 0 ? 'ENG' : 'PROD') as DepartmentCode,
+            priority: (idx === 0 ? 'CRITICAL' : 'HIGH') as StrategicPriority,
             estimatedHours: 20 + idx * 10,
             storyPoints: 5 + idx * 3,
-            assigneeName: t.assignee_name || TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].name,
+            assigneeName:
+              t.assignee_name || TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].name,
             assigneeEmail: TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].email,
-            deadline: t.deadline ? t.deadline.slice(0, 10) : "2026-09-15",
-            status: "TODO",
+            deadline: t.deadline ? t.deadline.slice(0, 10) : '2026-09-15',
+            status: 'TODO',
           }));
           setItems(mapped);
         } else if (initialActionItems.length > 0) {
           const mapped: EditableActionItem[] = initialActionItems.map((t, idx) => ({
             id: t.id || `ai-${idx}-${Date.now()}`,
             title: t.title,
-            description: t.description || "",
-            targetDept: (idx % 2 === 0 ? "ENG" : "PROD") as DepartmentCode,
-            priority: (idx === 0 ? "CRITICAL" : "HIGH") as StrategicPriority,
+            description: t.description || '',
+            targetDept: (idx % 2 === 0 ? 'ENG' : 'PROD') as DepartmentCode,
+            priority: (idx === 0 ? 'CRITICAL' : 'HIGH') as StrategicPriority,
             estimatedHours: 20 + idx * 10,
             storyPoints: 5 + idx * 3,
-            assigneeName: t.assignee_name || TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].name,
+            assigneeName:
+              t.assignee_name || TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].name,
             assigneeEmail: TEAM_MEMBERS_DIRECTORY[idx % TEAM_MEMBERS_DIRECTORY.length].email,
-            deadline: t.due_date ? t.due_date.slice(0, 10) : "2026-09-15",
-            status: "TODO",
+            deadline: t.due_date ? t.due_date.slice(0, 10) : '2026-09-15',
+            status: 'TODO',
           }));
           setItems(mapped);
         } else {
           // Provide standard structured protocol action items if transcript had few items
           setItems([
             {
-              id: "item-01",
-              title: "Tối ưu hóa Audio Ducking & Streaming WebRTC LiveKit Egress",
-              description: "Đảm bảo độ trễ nhận diện giọng nói STT dưới 200ms và không rò rỉ bộ nhớ local buffer.",
-              targetDept: "ENG",
-              priority: "CRITICAL",
+              id: 'item-01',
+              title: 'Tối ưu hóa Audio Ducking & Streaming WebRTC LiveKit Egress',
+              description:
+                'Đảm bảo độ trễ nhận diện giọng nói STT dưới 200ms và không rò rỉ bộ nhớ local buffer.',
+              targetDept: 'ENG',
+              priority: 'CRITICAL',
               estimatedHours: 40,
               storyPoints: 8,
-              assigneeName: "Alex Vance",
-              assigneeEmail: "alex.vance@axiom.com",
-              deadline: "2026-09-12",
-              status: "TODO",
+              assigneeName: 'Alex Vance',
+              assigneeEmail: 'alex.vance@axiom.com',
+              deadline: '2026-09-12',
+              status: 'TODO',
             },
             {
-              id: "item-02",
-              title: "Thiết kế & hoàn thiện luồng Agile Sprint Kanban 4 cột Mini Jira",
-              description: "Bổ sung thanh lọc nhanh theo assignee, nhãn ưu tiên và tính toán story points tự động.",
-              targetDept: "PROD",
-              priority: "HIGH",
+              id: 'item-02',
+              title: 'Thiết kế & hoàn thiện luồng Agile Sprint Kanban 4 cột Mini Jira',
+              description:
+                'Bổ sung thanh lọc nhanh theo assignee, nhãn ưu tiên và tính toán story points tự động.',
+              targetDept: 'PROD',
+              priority: 'HIGH',
               estimatedHours: 25,
               storyPoints: 5,
-              assigneeName: "Phạm Thu Trang",
-              assigneeEmail: "trang.pham@axiom.com",
-              deadline: "2026-09-15",
-              status: "TODO",
+              assigneeName: 'Phạm Thu Trang',
+              assigneeEmail: 'trang.pham@axiom.com',
+              deadline: '2026-09-15',
+              status: 'TODO',
             },
             {
-              id: "item-03",
-              title: "Triển khai kịch bản kiểm thử tải trọng 50 phòng họp đồng thời",
-              description: "Thực hiện stress test hệ thống Redis Pub/Sub và LiveKit SFU cluster.",
-              targetDept: "ENG",
-              priority: "HIGH",
+              id: 'item-03',
+              title: 'Triển khai kịch bản kiểm thử tải trọng 50 phòng họp đồng thời',
+              description: 'Thực hiện stress test hệ thống Redis Pub/Sub và LiveKit SFU cluster.',
+              targetDept: 'ENG',
+              priority: 'HIGH',
               estimatedHours: 30,
               storyPoints: 5,
-              assigneeName: "Elena Rostova",
-              assigneeEmail: "elena.r@axiom.com",
-              deadline: "2026-09-18",
-              status: "TODO",
+              assigneeName: 'Elena Rostova',
+              assigneeEmail: 'elena.r@axiom.com',
+              deadline: '2026-09-18',
+              status: 'TODO',
             },
           ]);
         }
       } catch (err) {
-        console.warn("Could not execute endMeeting API, using local fallback:", err);
+        console.warn('Could not execute endMeeting API, using local fallback:', err);
         setSummaryData({
           content: `Phiên họp "${meetingTitle}" đã kết thúc thành công với sự tham gia đầy đủ của các thành viên. Hệ thống AI đã hoàn tất việc trích xuất các quyết sách và danh mục công việc cần triển khai. Các bên thống nhất ưu tiên hoàn thiện kiến trúc âm thanh và giao diện Agile Sprint đúng thời hạn.`,
-          key_points: "• Đánh giá hiệu năng STT thời gian thực đạt độ trễ ấn tượng dưới 250ms.\n• Thống nhất chuẩn giao diện phân quyền 3 Bàn làm việc (Admin, Manager, Member).\n• Cần tăng tốc độ phân bổ công việc tránh tình trạng lệch tải giữa các khối.",
-          decisions: "1. Thông qua ngân sách thử nghiệm cho cụm máy chủ xử lý âm thanh AI on-premise.\n2. Bắt buộc gắn mã quyết sách (Mandate) cho mọi task con phát sinh từ tuần này.\n3. Khối Kỹ Thuật chịu trách nhiệm bàn giao bản prototype trước ngày 15/09.",
+          key_points:
+            '• Đánh giá hiệu năng STT thời gian thực đạt độ trễ ấn tượng dưới 250ms.\n• Thống nhất chuẩn giao diện phân quyền 3 Bàn làm việc (Admin, Manager, Member).\n• Cần tăng tốc độ phân bổ công việc tránh tình trạng lệch tải giữa các khối.',
+          decisions:
+            '1. Thông qua ngân sách thử nghiệm cho cụm máy chủ xử lý âm thanh AI on-premise.\n2. Bắt buộc gắn mã quyết sách (Mandate) cho mọi task con phát sinh từ tuần này.\n3. Khối Kỹ Thuật chịu trách nhiệm bàn giao bản prototype trước ngày 15/09.',
         });
 
         // Initialize fallback items
         setItems([
           {
-            id: "fallback-01",
-            title: "Tối ưu hóa Pipeline Audio Egress & Whisper STT",
-            description: "Hoàn thiện nhận diện ngôn ngữ tiếng Việt và tiếng Anh song song.",
-            targetDept: "ENG",
-            priority: "CRITICAL",
+            id: 'fallback-01',
+            title: 'Tối ưu hóa Pipeline Audio Egress & Whisper STT',
+            description: 'Hoàn thiện nhận diện ngôn ngữ tiếng Việt và tiếng Anh song song.',
+            targetDept: 'ENG',
+            priority: 'CRITICAL',
             estimatedHours: 35,
             storyPoints: 8,
-            assigneeName: "Alex Vance",
-            assigneeEmail: "alex.vance@axiom.com",
-            deadline: "2026-09-14",
-            status: "TODO",
+            assigneeName: 'Alex Vance',
+            assigneeEmail: 'alex.vance@axiom.com',
+            deadline: '2026-09-14',
+            status: 'TODO',
           },
           {
-            id: "fallback-02",
-            title: "Đồng bộ hóa Trạng thái Nhiệm Vụ Mini Jira sang Bàn Làm Việc Member",
-            description: "Đảm bảo nhân sự thấy ngay việc cần làm không cần qua dashboard cũ.",
-            targetDept: "PROD",
-            priority: "HIGH",
+            id: 'fallback-02',
+            title: 'Đồng bộ hóa Trạng thái Nhiệm Vụ Mini Jira sang Bàn Làm Việc Member',
+            description: 'Đảm bảo nhân sự thấy ngay việc cần làm không cần qua dashboard cũ.',
+            targetDept: 'PROD',
+            priority: 'HIGH',
             estimatedHours: 20,
             storyPoints: 5,
-            assigneeName: "Trần Minh Khoa",
-            assigneeEmail: "khoa.tran@axiom.com",
-            deadline: "2026-09-16",
-            status: "TODO",
+            assigneeName: 'Trần Minh Khoa',
+            assigneeEmail: 'khoa.tran@axiom.com',
+            deadline: '2026-09-16',
+            status: 'TODO',
           },
         ]);
       } finally {
@@ -249,16 +255,16 @@ export function PostMeetingCascadeModal({
   const handleAddItem = () => {
     const newItem: EditableActionItem = {
       id: `new-${Date.now()}`,
-      title: "Hạng mục hành động mới từ cuộc họp",
-      description: "Mô tả chi tiết yêu cầu kỹ thuật và chỉ tiêu bàn giao...",
-      targetDept: "ENG",
-      priority: "HIGH",
+      title: 'Hạng mục hành động mới từ cuộc họp',
+      description: 'Mô tả chi tiết yêu cầu kỹ thuật và chỉ tiêu bàn giao...',
+      targetDept: 'ENG',
+      priority: 'HIGH',
       estimatedHours: 20,
       storyPoints: 5,
-      assigneeName: "Alex Vance",
-      assigneeEmail: "alex.vance@axiom.com",
-      deadline: "2026-09-20",
-      status: "TODO",
+      assigneeName: 'Alex Vance',
+      assigneeEmail: 'alex.vance@axiom.com',
+      deadline: '2026-09-20',
+      status: 'TODO',
     };
     setItems((prev) => [...prev, newItem]);
   };
@@ -272,14 +278,15 @@ export function PostMeetingCascadeModal({
     setIsPublishingMandates(true);
     try {
       const newMandates: ExecutiveMandate[] = items.map((item, idx) => {
-        const deptInfo = DEPARTMENT_OPTIONS.find((d) => d.code === item.targetDept) || DEPARTMENT_OPTIONS[0];
+        const deptInfo =
+          DEPARTMENT_OPTIONS.find((d) => d.code === item.targetDept) || DEPARTMENT_OPTIONS[0];
         return {
           id: `mandate-live-${Date.now()}-${idx}`,
           code: `MANDATE-${item.targetDept}-${Math.floor(100 + Math.random() * 900)}`,
           title: item.title,
           sourceMeetingId: meetingId,
           sourceMeetingTitle: meetingTitle,
-          executiveHost: userRole === "OWNER" ? "Chủ tịch HĐQT" : "Ban Giám Đốc",
+          executiveHost: userRole === 'OWNER' ? 'Chủ tịch HĐQT' : 'Ban Giám Đốc',
           targetDepartment: item.targetDept,
           targetDepartmentName: deptInfo.name,
           managerName: deptInfo.managerName,
@@ -287,7 +294,7 @@ export function PostMeetingCascadeModal({
           allocatedHours: item.estimatedHours,
           storyPoints: item.storyPoints,
           deadline: item.deadline,
-          status: "PENDING_DECOMPOSITION",
+          status: 'PENDING_DECOMPOSITION',
           decomposedTasksCount: 0,
           totalTasksTarget: Math.ceil(item.estimatedHours / 10),
           aiConfidenceScore: 95,
@@ -295,12 +302,12 @@ export function PostMeetingCascadeModal({
             {
               title: item.title,
               estimatedHours: Math.round(item.estimatedHours * 0.6),
-              recommendedRole: "Senior Engineer",
+              recommendedRole: 'Senior Engineer',
             },
             {
               title: `Rà soát tiêu chuẩn và kiểm thử nghiệm thu: ${item.title}`,
               estimatedHours: Math.round(item.estimatedHours * 0.4),
-              recommendedRole: "QA & Tech Lead",
+              recommendedRole: 'QA & Tech Lead',
             },
           ],
         };
@@ -312,7 +319,7 @@ export function PostMeetingCascadeModal({
       );
     } catch (err) {
       console.error(err);
-      showToast("Có lỗi xảy ra khi ban hành quyết sách.");
+      showToast('Có lỗi xảy ra khi ban hành quyết sách.');
     } finally {
       setIsPublishingMandates(false);
     }
@@ -333,7 +340,7 @@ export function PostMeetingCascadeModal({
         assigneeEmail: item.assigneeEmail,
         estimatedHours: item.estimatedHours,
         priority: item.priority,
-        status: "TODO",
+        status: 'TODO',
         deadline: item.deadline,
       }));
 
@@ -343,7 +350,7 @@ export function PostMeetingCascadeModal({
       try {
         await jiraApi.syncMeetingTasksToJira(meetingId, {});
       } catch (jiraErr) {
-        console.warn("Jira API sync skipped/mocked:", jiraErr);
+        console.warn('Jira API sync skipped/mocked:', jiraErr);
       }
 
       showToast(
@@ -351,7 +358,7 @@ export function PostMeetingCascadeModal({
       );
     } catch (err) {
       console.error(err);
-      showToast("Có lỗi xảy ra khi phân bổ nhiệm vụ.");
+      showToast('Có lỗi xảy ra khi phân bổ nhiệm vụ.');
     } finally {
       setIsSyncingJira(false);
     }
@@ -362,19 +369,19 @@ export function PostMeetingCascadeModal({
 # BIÊN BẢN CUỘC HỌP / MEETING PROTOCOL
 **Cuộc họp**: ${meetingTitle}
 **Mã phòng**: ${meetingId}
-**Thời gian**: ${new Date().toLocaleString("vi-VN")}
+**Thời gian**: ${new Date().toLocaleString('vi-VN')}
 
 ---
 ### 1. TỔNG QUAN (SUMMARY)
-${summaryData?.content || "Chưa có tóm tắt."}
+${summaryData?.content || 'Chưa có tóm tắt.'}
 
 ---
 ### 2. ĐIỂM THẢO LUẬN CHÍNH (KEY POINTS)
-${summaryData?.key_points || "Không có điểm thảo luận chính."}
+${summaryData?.key_points || 'Không có điểm thảo luận chính.'}
 
 ---
 ### 3. QUYẾT ĐỊNH ĐÃ THỐNG NHẤT (DECISIONS)
-${summaryData?.decisions || "Không có quyết định."}
+${summaryData?.decisions || 'Không có quyết định.'}
 
 ---
 ### 4. DANH MỤC HÀNH ĐỘNG (ACTION ITEMS)
@@ -382,22 +389,22 @@ ${items
   .map(
     (it, i) =>
       `${i + 1}. [${it.priority}] ${it.title}\n   - Phụ trách: ${
-        meetingMode === "EXECUTIVE" ? it.targetDept : it.assigneeName
+        meetingMode === 'EXECUTIVE' ? it.targetDept : it.assigneeName
       }\n   - Hạn định: ${it.deadline}`
   )
-  .join("\n")}
+  .join('\n')}
     `.trim();
 
     navigator.clipboard.writeText(momText);
     setCopiedMoM(true);
     setTimeout(() => setCopiedMoM(false), 3000);
-    showToast("Đã sao chép toàn bộ biên bản cuộc họp vào Clipboard!");
+    showToast('Đã sao chép toàn bộ biên bản cuộc họp vào Clipboard!');
   };
 
   const handleFinishAndNavigate = () => {
-    let target = "/member";
-    if (userRole === "OWNER" || userRole === "ADMIN") target = "/admin";
-    else if (userRole === "MANAGER") target = "/manager";
+    let target = '/member';
+    if (userRole === 'OWNER' || userRole === 'ADMIN') target = '/admin';
+    else if (userRole === 'MANAGER') target = '/manager';
     onComplete(target);
   };
 
@@ -428,7 +435,11 @@ ${items
                 </span>
               </div>
               <p className="text-xs text-slate-500 truncate max-w-lg">
-                Cuộc họp: <span className="font-semibold text-slate-700 dark:text-slate-300">{meetingTitle}</span> • ID: <span className="font-mono">{meetingId.slice(0, 12)}...</span>
+                Cuộc họp:{' '}
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {meetingTitle}
+                </span>{' '}
+                • ID: <span className="font-mono">{meetingId.slice(0, 12)}...</span>
               </p>
             </div>
           </div>
@@ -436,11 +447,11 @@ ${items
           {/* Mode Switcher */}
           <div className="flex items-center gap-2 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl">
             <button
-              onClick={() => setMeetingMode("EXECUTIVE")}
+              onClick={() => setMeetingMode('EXECUTIVE')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                meetingMode === "EXECUTIVE"
-                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                meetingMode === 'EXECUTIVE'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
               title="Phân bổ Action Items thành Quyết sách giao cho Khối Phòng Ban"
             >
@@ -448,11 +459,11 @@ ${items
               <span>Họp Cấp Cao (Khối)</span>
             </button>
             <button
-              onClick={() => setMeetingMode("DEPARTMENT")}
+              onClick={() => setMeetingMode('DEPARTMENT')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                meetingMode === "DEPARTMENT"
-                  ? "bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                meetingMode === 'DEPARTMENT'
+                  ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
               title="Phân bổ Action Items thành Task cho từng Nhân viên & Jira"
             >
@@ -466,18 +477,18 @@ ${items
         <div className="px-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
           <div className="flex gap-6">
             <button
-              onClick={() => setActiveTab("cascade")}
+              onClick={() => setActiveTab('cascade')}
               className={`py-3 text-xs font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-                activeTab === "cascade"
-                  ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                activeTab === 'cascade'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Layers size={15} />
               <span>
-                {meetingMode === "EXECUTIVE"
-                  ? "Phân Bổ Quyết Sách Khối (Mandates)"
-                  : "Phân Bổ Task Cho Member & Jira"}
+                {meetingMode === 'EXECUTIVE'
+                  ? 'Phân Bổ Quyết Sách Khối (Mandates)'
+                  : 'Phân Bổ Task Cho Member & Jira'}
               </span>
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                 {items.length}
@@ -485,11 +496,11 @@ ${items
             </button>
 
             <button
-              onClick={() => setActiveTab("mom")}
+              onClick={() => setActiveTab('mom')}
               className={`py-3 text-xs font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-                activeTab === "mom"
-                  ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                activeTab === 'mom'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <FileText size={15} />
@@ -503,7 +514,7 @@ ${items
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               {copiedMoM ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-              <span>{copiedMoM ? "Đã copy!" : "Sao chép MoM"}</span>
+              <span>{copiedMoM ? 'Đã copy!' : 'Sao chép MoM'}</span>
             </button>
           </div>
         </div>
@@ -517,32 +528,32 @@ ${items
                 AI đang xử lý âm thanh, tổng hợp biên bản MoM & bóc tách Action items...
               </p>
             </div>
-          ) : activeTab === "cascade" ? (
+          ) : activeTab === 'cascade' ? (
             /* ── TAB CASCADE: Smart Allocation ── */
             <div className="space-y-4">
               {/* Banner explain context */}
               <div
                 className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 text-xs ${
-                  meetingMode === "EXECUTIVE"
-                    ? "bg-blue-50/70 border-blue-200/80 text-blue-900 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-200"
-                    : "bg-purple-50/70 border-purple-200/80 text-purple-900 dark:bg-purple-950/30 dark:border-purple-900/50 dark:text-purple-200"
+                  meetingMode === 'EXECUTIVE'
+                    ? 'bg-blue-50/70 border-blue-200/80 text-blue-900 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-200'
+                    : 'bg-purple-50/70 border-purple-200/80 text-purple-900 dark:bg-purple-950/30 dark:border-purple-900/50 dark:text-purple-200'
                 }`}
               >
                 <div className="flex items-start gap-2.5">
-                  {meetingMode === "EXECUTIVE" ? (
+                  {meetingMode === 'EXECUTIVE' ? (
                     <Building2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   ) : (
                     <Users className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
                   )}
                   <div>
                     <span className="font-bold">
-                      {meetingMode === "EXECUTIVE"
-                        ? "Chế độ Cuộc họp Cấp Cao (Executive Mandate Cascade):"
-                        : "Chế độ Cuộc họp Phòng Ban (Department Task Allocation):"}
-                    </span>{" "}
-                    {meetingMode === "EXECUTIVE"
-                      ? "Các action items từ phiên họp này sẽ được chuẩn hóa thành Quyết sách giao chỉ tiêu cho từng Khối Phòng Ban. Khi ban hành, các Trưởng phòng sẽ nhận được thông báo để phân rã vào cuộc họp Sprint của phòng."
-                      : "Các action items từ phiên họp này sẽ được gán trực tiếp cho từng cá nhân (Member) trong phòng, tự động đồng bộ sang bảng Kanban Mini Jira và xuất hiện ngay trên Bàn làm việc của nhân viên."}
+                      {meetingMode === 'EXECUTIVE'
+                        ? 'Chế độ Cuộc họp Cấp Cao (Executive Mandate Cascade):'
+                        : 'Chế độ Cuộc họp Phòng Ban (Department Task Allocation):'}
+                    </span>{' '}
+                    {meetingMode === 'EXECUTIVE'
+                      ? 'Các action items từ phiên họp này sẽ được chuẩn hóa thành Quyết sách giao chỉ tiêu cho từng Khối Phòng Ban. Khi ban hành, các Trưởng phòng sẽ nhận được thông báo để phân rã vào cuộc họp Sprint của phòng.'
+                      : 'Các action items từ phiên họp này sẽ được gán trực tiếp cho từng cá nhân (Member) trong phòng, tự động đồng bộ sang bảng Kanban Mini Jira và xuất hiện ngay trên Bàn làm việc của nhân viên.'}
                   </div>
                 </div>
 
@@ -598,7 +609,7 @@ ${items
 
                     {/* Allocation Selectors */}
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
-                      {meetingMode === "EXECUTIVE" ? (
+                      {meetingMode === 'EXECUTIVE' ? (
                         <>
                           {/* Target Department */}
                           <div className="space-y-1">
@@ -650,7 +661,9 @@ ${items
                             <input
                               type="date"
                               value={item.deadline}
-                              onChange={(e) => handleUpdateItem(item.id, { deadline: e.target.value })}
+                              onChange={(e) =>
+                                handleUpdateItem(item.id, { deadline: e.target.value })
+                              }
                               className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
                             />
                           </div>
@@ -689,7 +702,7 @@ ${items
                                 );
                                 handleUpdateItem(item.id, {
                                   assigneeName: e.target.value,
-                                  assigneeEmail: mem?.email || "",
+                                  assigneeEmail: mem?.email || '',
                                 });
                               }}
                               className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
@@ -730,7 +743,9 @@ ${items
                             <input
                               type="date"
                               value={item.deadline}
-                              onChange={(e) => handleUpdateItem(item.id, { deadline: e.target.value })}
+                              onChange={(e) =>
+                                handleUpdateItem(item.id, { deadline: e.target.value })
+                              }
                               className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
                             />
                           </div>
@@ -762,7 +777,7 @@ ${items
 
               {/* Execution Action Button */}
               <div className="pt-2 flex justify-end">
-                {meetingMode === "EXECUTIVE" ? (
+                {meetingMode === 'EXECUTIVE' ? (
                   <button
                     onClick={handlePublishExecutiveMandates}
                     disabled={isPublishingMandates || items.length === 0}
@@ -801,7 +816,7 @@ ${items
                   <span>1. Tóm Tắt Phiên Họp (Executive Brief)</span>
                 </div>
                 <p className="leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200">
-                  {summaryData?.content || "Chưa có nội dung tóm tắt từ hệ thống."}
+                  {summaryData?.content || 'Chưa có nội dung tóm tắt từ hệ thống.'}
                 </p>
               </div>
 
@@ -812,7 +827,8 @@ ${items
                   <span>2. Điểm Thảo Luận Cốt Lõi (Key Points)</span>
                 </div>
                 <div className="leading-relaxed whitespace-pre-line pl-2 text-slate-800 dark:text-slate-200">
-                  {summaryData?.key_points || "Đã thống nhất các tiêu chí kỹ thuật và quy chế làm việc."}
+                  {summaryData?.key_points ||
+                    'Đã thống nhất các tiêu chí kỹ thuật và quy chế làm việc.'}
                 </div>
               </div>
 
@@ -823,7 +839,8 @@ ${items
                   <span>3. Quyết Định Chiến Lược Đã Chốt (Approved Decisions)</span>
                 </div>
                 <div className="leading-relaxed whitespace-pre-line pl-2 text-slate-800 dark:text-slate-200">
-                  {summaryData?.decisions || "Toàn bộ quyết sách đã được ghi nhận vào nhật ký kiểm toán."}
+                  {summaryData?.decisions ||
+                    'Toàn bộ quyết sách đã được ghi nhận vào nhật ký kiểm toán.'}
                 </div>
               </div>
             </div>

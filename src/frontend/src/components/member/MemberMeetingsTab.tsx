@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Video,
   Plus,
@@ -15,8 +15,8 @@ import {
   FileText,
   Search,
   ExternalLink,
-} from "lucide-react";
-import { meetingsApi, Meeting } from "@/lib/api";
+} from 'lucide-react';
+import { meetingsApi, Meeting } from '@/lib/api';
 
 interface MemberMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -25,11 +25,11 @@ interface MemberMeetingsTabProps {
 export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [joinCode, setJoinCode] = useState("");
+  const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchFilter, setSearchFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
+  const [newTitle, setNewTitle] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -38,7 +38,7 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
         const data = await meetingsApi.list();
         setMeetings(data);
       } catch (err) {
-        console.error("Failed to load meetings:", err);
+        console.error('Failed to load meetings:', err);
       } finally {
         setLoading(false);
       }
@@ -61,12 +61,12 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
       const created = await meetingsApi.create({ title: newTitle.trim() });
       setMeetings([created, ...meetings]);
       setIsCreateModalOpen(false);
-      setNewTitle("");
+      setNewTitle('');
       onNotify(`Đã tạo phòng họp mới: ${created.title}`);
       router.push(`/meetings/${created.id}`);
     } catch (err) {
-      console.error("Failed to create meeting:", err);
-      onNotify("Không thể tạo cuộc họp. Vui lòng thử lại!");
+      console.error('Failed to create meeting:', err);
+      onNotify('Không thể tạo cuộc họp. Vui lòng thử lại!');
     }
   };
 
@@ -98,7 +98,10 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
           {/* Join by Code Form */}
           <form onSubmit={handleJoinByCode} className="flex items-center gap-2">
             <div className="relative">
-              <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <LinkIcon
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 value={joinCode}
@@ -181,9 +184,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                   <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
                     <span className="flex items-center gap-1">
                       <Clock size={12} />
-                      {new Date(mtg.created_at || Date.now()).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
+                      {new Date(mtg.created_at || Date.now()).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </span>
                     <span>•</span>
@@ -205,7 +208,7 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
 
                   <button
                     type="button"
-                    onClick={() => onNotify("Biên bản AI sẽ sẵn sàng ngay sau khi kết thúc họp.")}
+                    onClick={() => onNotify('Biên bản AI sẽ sẵn sàng ngay sau khi kết thúc họp.')}
                     className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <FileText size={12} />

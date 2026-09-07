@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { authApi, organizationApi } from "@/lib/api";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { useLanguageStore } from "@/lib/store/useLanguageStore";
-import Logo from "@/components/Logo";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import AuthLivelyStage from "@/components/auth/AuthLivelyStage";
-import AuthQuickAccess from "@/components/auth/AuthQuickAccess";
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { authApi, organizationApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
+import Logo from '@/components/Logo';
+import { MaterialIcon } from '@/components/ui/MaterialIcon';
+import AuthLivelyStage from '@/components/auth/AuthLivelyStage';
+import AuthQuickAccess from '@/components/auth/AuthQuickAccess';
 
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const { t } = useLanguageStore();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,12 +34,12 @@ export default function LoginPage() {
       const user = await authApi.me();
       const organizations = await organizationApi.list();
       setAuth(user, tokens.access_token, organizations, organizations[0]);
-      if (email === "admin@axiom.com") {
-        router.push("/admin");
-      } else if (email === "manager.khoa@axiom.com") {
-        router.push("/manager");
+      if (email === 'admin@axiom.com') {
+        router.push('/admin');
+      } else if (email === 'manager.khoa@axiom.com') {
+        router.push('/manager');
       } else {
-        router.push("/member");
+        router.push('/member');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.auth.loginError);
@@ -102,7 +102,7 @@ export default function LoginPage() {
                   <motion.div
                     layoutId="auth-mode-pill"
                     className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200/80"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                   />
                 </div>
 
@@ -171,15 +171,15 @@ export default function LoginPage() {
                       className="text-[11px] font-medium text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <MaterialIcon
-                        name={showPassword ? "visibility_off" : "visibility"}
+                        name={showPassword ? 'visibility_off' : 'visibility'}
                         className="w-3.5 h-3.5"
                       />
-                      <span>{showPassword ? "Ẩn" : "Hiện"}</span>
+                      <span>{showPassword ? 'Ẩn' : 'Hiện'}</span>
                     </button>
                   </div>
                   <div className="relative">
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       required
                       autoComplete="current-password"
                       value={password}

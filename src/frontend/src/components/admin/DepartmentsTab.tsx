@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { DepartmentNode } from "@/lib/mockAdminData";
+import React, { useState } from 'react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { DepartmentNode } from '@/lib/mockAdminData';
 import {
   MOCK_DEPARTMENTS_CAPACITY,
   MOCK_EXECUTIVE_MANDATES,
@@ -11,35 +11,27 @@ import {
   ExecutiveMandate,
   MemberCapacityWorkload,
   getStoredMandates,
-} from "@/lib/workloadProtocolData";
+} from '@/lib/workloadProtocolData';
 
 interface DepartmentsTabProps {
   departments: DepartmentNode[];
   onAddDepartment: (
-    newDept: Omit<DepartmentNode, "id" | "memberCount" | "activeMeetingsCount">
+    newDept: Omit<DepartmentNode, 'id' | 'memberCount' | 'activeMeetingsCount'>
   ) => void;
   onNotify?: (msg: string) => void;
 }
 
-export function DepartmentsTab({
-  departments,
-  onAddDepartment,
-  onNotify,
-}: DepartmentsTabProps) {
+export function DepartmentsTab({ departments, onAddDepartment, onNotify }: DepartmentsTabProps) {
   // Capacity States
-  const [deptList, setDeptList] = useState<DepartmentCapacityMetric[]>(
-    MOCK_DEPARTMENTS_CAPACITY
-  );
-  const [mandates, setMandates] = useState<ExecutiveMandate[]>(() =>
-    getStoredMandates()
-  );
+  const [deptList, setDeptList] = useState<DepartmentCapacityMetric[]>(MOCK_DEPARTMENTS_CAPACITY);
+  const [mandates, setMandates] = useState<ExecutiveMandate[]>(() => getStoredMandates());
 
   React.useEffect(() => {
     setMandates(getStoredMandates());
   }, []);
   const [capacityFilter, setCapacityFilter] = useState<
-    "ALL" | "OVERLOADED_OR_FULL" | "OPTIMAL" | "AVAILABLE"
-  >("ALL");
+    'ALL' | 'OVERLOADED_OR_FULL' | 'OPTIMAL' | 'AVAILABLE'
+  >('ALL');
 
   // Drawer / Modal States
   const [selectedDeptForDetail, setSelectedDeptForDetail] =
@@ -47,11 +39,11 @@ export function DepartmentsTab({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Form states for adding department
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [description, setDescription] = useState("");
-  const [managerName, setManagerName] = useState("");
-  const [managerEmail, setManagerEmail] = useState("");
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [description, setDescription] = useState('');
+  const [managerName, setManagerName] = useState('');
+  const [managerEmail, setManagerEmail] = useState('');
 
   const triggerNotify = (msg: string) => {
     if (onNotify) {
@@ -61,11 +53,11 @@ export function DepartmentsTab({
 
   // Filtered departments
   const filteredDepts = deptList.filter((d) => {
-    if (capacityFilter === "OVERLOADED_OR_FULL") {
-      return d.status === "OVERLOADED" || d.status === "FULL";
+    if (capacityFilter === 'OVERLOADED_OR_FULL') {
+      return d.status === 'OVERLOADED' || d.status === 'FULL';
     }
-    if (capacityFilter === "OPTIMAL") return d.status === "OPTIMAL";
-    if (capacityFilter === "AVAILABLE") return d.status === "AVAILABLE";
+    if (capacityFilter === 'OPTIMAL') return d.status === 'OPTIMAL';
+    if (capacityFilter === 'AVAILABLE') return d.status === 'AVAILABLE';
     return true;
   });
 
@@ -91,27 +83,25 @@ export function DepartmentsTab({
     onAddDepartment({
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      description:
-        description.trim() ||
-        "Phòng ban chức năng thuộc tổ chức Axiom Enterprise.",
-      managerName: managerName.trim() || "Chưa bổ nhiệm",
-      managerEmail: managerEmail.trim() || "unassigned@axiom.internal",
-      color: "#4F7BF7",
+      description: description.trim() || 'Phòng ban chức năng thuộc tổ chức Axiom Enterprise.',
+      managerName: managerName.trim() || 'Chưa bổ nhiệm',
+      managerEmail: managerEmail.trim() || 'unassigned@axiom.internal',
+      color: '#4F7BF7',
     });
 
     // Also push to local capacity metrics
     const newCapacityDept: DepartmentCapacityMetric = {
       code: code.trim().toUpperCase() as any,
       name: name.trim(),
-      managerName: managerName.trim() || "Chưa bổ nhiệm",
-      managerEmail: managerEmail.trim() || "unassigned@axiom.internal",
+      managerName: managerName.trim() || 'Chưa bổ nhiệm',
+      managerEmail: managerEmail.trim() || 'unassigned@axiom.internal',
       memberCount: 1,
       totalWeeklyHours: 40,
       meetingHoursTotal: 0,
       taskHoursCommitted: 0,
       totalCommittedHours: 0,
       utilizationRate: 0,
-      status: "AVAILABLE",
+      status: 'AVAILABLE',
       activeMeetingsCount: 0,
       mandatesCount: 0,
       zeroTaskCount: 1,
@@ -122,41 +112,41 @@ export function DepartmentsTab({
     };
     setDeptList([...deptList, newCapacityDept]);
 
-    setName("");
-    setCode("");
-    setDescription("");
-    setManagerName("");
-    setManagerEmail("");
+    setName('');
+    setCode('');
+    setDescription('');
+    setManagerName('');
+    setManagerEmail('');
     setIsAddModalOpen(false);
     triggerNotify(`Đã khai báo phòng ban ${name.trim()} vào cây cơ cấu tổ chức!`);
   };
 
-  const getCapacityStatusBadge = (status: DepartmentCapacityMetric["status"]) => {
+  const getCapacityStatusBadge = (status: DepartmentCapacityMetric['status']) => {
     switch (status) {
-      case "OVERLOADED":
+      case 'OVERLOADED':
         return {
-          bg: "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300",
-          dot: "bg-rose-500",
-          text: "QUÁ TẢI (>100%)",
+          bg: 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300',
+          dot: 'bg-rose-500',
+          text: 'QUÁ TẢI (>100%)',
         };
-      case "FULL":
+      case 'FULL':
         return {
-          bg: "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300",
-          dot: "bg-amber-500",
-          text: "ĐẦY TẢI (85-100%)",
+          bg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300',
+          dot: 'bg-amber-500',
+          text: 'ĐẦY TẢI (85-100%)',
         };
-      case "OPTIMAL":
+      case 'OPTIMAL':
         return {
-          bg: "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300",
-          dot: "bg-emerald-500",
-          text: "TỐI ƯU (50-80%)",
+          bg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300',
+          dot: 'bg-emerald-500',
+          text: 'TỐI ƯU (50-80%)',
         };
-      case "AVAILABLE":
+      case 'AVAILABLE':
       default:
         return {
-          bg: "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300",
-          dot: "bg-slate-400",
-          text: "DƯ THỪA CÔNG SUẤT",
+          bg: 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300',
+          dot: 'bg-slate-400',
+          text: 'DƯ THỪA CÔNG SUẤT',
         };
     }
   };
@@ -179,8 +169,9 @@ export function DepartmentsTab({
                 <span>Khối Lượng Công Việc & Năng Lực Phòng Ban</span>
               </h1>
               <p className="text-xs text-slate-300 max-w-2xl mt-1.5 leading-relaxed">
-                Tự động đo lường tỷ lệ tải thực tế từ các cuộc họp lãnh đạo, giám sát tiến độ phân rã
-                Nghị Quyết Cấp Cao (Executive Mandates) xuống từng khối và phát hiện nút thắt cổ chai nguồn lực.
+                Tự động đo lường tỷ lệ tải thực tế từ các cuộc họp lãnh đạo, giám sát tiến độ phân
+                rã Nghị Quyết Cấp Cao (Executive Mandates) xuống từng khối và phát hiện nút thắt cổ
+                chai nguồn lực.
               </p>
             </div>
 
@@ -202,12 +193,8 @@ export function DepartmentsTab({
                 <span>Tải Toàn Doanh Nghiệp</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black font-mono text-white">
-                  {avgUtilization}%
-                </span>
-                <span className="text-[11px] text-emerald-400 font-bold">
-                  ● Mức cân bằng
-                </span>
+                <span className="text-2xl font-black font-mono text-white">{avgUtilization}%</span>
+                <span className="text-[11px] text-emerald-400 font-bold">● Mức cân bằng</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
                 {totalCommitted}h / {totalWeeklyCap}h công suất tuần
@@ -220,16 +207,12 @@ export function DepartmentsTab({
                 <span>Nghị Quyết Cấp Cao</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black font-mono text-white">
-                  {mandates.length}
-                </span>
+                <span className="text-2xl font-black font-mono text-white">{mandates.length}</span>
                 <span className="text-[11px] text-amber-300 font-bold">
                   {totalMandatesHours}h cam kết
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-1">
-                Trích xuất từ Họp HĐQT Q3
-              </div>
+              <div className="text-[10px] text-slate-400 mt-1">Trích xuất từ Họp HĐQT Q3</div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
@@ -245,9 +228,7 @@ export function DepartmentsTab({
                   {totalDecomposedTasks}/{totalTargetTasks} tasks
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-1">
-                Đã gán xuống nhân sự
-              </div>
+              <div className="text-[10px] text-slate-400 mt-1">Đã gán xuống nhân sự</div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
@@ -256,16 +237,10 @@ export function DepartmentsTab({
                 <span>Cảnh Báo Cổ Chai</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black font-mono text-rose-300">
-                  1 Khối
-                </span>
-                <span className="text-[11px] text-rose-300 font-bold">
-                  Khối BIZ (92%)
-                </span>
+                <span className="text-2xl font-black font-mono text-rose-300">1 Khối</span>
+                <span className="text-[11px] text-rose-300 font-bold">Khối BIZ (92%)</span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-1">
-                Cần điều chuyển nhân lực
-              </div>
+              <div className="text-[10px] text-slate-400 mt-1">Cần điều chuyển nhân lực</div>
             </div>
           </div>
         </div>
@@ -285,7 +260,8 @@ export function DepartmentsTab({
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Chỉ đạo từ cuộc họp của Chủ Tịch & Trưởng Phòng. AI theo dõi xem Trưởng phòng đã phân rã thành bao nhiêu task cho nhân viên.
+              Chỉ đạo từ cuộc họp của Chủ Tịch & Trưởng Phòng. AI theo dõi xem Trưởng phòng đã phân
+              rã thành bao nhiêu task cho nhân viên.
             </p>
           </div>
         </div>
@@ -308,11 +284,11 @@ export function DepartmentsTab({
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                         isCompleted
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                       }`}
                     >
-                      {isCompleted ? "ĐÃ PHÂN RÃ 100%" : `ĐANG PHÂN RÃ (${percent}%)`}
+                      {isCompleted ? 'ĐÃ PHÂN RÃ 100%' : `ĐANG PHÂN RÃ (${percent}%)`}
                     </span>
                   </div>
 
@@ -354,7 +330,7 @@ export function DepartmentsTab({
                     <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          isCompleted ? "bg-emerald-500" : "bg-blue-600"
+                          isCompleted ? 'bg-emerald-500' : 'bg-blue-600'
                         }`}
                         style={{ width: `${percent}%` }}
                       />
@@ -364,9 +340,7 @@ export function DepartmentsTab({
 
                 {/* Footer Action */}
                 <div className="mt-3.5 pt-2.5 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400">
-                    Hạn chót: {m.deadline}
-                  </span>
+                  <span className="text-[10px] text-slate-400">Hạn chót: {m.deadline}</span>
 
                   {!isCompleted && (
                     <button
@@ -390,7 +364,10 @@ export function DepartmentsTab({
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <MatIcon name="grid_view" className="text-indigo-600 dark:text-indigo-400 text-[20px]" />
+              <MatIcon
+                name="grid_view"
+                className="text-indigo-600 dark:text-indigo-400 text-[20px]"
+              />
               <span>Ma Trận Tải Năng Lực Theo Khối Chức Năng</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -402,11 +379,11 @@ export function DepartmentsTab({
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
             <button
               type="button"
-              onClick={() => setCapacityFilter("ALL")}
+              onClick={() => setCapacityFilter('ALL')}
               className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "ALL"
-                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'ALL'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Tất cả các phòng ban"
             >
@@ -415,11 +392,11 @@ export function DepartmentsTab({
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("OVERLOADED_OR_FULL")}
+              onClick={() => setCapacityFilter('OVERLOADED_OR_FULL')}
               className={`w-32 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "OVERLOADED_OR_FULL"
-                  ? "bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'OVERLOADED_OR_FULL'
+                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Phòng ban đầy tải hoặc quá tải"
             >
@@ -428,11 +405,11 @@ export function DepartmentsTab({
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("OPTIMAL")}
+              onClick={() => setCapacityFilter('OPTIMAL')}
               className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "OPTIMAL"
-                  ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'OPTIMAL'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Phòng ban tải tối ưu"
             >
@@ -441,11 +418,11 @@ export function DepartmentsTab({
 
             <button
               type="button"
-              onClick={() => setCapacityFilter("AVAILABLE")}
+              onClick={() => setCapacityFilter('AVAILABLE')}
               className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                capacityFilter === "AVAILABLE"
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                capacityFilter === 'AVAILABLE'
+                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Phòng ban còn dư thừa công suất"
             >
@@ -487,13 +464,20 @@ export function DepartmentsTab({
                   <div className="mt-2 flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
                     <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[10px]">
                       {dept.managerAvatar ? (
-                        <img src={dept.managerAvatar} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={dept.managerAvatar}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         dept.managerName.charAt(0)
                       )}
                     </div>
                     <span>
-                      Trưởng phòng: <strong className="text-slate-800 dark:text-slate-200">{dept.managerName}</strong>
+                      Trưởng phòng:{' '}
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        {dept.managerName}
+                      </strong>
                     </span>
                   </div>
 
@@ -513,13 +497,13 @@ export function DepartmentsTab({
                     <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden flex">
                       <div
                         className={`h-full transition-all duration-500 ${
-                          dept.status === "OVERLOADED"
-                            ? "bg-rose-500"
-                            : dept.status === "FULL"
-                            ? "bg-amber-500"
-                            : dept.status === "OPTIMAL"
-                            ? "bg-emerald-500"
-                            : "bg-slate-400"
+                          dept.status === 'OVERLOADED'
+                            ? 'bg-rose-500'
+                            : dept.status === 'FULL'
+                              ? 'bg-amber-500'
+                              : dept.status === 'OPTIMAL'
+                                ? 'bg-emerald-500'
+                                : 'bg-slate-400'
                         }`}
                         style={{ width: `${Math.min(dept.utilizationRate, 100)}%` }}
                       />
@@ -562,7 +546,10 @@ export function DepartmentsTab({
                   {/* Bottleneck alert if any */}
                   {dept.bottlenecksAlert && (
                     <div className="mt-3 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
-                      <MatIcon name="warning" className="text-[14px] text-amber-600 shrink-0 mt-0.5" />
+                      <MatIcon
+                        name="warning"
+                        className="text-[14px] text-amber-600 shrink-0 mt-0.5"
+                      />
                       <span>{dept.bottlenecksAlert}</span>
                     </div>
                   )}
@@ -613,7 +600,8 @@ export function DepartmentsTab({
                 </h3>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Trưởng phòng phụ trách: <strong>{selectedDeptForDetail.managerName}</strong> ({selectedDeptForDetail.managerEmail})
+                Trưởng phòng phụ trách: <strong>{selectedDeptForDetail.managerName}</strong> (
+                {selectedDeptForDetail.managerEmail})
               </p>
             </div>
 
@@ -626,7 +614,7 @@ export function DepartmentsTab({
                 </span>
               </div>
 
-              {selectedDeptForDetail.code === "ENG" ? (
+              {selectedDeptForDetail.code === 'ENG' ? (
                 <div className="space-y-3">
                   {INITIAL_ENG_MEMBERS.map((mem) => {
                     const isZero = mem.activeTasksCount === 0;
@@ -663,7 +651,8 @@ export function DepartmentsTab({
                               {mem.title}
                             </p>
                             <p className="text-[10px] text-slate-400">
-                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task ({mem.activeTasksCount} active tasks)
+                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task (
+                              {mem.activeTasksCount} active tasks)
                             </p>
                           </div>
                         </div>
@@ -673,10 +662,10 @@ export function DepartmentsTab({
                           <div
                             className={`font-mono text-sm font-black ${
                               isOver
-                                ? "text-rose-600 dark:text-rose-400"
+                                ? 'text-rose-600 dark:text-rose-400'
                                 : isZero
-                                ? "text-slate-400"
-                                : "text-emerald-600 dark:text-emerald-400"
+                                  ? 'text-slate-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
                             }`}
                           >
                             {mem.capacityPercent}%
@@ -684,11 +673,7 @@ export function DepartmentsTab({
                           <div className="w-20 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
                             <div
                               className={`h-full rounded-full ${
-                                isOver
-                                  ? "bg-rose-500"
-                                  : isZero
-                                  ? "bg-slate-400"
-                                  : "bg-emerald-500"
+                                isOver ? 'bg-rose-500' : isZero ? 'bg-slate-400' : 'bg-emerald-500'
                               }`}
                               style={{ width: `${Math.min(mem.capacityPercent, 100)}%` }}
                             />
@@ -700,8 +685,9 @@ export function DepartmentsTab({
                 </div>
               ) : (
                 <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800 text-center text-xs text-slate-500">
-                  Phòng ban gồm {selectedDeptForDetail.memberCount} nhân sự đang vận hành theo cơ chế phân tán.
-                  Tổng công suất khả dụng: {selectedDeptForDetail.totalWeeklyHours}h/tuần.
+                  Phòng ban gồm {selectedDeptForDetail.memberCount} nhân sự đang vận hành theo cơ
+                  chế phân tán. Tổng công suất khả dụng: {selectedDeptForDetail.totalWeeklyHours}
+                  h/tuần.
                 </div>
               )}
             </div>

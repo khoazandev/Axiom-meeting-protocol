@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import Logo from "@/components/Logo";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import Logo from '@/components/Logo';
 import {
   Video,
   Kanban,
@@ -13,14 +13,9 @@ import {
   ChevronRight,
   LogOut,
   FolderGit2,
-} from "lucide-react";
+} from 'lucide-react';
 
-export type ManagerNavKey =
-  | "meetings"
-  | "kanban"
-  | "calendar"
-  | "team"
-  | "analytics";
+export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'analytics';
 
 interface ManagerSidebarProps {
   activeTab: ManagerNavKey;
@@ -33,7 +28,7 @@ interface ManagerSidebarProps {
 export function ManagerSidebar({
   activeTab,
   onSelectTab,
-  departmentName = "Khối Kỹ Thuật (Engineering)",
+  departmentName = 'Khối Kỹ Thuật (Engineering)',
   activeMeetingsCount = 1,
   pendingTasksCount = 6,
 }: ManagerSidebarProps) {
@@ -41,42 +36,42 @@ export function ManagerSidebar({
 
   const navGroups = [
     {
-      title: "ĐIỀU HÀNH CUỘC HỌP",
+      title: 'ĐIỀU HÀNH CUỘC HỌP',
       items: [
         {
-          id: "meetings" as ManagerNavKey,
-          label: "Cuộc Họp Phòng Ban",
+          id: 'meetings' as ManagerNavKey,
+          label: 'Cuộc Họp Phòng Ban',
           icon: Video,
           badge: activeMeetingsCount > 0 ? `${activeMeetingsCount} Live` : undefined,
-          badgeClass: "bg-emerald-500 text-white animate-pulse",
+          badgeClass: 'bg-emerald-500 text-white animate-pulse',
         },
         {
-          id: "kanban" as ManagerNavKey,
-          label: "Bảng Nhiệm Vụ AI (Kanban)",
+          id: 'kanban' as ManagerNavKey,
+          label: 'Bảng Nhiệm Vụ AI (Kanban)',
           icon: Kanban,
           badge: pendingTasksCount > 0 ? `${pendingTasksCount} Tasks` : undefined,
-          badgeClass: "bg-blue-500 text-white",
+          badgeClass: 'bg-blue-500 text-white',
         },
         {
-          id: "calendar" as ManagerNavKey,
-          label: "Lịch Trình Nội Bộ",
+          id: 'calendar' as ManagerNavKey,
+          label: 'Lịch Trình Nội Bộ',
           icon: Calendar,
         },
       ],
     },
     {
-      title: "NHÂN SỰ & HIỆU SUẤT",
+      title: 'NHÂN SỰ & HIỆU SUẤT',
       items: [
         {
-          id: "team" as ManagerNavKey,
-          label: "Nhân Sự Phòng Ban",
+          id: 'team' as ManagerNavKey,
+          label: 'Nhân Sự Phòng Ban',
           icon: Users,
-          badge: "12 TV",
-          badgeClass: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
+          badge: '12 TV',
+          badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300',
         },
         {
-          id: "analytics" as ManagerNavKey,
-          label: "Sức Khỏe Kỷ Luật & Quá Tải",
+          id: 'analytics' as ManagerNavKey,
+          label: 'Sức Khỏe Kỷ Luật & Quá Tải',
           icon: BarChart3,
         },
       ],
@@ -86,7 +81,7 @@ export function ManagerSidebar({
   return (
     <aside
       className={`bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 flex flex-col justify-between shrink-0 transition-all duration-300 z-30 select-none ${
-        collapsed ? "w-18" : "w-68"
+        collapsed ? 'w-18' : 'w-68'
       }`}
     >
       {/* Top Header */}
@@ -106,7 +101,7 @@ export function ManagerSidebar({
             type="button"
             onClick={() => setCollapsed(!collapsed)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+            title={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
@@ -176,17 +171,17 @@ export function ManagerSidebar({
                       title={collapsed ? item.label : undefined}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isActive
-                          ? "bg-blue-600 text-white shadow-xs font-bold"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100"
-                      } ${collapsed ? "justify-center px-2" : ""}`}
+                          ? 'bg-blue-600 text-white shadow-xs font-bold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
+                      } ${collapsed ? 'justify-center px-2' : ''}`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <Icon
                           size={17}
                           className={
                             isActive
-                              ? "text-white shrink-0"
-                              : "text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 shrink-0"
+                              ? 'text-white shrink-0'
+                              : 'text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 shrink-0'
                           }
                         />
                         {!collapsed && <span className="truncate">{item.label}</span>}
@@ -195,7 +190,7 @@ export function ManagerSidebar({
                       {!collapsed && item.badge && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isActive ? "bg-white/20 text-white" : item.badgeClass
+                            isActive ? 'bg-white/20 text-white' : item.badgeClass
                           }`}
                         >
                           {item.badge}
@@ -215,7 +210,7 @@ export function ManagerSidebar({
         <Link
           href="/member"
           className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 transition-colors ${
-            collapsed ? "justify-center px-2" : ""
+            collapsed ? 'justify-center px-2' : ''
           }`}
           title="Bàn làm việc thành viên"
         >

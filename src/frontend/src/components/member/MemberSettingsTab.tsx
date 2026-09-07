@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Settings,
   Mic,
@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   Sliders,
   User,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface MemberSettingsTabProps {
   onNotify: (msg: string) => void;
@@ -26,10 +26,10 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
 
   const handleTestMic = () => {
     setIsTestingMic(true);
-    onNotify("Đang kiểm tra tín hiệu Microphone qua WebRTC AudioContext...");
+    onNotify('Đang kiểm tra tín hiệu Microphone qua WebRTC AudioContext...');
     setTimeout(() => {
       setIsTestingMic(false);
-      onNotify("Microphone hoạt động xuất sắc! Không có tiếng vọng (Echo).");
+      onNotify('Microphone hoạt động xuất sắc! Không có tiếng vọng (Echo).');
     }, 2500);
   };
 
@@ -47,7 +47,8 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Cấu hình thiết bị âm thanh, kiểm tra độ nhạy micro và đảm bảo chất lượng gỡ băng AI đạt chuẩn cao nhất.
+            Cấu hình thiết bị âm thanh, kiểm tra độ nhạy micro và đảm bảo chất lượng gỡ băng AI đạt
+            chuẩn cao nhất.
           </p>
         </div>
       </div>
@@ -95,7 +96,7 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
             <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
-                  isTestingMic ? "bg-emerald-500 animate-pulse w-[88%]" : "bg-blue-600 w-[72%]"
+                  isTestingMic ? 'bg-emerald-500 animate-pulse w-[88%]' : 'bg-blue-600 w-[72%]'
                 }`}
               />
             </div>
@@ -107,7 +108,7 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
                 disabled={isTestingMic}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
               >
-                {isTestingMic ? "Đang thử mic..." : "Bấm Thử Micro"}
+                {isTestingMic ? 'Đang thử mic...' : 'Bấm Thử Micro'}
               </button>
             </div>
           </div>
@@ -127,15 +128,15 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
                 type="button"
                 onClick={() => {
                   setNoiseSuppression(!noiseSuppression);
-                  onNotify(`Đã ${!noiseSuppression ? "bật" : "tắt"} tính năng lọc tiếng ồn.`);
+                  onNotify(`Đã ${!noiseSuppression ? 'bật' : 'tắt'} tính năng lọc tiếng ồn.`);
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  noiseSuppression ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                  noiseSuppression ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span
                   className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                    noiseSuppression ? "right-1" : "left-1"
+                    noiseSuppression ? 'right-1' : 'left-1'
                   }`}
                 />
               </button>
@@ -154,15 +155,15 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
                 type="button"
                 onClick={() => {
                   setEchoCancellation(!echoCancellation);
-                  onNotify(`Đã ${!echoCancellation ? "bật" : "tắt"} tính năng khử tiếng vọng.`);
+                  onNotify(`Đã ${!echoCancellation ? 'bật' : 'tắt'} tính năng khử tiếng vọng.`);
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  echoCancellation ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                  echoCancellation ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span
                   className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                    echoCancellation ? "right-1" : "left-1"
+                    echoCancellation ? 'right-1' : 'left-1'
                   }`}
                 />
               </button>
@@ -187,9 +188,7 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
             />
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
-              Alex Rivera
-            </h4>
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">Alex Rivera</h4>
             <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
               Kỹ sư AI & Xử lý Âm thanh (Senior AI Engineer)
             </p>

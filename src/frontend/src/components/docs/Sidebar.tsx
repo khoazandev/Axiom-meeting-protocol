@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
-import { MaterialIcon, MaterialIconName } from "@/components/ui/MaterialIcon";
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import clsx from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MaterialIcon, MaterialIconName } from '@/components/ui/MaterialIcon';
 
 interface NavItem {
   name: string;
@@ -21,26 +21,31 @@ interface NavGroup {
 
 const DOCS_NAV: NavGroup[] = [
   {
-    category: "Bắt đầu",
+    category: 'Bắt đầu',
     items: [
-      { name: "Giới thiệu", href: "/docs", icon: "description" },
-      { name: "Cài đặt & Tích hợp", href: "/docs/installation", icon: "terminal", badge: "Docker" },
-      { name: "Kiến trúc hệ thống", href: "/docs/architecture", icon: "hub" },
+      { name: 'Giới thiệu', href: '/docs', icon: 'description' },
+      { name: 'Cài đặt & Tích hợp', href: '/docs/installation', icon: 'terminal', badge: 'Docker' },
+      { name: 'Kiến trúc hệ thống', href: '/docs/architecture', icon: 'hub' },
     ],
   },
   {
-    category: "Tính năng cốt lõi",
+    category: 'Tính năng cốt lõi',
     items: [
-      { name: "LiveKit & Phụ đề Realtime", href: "/docs/features/recording", icon: "graphic_eq" },
-      { name: "Trí tuệ nhân tạo (Local AI)", href: "/docs/features/ai-analysis", icon: "psychology", badge: "Qwen" },
-      { name: "Mini Jira & Kanban Board", href: "/docs/features/kanban", icon: "view_kanban" },
+      { name: 'LiveKit & Phụ đề Realtime', href: '/docs/features/recording', icon: 'graphic_eq' },
+      {
+        name: 'Trí tuệ nhân tạo (Local AI)',
+        href: '/docs/features/ai-analysis',
+        icon: 'psychology',
+        badge: 'Qwen',
+      },
+      { name: 'Mini Jira & Kanban Board', href: '/docs/features/kanban', icon: 'view_kanban' },
     ],
   },
   {
-    category: "API & Mở rộng",
+    category: 'API & Mở rộng',
     items: [
-      { name: "REST API", href: "/docs/api", icon: "api" },
-      { name: "Webhook", href: "/docs/webhook", icon: "webhook" },
+      { name: 'REST API', href: '/docs/api', icon: 'api' },
+      { name: 'Webhook', href: '/docs/webhook', icon: 'webhook' },
     ],
   },
 ];
@@ -48,7 +53,7 @@ const DOCS_NAV: NavGroup[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter items if user types in the search bar
   const filteredNav = useMemo(() => {
@@ -57,9 +62,7 @@ export default function Sidebar() {
     return DOCS_NAV.map((group) => ({
       ...group,
       items: group.items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          group.category.toLowerCase().includes(q)
+        (item) => item.name.toLowerCase().includes(q) || group.category.toLowerCase().includes(q)
       ),
     })).filter((group) => group.items.length > 0);
   }, [searchQuery]);
@@ -73,7 +76,7 @@ export default function Sidebar() {
         aria-label="Toggle navigation"
       >
         <span className="material-symbols-outlined text-[20px]">
-          {mobileOpen ? "close" : "menu"}
+          {mobileOpen ? 'close' : 'menu'}
         </span>
       </button>
 
@@ -93,8 +96,8 @@ export default function Sidebar() {
       {/* Sidebar Container */}
       <aside
         className={clsx(
-          "fixed md:sticky top-0 md:top-16 left-0 h-screen md:h-[calc(100vh-4rem)] w-[270px] lg:w-[280px] shrink-0 bg-[#F8FAFC] border-r border-[#E2E8F0] flex flex-col transition-transform duration-300 z-40 md:z-10",
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          'fixed md:sticky top-0 md:top-16 left-0 h-screen md:h-[calc(100vh-4rem)] w-[270px] lg:w-[280px] shrink-0 bg-[#F8FAFC] border-r border-[#E2E8F0] flex flex-col transition-transform duration-300 z-40 md:z-10',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {/* Top Header inside Sidebar: Search & Doc Title */}
@@ -129,7 +132,7 @@ export default function Sidebar() {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
               >
                 ✕
@@ -165,20 +168,20 @@ export default function Sidebar() {
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
                         className={clsx(
-                          "relative px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center justify-between group",
+                          'relative px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center justify-between group',
                           isActive
-                            ? "bg-blue-50/90 text-[#2563EB] font-semibold border border-blue-200/60 shadow-xs"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/40"
+                            ? 'bg-blue-50/90 text-[#2563EB] font-semibold border border-blue-200/60 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/40'
                         )}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <MaterialIcon
                             name={item.icon}
                             className={clsx(
-                              "w-4 h-4 shrink-0 transition-colors",
+                              'w-4 h-4 shrink-0 transition-colors',
                               isActive
-                                ? "text-[#2563EB]"
-                                : "text-slate-400 group-hover:text-slate-700"
+                                ? 'text-[#2563EB]'
+                                : 'text-slate-400 group-hover:text-slate-700'
                             )}
                           />
                           <span className="truncate">{item.name}</span>
@@ -187,10 +190,10 @@ export default function Sidebar() {
                         {item.badge && (
                           <span
                             className={clsx(
-                              "text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0",
+                              'text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0',
                               isActive
-                                ? "bg-blue-200/60 text-[#1d4ed8]"
-                                : "bg-slate-200/60 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                                ? 'bg-blue-200/60 text-[#1d4ed8]'
+                                : 'bg-slate-200/60 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'
                             )}
                           >
                             {item.badge}

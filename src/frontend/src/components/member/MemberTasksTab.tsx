@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   CheckSquare,
   Kanban,
@@ -14,17 +14,17 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
-} from "lucide-react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { getAuthHeaders } from "@/lib/api";
-import { getStoredMemberTasks } from "@/lib/workloadProtocolData";
+} from 'lucide-react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { getAuthHeaders } from '@/lib/api';
+import { getStoredMemberTasks } from '@/lib/workloadProtocolData';
 
 interface RemoteTask {
   id: string;
   title: string;
   meeting_id?: string | number | null;
   assignee_id?: string | null;
-  priority?: "HIGH" | "MEDIUM" | "LOW";
+  priority?: 'HIGH' | 'MEDIUM' | 'LOW';
   status: string;
   due_date?: string | null;
 }
@@ -36,8 +36,8 @@ interface MemberTask {
   meetingId: string;
   mandateOrigin: string;
   assignee: string;
-  priority: "HIGH" | "MEDIUM" | "LOW";
-  status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED";
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED';
   dueDate: string;
 }
 
@@ -48,44 +48,44 @@ interface MemberTasksTabProps {
 
 const DEFAULT_ALEX_TASKS: MemberTask[] = [
   {
-    id: "tsk-01",
-    title: "Triển khai LiveKit Audio Egress & S3 Auto-Upload",
-    meetingTitle: "Họp Sprint 42 Kỹ Thuật",
-    meetingId: "ENG-SPRINT-42",
-    mandateOrigin: "MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)",
-    assignee: "Alex Rivera (Tôi)",
-    priority: "HIGH",
-    status: "IN_PROGRESS",
-    dueDate: "Hôm nay, 18:00",
+    id: 'tsk-01',
+    title: 'Triển khai LiveKit Audio Egress & S3 Auto-Upload',
+    meetingTitle: 'Họp Sprint 42 Kỹ Thuật',
+    meetingId: 'ENG-SPRINT-42',
+    mandateOrigin: 'MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)',
+    assignee: 'Alex Rivera (Tôi)',
+    priority: 'HIGH',
+    status: 'IN_PROGRESS',
+    dueDate: 'Hôm nay, 18:00',
   },
   {
-    id: "tsk-02",
-    title: "Tối ưu hóa Buffer Whisper STT Latency < 400ms",
-    meetingTitle: "Họp Sprint 42 Kỹ Thuật",
-    meetingId: "ENG-SPRINT-42",
-    mandateOrigin: "MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)",
-    assignee: "Alex Rivera (Tôi)",
-    priority: "HIGH",
-    status: "TODO",
-    dueDate: "Ngày mai, 12:00",
+    id: 'tsk-02',
+    title: 'Tối ưu hóa Buffer Whisper STT Latency < 400ms',
+    meetingTitle: 'Họp Sprint 42 Kỹ Thuật',
+    meetingId: 'ENG-SPRINT-42',
+    mandateOrigin: 'MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)',
+    assignee: 'Alex Rivera (Tôi)',
+    priority: 'HIGH',
+    status: 'TODO',
+    dueDate: 'Ngày mai, 12:00',
   },
   {
-    id: "tsk-03",
-    title: "Nghiên cứu mô hình nén ngữ nghĩa STT đa ngôn ngữ",
-    meetingTitle: "Họp Sprint 42 Kỹ Thuật",
-    meetingId: "ENG-SPRINT-42",
-    mandateOrigin: "MANDATE-Q3-02 (Chỉ đạo Ban Giám Đốc Q3)",
-    assignee: "Alex Rivera (Tôi)",
-    priority: "MEDIUM",
-    status: "TODO",
-    dueDate: "Thứ Sáu, 17:00",
+    id: 'tsk-03',
+    title: 'Nghiên cứu mô hình nén ngữ nghĩa STT đa ngôn ngữ',
+    meetingTitle: 'Họp Sprint 42 Kỹ Thuật',
+    meetingId: 'ENG-SPRINT-42',
+    mandateOrigin: 'MANDATE-Q3-02 (Chỉ đạo Ban Giám Đốc Q3)',
+    assignee: 'Alex Rivera (Tôi)',
+    priority: 'MEDIUM',
+    status: 'TODO',
+    dueDate: 'Thứ Sáu, 17:00',
   },
 ];
 
 export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabProps) {
   const [tasks, setTasks] = useState<MemberTask[]>(DEFAULT_ALEX_TASKS);
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -93,42 +93,42 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
       try {
         setIsLoading(true);
         const headers = getAuthHeaders();
-        if (!headers["Authorization"]) {
+        if (!headers['Authorization']) {
           setIsLoading(false);
           return;
         }
 
-        const res = await fetch("/api/v1/tasks", { headers });
+        const res = await fetch('/api/v1/tasks', { headers });
         if (res.ok) {
           const remoteTasks = (await res.json()) as RemoteTask[];
           if (Array.isArray(remoteTasks) && remoteTasks.length > 0) {
             const mapped: MemberTask[] = remoteTasks.map((t, idx) => {
-              let mappedStatus: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED" = "TODO";
-              if (t.status === "COMPLETED") mappedStatus = "COMPLETED";
-              else if (t.status === "IN_PROGRESS") mappedStatus = "IN_PROGRESS";
-              else if (t.status === "IN_REVIEW") mappedStatus = "IN_REVIEW";
-              else if (t.status === "CONFIRMED") mappedStatus = "IN_PROGRESS";
-              else mappedStatus = "TODO";
+              let mappedStatus: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED' = 'TODO';
+              if (t.status === 'COMPLETED') mappedStatus = 'COMPLETED';
+              else if (t.status === 'IN_PROGRESS') mappedStatus = 'IN_PROGRESS';
+              else if (t.status === 'IN_REVIEW') mappedStatus = 'IN_REVIEW';
+              else if (t.status === 'CONFIRMED') mappedStatus = 'IN_PROGRESS';
+              else mappedStatus = 'TODO';
 
               return {
                 id: t.id,
                 title: t.title,
                 meetingTitle: t.meeting_id
                   ? `Meeting #${String(t.meeting_id).substring(0, 8)}`
-                  : "Họp Sprint 42 Kỹ Thuật",
-                meetingId: t.meeting_id ? String(t.meeting_id) : "",
-                mandateOrigin: "MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)",
-                assignee: "Alex Rivera (Tôi)",
-                priority: t.priority || "HIGH",
+                  : 'Họp Sprint 42 Kỹ Thuật',
+                meetingId: t.meeting_id ? String(t.meeting_id) : '',
+                mandateOrigin: 'MANDATE-Q3-01 (Chỉ đạo Ban Giám Đốc Q3)',
+                assignee: 'Alex Rivera (Tôi)',
+                priority: t.priority || 'HIGH',
                 status: mappedStatus,
-                dueDate: t.due_date ? new Date(t.due_date).toLocaleDateString("vi-VN") : "Hôm nay",
+                dueDate: t.due_date ? new Date(t.due_date).toLocaleDateString('vi-VN') : 'Hôm nay',
               };
             });
             setTasks(mapped);
           }
         }
       } catch (err) {
-        console.error("Failed to load tasks from API:", err);
+        console.error('Failed to load tasks from API:', err);
       } finally {
         const stored = getStoredMemberTasks();
         if (stored.length > 0) {
@@ -137,21 +137,21 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
             title: s.title,
             meetingTitle: s.meetingOrigin,
             meetingId: s.mandateOriginCode,
-            mandateOrigin: s.mandateOriginTitle || "Chỉ đạo cấp cao",
+            mandateOrigin: s.mandateOriginTitle || 'Chỉ đạo cấp cao',
             assignee: s.assigneeName,
             priority:
-              s.priority === "CRITICAL" || s.priority === "HIGH"
-                ? "HIGH"
-                : s.priority === "MEDIUM"
-                ? "MEDIUM"
-                : "LOW",
+              s.priority === 'CRITICAL' || s.priority === 'HIGH'
+                ? 'HIGH'
+                : s.priority === 'MEDIUM'
+                  ? 'MEDIUM'
+                  : 'LOW',
             status:
-              s.status === "DONE"
-                ? "COMPLETED"
-                : s.status === "IN_PROGRESS"
-                ? "IN_PROGRESS"
-                : "TODO",
-            dueDate: s.deadline || "Tuần này",
+              s.status === 'DONE'
+                ? 'COMPLETED'
+                : s.status === 'IN_PROGRESS'
+                  ? 'IN_PROGRESS'
+                  : 'TODO',
+            dueDate: s.deadline || 'Tuần này',
           }));
           setTasks((prev) => [
             ...storedMapped,
@@ -169,11 +169,11 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== taskId) return t;
-        let nextStatus: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED" = "IN_PROGRESS";
-        if (t.status === "TODO") nextStatus = "IN_PROGRESS";
-        else if (t.status === "IN_PROGRESS") nextStatus = "IN_REVIEW";
-        else if (t.status === "IN_REVIEW") nextStatus = "COMPLETED";
-        else nextStatus = "COMPLETED";
+        let nextStatus: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED' = 'IN_PROGRESS';
+        if (t.status === 'TODO') nextStatus = 'IN_PROGRESS';
+        else if (t.status === 'IN_PROGRESS') nextStatus = 'IN_REVIEW';
+        else if (t.status === 'IN_REVIEW') nextStatus = 'COMPLETED';
+        else nextStatus = 'COMPLETED';
 
         onNotify(`Đã cập nhật nhiệm vụ: ${t.title} -> ${nextStatus}`);
         return { ...t, status: nextStatus };
@@ -182,14 +182,14 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
   };
 
   const columns: Array<{
-    id: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED";
+    id: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED';
     title: string;
     dotColor: string;
   }> = [
-    { id: "TODO", title: "Cần Làm (To Do)", dotColor: "bg-slate-400" },
-    { id: "IN_PROGRESS", title: "Đang Thực Hiện", dotColor: "bg-blue-500" },
-    { id: "IN_REVIEW", title: "Chờ Đánh Giá", dotColor: "bg-amber-500" },
-    { id: "COMPLETED", title: "Đã Hoàn Thành", dotColor: "bg-emerald-500" },
+    { id: 'TODO', title: 'Cần Làm (To Do)', dotColor: 'bg-slate-400' },
+    { id: 'IN_PROGRESS', title: 'Đang Thực Hiện', dotColor: 'bg-blue-500' },
+    { id: 'IN_REVIEW', title: 'Chờ Đánh Giá', dotColor: 'bg-amber-500' },
+    { id: 'COMPLETED', title: 'Đã Hoàn Thành', dotColor: 'bg-emerald-500' },
   ];
 
   const filteredTasks = tasks.filter((t) =>
@@ -211,7 +211,8 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Được phân rã tự động từ cuộc họp phòng ban và liên kết trực tiếp với Nghị quyết của Ban Giám Đốc.
+            Được phân rã tự động từ cuộc họp phòng ban và liên kết trực tiếp với Nghị quyết của Ban
+            Giám Đốc.
           </p>
         </div>
 
@@ -231,11 +232,11 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
             <button
               type="button"
-              onClick={() => setViewMode("kanban")}
+              onClick={() => setViewMode('kanban')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === "kanban"
-                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                viewMode === 'kanban'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Kanban size={13} />
@@ -243,11 +244,11 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("list")}
+              onClick={() => setViewMode('list')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === "list"
-                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <List size={13} />
@@ -282,7 +283,7 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
           <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-              style={{ width: "85%" }}
+              style={{ width: '85%' }}
             />
           </div>
           <span className="font-mono font-black text-xs text-slate-800 dark:text-slate-200 shrink-0">
@@ -307,7 +308,7 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
       </div>
 
       {/* Task Content: Kanban View */}
-      {viewMode === "kanban" && (
+      {viewMode === 'kanban' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           {columns.map((col) => {
             const colTasks = filteredTasks.filter((t) => t.status === col.id);
@@ -376,7 +377,7 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
                           </span>
                         </div>
 
-                        {task.status !== "COMPLETED" && (
+                        {task.status !== 'COMPLETED' && (
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                             <button
                               type="button"
@@ -399,7 +400,7 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
       )}
 
       {/* Task Content: List View */}
-      {viewMode === "list" && (
+      {viewMode === 'list' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-xs">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredTasks.map((task) => (
@@ -437,15 +438,15 @@ export function MemberTasksTab({ onNotify, onNavigateToJira }: MemberTasksTabPro
 
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      task.status === "COMPLETED"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                      task.status === 'COMPLETED'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400'
                     }`}
                   >
                     {task.status}
                   </span>
 
-                  {task.status !== "COMPLETED" && (
+                  {task.status !== 'COMPLETED' && (
                     <button
                       type="button"
                       onClick={() => handleAdvanceStatus(task.id)}

@@ -40,7 +40,7 @@ export interface AxiomSelectProps<T extends string | number = string> {
 
 /**
  * AxiomSelect - Modern Seamless Dropdown Component
- * 
+ *
  * Features:
  * - Seamless Connected Mode ("liền mạch"): Trigger and dropdown visually merge into a single contiguous shape
  * - Anti-Layout-Shift: Supports fixed width + text truncation so changing data never deforms the UI
@@ -305,9 +305,7 @@ export function AxiomSelect<T extends string | number = string>({
           } ${menuClassName}`}
         >
           {/* Subtle connecting divider for connected mode */}
-          {isConnected && (
-            <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-800/80" />
-          )}
+          {isConnected && <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-800/80" />}
 
           {/* Optional Search Filter */}
           {searchable && (

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { useAuthStore } from "@/lib/store/useAuthStore";
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 interface SovereignNavbarProps {
   onOpenInviteModal?: () => void;
@@ -15,22 +15,22 @@ interface SovereignNavbarProps {
 
 export function SovereignNavbar({
   onOpenInviteModal,
-  searchQuery = "",
+  searchQuery = '',
   onSearchChange,
 }: SovereignNavbarProps) {
   const router = useRouter();
   const { user, activeOrganization, logout } = useAuthStore();
-  const [timeStr, setTimeStr] = useState<string>("");
+  const [timeStr, setTimeStr] = useState<string>('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         })
       );
@@ -45,10 +45,7 @@ export function SovereignNavbar({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Left Section: Brand & Sovereign Identity */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link
-            href="/admin"
-            className="flex items-center gap-2.5 group focus:outline-hidden"
-          >
+          <Link href="/admin" className="flex items-center gap-2.5 group focus:outline-hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-amber-500 p-0.5 shadow-md group-hover:scale-105 transition-transform duration-200">
               <div className="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
                 <MatIcon
@@ -68,7 +65,7 @@ export function SovereignNavbar({
                 </span>
               </div>
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <span>{activeOrganization?.name || "Axiom Enterprise"}</span>
+                <span>{activeOrganization?.name || 'Axiom Enterprise'}</span>
                 <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
                 <span className="text-blue-600 dark:text-blue-400 font-semibold">
                   Executive Console
@@ -87,7 +84,7 @@ export function SovereignNavbar({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-slate-800 dark:text-slate-100">
-              {timeStr || "14:00:00"} ICT
+              {timeStr || '14:00:00'} ICT
             </span>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
@@ -127,8 +124,6 @@ export function SovereignNavbar({
             </button>
           )}
 
-
-
           {/* User Profile Avatar with Dropdown */}
           <div className="relative">
             <button
@@ -139,7 +134,7 @@ export function SovereignNavbar({
                 <img
                   src={
                     user?.avatar_url ||
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                   }
                   alt="Admin"
                   className="w-8 h-8 rounded-full object-cover border border-amber-400 shadow-xs"
@@ -148,32 +143,26 @@ export function SovereignNavbar({
               </div>
               <div className="hidden xl:block text-left">
                 <p className="text-xs font-bold text-slate-900 dark:text-white leading-none">
-                  {user?.full_name || "Nguyễn Thế Khang"}
+                  {user?.full_name || 'Nguyễn Thế Khang'}
                 </p>
                 <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-tight">
                   CHỦ TỊCH / CEO
                 </p>
               </div>
-              <MatIcon
-                name="expand_more"
-                className="text-slate-400 text-[18px]"
-              />
+              <MatIcon name="expand_more" className="text-slate-400 text-[18px]" />
             </button>
 
             {/* Dropdown Menu */}
             {userDropdownOpen && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setUserDropdownOpen(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
                 <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 py-1.5 text-xs text-slate-700 dark:text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                     <p className="font-bold text-slate-900 dark:text-white">
-                      {user?.full_name || "Nguyễn Thế Khang"}
+                      {user?.full_name || 'Nguyễn Thế Khang'}
                     </p>
                     <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate">
-                      {user?.email || "admin@axiom.com"}
+                      {user?.email || 'admin@axiom.com'}
                     </p>
                     <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
                       Vai trò: CHỦ TỊCH HĐQT (Tối cao)
@@ -212,7 +201,7 @@ export function SovereignNavbar({
                       onClick={() => {
                         setUserDropdownOpen(false);
                         logout();
-                        router.push("/login");
+                        router.push('/login');
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400"
                     >

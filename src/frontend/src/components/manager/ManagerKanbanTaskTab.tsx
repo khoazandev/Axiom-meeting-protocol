@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Kanban,
   Plus,
@@ -13,10 +13,10 @@ import {
   Filter,
   AlertCircle,
   Video,
-} from "lucide-react";
+} from 'lucide-react';
 
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
-export type TaskPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskPriority = 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface KanbanTask {
   id: string;
@@ -35,95 +35,101 @@ export interface KanbanTask {
 
 const INITIAL_TASKS: KanbanTask[] = [
   {
-    id: "task-01",
-    title: "Triển khai LiveKit Audio Egress & S3 Auto-Upload",
-    sourceMeeting: "ENG-SPRINT-42",
-    status: "IN_PROGRESS",
-    priority: "URGENT",
+    id: 'task-01',
+    title: 'Triển khai LiveKit Audio Egress & S3 Auto-Upload',
+    sourceMeeting: 'ENG-SPRINT-42',
+    status: 'IN_PROGRESS',
+    priority: 'URGENT',
     assignee: {
-      name: "Alex Rivera",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-      role: "Senior AI Engineer",
+      name: 'Alex Rivera',
+      avatar:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+      role: 'Senior AI Engineer',
     },
-    deadline: "Hôm nay, 18:00",
+    deadline: 'Hôm nay, 18:00',
     aiConfidenceScore: 98,
   },
   {
-    id: "task-02",
-    title: "Tối ưu hóa Audio Buffer cho Whisper STT Latency < 400ms",
-    sourceMeeting: "ENG-SPRINT-42",
-    status: "TODO",
-    priority: "HIGH",
+    id: 'task-02',
+    title: 'Tối ưu hóa Audio Buffer cho Whisper STT Latency < 400ms',
+    sourceMeeting: 'ENG-SPRINT-42',
+    status: 'TODO',
+    priority: 'HIGH',
     assignee: {
-      name: "Alex Rivera",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-      role: "Senior AI Engineer",
+      name: 'Alex Rivera',
+      avatar:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+      role: 'Senior AI Engineer',
     },
-    deadline: "Ngày mai, 12:00",
+    deadline: 'Ngày mai, 12:00',
     aiConfidenceScore: 95,
   },
   {
-    id: "task-03",
-    title: "Kiểm thử tải đồng thời 50 Room LiveKit với docker-compose",
-    sourceMeeting: "ENG-SPRINT-42",
-    status: "TODO",
-    priority: "MEDIUM",
+    id: 'task-03',
+    title: 'Kiểm thử tải đồng thời 50 Room LiveKit với docker-compose',
+    sourceMeeting: 'ENG-SPRINT-42',
+    status: 'TODO',
+    priority: 'MEDIUM',
     assignee: {
-      name: "Phạm Quốc Bảo",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-      role: "DevOps Engineer",
+      name: 'Phạm Quốc Bảo',
+      avatar:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+      role: 'DevOps Engineer',
     },
-    deadline: "08/09/2026",
+    deadline: '08/09/2026',
     aiConfidenceScore: 92,
   },
   {
-    id: "task-04",
-    title: "Sửa lỗi Anti-Layout-Shift trên Dropdown phân quyền",
-    sourceMeeting: "ENG-DAILY-SYNC",
-    status: "IN_PROGRESS",
-    priority: "HIGH",
+    id: 'task-04',
+    title: 'Sửa lỗi Anti-Layout-Shift trên Dropdown phân quyền',
+    sourceMeeting: 'ENG-DAILY-SYNC',
+    status: 'IN_PROGRESS',
+    priority: 'HIGH',
     assignee: {
-      name: "Lê Thị Hồng",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
-      role: "Frontend Lead",
+      name: 'Lê Thị Hồng',
+      avatar:
+        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+      role: 'Frontend Lead',
     },
-    deadline: "Hôm nay, 21:00",
+    deadline: 'Hôm nay, 21:00',
     aiConfidenceScore: 99,
   },
   {
-    id: "task-05",
-    title: "Viết Unit Test cho Agenda Gatekeeper Rule",
-    sourceMeeting: "ENG-SPRINT-41",
-    status: "DONE",
-    priority: "MEDIUM",
+    id: 'task-05',
+    title: 'Viết Unit Test cho Agenda Gatekeeper Rule',
+    sourceMeeting: 'ENG-SPRINT-41',
+    status: 'DONE',
+    priority: 'MEDIUM',
     assignee: {
-      name: "Đặng Thùy Dung",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-      role: "QA Automation",
+      name: 'Đặng Thùy Dung',
+      avatar:
+        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+      role: 'QA Automation',
     },
-    deadline: "Đã hoàn thành",
+    deadline: 'Đã hoàn thành',
     aiConfidenceScore: 96,
   },
   {
-    id: "task-06",
-    title: "Đồng bộ bảng User Schema với PostgreSQL 16 & Prisma",
-    sourceMeeting: "ENG-SPRINT-41",
-    status: "DONE",
-    priority: "HIGH",
+    id: 'task-06',
+    title: 'Đồng bộ bảng User Schema với PostgreSQL 16 & Prisma',
+    sourceMeeting: 'ENG-SPRINT-41',
+    status: 'DONE',
+    priority: 'HIGH',
     assignee: {
-      name: "Vũ Hải Đăng",
-      avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
-      role: "Backend Specialist",
+      name: 'Vũ Hải Đăng',
+      avatar:
+        'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
+      role: 'Backend Specialist',
     },
-    deadline: "Đã hoàn thành",
+    deadline: 'Đã hoàn thành',
     aiConfidenceScore: 100,
   },
 ];
 
 const COLUMNS: { key: TaskStatus; label: string; dotColor: string }[] = [
-  { key: "TODO", label: "Cần Làm (To Do)", dotColor: "bg-slate-400" },
-  { key: "IN_PROGRESS", label: "Đang Làm (In Progress)", dotColor: "bg-blue-500" },
-  { key: "DONE", label: "Hoàn Thành (Done)", dotColor: "bg-emerald-500" },
+  { key: 'TODO', label: 'Cần Làm (To Do)', dotColor: 'bg-slate-400' },
+  { key: 'IN_PROGRESS', label: 'Đang Làm (In Progress)', dotColor: 'bg-blue-500' },
+  { key: 'DONE', label: 'Hoàn Thành (Done)', dotColor: 'bg-emerald-500' },
 ];
 
 interface ManagerKanbanTaskTabProps {
@@ -132,29 +138,30 @@ interface ManagerKanbanTaskTabProps {
 
 export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const [tasks, setTasks] = useState<KanbanTask[]>(INITIAL_TASKS);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("HIGH");
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('HIGH');
 
-  const filteredTasks = tasks.filter((t) =>
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.sourceMeeting.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTasks = tasks.filter(
+    (t) =>
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.sourceMeeting.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const moveTask = (taskId: string, direction: "next" | "prev") => {
+  const moveTask = (taskId: string, direction: 'next' | 'prev') => {
     setTasks((prev) =>
       prev.map((task) => {
         if (task.id !== taskId) return task;
 
         let nextStatus: TaskStatus = task.status;
-        if (direction === "next") {
-          if (task.status === "TODO") nextStatus = "IN_PROGRESS";
-          else if (task.status === "IN_PROGRESS") nextStatus = "DONE";
+        if (direction === 'next') {
+          if (task.status === 'TODO') nextStatus = 'IN_PROGRESS';
+          else if (task.status === 'IN_PROGRESS') nextStatus = 'DONE';
         } else {
-          if (task.status === "DONE") nextStatus = "IN_PROGRESS";
-          else if (task.status === "IN_PROGRESS") nextStatus = "TODO";
+          if (task.status === 'DONE') nextStatus = 'IN_PROGRESS';
+          else if (task.status === 'IN_PROGRESS') nextStatus = 'TODO';
         }
 
         return { ...task, status: nextStatus };
@@ -171,34 +178,35 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     const newTask: KanbanTask = {
       id: `task-${Date.now()}`,
       title: newTaskTitle,
-      sourceMeeting: "HỌP NỘI BỘ",
-      status: "TODO",
+      sourceMeeting: 'HỌP NỘI BỘ',
+      status: 'TODO',
       priority: newTaskPriority,
       assignee: {
-        name: "Alex Rivera",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        role: "Senior AI Engineer",
+        name: 'Alex Rivera',
+        avatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        role: 'Senior AI Engineer',
       },
-      deadline: "Hôm nay",
+      deadline: 'Hôm nay',
       aiConfidenceScore: 97,
     };
 
     setTasks([newTask, ...tasks]);
     setIsAddTaskOpen(false);
-    setNewTaskTitle("");
+    setNewTaskTitle('');
     onNotify(`Đã thêm nhiệm vụ mới vào bảng Kanban: "${newTask.title}"`);
   };
 
   const getPriorityBadge = (p: TaskPriority) => {
     switch (p) {
-      case "URGENT":
-        return "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800";
-      case "HIGH":
-        return "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800";
-      case "MEDIUM":
-        return "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800";
+      case 'URGENT':
+        return 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800';
+      case 'HIGH':
+        return 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800';
+      case 'MEDIUM':
+        return 'bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800';
       default:
-        return "bg-slate-100 dark:bg-slate-800 text-slate-600";
+        return 'bg-slate-100 dark:bg-slate-800 text-slate-600';
     }
   };
 
@@ -217,16 +225,14 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Các đầu việc tự động trích xuất từ biên bản họp phòng ban, cho phép Trưởng phòng giao việc và giám sát tiến độ.
+            Các đầu việc tự động trích xuất từ biên bản họp phòng ban, cho phép Trưởng phòng giao
+            việc và giám sát tiến độ.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
@@ -334,22 +340,24 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
                       {/* Quick Move Buttons */}
                       <div className="flex items-center justify-between pt-1">
-                        {task.status !== "TODO" ? (
+                        {task.status !== 'TODO' ? (
                           <button
                             type="button"
-                            onClick={() => moveTask(task.id, "prev")}
+                            onClick={() => moveTask(task.id, 'prev')}
                             className="text-[11px] font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
                             title="Chuyển về trạng thái trước"
                           >
                             <ArrowLeft size={12} />
                             <span>Lùi lại</span>
                           </button>
-                        ) : <div />}
+                        ) : (
+                          <div />
+                        )}
 
-                        {task.status !== "DONE" && (
+                        {task.status !== 'DONE' && (
                           <button
                             type="button"
-                            onClick={() => moveTask(task.id, "next")}
+                            onClick={() => moveTask(task.id, 'next')}
                             className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer ml-auto transition-colors"
                             title="Chuyển sang trạng thái tiếp theo"
                           >
@@ -404,15 +412,15 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                   Mức độ ưu tiên
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(["URGENT", "HIGH", "MEDIUM"] as TaskPriority[]).map((p) => (
+                  {(['URGENT', 'HIGH', 'MEDIUM'] as TaskPriority[]).map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setNewTaskPriority(p)}
                       className={`py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
                         newTaskPriority === p
-                          ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                          : "border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
                       {p}

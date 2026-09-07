@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import clsx from "clsx";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import clsx from 'clsx';
+import { MaterialIcon } from '@/components/ui/MaterialIcon';
 
 interface TocItem {
   id: string;
@@ -13,53 +13,46 @@ interface TocItem {
 
 // Route-specific fallback TOC items if DOM hasn't rendered yet
 const ROUTE_TOCS: Record<string, TocItem[]> = {
-  "/docs": [
-    { id: "why", title: "Tại sao chọn Axiom?" },
-    { id: "architecture", title: "Kiến trúc hệ thống H-P-D-I" },
-    { id: "next-steps", title: "Bắt đầu từ đâu?" },
+  '/docs': [
+    { id: 'why', title: 'Tại sao chọn Axiom?' },
+    { id: 'architecture', title: 'Kiến trúc hệ thống H-P-D-I' },
+    { id: 'next-steps', title: 'Bắt đầu từ đâu?' },
   ],
-  "/docs/installation": [
-    { id: "docker", title: "Khởi chạy với Docker" },
-    { id: "local", title: "Môi trường Cục bộ (Local Dev)" },
+  '/docs/installation': [
+    { id: 'docker', title: 'Khởi chạy với Docker' },
+    { id: 'local', title: 'Môi trường Cục bộ (Local Dev)' },
   ],
-  "/docs/architecture": [
-    { id: "overview", title: "Mô hình tổng thể 4 tầng" },
+  '/docs/architecture': [{ id: 'overview', title: 'Mô hình tổng thể 4 tầng' }],
+  '/docs/features/recording': [
+    { id: 'webrtc', title: 'Hội nghị truyền hình LiveKit' },
+    { id: 'translation', title: 'Phụ đề & Phiên dịch đa ngữ' },
   ],
-  "/docs/features/recording": [
-    { id: "webrtc", title: "Hội nghị truyền hình LiveKit" },
-    { id: "translation", title: "Phụ đề & Phiên dịch đa ngữ" },
+  '/docs/features/ai-analysis': [{ id: 'summarize', title: 'Tự động trích xuất MoM' }],
+  '/docs/features/kanban': [{ id: 'sync-jira', title: '1-Click Đồng bộ sang Jira' }],
+  '/docs/api': [
+    { id: 'auth', title: 'Xác thực JWT Token' },
+    { id: 'meetings-api', title: 'Quản lý Cuộc họp V2' },
+    { id: 'jira-api', title: 'Mini Jira Integration API' },
   ],
-  "/docs/features/ai-analysis": [
-    { id: "summarize", title: "Tự động trích xuất MoM" },
-  ],
-  "/docs/features/kanban": [
-    { id: "sync-jira", title: "1-Click Đồng bộ sang Jira" },
-  ],
-  "/docs/api": [
-    { id: "auth", title: "Xác thực JWT Token" },
-    { id: "meetings-api", title: "Quản lý Cuộc họp V2" },
-    { id: "jira-api", title: "Mini Jira Integration API" },
-  ],
-  "/docs/webhook": [
-    { id: "config", title: "Cấu hình Webhook & Sự kiện" },
-  ],
+  '/docs/webhook': [{ id: 'config', title: 'Cấu hình Webhook & Sự kiện' }],
 };
 
 export default function DocToc() {
   const pathname = usePathname();
-  const [activeId, setActiveId] = useState<string>("");
+  const [activeId, setActiveId] = useState<string>('');
   const [items, setItems] = useState<TocItem[]>(ROUTE_TOCS[pathname] || []);
   const [feedbackGiven, setFeedbackGiven] = useState<boolean>(false);
 
   // Scan document for actual headings or fall back to pre-defined items
   useEffect(() => {
     setFeedbackGiven(false);
-    const sections = Array.from(document.querySelectorAll("section[id], h2[id]"));
+    const sections = Array.from(document.querySelectorAll('section[id], h2[id]'));
     if (sections.length > 0) {
       const extracted: TocItem[] = sections.map((sec) => {
-        const heading = sec.querySelector("h2") || sec;
-        const rawTitle = heading.querySelector("span")?.textContent || heading.textContent || sec.id;
-        const cleanTitle = rawTitle.replace(/[#\s]+$/, "").trim();
+        const heading = sec.querySelector('h2') || sec;
+        const rawTitle =
+          heading.querySelector('span')?.textContent || heading.textContent || sec.id;
+        const cleanTitle = rawTitle.replace(/[#\s]+$/, '').trim();
         return {
           id: sec.id,
           title: cleanTitle || sec.id,
@@ -93,8 +86,8 @@ export default function DocToc() {
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [items]);
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -103,9 +96,9 @@ export default function DocToc() {
     if (el) {
       const yOffset = -90;
       const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
+      window.scrollTo({ top: y, behavior: 'smooth' });
       setActiveId(id);
-      history.pushState(null, "", `#${id}`);
+      history.pushState(null, '', `#${id}`);
     }
   };
 
@@ -129,10 +122,10 @@ export default function DocToc() {
                     href={`#${item.id}`}
                     onClick={(e) => scrollToSection(e, item.id)}
                     className={clsx(
-                      "group relative pl-4 py-1.5 text-[13px] transition-all leading-snug block",
+                      'group relative pl-4 py-1.5 text-[13px] transition-all leading-snug block',
                       isActive
-                        ? "text-[#2563EB] font-semibold"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? 'text-[#2563EB] font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
                     )}
                   >
                     {isActive && (
@@ -167,7 +160,10 @@ export default function DocToc() {
                 <MaterialIcon name="graphic_eq" className="w-3.5 h-3.5 text-[#2563EB]" />
                 <span>Trải nghiệm phòng họp</span>
               </span>
-              <MaterialIcon name="arrow_forward" className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all" />
+              <MaterialIcon
+                name="arrow_forward"
+                className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all"
+              />
             </Link>
 
             <Link
@@ -178,7 +174,10 @@ export default function DocToc() {
                 <MaterialIcon name="terminal" className="w-3.5 h-3.5 text-slate-600" />
                 <span>Hướng dẫn Docker</span>
               </span>
-              <MaterialIcon name="arrow_forward" className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all" />
+              <MaterialIcon
+                name="arrow_forward"
+                className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all"
+              />
             </Link>
 
             <a
@@ -191,7 +190,10 @@ export default function DocToc() {
                 <MaterialIcon name="code" className="w-3.5 h-3.5 text-slate-600" />
                 <span>GitHub Repository</span>
               </span>
-              <MaterialIcon name="open_in_new" className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] transition-all" />
+              <MaterialIcon
+                name="open_in_new"
+                className="w-3 h-3 text-slate-400 group-hover:text-[#2563EB] transition-all"
+              />
             </a>
           </div>
         </div>

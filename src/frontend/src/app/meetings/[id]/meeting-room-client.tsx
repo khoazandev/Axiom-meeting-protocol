@@ -133,10 +133,10 @@ export interface RecordEntry {
   is_final: boolean;
 }
 
-function RecordsListener({ 
+function RecordsListener({
   onNewRecord,
-  onTranscriptFinalized 
-}: { 
+  onTranscriptFinalized,
+}: {
   onNewRecord: (r: RecordEntry) => void;
   onTranscriptFinalized?: (text: string, timestamp: string) => void;
 }) {
@@ -144,7 +144,7 @@ function RecordsListener({
     try {
       const payload = msg.payload || msg; // Handle both v1 and v2 formats
       const text = new TextDecoder().decode(payload as Uint8Array);
-      console.log("[DataChannel] Received record payload:", text);
+      console.log('[DataChannel] Received record payload:', text);
       const data = JSON.parse(text);
       if (data.type === 'original_transcript') {
         const timeStr = new Date().toLocaleTimeString([], {
@@ -159,7 +159,7 @@ function RecordsListener({
           language: data.language,
           is_final: data.is_final,
         });
-        
+
         if (data.is_final && onTranscriptFinalized) {
           onTranscriptFinalized(data.original_text, timeStr);
         }
@@ -225,9 +225,8 @@ function LiveKitContent({
   onInviteClick: () => void;
   onSidebarToggle: () => void;
 }) {
-  const { streamData, interimText, isListening, isConnected, transcriptHistory } = useVADController(
-    participantName
-  );
+  const { streamData, interimText, isListening, isConnected, transcriptHistory } =
+    useVADController(participantName);
 
   // Activate translation audio muting hook
   useTranslationAudioMuting();
@@ -415,8 +414,14 @@ export function MeetingRoomClient() {
 
   // Edit Task state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ title: string; assignee_id: string; deadline: string }>({ 
-    title: '', assignee_id: '', deadline: '' 
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    assignee_id: string;
+    deadline: string;
+  }>({
+    title: '',
+    assignee_id: '',
+    deadline: '',
   });
 
   // Poll for action items
@@ -448,17 +453,27 @@ export function MeetingRoomClient() {
       const payload: any = { title: editForm.title };
       if (editForm.assignee_id) payload.assignee_id = editForm.assignee_id;
       if (editForm.deadline) payload.deadline = new Date(editForm.deadline).toISOString();
-      
+
       await meetingsApi.updateFollowUpTask(meetingId, taskId, payload);
       setEditingTaskId(null);
       // Cập nhật local state ngay lập tức cho mượt
-      setActionItems(prev => prev.map(item => {
-        if (item.id === taskId) {
-          const assigneeName = meetingMembers.find(m => m.user_id === editForm.assignee_id)?.user_name || item.assignee_name;
-          return { ...item, title: editForm.title, assignee_id: editForm.assignee_id, assignee_name: assigneeName, deadline: payload.deadline } as any;
-        }
-        return item;
-      }));
+      setActionItems((prev) =>
+        prev.map((item) => {
+          if (item.id === taskId) {
+            const assigneeName =
+              meetingMembers.find((m) => m.user_id === editForm.assignee_id)?.user_name ||
+              item.assignee_name;
+            return {
+              ...item,
+              title: editForm.title,
+              assignee_id: editForm.assignee_id,
+              assignee_name: assigneeName,
+              deadline: payload.deadline,
+            } as any;
+          }
+          return item;
+        })
+      );
     } catch (err) {
       console.error('Failed to update task:', err);
     }
@@ -809,7 +824,10 @@ export function MeetingRoomClient() {
                     if (!found) {
                       newArr.push(r);
                     }
-                    console.log("[RecordsListener] Updated records history array length:", newArr.length);
+                    console.log(
+                      '[RecordsListener] Updated records history array length:',
+                      newArr.length
+                    );
                     return newArr;
                   });
                 }}
@@ -993,23 +1011,34 @@ export function MeetingRoomClient() {
                                   type="text"
                                   className="w-full text-sm p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
                                   value={editForm.title}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                                  }
                                   placeholder="Tiêu đề task..."
                                 />
                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                   <select
                                     className="flex-1 text-xs p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
                                     value={editForm.assignee_id}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, assignee_id: e.target.value }))}
+                                    onChange={(e) =>
+                                      setEditForm((prev) => ({
+                                        ...prev,
+                                        assignee_id: e.target.value,
+                                      }))
+                                    }
                                   >
                                     <option value="">-- Chọn người phụ trách --</option>
-                                    {meetingMembers.map(m => (
-                                      <option key={m.user_id} value={m.user_id}>{m.user_name || m.user_email || 'Người dùng ẩn danh'}</option>
+                                    {meetingMembers.map((m) => (
+                                      <option key={m.user_id} value={m.user_id}>
+                                        {m.user_name || m.user_email || 'Người dùng ẩn danh'}
+                                      </option>
                                     ))}
                                   </select>
                                   <CustomDateTimePicker
                                     value={editForm.deadline}
-                                    onChange={(val) => setEditForm(prev => ({ ...prev, deadline: val }))}
+                                    onChange={(val) =>
+                                      setEditForm((prev) => ({ ...prev, deadline: val }))
+                                    }
                                   />
                                 </div>
                                 <div className="flex justify-end gap-2 mt-2">
@@ -1046,7 +1075,7 @@ export function MeetingRoomClient() {
                                     </span>
                                   </div>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between border-t border-border/50 pt-2 mt-1">
                                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
                                     <span className="flex items-center gap-1">
@@ -1057,14 +1086,22 @@ export function MeetingRoomClient() {
                                     <span className="flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
                                       {/* ActionItemResponse has due_date, FollowUpTask has deadline. Handle both. */}
-                                      {(item as any).deadline || item.due_date ? new Date((item as any).deadline || item.due_date).toLocaleString('vi-VN', {
-                                        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-                                      }) : 'Không có hạn'}
+                                      {(item as any).deadline || item.due_date
+                                        ? new Date(
+                                            (item as any).deadline || item.due_date
+                                          ).toLocaleString('vi-VN', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                          })
+                                        : 'Không có hạn'}
                                     </span>
                                   </div>
-                                  <div 
+                                  <div
                                     onClick={() => handleStartEdit(item)}
-                                    className="w-4 h-4 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-muted-foreground hover:text-primary" 
+                                    className="w-4 h-4 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-muted-foreground hover:text-primary"
                                     title="Chỉnh sửa task"
                                   >
                                     <Pencil className="w-3 h-3" />

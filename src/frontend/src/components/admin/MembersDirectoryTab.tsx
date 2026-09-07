@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { MatIcon } from "@/components/ui/MatIcon";
-import { AxiomSelect } from "@/components/ui/AxiomSelect";
-import { OrgMemberItem, OrgRole } from "@/lib/mockAdminData";
+import React, { useState } from 'react';
+import { MatIcon } from '@/components/ui/MatIcon';
+import { AxiomSelect } from '@/components/ui/AxiomSelect';
+import { OrgMemberItem, OrgRole } from '@/lib/mockAdminData';
 
 interface MembersDirectoryTabProps {
   members: OrgMemberItem[];
@@ -25,34 +25,52 @@ export function MembersDirectoryTab({
   onToggleStatus,
   onInviteMember,
 }: MembersDirectoryTabProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDept, setSelectedDept] = useState("ALL");
-  const [selectedRole, setSelectedRole] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDept, setSelectedDept] = useState('ALL');
+  const [selectedRole, setSelectedRole] = useState<string>('ALL');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   // Invite Modal Form State
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteDept, setInviteDept] = useState(departments[0] || "Khối Kỹ Thuật");
-  const [inviteRole, setInviteRole] = useState<OrgRole>("MEMBER");
-  const [generatedLink, setGeneratedLink] = useState("");
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteDept, setInviteDept] = useState(departments[0] || 'Khối Kỹ Thuật');
+  const [inviteRole, setInviteRole] = useState<OrgRole>('MEMBER');
+  const [generatedLink, setGeneratedLink] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Reusable options for AxiomSelect
   const departmentFilterOptions = [
-    { value: "ALL", label: "Tất cả Phòng ban", icon: "domain" },
+    { value: 'ALL', label: 'Tất cả Phòng ban', icon: 'domain' },
     ...departments.map((dept) => ({
       value: dept,
       label: dept,
-      icon: "group",
+      icon: 'group',
     })),
   ];
 
   const roleFilterOptions = [
-    { value: "ALL", label: "Tất cả Vai trò", icon: "shield" },
-    { value: "OWNER", label: "CHỦ TỊCH", description: "Chủ tịch HĐQT & Quản trị tối cao", badge: "Tối cao", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
-    { value: "MANAGER", label: "TRƯỞNG PHÒNG", description: "Quản lý & điều hành khối phòng ban", badge: "Quản lý", badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-    { value: "MEMBER", label: "NHÂN VIÊN", description: "Thành viên tiêu chuẩn", badge: "Nhân viên", badgeClass: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+    { value: 'ALL', label: 'Tất cả Vai trò', icon: 'shield' },
+    {
+      value: 'OWNER',
+      label: 'CHỦ TỊCH',
+      description: 'Chủ tịch HĐQT & Quản trị tối cao',
+      badge: 'Tối cao',
+      badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+    },
+    {
+      value: 'MANAGER',
+      label: 'TRƯỞNG PHÒNG',
+      description: 'Quản lý & điều hành khối phòng ban',
+      badge: 'Quản lý',
+      badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    },
+    {
+      value: 'MEMBER',
+      label: 'NHÂN VIÊN',
+      description: 'Thành viên tiêu chuẩn',
+      badge: 'Nhân viên',
+      badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    },
   ];
 
   // Filter members
@@ -61,15 +79,15 @@ export function MembersDirectoryTab({
       m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchDept = selectedDept === "ALL" || m.department === selectedDept;
-    const matchRole = selectedRole === "ALL" || m.role === selectedRole;
+    const matchDept = selectedDept === 'ALL' || m.department === selectedDept;
+    const matchRole = selectedRole === 'ALL' || m.role === selectedRole;
     return matchQuery && matchDept && matchRole;
   });
 
   const handleOpenInvite = () => {
-    setInviteName("");
-    setInviteEmail("");
-    setGeneratedLink("");
+    setInviteName('');
+    setInviteEmail('');
+    setGeneratedLink('');
     setCopiedLink(false);
     setIsInviteModalOpen(true);
   };
@@ -99,15 +117,15 @@ export function MembersDirectoryTab({
 
   const getRoleBadgeStyle = (role: OrgRole) => {
     switch (role) {
-      case "OWNER":
-        return "bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80 dark:border-amber-700 font-extrabold";
-      case "ADMIN":
-        return "bg-purple-100 text-purple-900 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300/80 dark:border-purple-700 font-bold";
-      case "MANAGER":
-        return "bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/80 dark:border-blue-700 font-semibold";
-      case "MEMBER":
+      case 'OWNER':
+        return 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80 dark:border-amber-700 font-extrabold';
+      case 'ADMIN':
+        return 'bg-purple-100 text-purple-900 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300/80 dark:border-purple-700 font-bold';
+      case 'MANAGER':
+        return 'bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/80 dark:border-blue-700 font-semibold';
+      case 'MEMBER':
       default:
-        return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium";
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium';
     }
   };
 
@@ -203,7 +221,7 @@ export function MembersDirectoryTab({
                       <div className="truncate max-w-[220px]">
                         <div className="font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
                           <span>{member.fullName}</span>
-                          {member.role === "OWNER" && (
+                          {member.role === 'OWNER' && (
                             <MatIcon
                               name="verified"
                               filled
@@ -230,8 +248,10 @@ export function MembersDirectoryTab({
 
                   {/* Role Selector with locked width */}
                   <td className="py-3.5 px-4">
-                    {member.role === "OWNER" ? (
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${getRoleBadgeStyle("OWNER")}`}>
+                    {member.role === 'OWNER' ? (
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${getRoleBadgeStyle('OWNER')}`}
+                      >
                         <MatIcon name="shield_person" size={13} />
                         <span>CHỦ TỊCH</span>
                       </span>
@@ -243,8 +263,18 @@ export function MembersDirectoryTab({
                         variant="connected"
                         width="145px"
                         options={[
-                          { value: "MANAGER", label: "TRƯỞNG PHÒNG", description: "Quản lý phòng ban", badge: "Quản lý" },
-                          { value: "MEMBER", label: "NHÂN VIÊN", description: "Thành viên tiêu chuẩn", badge: "Nhân viên" },
+                          {
+                            value: 'MANAGER',
+                            label: 'TRƯỞNG PHÒNG',
+                            description: 'Quản lý phòng ban',
+                            badge: 'Quản lý',
+                          },
+                          {
+                            value: 'MEMBER',
+                            label: 'NHÂN VIÊN',
+                            description: 'Thành viên tiêu chuẩn',
+                            badge: 'Nhân viên',
+                          },
                         ]}
                       />
                     )}
@@ -252,7 +282,7 @@ export function MembersDirectoryTab({
 
                   {/* Status */}
                   <td className="py-3.5 px-4">
-                    {member.status === "ACTIVE" ? (
+                    {member.status === 'ACTIVE' ? (
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold border border-emerald-200 dark:border-emerald-800">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <span>Hoạt động</span>
@@ -263,32 +293,30 @@ export function MembersDirectoryTab({
                         <span>Tạm khóa</span>
                       </span>
                     )}
-                    <div className="text-[10.5px] text-slate-400 mt-1">
-                      {member.lastActive}
-                    </div>
+                    <div className="text-[10.5px] text-slate-400 mt-1">{member.lastActive}</div>
                   </td>
 
                   {/* Meetings Count */}
                   <td className="py-3.5 px-4">
                     <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
                       {member.meetingsCount}
-                    </span>{" "}
+                    </span>{' '}
                     <span className="text-[11px] text-slate-400">cuộc họp</span>
                   </td>
 
                   {/* Actions */}
                   <td className="py-3.5 px-4 text-right">
-                    {member.role !== "OWNER" && (
+                    {member.role !== 'OWNER' && (
                       <button
                         type="button"
                         onClick={() => onToggleStatus(member.id)}
                         className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          member.status === "ACTIVE"
-                            ? "text-slate-600 dark:text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
-                            : "text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                          member.status === 'ACTIVE'
+                            ? 'text-slate-600 dark:text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50'
+                            : 'text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
                         }`}
                       >
-                        {member.status === "ACTIVE" ? "Tạm khóa" : "Kích hoạt"}
+                        {member.status === 'ACTIVE' ? 'Tạm khóa' : 'Kích hoạt'}
                       </button>
                     )}
                   </td>
@@ -368,7 +396,7 @@ export function MembersDirectoryTab({
                   <AxiomSelect
                     value={inviteDept}
                     onChange={setInviteDept}
-                    options={departments.map((d) => ({ value: d, label: d, icon: "group" }))}
+                    options={departments.map((d) => ({ value: d, label: d, icon: 'group' }))}
                     className="w-full"
                     minWidth="100%"
                     variant="connected"
@@ -384,8 +412,18 @@ export function MembersDirectoryTab({
                     value={inviteRole}
                     onChange={(val) => setInviteRole(val as OrgRole)}
                     options={[
-                      { value: "MEMBER", label: "NHÂN VIÊN", description: "Thành viên tiêu chuẩn phòng ban", badge: "Nhân viên" },
-                      { value: "MANAGER", label: "TRƯỞNG PHÒNG", description: "Quản lý & điều hành phòng ban", badge: "Quản lý" },
+                      {
+                        value: 'MEMBER',
+                        label: 'NHÂN VIÊN',
+                        description: 'Thành viên tiêu chuẩn phòng ban',
+                        badge: 'Nhân viên',
+                      },
+                      {
+                        value: 'MANAGER',
+                        label: 'TRƯỞNG PHÒNG',
+                        description: 'Quản lý & điều hành phòng ban',
+                        badge: 'Quản lý',
+                      },
                     ]}
                     className="w-full"
                     minWidth="100%"
@@ -428,7 +466,7 @@ export function MembersDirectoryTab({
                     onClick={handleCopyLink}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg cursor-pointer whitespace-nowrap active:scale-95"
                   >
-                    {copiedLink ? "Đã copy!" : "Copy"}
+                    {copiedLink ? 'Đã copy!' : 'Copy'}
                   </button>
                 </div>
               </div>

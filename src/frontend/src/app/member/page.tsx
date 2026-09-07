@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   MemberCurlyBracketSidebar,
   MemberSectionKey,
   MEMBER_NAV_SECTIONS,
-} from "@/components/member/MemberCurlyBracketSidebar";
-import { MemberMeetingsTab } from "@/components/member/MemberMeetingsTab";
-import { MemberTasksTab } from "@/components/member/MemberTasksTab";
-import { MemberJiraWorkspaceTab } from "@/components/member/MemberJiraWorkspaceTab";
-import { MemberCalendarTab } from "@/components/member/MemberCalendarTab";
-import { MemberKnowledgeTab } from "@/components/member/MemberKnowledgeTab";
-import { MemberSettingsTab } from "@/components/member/MemberSettingsTab";
-import { UserProfileModal, generateInitialsAvatar } from "@/components/profile/UserProfileModal";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import Logo from "@/components/Logo";
+} from '@/components/member/MemberCurlyBracketSidebar';
+import { MemberMeetingsTab } from '@/components/member/MemberMeetingsTab';
+import { MemberTasksTab } from '@/components/member/MemberTasksTab';
+import { MemberJiraWorkspaceTab } from '@/components/member/MemberJiraWorkspaceTab';
+import { MemberCalendarTab } from '@/components/member/MemberCalendarTab';
+import { MemberKnowledgeTab } from '@/components/member/MemberKnowledgeTab';
+import { MemberSettingsTab } from '@/components/member/MemberSettingsTab';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import Logo from '@/components/Logo';
 import {
   Search,
   CheckCircle2,
@@ -28,23 +28,21 @@ import {
   ChevronRight,
   Shield,
   Layers,
-} from "lucide-react";
+} from 'lucide-react';
 
 function MemberWorkspaceInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { logout, user } = useAuthStore();
 
-  const tabParam = searchParams.get("tab") as MemberSectionKey | null;
+  const tabParam = searchParams.get('tab') as MemberSectionKey | null;
   const initialTab: MemberSectionKey =
-    tabParam && MEMBER_NAV_SECTIONS.some((s) => s.id === tabParam)
-      ? tabParam
-      : "meetings";
+    tabParam && MEMBER_NAV_SECTIONS.some((s) => s.id === tabParam) ? tabParam : 'meetings';
 
   // Navigation State
   const [activeSection, setActiveSection] = useState<MemberSectionKey>(initialTab);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [timeStr, setTimeStr] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeStr, setTimeStr] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -62,7 +60,7 @@ function MemberWorkspaceInner() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push('/login');
   };
 
   // Clock ticker matching Owner page
@@ -70,10 +68,10 @@ function MemberWorkspaceInner() {
     const update = () => {
       const now = new Date();
       setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         })
       );
@@ -85,12 +83,11 @@ function MemberWorkspaceInner() {
 
   const handleSelectSection = (section: MemberSectionKey) => {
     setActiveSection(section);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const currentSection =
-    MEMBER_NAV_SECTIONS.find((s) => s.id === activeSection) ||
-    MEMBER_NAV_SECTIONS[0];
+    MEMBER_NAV_SECTIONS.find((s) => s.id === activeSection) || MEMBER_NAV_SECTIONS[0];
   const CurrentIcon = currentSection.icon;
 
   return (
@@ -127,7 +124,7 @@ function MemberWorkspaceInner() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-slate-800 dark:text-slate-100">
-              {timeStr || "14:55:00"} ICT
+              {timeStr || '14:55:00'} ICT
             </span>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
@@ -158,7 +155,7 @@ function MemberWorkspaceInner() {
           {/* Quick Meeting Action */}
           <button
             type="button"
-            onClick={() => handleSelectSection("meetings")}
+            onClick={() => handleSelectSection('meetings')}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <Video size={14} />
@@ -168,9 +165,7 @@ function MemberWorkspaceInner() {
           {/* Notification Button */}
           <button
             type="button"
-            onClick={() =>
-              showToast("Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp")
-            }
+            onClick={() => showToast('Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp')}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative"
             title="Thông báo cá nhân"
           >
@@ -189,17 +184,14 @@ function MemberWorkspaceInner() {
           >
             <div className="relative w-8 h-8 rounded-full overflow-hidden border border-emerald-400 ring-2 ring-emerald-100 dark:ring-emerald-950 group-hover:ring-emerald-500 transition-all">
               <img
-                src={
-                  user?.avatar_url ||
-                  generateInitialsAvatar(user?.full_name || "Alex Rivera")
-                }
-                alt={user?.full_name || "Alex Rivera"}
+                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Alex Rivera')}
+                alt={user?.full_name || 'Alex Rivera'}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors">
-                {user?.full_name || "Alex Rivera"}
+                {user?.full_name || 'Alex Rivera'}
               </div>
               <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase">
                 KỸ SƯ AI
@@ -231,7 +223,7 @@ function MemberWorkspaceInner() {
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {currentSection.sublabel} • Phím tắt chuyển nhanh:{" "}
+                {currentSection.sublabel} • Phím tắt chuyển nhanh:{' '}
                 <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                   {currentSection.shortcut}
                 </kbd>
@@ -251,12 +243,12 @@ function MemberWorkspaceInner() {
                   onClick={() => handleSelectSection(sec.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isSelected
-                      ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50"
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <Icon size={14} />
-                  <span>{sec.label.split(" ")[0]}</span>
+                  <span>{sec.label.split(' ')[0]}</span>
                 </button>
               );
             })}
@@ -265,32 +257,22 @@ function MemberWorkspaceInner() {
 
         {/* Tab View Container - 100% Full Width, EXACTLY 1 SIDEBAR */}
         <div className="w-full transition-opacity duration-200">
-          {activeSection === "meetings" && (
-            <MemberMeetingsTab onNotify={showToast} />
-          )}
+          {activeSection === 'meetings' && <MemberMeetingsTab onNotify={showToast} />}
 
-          {activeSection === "tasks" && (
+          {activeSection === 'tasks' && (
             <MemberTasksTab
               onNotify={showToast}
-              onNavigateToJira={() => handleSelectSection("jira")}
+              onNavigateToJira={() => handleSelectSection('jira')}
             />
           )}
 
-          {activeSection === "jira" && (
-            <MemberJiraWorkspaceTab onNotify={showToast} />
-          )}
+          {activeSection === 'jira' && <MemberJiraWorkspaceTab onNotify={showToast} />}
 
-          {activeSection === "calendar" && (
-            <MemberCalendarTab onNotify={showToast} />
-          )}
+          {activeSection === 'calendar' && <MemberCalendarTab onNotify={showToast} />}
 
-          {activeSection === "knowledge" && (
-            <MemberKnowledgeTab onNotify={showToast} />
-          )}
+          {activeSection === 'knowledge' && <MemberKnowledgeTab onNotify={showToast} />}
 
-          {activeSection === "settings" && (
-            <MemberSettingsTab onNotify={showToast} />
-          )}
+          {activeSection === 'settings' && <MemberSettingsTab onNotify={showToast} />}
         </div>
       </main>
 

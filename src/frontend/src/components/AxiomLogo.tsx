@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import React, { useId } from "react";
-import clsx from "clsx";
+import React, { useId } from 'react';
+import clsx from 'clsx';
 
 export interface AxiomLogoProps {
   className?: string;
   /** Size in pixels (number) or predefined preset */
-  size?: number | "sm" | "md" | "lg" | "xl";
+  size?: number | 'sm' | 'md' | 'lg' | 'xl';
   /** Show the "AXIOM" brand wordmark next to the icon */
   showText?: boolean;
   /** Custom subtitle under AXIOM (e.g. "DX-OS", "MEETING PROTOCOL") */
   subtitle?: string;
   /** Style variant */
-  variant?: "gradient" | "monochrome" | "white";
+  variant?: 'gradient' | 'monochrome' | 'white';
   /** Wrap the vector icon in a rounded glass container badge */
   showBadge?: boolean;
 }
 
 export function AxiomIcon({
   size = 36,
-  variant = "gradient",
+  variant = 'gradient',
   className,
 }: {
   size?: number | string;
-  variant?: "gradient" | "monochrome" | "white";
+  variant?: 'gradient' | 'monochrome' | 'white';
   className?: string;
 }) {
   const id = useId();
@@ -31,7 +31,7 @@ export function AxiomIcon({
   const gradCyan = `axiom-pulse-c-${id}`;
   const gradFacet = `axiom-pulse-f-${id}`;
 
-  const numSize = typeof size === "number" ? size : 36;
+  const numSize = typeof size === 'number' ? size : 36;
 
   return (
     <svg
@@ -40,7 +40,10 @@ export function AxiomIcon({
       viewBox="0 0 46 44"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={clsx("shrink-0 transition-transform duration-300 group-hover:scale-105", className)}
+      className={clsx(
+        'shrink-0 transition-transform duration-300 group-hover:scale-105',
+        className
+      )}
     >
       <defs>
         {/* Main Electric Blue -> Cyan Gradient */}
@@ -71,8 +74,14 @@ export function AxiomIcon({
         width="3"
         height="11"
         rx="1.5"
-        fill={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradPrimary})`}
-        opacity={variant === "white" ? 0.7 : 0.85}
+        fill={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradPrimary})`
+        }
+        opacity={variant === 'white' ? 0.7 : 0.85}
       />
 
       {/* Bar 2: Harmonic Mid Pulse */}
@@ -82,7 +91,13 @@ export function AxiomIcon({
         width="3"
         height="22"
         rx="1.5"
-        fill={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradPrimary})`}
+        fill={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradPrimary})`
+        }
       />
 
       {/* Bar 3: Peak Resonant Wave */}
@@ -92,7 +107,13 @@ export function AxiomIcon({
         width="3.2"
         height="32"
         rx="1.6"
-        fill={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradPrimary})`}
+        fill={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradPrimary})`
+        }
       />
 
       {/* Bar 4: Transition Voice Bar */}
@@ -102,13 +123,25 @@ export function AxiomIcon({
         width="3"
         height="19"
         rx="1.5"
-        fill={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradCyan})`}
+        fill={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradCyan})`
+        }
       />
 
       {/* ── PART 2: Transition Bridge Vectors (Sound to Data transformation) ── */}
       <path
         d="M21.2 16.5H24M21.2 22H24M21.2 27.5H24"
-        stroke={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradCyan})`}
+        stroke={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradCyan})`
+        }
         strokeWidth="1.5"
         strokeLinecap="round"
         opacity="0.6"
@@ -118,13 +151,19 @@ export function AxiomIcon({
       {/* Top Isometric Facet (Shaded) */}
       <polygon
         points="33.5,10.5 43,16 33.5,21.5 24,16"
-        fill={variant === "white" ? "rgba(255,255,255,0.15)" : `url(#${gradFacet})`}
+        fill={variant === 'white' ? 'rgba(255,255,255,0.15)' : `url(#${gradFacet})`}
       />
 
       {/* Outer Hexagon Contour */}
       <polygon
         points="33.5,10.5 43,16 43,27 33.5,32.5 24,27 24,16"
-        stroke={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradPrimary})`}
+        stroke={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradPrimary})`
+        }
         strokeWidth="2.2"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -133,7 +172,13 @@ export function AxiomIcon({
       {/* Inner Isometric Cube Ribs */}
       <path
         d="M33.5 21.5V32.5M33.5 21.5L43 16M33.5 21.5L24 16"
-        stroke={variant === "white" ? "#FFFFFF" : variant === "monochrome" ? "currentColor" : `url(#${gradCyan})`}
+        stroke={
+          variant === 'white'
+            ? '#FFFFFF'
+            : variant === 'monochrome'
+              ? 'currentColor'
+              : `url(#${gradCyan})`
+        }
         strokeWidth="1.8"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -144,7 +189,7 @@ export function AxiomIcon({
         cx="33.5"
         cy="21.5"
         r="2"
-        fill={variant === "white" ? "#FFFFFF" : "#38BDF8"}
+        fill={variant === 'white' ? '#FFFFFF' : '#38BDF8'}
         className="animate-pulse"
       />
     </svg>
@@ -153,10 +198,10 @@ export function AxiomIcon({
 
 export default function AxiomLogo({
   className,
-  size = "md",
+  size = 'md',
   showText = true,
-  subtitle = "DX-OS",
-  variant = "gradient",
+  subtitle = 'DX-OS',
+  variant = 'gradient',
   showBadge = false,
 }: AxiomLogoProps) {
   // Translate size presets to pixel numbers
@@ -167,24 +212,24 @@ export default function AxiomLogo({
     xl: 56,
   };
 
-  const pixelSize = typeof size === "number" ? size : pixelMap[size] || 36;
+  const pixelSize = typeof size === 'number' ? size : pixelMap[size] || 36;
 
   const badgeSizeClasses: Record<string, string> = {
-    sm: "w-8 h-8 rounded-lg p-1",
-    md: "w-10 h-10 rounded-xl p-1.5",
-    lg: "w-12 h-12 rounded-2xl p-2",
-    xl: "w-16 h-16 rounded-[1.25rem] p-2.5",
+    sm: 'w-8 h-8 rounded-lg p-1',
+    md: 'w-10 h-10 rounded-xl p-1.5',
+    lg: 'w-12 h-12 rounded-2xl p-2',
+    xl: 'w-16 h-16 rounded-[1.25rem] p-2.5',
   };
 
-  const badgeClass = typeof size === "string" ? badgeSizeClasses[size] : "p-1.5 rounded-xl";
+  const badgeClass = typeof size === 'string' ? badgeSizeClasses[size] : 'p-1.5 rounded-xl';
 
   return (
-    <div className={clsx("inline-flex items-center gap-3 select-none group shrink-0", className)}>
+    <div className={clsx('inline-flex items-center gap-3 select-none group shrink-0', className)}>
       {/* Icon with optional badge wrapper */}
       {showBadge ? (
         <div
           className={clsx(
-            "flex items-center justify-center shrink-0 bg-gradient-to-br from-[#18181a] via-[#1e2230] to-[#0f172a] border border-white/10 shadow-md shadow-[#4F7BF7]/10",
+            'flex items-center justify-center shrink-0 bg-gradient-to-br from-[#18181a] via-[#1e2230] to-[#0f172a] border border-white/10 shadow-md shadow-[#4F7BF7]/10',
             badgeClass
           )}
         >

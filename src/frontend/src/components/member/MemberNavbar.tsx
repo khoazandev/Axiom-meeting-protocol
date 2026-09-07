@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Search,
   Clock,
@@ -13,7 +13,7 @@ import {
   User,
   Settings,
   LogOut,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface MemberNavbarProps {
   searchQuery: string;
@@ -28,7 +28,7 @@ export function MemberNavbar({
   onOpenQuickMeeting,
   onLogout,
 }: MemberNavbarProps) {
-  const [timeStr, setTimeStr] = useState("");
+  const [timeStr, setTimeStr] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Clock ticker
@@ -36,10 +36,10 @@ export function MemberNavbar({
     const update = () => {
       const now = new Date();
       setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         })
       );
@@ -54,10 +54,7 @@ export function MemberNavbar({
       {/* Left: Search Bar */}
       <div className="flex items-center gap-3 flex-1 max-w-md">
         <div className="relative w-full">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
@@ -86,7 +83,7 @@ export function MemberNavbar({
         {/* Real-time Clock */}
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs font-semibold">
           <Clock size={12} className="text-slate-400" />
-          <span>{timeStr || "--:--:--"}</span>
+          <span>{timeStr || '--:--:--'}</span>
         </div>
 
         {/* Notification Pill */}
@@ -133,10 +130,7 @@ export function MemberNavbar({
           {/* User Dropdown */}
           {userDropdownOpen && (
             <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setUserDropdownOpen(false)}
-              />
+              <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
               <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 py-2 text-xs text-slate-700 dark:text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800">
                   <p className="font-bold text-slate-900 dark:text-white">Alex Rivera</p>
@@ -148,7 +142,8 @@ export function MemberNavbar({
 
                 <div className="py-1">
                   <div className="px-3.5 py-1.5 text-[11px] text-slate-500">
-                    Phòng ban: <strong className="text-slate-700 dark:text-slate-300">Khối Kỹ Thuật</strong>
+                    Phòng ban:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">Khối Kỹ Thuật</strong>
                   </div>
                 </div>
 

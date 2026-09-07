@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React from "react";
-import AxiomLogo, { AxiomIcon, AxiomLogoProps } from "./AxiomLogo";
+import React from 'react';
+import AxiomLogo, { AxiomIcon, AxiomLogoProps } from './AxiomLogo';
 
 export interface LogoProps extends AxiomLogoProps {
   showBackground?: boolean;
@@ -13,7 +13,7 @@ export interface LogoProps extends AxiomLogoProps {
  */
 export default function Logo({
   className,
-  size = "md",
+  size = 'md',
   showBackground = false,
   showText = false,
   subtitle,

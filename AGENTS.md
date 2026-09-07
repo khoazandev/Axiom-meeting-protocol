@@ -11,6 +11,7 @@ Sau khi chạy lệnh trên, hãy chờ hoặc báo cho người dùng biết đ
 # UI Stability & Anti-Layout-Shift Rule (Quy tắc chống biến dạng giao diện)
 
 Khi thiết kế hoặc cập nhật các thành phần UI có nội dung thay đổi động (như Bộ lọc, Dropdown Select, Badge trạng thái, Thẻ tóm tắt...):
+
 1. **Khóa cứng kích thước (Fixed Width / Dimension Locking)**: Phải đặt kích thước cố định rõ ràng (ví dụ `width="170px"`, `w-44`, hoặc `shrink-0 w-[...]`) cho nút kích hoạt để khi người dùng chọn mục ngắn/dài khác nhau, nút bấm KHÔNG BAO GIỜ bị phình to hoặc co nhỏ làm nhảy giao diện (Cumulative Layout Shift - CLS) của các phần tử xung quanh.
 2. **Loại bỏ chú thích ngoặc đơn rườm rà trên Trigger**:
    - Nhãn nút trigger chỉ hiển thị định danh ngắn gọn súc tích (ví dụ: `ADMIN`, `MANAGER`, `MEMBER`, `OWNER` thay vì `ADMIN (Quản trị viên)`).

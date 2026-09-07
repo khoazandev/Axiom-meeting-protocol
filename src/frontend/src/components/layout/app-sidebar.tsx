@@ -82,18 +82,18 @@ export function AppSidebar() {
 
   const navSystem = [
     ...(isOwner ? [{ title: 'Admin Center', url: '/admin', icon: ShieldCheck, badge: 'Gov' }] : []),
-    ...(isManager ? [{ title: 'Bàn Làm Việc Manager', url: '/manager', icon: ShieldCheck, badge: 'Lead' }] : []),
-    ...(isMember ? [{ title: 'Bàn Làm Việc Thành Viên', url: '/member', icon: ShieldCheck, badge: 'User' }] : []),
+    ...(isManager
+      ? [{ title: 'Bàn Làm Việc Manager', url: '/manager', icon: ShieldCheck, badge: 'Lead' }]
+      : []),
+    ...(isMember
+      ? [{ title: 'Bàn Làm Việc Thành Viên', url: '/member', icon: ShieldCheck, badge: 'User' }]
+      : []),
     { title: 'Settings', url: '/settings', icon: Settings, badge: null },
   ];
 
   const userName = user?.full_name || 'Alex Rivera (Kỹ sư AI / Thành viên)';
   const userEmail = user?.email || 'alex@axiom.com';
-  const roleLabel = isOwner
-    ? 'CHỦ TỊCH / CEO'
-    : isManager
-      ? 'TRƯỞNG PHÒNG'
-      : 'THÀNH VIÊN (MEMBER)';
+  const roleLabel = isOwner ? 'CHỦ TỊCH / CEO' : isManager ? 'TRƯỞNG PHÒNG' : 'THÀNH VIÊN (MEMBER)';
   const userInitials = (
     userName
       .split(' ')
@@ -270,14 +270,19 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user?.avatar_url || generateInitialsAvatar(userName)} alt={userName} />
+                    <AvatarImage
+                      src={user?.avatar_url || generateInitialsAvatar(userName)}
+                      alt={userName}
+                    />
                     <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{userName}</span>
-                    <span className="truncate text-[10.5px] font-bold text-blue-600 dark:text-blue-400">{roleLabel}</span>
+                    <span className="truncate text-[10.5px] font-bold text-blue-600 dark:text-blue-400">
+                      {roleLabel}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -291,7 +296,10 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user?.avatar_url || generateInitialsAvatar(userName)} alt={userName} />
+                      <AvatarImage
+                        src={user?.avatar_url || generateInitialsAvatar(userName)}
+                        alt={userName}
+                      />
                       <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
                         {userInitials}
                       </AvatarFallback>
@@ -299,15 +307,14 @@ export function AppSidebar() {
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{userName}</span>
                       <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
-                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">{roleLabel}</span>
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                        {roleLabel}
+                      </span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setIsProfileOpen(true)}
-                  className="cursor-pointer"
-                >
+                <DropdownMenuItem onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
                   <UserCircle className="mr-2 h-4 w-4 text-blue-500" />
                   <span className="font-medium">Hồ Sơ & Đổi Avatar</span>
                 </DropdownMenuItem>
@@ -319,19 +326,28 @@ export function AppSidebar() {
                   Cài Đặt Hệ Thống
                 </DropdownMenuItem>
                 {isOwner && (
-                  <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => router.push('/admin')}
+                    className="cursor-pointer"
+                  >
                     <ShieldCheck className="mr-2 h-4 w-4 text-amber-500" />
                     Trung Tâm Quản Trị (Admin Center)
                   </DropdownMenuItem>
                 )}
                 {isManager && (
-                  <DropdownMenuItem onClick={() => router.push('/manager')} className="cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => router.push('/manager')}
+                    className="cursor-pointer"
+                  >
                     <ShieldCheck className="mr-2 h-4 w-4 text-blue-500" />
                     Bàn Làm Việc Trưởng Phòng
                   </DropdownMenuItem>
                 )}
                 {!isOwner && !isManager && (
-                  <DropdownMenuItem onClick={() => router.push('/member')} className="cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => router.push('/member')}
+                    className="cursor-pointer"
+                  >
                     <Users className="mr-2 h-4 w-4 text-emerald-500" />
                     Bàn Làm Việc Thành Viên
                   </DropdownMenuItem>
@@ -353,10 +369,7 @@ export function AppSidebar() {
       <SidebarRail />
 
       {/* Profile & Avatar Modal */}
-      <UserProfileModal
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-      />
+      <UserProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </Sidebar>
   );
 }

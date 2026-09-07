@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -8,7 +8,7 @@ import {
   Users,
   AlertTriangle,
   Sparkles,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface ScheduleEvent {
   id: string;
@@ -18,59 +18,59 @@ interface ScheduleEvent {
   title: string;
   roomCode: string;
   host: string;
-  type: "STANDUP" | "SPRINT" | "1ON1" | "TECH";
+  type: 'STANDUP' | 'SPRINT' | '1ON1' | 'TECH';
 }
 
 const MEMBER_SCHEDULE: ScheduleEvent[] = [
   {
-    id: "sc-01",
-    day: "Thứ Hai",
-    dateStr: "07/09",
-    time: "09:00 - 09:30",
-    title: "Weekly Engineering Kickoff & Sprint Goal",
-    roomCode: "ENG-KICKOFF",
-    host: "Trần Minh Khoa",
-    type: "SPRINT",
+    id: 'sc-01',
+    day: 'Thứ Hai',
+    dateStr: '07/09',
+    time: '09:00 - 09:30',
+    title: 'Weekly Engineering Kickoff & Sprint Goal',
+    roomCode: 'ENG-KICKOFF',
+    host: 'Trần Minh Khoa',
+    type: 'SPRINT',
   },
   {
-    id: "sc-02",
-    day: "Thứ Hai",
-    dateStr: "07/09",
-    time: "14:00 - 15:30",
-    title: "Sprint 42 Architecture & Protocol Review",
-    roomCode: "ENG-SPRINT-42",
-    host: "Trần Minh Khoa",
-    type: "SPRINT",
+    id: 'sc-02',
+    day: 'Thứ Hai',
+    dateStr: '07/09',
+    time: '14:00 - 15:30',
+    title: 'Sprint 42 Architecture & Protocol Review',
+    roomCode: 'ENG-SPRINT-42',
+    host: 'Trần Minh Khoa',
+    type: 'SPRINT',
   },
   {
-    id: "sc-03",
-    day: "Thứ Ba",
-    dateStr: "08/09",
-    time: "09:30 - 09:45",
-    title: "Daily Engineering Standup (15 phút)",
-    roomCode: "ENG-DAILY-SYNC",
-    host: "Trần Minh Khoa",
-    type: "STANDUP",
+    id: 'sc-03',
+    day: 'Thứ Ba',
+    dateStr: '08/09',
+    time: '09:30 - 09:45',
+    title: 'Daily Engineering Standup (15 phút)',
+    roomCode: 'ENG-DAILY-SYNC',
+    host: 'Trần Minh Khoa',
+    type: 'STANDUP',
   },
   {
-    id: "sc-04",
-    day: "Thứ Ba",
-    dateStr: "08/09",
-    time: "14:30 - 15:15",
-    title: "1-on-1 Mentorship & Deep Work: Alex Rivera",
-    roomCode: "ENG-1ON1-ALEX",
-    host: "Trần Minh Khoa",
-    type: "1ON1",
+    id: 'sc-04',
+    day: 'Thứ Ba',
+    dateStr: '08/09',
+    time: '14:30 - 15:15',
+    title: '1-on-1 Mentorship & Deep Work: Alex Rivera',
+    roomCode: 'ENG-1ON1-ALEX',
+    host: 'Trần Minh Khoa',
+    type: '1ON1',
   },
   {
-    id: "sc-05",
-    day: "Thứ Tư",
-    dateStr: "09/09",
-    time: "16:00 - 17:00",
-    title: "Tech Sharing: WebRTC Audio Codecs & Whisper STT",
-    roomCode: "ENG-TECH-TALK",
-    host: "Alex Rivera (Bạn thuyết trình)",
-    type: "TECH",
+    id: 'sc-05',
+    day: 'Thứ Tư',
+    dateStr: '09/09',
+    time: '16:00 - 17:00',
+    title: 'Tech Sharing: WebRTC Audio Codecs & Whisper STT',
+    roomCode: 'ENG-TECH-TALK',
+    host: 'Alex Rivera (Bạn thuyết trình)',
+    type: 'TECH',
   },
 ];
 
@@ -81,16 +81,16 @@ interface MemberCalendarTabProps {
 export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
   const [events] = useState<ScheduleEvent[]>(MEMBER_SCHEDULE);
 
-  const getTypeBadge = (type: ScheduleEvent["type"]) => {
+  const getTypeBadge = (type: ScheduleEvent['type']) => {
     switch (type) {
-      case "STANDUP":
-        return "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800";
-      case "SPRINT":
-        return "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800";
-      case "1ON1":
-        return "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
+      case 'STANDUP':
+        return 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+      case 'SPRINT':
+        return 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+      case '1ON1':
+        return 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
       default:
-        return "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+        return 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
     }
   };
 
@@ -128,9 +128,7 @@ export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
           >
             <div className="flex items-start sm:items-center gap-4">
               <div className="w-16 text-center py-2 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
-                <div className="text-[10px] font-extrabold uppercase text-slate-400">
-                  {ev.day}
-                </div>
+                <div className="text-[10px] font-extrabold uppercase text-slate-400">{ev.day}</div>
                 <div className="text-sm font-black text-slate-900 dark:text-white">
                   {ev.dateStr}
                 </div>

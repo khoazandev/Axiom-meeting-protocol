@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -9,7 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface CalendarEvent {
   id: string;
@@ -19,79 +19,79 @@ interface CalendarEvent {
   title: string;
   roomCode: string;
   attendeesCount: number;
-  type: "STANDUP" | "SPRINT" | "1ON1" | "TECH_TALK";
+  type: 'STANDUP' | 'SPRINT' | '1ON1' | 'TECH_TALK';
 }
 
 const WEEKLY_EVENTS: CalendarEvent[] = [
   {
-    id: "cal-01",
-    day: "Thứ Hai",
-    dateStr: "07/09",
-    time: "09:00 - 09:30",
-    title: "Weekly Engineering Kickoff & Sprint Goal",
-    roomCode: "ENG-KICKOFF",
+    id: 'cal-01',
+    day: 'Thứ Hai',
+    dateStr: '07/09',
+    time: '09:00 - 09:30',
+    title: 'Weekly Engineering Kickoff & Sprint Goal',
+    roomCode: 'ENG-KICKOFF',
     attendeesCount: 12,
-    type: "SPRINT",
+    type: 'SPRINT',
   },
   {
-    id: "cal-02",
-    day: "Thứ Hai",
-    dateStr: "07/09",
-    time: "14:00 - 15:30",
-    title: "Sprint 42 Architecture & Protocol Review",
-    roomCode: "ENG-SPRINT-42",
+    id: 'cal-02',
+    day: 'Thứ Hai',
+    dateStr: '07/09',
+    time: '14:00 - 15:30',
+    title: 'Sprint 42 Architecture & Protocol Review',
+    roomCode: 'ENG-SPRINT-42',
     attendeesCount: 8,
-    type: "SPRINT",
+    type: 'SPRINT',
   },
   {
-    id: "cal-03",
-    day: "Thứ Ba",
-    dateStr: "08/09",
-    time: "09:30 - 09:45",
-    title: "Daily Engineering Sync (15 phút)",
-    roomCode: "ENG-DAILY-SYNC",
+    id: 'cal-03',
+    day: 'Thứ Ba',
+    dateStr: '08/09',
+    time: '09:30 - 09:45',
+    title: 'Daily Engineering Sync (15 phút)',
+    roomCode: 'ENG-DAILY-SYNC',
     attendeesCount: 12,
-    type: "STANDUP",
+    type: 'STANDUP',
   },
   {
-    id: "cal-04",
-    day: "Thứ Ba",
-    dateStr: "08/09",
-    time: "14:30 - 15:15",
-    title: "1-on-1 Mentorship: Alex Rivera",
-    roomCode: "ENG-1ON1-ALEX",
+    id: 'cal-04',
+    day: 'Thứ Ba',
+    dateStr: '08/09',
+    time: '14:30 - 15:15',
+    title: '1-on-1 Mentorship: Alex Rivera',
+    roomCode: 'ENG-1ON1-ALEX',
     attendeesCount: 2,
-    type: "1ON1",
+    type: '1ON1',
   },
   {
-    id: "cal-05",
-    day: "Thứ Tư",
-    dateStr: "09/09",
-    time: "16:00 - 17:00",
-    title: "Tech Sharing: Audio Codecs & WebRTC Optimization",
-    roomCode: "ENG-TECH-TALK",
+    id: 'cal-05',
+    day: 'Thứ Tư',
+    dateStr: '09/09',
+    time: '16:00 - 17:00',
+    title: 'Tech Sharing: Audio Codecs & WebRTC Optimization',
+    roomCode: 'ENG-TECH-TALK',
     attendeesCount: 15,
-    type: "TECH_TALK",
+    type: 'TECH_TALK',
   },
   {
-    id: "cal-06",
-    day: "Thứ Năm",
-    dateStr: "10/09",
-    time: "09:30 - 09:45",
-    title: "Daily Engineering Sync (15 phút)",
-    roomCode: "ENG-DAILY-SYNC",
+    id: 'cal-06',
+    day: 'Thứ Năm',
+    dateStr: '10/09',
+    time: '09:30 - 09:45',
+    title: 'Daily Engineering Sync (15 phút)',
+    roomCode: 'ENG-DAILY-SYNC',
     attendeesCount: 12,
-    type: "STANDUP",
+    type: 'STANDUP',
   },
   {
-    id: "cal-07",
-    day: "Thứ Sáu",
-    dateStr: "11/09",
-    time: "15:00 - 16:30",
-    title: "Sprint 42 Retrospective & Demo Day",
-    roomCode: "ENG-DEMO-42",
+    id: 'cal-07',
+    day: 'Thứ Sáu',
+    dateStr: '11/09',
+    time: '15:00 - 16:30',
+    title: 'Sprint 42 Retrospective & Demo Day',
+    roomCode: 'ENG-DEMO-42',
     attendeesCount: 14,
-    type: "SPRINT",
+    type: 'SPRINT',
   },
 ];
 
@@ -102,16 +102,16 @@ interface ManagerCalendarTabProps {
 export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
   const [events] = useState<CalendarEvent[]>(WEEKLY_EVENTS);
 
-  const getTypeStyle = (t: CalendarEvent["type"]) => {
+  const getTypeStyle = (t: CalendarEvent['type']) => {
     switch (t) {
-      case "STANDUP":
-        return "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800";
-      case "SPRINT":
-        return "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800";
-      case "1ON1":
-        return "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
+      case 'STANDUP':
+        return 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+      case 'SPRINT':
+        return 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+      case '1ON1':
+        return 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
       default:
-        return "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+        return 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
     }
   };
 
@@ -135,7 +135,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
 
         <button
           type="button"
-          onClick={() => onNotify("Đã mở giao diện lên lịch sự kiện nội bộ")}
+          onClick={() => onNotify('Đã mở giao diện lên lịch sự kiện nội bộ')}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs cursor-pointer shrink-0"
         >
           <Plus size={15} />
@@ -153,9 +153,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             <div className="flex items-start sm:items-center gap-4">
               {/* Day Badge */}
               <div className="w-16 text-center py-2 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
-                <div className="text-[10px] font-extrabold uppercase text-slate-400">
-                  {ev.day}
-                </div>
+                <div className="text-[10px] font-extrabold uppercase text-slate-400">{ev.day}</div>
                 <div className="text-sm font-black text-slate-900 dark:text-white">
                   {ev.dateStr}
                 </div>
