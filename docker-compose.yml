@@ -95,10 +95,14 @@ services:
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - WHISPER_MODEL_SIZE=small
+      - WHISPER_CPU_THREADS=6
+      - TRANSLATION_MODEL=translategemma:4b
     depends_on:
       - livekit
     volumes:
       - hf_cache:/home/appuser/.cache/huggingface
+      - ./src/backend:/app/src/backend
     command: python -m src.backend.agent start
 
   # ─── Redis (for future AI queue pipeline) ────────────────────

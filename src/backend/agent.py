@@ -34,9 +34,10 @@ class AgentState:
             ollama_url = f"{ollama_url.rstrip('/')}/v1"
             
         self.llm_plugin = openai.LLM(
-            model="translategemma:4b",
+            model=os.getenv("TRANSLATION_MODEL", "translategemma:4b"),
             base_url=ollama_url,
-            api_key="ollama"
+            api_key="ollama",
+            timeout=30.0
         )
         
         # To avoid overlapping TTS in the same language, we could use queues, 
@@ -83,13 +84,10 @@ async def process_translation(state: AgentState, source_text: str, source_partic
     source_lang_name, source_lang_code = LANGUAGE_MAP.get(source_lang, (source_lang.capitalize(), source_lang))
     target_lang_name, target_lang_code = LANGUAGE_MAP.get(target_lang, (target_lang.capitalize(), target_lang))
 
-    # 1. Translate using TranslateGemma Prompt Format
+    # 1. Translate using concise Prompt Format for maximum speed
     prompt = (
-        f"You are a professional {source_lang_name} ({source_lang_code}) to {target_lang_name} ({target_lang_code}) translator. "
-        f"Your goal is to accurately convey the meaning and nuances of the original {source_lang_name} text while adhering to {target_lang_name} grammar, vocabulary, and cultural sensitivities.\n"
-        f"Produce only the {target_lang_name} translation, without any additional explanations or commentary. "
-        f"Please translate the following {source_lang_name} text into {target_lang_name}:\n\n\n"
-        f"{source_text}"
+        f"Translate the following text from {source_lang_name} to {target_lang_name}. "
+        f"Output ONLY the translated text without quotes, explanation, or commentary:\n\n{source_text}"
     )
     try:
         from livekit.agents.llm import ChatContext
@@ -235,7 +233,7 @@ async def entrypoint(ctx: JobContext):
         
         # Create STT plugin specific to this user's language using local Faster-Whisper
         stt_plugin = local_ai.RealtimeStreamAdapter(
-            stt=local_ai.FasterWhisperSTT(model_size="large-v3-turbo", language=lang),
+            stt=local_ai.FasterWhisperSTT(language=lang),
             vad=local_ai.get_vad()
         )
         stt_stream = stt_plugin.stream()
