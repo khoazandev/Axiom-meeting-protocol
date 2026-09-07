@@ -1,7 +1,7 @@
 import datetime
 import os
 from typing import Any, Dict, List
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ class KnowledgeDocumentResponse(BaseModel):
     file_path: str
     file_size: int
     vector_status: str
+    meeting_id: str | None = None
     created_at: datetime.datetime
 
 
@@ -34,6 +35,7 @@ STORAGE_DIR = "storage/knowledge"
 
 @router.post("/documents", response_model=KnowledgeDocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_knowledge_document(
+    meeting_id: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(deps.get_current_user),
     member: WorkspaceMember = Depends(deps.get_current_workspace_member),
@@ -50,6 +52,7 @@ async def upload_knowledge_document(
 
     doc = KnowledgeDocument(
         workspace_id=member.workspace_id,
+        meeting_id=meeting_id,
         uploaded_by_id=current_user.id,
         filename=file.filename,
         file_path=file_path,
@@ -64,12 +67,14 @@ async def upload_knowledge_document(
 
 @router.get("/documents", response_model=List[KnowledgeDocumentResponse])
 def list_knowledge_documents(
+    meeting_id: str,
     member: WorkspaceMember = Depends(deps.get_current_workspace_member),
     db: Session = Depends(get_db),
 ):
     return (
         db.query(KnowledgeDocument)
         .filter(KnowledgeDocument.workspace_id == member.workspace_id)
+        .filter(KnowledgeDocument.meeting_id == meeting_id)
         .order_by(KnowledgeDocument.created_at.desc())
         .all()
     )
