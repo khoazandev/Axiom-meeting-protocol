@@ -1,300 +1,120 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  BookOpen,
-  Sparkles,
-  UploadCloud,
-  Search,
-  FileText,
-  Trash2,
-  Loader2,
-  Database,
-} from 'lucide-react';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
-import { getAuthHeaders } from '@/lib/api';
+import { meetingsApi, type Meeting } from '@/lib/api';
+import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
+import { Database, Search, Folder, Calendar, Users, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 
-interface KnowledgeDoc {
-  id: string;
-  filename: string;
-  file_size: number;
-  vector_status: string;
-  created_at: string;
-}
-
-interface SearchResult {
-  type: string;
-  id: string;
-  title: string;
-  snippet: string;
-  source: string;
-}
-
-export default function KnowledgePage() {
+export default function KnowledgeDashboardPage() {
   const { t } = useLanguageStore();
-  const [documents, setDocuments] = useState<KnowledgeDoc[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMeeting, setSelectedMeeting] = useState<{id: string, title: string} | null>(null);
 
   useEffect(() => {
-    loadDocuments();
+    loadMeetings();
   }, []);
 
-  async function loadDocuments() {
+  async function loadMeetings() {
+    setLoading(true);
     try {
-      const headers = getAuthHeaders();
-      if (!headers['Authorization']) return;
-
-      const res = await fetch('/api/v1/knowledge/documents', { headers });
-
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data);
-      }
+      const data = await meetingsApi.list(0, 100);
+      setMeetings(data);
     } catch (err) {
-      console.error('Failed to load knowledge documents:', err);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsUploading(true);
-      const headers = getAuthHeaders();
-      if (!headers['Authorization']) {
-        setIsUploading(false);
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Remove Content-Type for FormData — browser sets it with boundary
-      const uploadHeaders = { ...headers } as Record<string, string>;
-      delete uploadHeaders['Content-Type'];
-
-      const res = await fetch('/api/v1/knowledge/documents', {
-        method: 'POST',
-        headers: uploadHeaders,
-        body: formData,
-      });
-
-      if (res.ok) {
-        setUploadFeedback(`Uploaded and indexed ${file.name}`);
-        setTimeout(() => setUploadFeedback(null), 3000);
-        loadDocuments();
-      }
-    } catch (err) {
-      console.error('Upload failed:', err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    try {
-      setIsSearching(true);
-      const headers = getAuthHeaders();
-      if (!headers['Authorization']) {
-        setIsSearching(false);
-        return;
-      }
-
-      const res = await fetch('/api/v1/knowledge/query', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: JSON.stringify({ query: searchQuery.trim() }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSearchResults(data.matches || []);
-      }
-    } catch (err) {
-      console.error('Search failed:', err);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleDeleteDoc = async (id: string) => {
-    try {
-      const headers = getAuthHeaders();
-      if (!headers['Authorization']) return;
-
-      const res = await fetch(`/api/v1/knowledge/documents/${id}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (res.ok) {
-        loadDocuments();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const filteredMeetings = meetings.filter(m => 
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.status.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-accent" />
-            <h1 className="text-lg font-semibold text-text-primary">{t.knowledge.title}</h1>
+      <div className="bg-bg-card border border-border rounded-xl p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
+              <Database className="w-5 h-5 text-accent" />
+              Cơ sở tri thức (Knowledge Base)
+            </h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Duyệt tài liệu, biên bản và bản ghi theo từng cuộc họp.
+            </p>
           </div>
-          <p className="text-sm text-text-secondary mt-1">{t.knowledge.subTitle}</p>
-        </div>
 
-        {uploadFeedback && (
-          <span className="text-xs text-success font-semibold px-3 py-1 bg-success/10 border border-emerald-500/20 rounded-full animate-bounce">
-            {uploadFeedback}
-          </span>
-        )}
-      </div>
-
-      {/* AI Semantic Search Box */}
-      <div className="p-6 rounded-xl bg-bg-card border border-border/80 shadow-xl space-y-4">
-        <div className="flex items-center gap-2 text-accent text-sm font-medium">
-          <Sparkles className="w-4 h-4" />
-          <span>{t.knowledge.searchBtn}</span>
-        </div>
-
-        <form onSubmit={handleSearch} className="flex items-center gap-3">
-          <div className="relative flex-1">
+          {/* Search */}
+          <div className="relative w-full max-w-sm">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.knowledge.searchPlaceholder}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-bg-elevated border border-border text-sm text-text-primary placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
+              placeholder="Tìm kiếm cuộc họp..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-bg-elevated border border-border text-sm text-text-primary placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-focus-ring transition-colors"
             />
-            <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
-          <button
-            type="submit"
-            disabled={isSearching}
-            className="px-5 py-3 rounded-xl bg-accent hover:bg-accent/90 text-text-primary text-xs font-bold shadow-lg  flex items-center gap-2 transition-all disabled:opacity-50"
-          >
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            <span>{t.knowledge.searchBtn}</span>
-          </button>
-        </form>
+        </div>
 
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <div className="text-xs font-bold text-text-secondary ">
-              Search Results ({searchResults.length})
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {searchResults.map((res, i) => (
-                <div
-                  key={i}
-                  className="p-3.5 rounded-xl bg-bg-base border border-border/60 space-y-1.5 text-xs"
-                >
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-accent">{res.title}</span>
-                    <span className="text-[9px] font-mono text-text-muted px-2 py-0.5 rounded bg-indigo-950/40 border border-indigo-900/40">
-                      {res.type}
-                    </span>
+        {/* Meetings Grid */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+          </div>
+        ) : filteredMeetings.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-border rounded-xl">
+            <Folder className="w-12 h-12 text-text-muted mx-auto mb-3" />
+            <p className="text-text-primary font-bold">Không tìm thấy cuộc họp nào</p>
+            <p className="text-sm text-text-secondary">Tạo cuộc họp mới để lưu trữ kiến thức.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMeetings.map((meeting) => (
+              <div 
+                key={meeting.id} 
+                className="group p-5 rounded-xl border border-border bg-bg-elevated hover:border-accent/50 cursor-pointer transition-all duration-200"
+                onClick={() => setSelectedMeeting({id: meeting.id, title: meeting.title})}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2.5 rounded-lg bg-accent/10 text-accent group-hover:scale-110 transition-transform">
+                    <Folder className="w-5 h-5" />
                   </div>
-                  <p className="text-text-secondary leading-relaxed text-[11px]">{res.snippet}</p>
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    meeting.status === 'COMPLETED' ? 'bg-success/10 text-success' :
+                    meeting.status === 'IN_PROGRESS' ? 'bg-warning/10 text-warning' :
+                    'bg-text-muted/10 text-text-secondary'
+                  }`}>
+                    {meeting.status}
+                  </span>
                 </div>
-              ))}
-            </div>
+                
+                <h3 className="font-bold text-text-primary mb-1 line-clamp-1">{meeting.title}</h3>
+                
+                <div className="flex items-center gap-4 text-xs text-text-secondary mt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{format(new Date(meeting.created_at), 'dd/MM/yyyy')}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Grid: Upload Zone & Uploaded Document List */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        {/* Upload Card */}
-        <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4">
-          <div className="flex items-center gap-2 text-accent text-xs font-bold ">
-            <UploadCloud className="w-4 h-4" />
-            <span>Upload Document</span>
-          </div>
-
-          <label className="border-2 border-dashed border-border hover:border-accent/40 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors space-y-2">
-            <UploadCloud className="w-8 h-8 text-accent" />
-            <span className="text-xs font-bold text-text-primary">Click to Upload PDF / DOCX</span>
-            <span className="text-[10px] text-text-secondary">
-              Files will be auto-vectorized for RAG search
-            </span>
-            <input
-              type="file"
-              onChange={handleFileUpload}
-              disabled={isUploading}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        {/* Uploaded Documents List */}
-        <div className="md:col-span-2 p-6 rounded-xl bg-bg-card border border-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-text-secondary text-xs font-bold ">
-              <Database className="w-4 h-4 text-accent" />
-              <span>Vectorized Documents ({documents.length})</span>
-            </div>
-          </div>
-
-          {documents.length === 0 ? (
-            <div className="p-8 text-center text-xs text-text-secondary bg-bg-base rounded-xl border border-border">
-              No knowledge documents uploaded yet. Upload a PDF or DOCX file to get started.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-3.5 rounded-xl bg-bg-base border border-border flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-4 h-4 text-accent shrink-0" />
-                    <div>
-                      <div className="font-semibold text-text-primary">{doc.filename}</div>
-                      <div className="text-[10px] text-text-secondary font-mono">
-                        {(doc.file_size / 1024).toFixed(1)} KB
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="px-2 py-0.5 rounded-full bg-success/10 text-success border border-emerald-500/30 text-[9px] font-bold uppercase">
-                      {doc.vector_status}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteDoc(doc.id)}
-                      className="p-1 rounded-lg text-text-muted hover:text-danger transition-colors"
-                      title="Delete document"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {selectedMeeting && (
+        <MeetingDetailsModal
+          meetingId={selectedMeeting.id}
+          meetingTitle={selectedMeeting.title}
+          onClose={() => setSelectedMeeting(null)}
+        />
+      )}
     </div>
   );
 }
