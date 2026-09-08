@@ -23,7 +23,7 @@ from src.backend.api.v1.meeting_end import router as meeting_end_router
 # from src.backend.api.v1.analytics import router as analytics_router
 # from src.backend.api.v1.files import router as files_router
 # from src.backend.api.v1.invitations import router as invitations_router
-# from src.backend.api.v1.knowledge import router as knowledge_router  # disabled: uses removed models
+from src.backend.api.v1.knowledge import router as knowledge_router
 # from src.backend.api.v1.meetings import router as meetings_router
 # from src.backend.api.v1.mom import router as mom_router
 # from src.backend.api.v1.notifications import router as notifications_router
@@ -63,6 +63,6 @@ api_v1_router.include_router(tasks_router)
 # api_v1_router.include_router(files_router)
 # api_v1_router.include_router(ai_hooks_router)
 # api_v1_router.include_router(mom_router)
-# api_v1_router.include_router(knowledge_router)  # disabled: uses removed models
+api_v1_router.include_router(knowledge_router)
 # api_v1_router.include_router(admin_router)
 # api_v1_router.include_router(analytics_router)
