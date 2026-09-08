@@ -119,10 +119,7 @@ export function AxiomIcon({
 
       {/* ── PART 3: Structured Isometric Crystal Lattice (MoM & Action Items) ── */}
       {/* Top Isometric Facet (Shaded) */}
-      <polygon
-        points="33.5,10.5 43,16 33.5,21.5 24,16"
-        fill={`url(#${gradFacet})`}
-      />
+      <polygon points="33.5,10.5 43,16 33.5,21.5 24,16" fill={`url(#${gradFacet})`} />
 
       {/* Outer Hexagon Contour */}
       <polygon
@@ -143,13 +140,7 @@ export function AxiomIcon({
       />
 
       {/* Central Quantum Node (Synthesized Decision / Action item) */}
-      <circle
-        cx="33.5"
-        cy="21.5"
-        r="2"
-        fill="#38BDF8"
-        className="animate-pulse"
-      />
+      <circle cx="33.5" cy="21.5" r="2" fill="#38BDF8" className="animate-pulse" />
     </svg>
   );
 }

@@ -63,12 +63,7 @@ export function useWebSpeech(
         }
       : optionsOrOnFinal;
 
-  const {
-    enabled = false,
-    lang = 'vi-VN',
-    onFinalTranscript,
-    onInterimTranscript,
-  } = options;
+  const { enabled = false, lang = 'vi-VN', onFinalTranscript, onInterimTranscript } = options;
 
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -114,8 +109,7 @@ export function useWebSpeech(
     if (typeof window === 'undefined') return;
 
     const win = window as WindowWithSpeech;
-    const SpeechRecognitionClass =
-      win.SpeechRecognition || win.webkitSpeechRecognition;
+    const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRecognitionClass) {
       setIsSupported(false);

@@ -52,7 +52,11 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   }, []);
 
   const handleDeleteMeeting = async (id: string, title: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa cuộc họp "${title}" không? Hành động này không thể hoàn tác.`)) {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa cuộc họp "${title}" không? Hành động này không thể hoàn tác.`
+      )
+    ) {
       return;
     }
     setDeletingId(id);
@@ -221,21 +225,24 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                       <span>Biên Bản AI</span>
                     </button>
 
-                    {user && (user.id === mtg.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN') && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMeeting(String(mtg.id), mtg.title)}
-                        disabled={deletingId === String(mtg.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                        title="Xóa cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
-                      >
-                        {deletingId === String(mtg.id) ? (
-                          <Loader2 size={13} className="animate-spin text-rose-500" />
-                        ) : (
-                          <Trash2 size={13} />
-                        )}
-                      </button>
-                    )}
+                    {user &&
+                      (user.id === mtg.created_by_id ||
+                        user.role === 'OWNER' ||
+                        user.role === 'ADMIN') && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMeeting(String(mtg.id), mtg.title)}
+                          disabled={deletingId === String(mtg.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Xóa cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
+                        >
+                          {deletingId === String(mtg.id) ? (
+                            <Loader2 size={13} className="animate-spin text-rose-500" />
+                          ) : (
+                            <Trash2 size={13} />
+                          )}
+                        </button>
+                      )}
                   </div>
                 </div>
               </div>

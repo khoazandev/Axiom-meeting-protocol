@@ -207,7 +207,8 @@ export default function CreateMeetingPage() {
               Khởi Tạo Cuộc Họp & Nhập Agenda AI
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Hệ thống sẽ nạp toàn bộ Agenda và tài liệu vào Asightant AI để đồng hành xuyên suốt cuộc họp.
+              Hệ thống sẽ nạp toàn bộ Agenda và tài liệu vào Asightant AI để đồng hành xuyên suốt
+              cuộc họp.
             </p>
           </div>
 
@@ -314,7 +315,9 @@ export default function CreateMeetingPage() {
                               {tpl.title}
                             </span>
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />}
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-white/5 pt-1.5">
@@ -336,7 +339,9 @@ export default function CreateMeetingPage() {
               {agendaMode === 'upload' && (
                 <label className="flex flex-col items-center gap-2 p-5 rounded-2xl border-2 border-dashed border-blue-500/30 bg-blue-600/5 cursor-pointer hover:border-blue-500/60 hover:bg-blue-600/10 transition-all group text-center">
                   <Upload className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs text-white font-bold">Click để chọn tài liệu Agenda</span>
+                  <span className="text-xs text-white font-bold">
+                    Click để chọn tài liệu Agenda
+                  </span>
                   <span className="text-[11px] text-slate-400">
                     PDF, Word (.docx), Excel (.xlsx), Markdown (.md), TXT
                   </span>

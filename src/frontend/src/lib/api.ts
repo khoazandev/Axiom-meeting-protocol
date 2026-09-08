@@ -371,7 +371,9 @@ export const meetingsApi = {
   },
 
   /** Upload and parse an agenda file (.docx, .pdf, .txt, .md, .csv, .xlsx) into clean plain text. */
-  async parseAgenda(file: File): Promise<{ filename: string; content: string; char_count: number; error?: string }> {
+  async parseAgenda(
+    file: File
+  ): Promise<{ filename: string; content: string; char_count: number; error?: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -433,19 +435,26 @@ export const meetingsApi = {
     fromLang: string = 'vi',
     toLang: string = 'en',
     signal?: AbortSignal
-  ): Promise<{ original_text: string; translated_text: string; from_lang: string; to_lang: string }> {
-    return apiFetch<{ original_text: string; translated_text: string; from_lang: string; to_lang: string }>(
-      '/api/v1/meetings/translate',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          text,
-          from_lang: fromLang,
-          to_lang: toLang,
-        }),
-        signal,
-      }
-    );
+  ): Promise<{
+    original_text: string;
+    translated_text: string;
+    from_lang: string;
+    to_lang: string;
+  }> {
+    return apiFetch<{
+      original_text: string;
+      translated_text: string;
+      from_lang: string;
+      to_lang: string;
+    }>('/api/v1/meetings/translate', {
+      method: 'POST',
+      body: JSON.stringify({
+        text,
+        from_lang: fromLang,
+        to_lang: toLang,
+      }),
+      signal,
+    });
   },
 
   /** Save a transcript segment. */

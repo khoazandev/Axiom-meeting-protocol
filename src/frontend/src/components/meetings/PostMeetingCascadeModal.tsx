@@ -156,14 +156,28 @@ export function PostMeetingCascadeModal({
           setItems([]);
         }
       } catch (err) {
-        console.warn('Could not execute endMeeting API, using meeting-specific dynamic fallback:', err);
+        console.warn(
+          'Could not execute endMeeting API, using meeting-specific dynamic fallback:',
+          err
+        );
         const fallbackSummary = `Phiên họp "${meetingTitle}" đã hoàn tất với sự đồng thuận cao giữa các thành viên tham dự. Biên bản cuộc họp đã được hệ thống AI bóc tách chi tiết các phát biểu, ghi nhận các điểm thảo luận cốt lõi và xác lập các cam kết công việc cần thực hiện.`;
-        const fallbackKeyPoints = initialActionItems.length > 0
-          ? initialActionItems.slice(0, 3).map((it) => `• Thảo luận và thống nhất triển khai: ${it.title}.`).join('\n')
-          : '• Rà soát tổng thể tiến độ các hạng mục công việc trọng điểm.\n• Đánh giá nguồn lực và kế hoạch phối hợp giữa các thành viên.\n• Thống nhất chuẩn giao tiếp và chế độ báo cáo tiến độ định kỳ.';
-        const fallbackDecisions = initialActionItems.length > 0
-          ? initialActionItems.slice(0, 3).map((it, idx) => `${idx + 1}. Phân công [${it.assignee_name || 'Nhân sự phụ trách'}]: ${it.title} (Hạn: ${it.due_date ? it.due_date.slice(0, 10) : 'Theo tuần'}).`).join('\n')
-          : '1. Thông qua kế hoạch hành động đã được các bên cam kết trong phiên họp.\n2. Các nhân sự phụ trách chủ động bám sát tiến độ và báo cáo kịp thời.\n3. Cập nhật đầy đủ trạng thái nhiệm vụ lên hệ thống sau cuộc họp.';
+        const fallbackKeyPoints =
+          initialActionItems.length > 0
+            ? initialActionItems
+                .slice(0, 3)
+                .map((it) => `• Thảo luận và thống nhất triển khai: ${it.title}.`)
+                .join('\n')
+            : '• Rà soát tổng thể tiến độ các hạng mục công việc trọng điểm.\n• Đánh giá nguồn lực và kế hoạch phối hợp giữa các thành viên.\n• Thống nhất chuẩn giao tiếp và chế độ báo cáo tiến độ định kỳ.';
+        const fallbackDecisions =
+          initialActionItems.length > 0
+            ? initialActionItems
+                .slice(0, 3)
+                .map(
+                  (it, idx) =>
+                    `${idx + 1}. Phân công [${it.assignee_name || 'Nhân sự phụ trách'}]: ${it.title} (Hạn: ${it.due_date ? it.due_date.slice(0, 10) : 'Theo tuần'}).`
+                )
+                .join('\n')
+            : '1. Thông qua kế hoạch hành động đã được các bên cam kết trong phiên họp.\n2. Các nhân sự phụ trách chủ động bám sát tiến độ và báo cáo kịp thời.\n3. Cập nhật đầy đủ trạng thái nhiệm vụ lên hệ thống sau cuộc họp.';
 
         setSummaryData({
           content: fallbackSummary,
@@ -172,19 +186,21 @@ export function PostMeetingCascadeModal({
         });
 
         if (initialActionItems.length > 0) {
-          setItems(initialActionItems.map((t, idx) => ({
-            id: t.id || `ai-${idx}-${Date.now()}`,
-            title: t.title,
-            description: t.description || '',
-            targetDept: (idx % 2 === 0 ? 'ENG' : 'PROD') as DepartmentCode,
-            priority: (idx === 0 ? 'CRITICAL' : 'HIGH') as StrategicPriority,
-            estimatedHours: 20 + idx * 10,
-            storyPoints: 5 + idx * 3,
-            assigneeName: t.assignee_name || 'Thành viên',
-            assigneeEmail: 'member@axiom.com',
-            deadline: t.due_date ? t.due_date.slice(0, 10) : '2026-09-18',
-            status: 'TODO',
-          })));
+          setItems(
+            initialActionItems.map((t, idx) => ({
+              id: t.id || `ai-${idx}-${Date.now()}`,
+              title: t.title,
+              description: t.description || '',
+              targetDept: (idx % 2 === 0 ? 'ENG' : 'PROD') as DepartmentCode,
+              priority: (idx === 0 ? 'CRITICAL' : 'HIGH') as StrategicPriority,
+              estimatedHours: 20 + idx * 10,
+              storyPoints: 5 + idx * 3,
+              assigneeName: t.assignee_name || 'Thành viên',
+              assigneeEmail: 'member@axiom.com',
+              deadline: t.due_date ? t.due_date.slice(0, 10) : '2026-09-18',
+              status: 'TODO',
+            }))
+          );
         } else {
           setItems([]);
         }

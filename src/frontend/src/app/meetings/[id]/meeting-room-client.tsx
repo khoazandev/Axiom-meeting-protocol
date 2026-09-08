@@ -223,16 +223,18 @@ function CustomLiveKitChat() {
               Trò chuyện thời gian thực với tất cả người tham gia trong cuộc họp.
             </p>
             <div className="flex flex-wrap gap-1.5 justify-center mt-3 max-w-xs">
-              {['Chào mọi người! 👋', 'Tôi nghe rất rõ 👍', 'Nhất trí ý kiến này 🎯'].map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => handleQuickSend(chip)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-[11px] text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
-                >
-                  {chip}
-                </button>
-              ))}
+              {['Chào mọi người! 👋', 'Tôi nghe rất rõ 👍', 'Nhất trí ý kiến này 🎯'].map(
+                (chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => handleQuickSend(chip)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-[11px] text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
+                  >
+                    {chip}
+                  </button>
+                )
+              )}
             </div>
           </div>
         ) : (
@@ -389,7 +391,11 @@ function RecordsListener({
 
         callbacksRef.current.onNewRecord(entry);
 
-        if (data.is_final && data.source !== 'client' && callbacksRef.current.onTranscriptFinalized) {
+        if (
+          data.is_final &&
+          data.source !== 'client' &&
+          callbacksRef.current.onTranscriptFinalized
+        ) {
           callbacksRef.current.onTranscriptFinalized(data.original_text, timeStr);
         }
       } else if (data.type === 'translation_record' || data.type === 'translation') {
@@ -602,7 +608,15 @@ function WebSpeechPublisher({
         console.warn('[WebSpeech] payload encode error', err);
       }
     },
-    [room, localParticipant, participantName, selectedLanguage, onLocalSubtitleUpdate, onLocalRecord, onTranscriptFinalized]
+    [
+      room,
+      localParticipant,
+      participantName,
+      selectedLanguage,
+      onLocalSubtitleUpdate,
+      onLocalRecord,
+      onTranscriptFinalized,
+    ]
   );
 
   useWebSpeech({
@@ -924,7 +938,7 @@ export function MeetingRoomClient() {
     }, 350);
   }, [isSidebarPinned]);
 
-  const isSidebarVisible = isSidebarPinned ? sidebarOpen : (isSidebarHovered || sidebarOpen);
+  const isSidebarVisible = isSidebarPinned ? sidebarOpen : isSidebarHovered || sidebarOpen;
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -1011,11 +1025,7 @@ export function MeetingRoomClient() {
     try {
       const name = file.name.toLowerCase();
       let text = '';
-      if (
-        name.endsWith('.txt') ||
-        name.endsWith('.md') ||
-        name.endsWith('.markdown')
-      ) {
+      if (name.endsWith('.txt') || name.endsWith('.md') || name.endsWith('.markdown')) {
         text = (await file.text()).trim();
       } else {
         const res = await meetingsApi.parseAgenda(file);
@@ -1276,7 +1286,12 @@ export function MeetingRoomClient() {
 
   const getSpeakerDisplayName = useCallback(
     (identity?: string, name?: string) => {
-      if (name && !name.startsWith('user_') && !name.startsWith('User-') && !name.startsWith('User ')) {
+      if (
+        name &&
+        !name.startsWith('user_') &&
+        !name.startsWith('User-') &&
+        !name.startsWith('User ')
+      ) {
         return name;
       }
       const cleanId = identity ? identity.replace(/^user_/, '') : '';
@@ -1386,7 +1401,9 @@ export function MeetingRoomClient() {
         const mText = m.text.trim();
         return (
           mText === rhText ||
-          (mText.length > 6 && rhText.length > 6 && (mText.includes(rhText) || rhText.includes(mText)))
+          (mText.length > 6 &&
+            rhText.length > 6 &&
+            (mText.includes(rhText) || rhText.includes(mText)))
         );
       });
 
@@ -1520,7 +1537,12 @@ export function MeetingRoomClient() {
               .slice(0, 3)
               .map((s: RagSource) => {
                 const label =
-                  { agenda: '📋 Agenda', transcript: '🗣️ Lời nói', file: '📄 Tài liệu', bookmark: '📌 Ghi chú' }[s.type] ?? '📎 Nguồn';
+                  {
+                    agenda: '📋 Agenda',
+                    transcript: '🗣️ Lời nói',
+                    file: '📄 Tài liệu',
+                    bookmark: '📌 Ghi chú',
+                  }[s.type] ?? '📎 Nguồn';
                 const title = s.filename ? `${label} (${s.filename})` : label;
                 return `• ${title}: ${s.snippet.slice(0, 120)}${
                   s.snippet.length > 120 ? '...' : ''
@@ -1540,7 +1562,9 @@ export function MeetingRoomClient() {
       ]);
     } catch (err) {
       const msg =
-        err instanceof ApiRequestError ? err.message : 'Asightant không phản hồi. Vui lòng thử lại.';
+        err instanceof ApiRequestError
+          ? err.message
+          : 'Asightant không phản hồi. Vui lòng thử lại.';
       setAiMessages((prev) => [
         ...prev,
         {
@@ -1596,7 +1620,8 @@ export function MeetingRoomClient() {
         onJoin={handleJoinMeeting}
         onExit={handleExitMeeting}
         onDeleteMeeting={
-          user && (user.id === meeting.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN')
+          user &&
+          (user.id === meeting.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN')
             ? handleDeleteMeeting
             : undefined
         }
@@ -1692,17 +1717,20 @@ export function MeetingRoomClient() {
           </button>
 
           {/* Delete Meeting for Creator / Host */}
-          {user && (user.id === meeting.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN') && (
-            <button
-              type="button"
-              onClick={handleDeleteMeeting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
-              title="Xóa vĩnh viễn cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span className="hidden sm:inline">Xóa phòng</span>
-            </button>
-          )}
+          {user &&
+            (user.id === meeting.created_by_id ||
+              user.role === 'OWNER' ||
+              user.role === 'ADMIN') && (
+              <button
+                type="button"
+                onClick={handleDeleteMeeting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
+                title="Xóa vĩnh viễn cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Xóa phòng</span>
+              </button>
+            )}
         </div>
       </header>
 
@@ -1877,7 +1905,9 @@ export function MeetingRoomClient() {
               onMouseLeave={handleSidebarMouseLeave}
               className={`${
                 isSidebarPinned
-                  ? (isSidebarVisible ? 'relative w-80 md:w-96 xl:w-[420px] shrink-0' : 'hidden')
+                  ? isSidebarVisible
+                    ? 'relative w-80 md:w-96 xl:w-[420px] shrink-0'
+                    : 'hidden'
                   : `fixed right-0 top-0 bottom-0 w-80 md:w-96 xl:w-[420px] z-50 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                       isSidebarVisible
                         ? 'translate-x-0 opacity-100 pointer-events-auto'
@@ -1942,615 +1972,621 @@ export function MeetingRoomClient() {
                 </div>
               </div>
 
-                {/* 2. 4-Tab Segmented Switcher */}
-                <div className="p-2 border-b border-slate-200 bg-slate-50 shrink-0">
-                  <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
-                    {/* Tab 1: Records */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveRightTab('records')}
-                      className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                        activeRightTab === 'records'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                      }`}
-                      title="Bản ghi âm và dịch song ngữ thời gian thực"
-                    >
-                      <Languages className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[11px] truncate">Bản Ghi</span>
-                      {displayedRecords.length > 0 && (
-                        <span
-                          className={`text-[9px] px-1 rounded-full font-mono font-bold ${
-                            activeRightTab === 'records'
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          {displayedRecords.length}
-                        </span>
-                      )}
-                    </button>
+              {/* 2. 4-Tab Segmented Switcher */}
+              <div className="p-2 border-b border-slate-200 bg-slate-50 shrink-0">
+                <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
+                  {/* Tab 1: Records */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveRightTab('records')}
+                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      activeRightTab === 'records'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                    title="Bản ghi âm và dịch song ngữ thời gian thực"
+                  >
+                    <Languages className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-[11px] truncate">Bản Ghi</span>
+                    {displayedRecords.length > 0 && (
+                      <span
+                        className={`text-[9px] px-1 rounded-full font-mono font-bold ${
+                          activeRightTab === 'records'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {displayedRecords.length}
+                      </span>
+                    )}
+                  </button>
 
-                    {/* Tab 2: Task & Agenda */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveRightTab('transcript')}
-                      className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                        activeRightTab === 'transcript'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                      }`}
-                      title="Danh sách Task và Agenda cuộc họp"
-                    >
-                      <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[11px] truncate font-bold">Task</span>
-                      {actionItems.length > 0 && (
-                        <span
-                          className={`text-[9px] px-1 rounded-full font-mono font-bold ${
-                            activeRightTab === 'transcript'
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          {actionItems.length}
-                        </span>
-                      )}
-                    </button>
+                  {/* Tab 2: Task & Agenda */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveRightTab('transcript')}
+                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      activeRightTab === 'transcript'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                    title="Danh sách Task và Agenda cuộc họp"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-[11px] truncate font-bold">Task</span>
+                    {actionItems.length > 0 && (
+                      <span
+                        className={`text-[9px] px-1 rounded-full font-mono font-bold ${
+                          activeRightTab === 'transcript'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {actionItems.length}
+                      </span>
+                    )}
+                  </button>
 
-                    {/* Tab 3: Chat */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveRightTab('chat')}
-                      className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                        activeRightTab === 'chat'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                      }`}
-                      title="Hộp trò chuyện tin nhắn phòng họp"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[11px] truncate">Chat</span>
-                    </button>
+                  {/* Tab 3: Chat */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveRightTab('chat')}
+                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      activeRightTab === 'chat'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                    title="Hộp trò chuyện tin nhắn phòng họp"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-[11px] truncate">Chat</span>
+                  </button>
 
-                    {/* Tab 4: Asightant */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveRightTab('ai')}
-                      className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                        activeRightTab === 'ai'
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                      }`}
-                      title="Trợ lý Asightant AI giải đáp mọi thông tin và diễn biến cuộc họp"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                      <span className="text-[11px] truncate">Asightant</span>
-                    </button>
-                  </div>
+                  {/* Tab 4: Asightant */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveRightTab('ai')}
+                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      activeRightTab === 'ai'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                    title="Trợ lý Asightant AI giải đáp mọi thông tin và diễn biến cuộc họp"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <span className="text-[11px] truncate">Asightant</span>
+                  </button>
                 </div>
+              </div>
 
-                {/* 3. Tab Content Panels with Smooth Vertical Scrolling */}
-                <div className="flex-1 flex flex-col overflow-hidden relative min-h-0">
-                  {/* ─────────────────────────────────────────────────────────────
+              {/* 3. Tab Content Panels with Smooth Vertical Scrolling */}
+              <div className="flex-1 flex flex-col overflow-hidden relative min-h-0">
+                {/* ─────────────────────────────────────────────────────────────
                       TAB 1: RECORDS & REALTIME BILINGUAL TRANSLATION
                   ───────────────────────────────────────────────────────────── */}
-                  <div
-                    className={`flex-1 flex-col overflow-hidden min-h-0 ${
-                      activeRightTab === 'records' ? 'flex' : 'hidden'
-                    }`}
-                  >
-                    {/* Subheader bar */}
-                    <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1.5 font-medium text-slate-700">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Nhận diện giọng nói STT & Dịch song ngữ
-                      </span>
-                      <span className="text-slate-400 font-mono text-[10px]">
-                        {displayedRecords.length} đoạn
-                      </span>
-                    </div>
+                <div
+                  className={`flex-1 flex-col overflow-hidden min-h-0 ${
+                    activeRightTab === 'records' ? 'flex' : 'hidden'
+                  }`}
+                >
+                  {/* Subheader bar */}
+                  <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0 text-[11px] text-slate-500">
+                    <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Nhận diện giọng nói STT & Dịch song ngữ
+                    </span>
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      {displayedRecords.length} đoạn
+                    </span>
+                  </div>
 
-                    {/* Scrollable Records Feed */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-300">
-                      {displayedRecords.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-center p-4 text-slate-400 text-xs my-auto">
-                          <Languages className="w-8 h-8 text-slate-400 mb-2" />
-                          <p className="font-semibold text-slate-700">Chưa có bản ghi âm nào</p>
-                          <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                            Bật micro và phát biểu, hệ thống sẽ tự động bóc tách giọng nói và dịch song song tại đây.
-                          </p>
-                        </div>
-                      ) : (
-                        displayedRecords.map((t) => (
-                          <div
-                            key={t.id}
-                            className={`p-3 rounded-xl transition-all duration-200 border ${
-                              !t.is_final
-                                ? 'bg-amber-50/50 border-amber-300 shadow-2xs'
-                                : 'bg-white border-slate-200 shadow-2xs'
-                            }`}
-                          >
-                            <div className="text-xs mb-1.5 flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
-                                <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[10px] text-blue-600 font-bold shrink-0">
-                                  {t.speaker ? t.speaker.charAt(0).toUpperCase() : 'U'}
-                                </div>
-                                <span className="truncate">{t.speaker}</span>
-                                {!t.is_final && (
-                                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-mono font-medium animate-pulse">
-                                    đang nói...
-                                  </span>
-                                )}
+                  {/* Scrollable Records Feed */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-300">
+                    {displayedRecords.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-48 text-center p-4 text-slate-400 text-xs my-auto">
+                        <Languages className="w-8 h-8 text-slate-400 mb-2" />
+                        <p className="font-semibold text-slate-700">Chưa có bản ghi âm nào</p>
+                        <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                          Bật micro và phát biểu, hệ thống sẽ tự động bóc tách giọng nói và dịch
+                          song song tại đây.
+                        </p>
+                      </div>
+                    ) : (
+                      displayedRecords.map((t) => (
+                        <div
+                          key={t.id}
+                          className={`p-3 rounded-xl transition-all duration-200 border ${
+                            !t.is_final
+                              ? 'bg-amber-50/50 border-amber-300 shadow-2xs'
+                              : 'bg-white border-slate-200 shadow-2xs'
+                          }`}
+                        >
+                          <div className="text-xs mb-1.5 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
+                              <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[10px] text-blue-600 font-bold shrink-0">
+                                {t.speaker ? t.speaker.charAt(0).toUpperCase() : 'U'}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="text-[10px] text-slate-400 font-mono">[{t.timestamp}]</span>
-                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 uppercase border border-slate-200">
-                                  {t.language}
+                              <span className="truncate">{t.speaker}</span>
+                              {!t.is_final && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-mono font-medium animate-pulse">
+                                  đang nói...
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                [{t.timestamp}]
+                              </span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 uppercase border border-slate-200">
+                                {t.language}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-slate-900 font-medium leading-relaxed">
+                            {t.text}
+                          </p>
+
+                          {t.translated_text && (
+                            <div className="mt-2 pt-2 border-t border-slate-100 flex items-start gap-2 text-xs bg-blue-50/70 border border-blue-200 p-2.5 rounded-lg text-blue-950">
+                              <Globe className="w-3.5 h-3.5 shrink-0 text-blue-600 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[10px] uppercase font-bold text-blue-700 mr-1.5 tracking-wider font-mono">
+                                  [{t.to_language || 'EN'}]
+                                </span>
+                                <span className="font-medium leading-relaxed">
+                                  {t.translated_text}
                                 </span>
                               </div>
                             </div>
-
-                            <p className="text-sm text-slate-900 font-medium leading-relaxed">
-                              {t.text}
-                            </p>
-
-                            {t.translated_text && (
-                              <div className="mt-2 pt-2 border-t border-slate-100 flex items-start gap-2 text-xs bg-blue-50/70 border border-blue-200 p-2.5 rounded-lg text-blue-950">
-                                <Globe className="w-3.5 h-3.5 shrink-0 text-blue-600 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-[10px] uppercase font-bold text-blue-700 mr-1.5 tracking-wider font-mono">
-                                    [{t.to_language || 'EN'}]
-                                  </span>
-                                  <span className="font-medium leading-relaxed">
-                                    {t.translated_text}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                      <div ref={transcriptEndRef} />
-                    </div>
-                  </div>
-
-                  {/* ─────────────────────────────────────────────────────────────
-                      TAB 2: AGENDA & MEETING NOTES & AI ACTION ITEMS (JIRA)
-                  ───────────────────────────────────────────────────────────── */}
-                  <div
-                    className={`flex-1 flex-col overflow-hidden min-h-0 ${
-                      activeRightTab === 'transcript' ? 'flex' : 'hidden'
-                    }`}
-                  >
-                    {/* 1. Interactive Meeting Agenda Section (Trong cuộc họp) */}
-                    <div className="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-blue-600" />
-                          <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                            Agenda Cuộc Họp
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="file"
-                            ref={inMeetingFileInputRef}
-                            onChange={handleInMeetingAgendaUpload}
-                            accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv"
-                            className="hidden"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => inMeetingFileInputRef.current?.click()}
-                            className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-white text-[11px] font-medium transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-                            title="Nạp tệp Agenda mới (.txt, .md, .docx, .pdf)"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                          </button>
-                          {isEditingAgenda ? (
-                            <button
-                              type="button"
-                              onClick={handleSaveAgenda}
-                              disabled={isSavingAgenda}
-                              className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
-                            >
-                              {isSavingAgenda ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Save className="w-3 h-3" />
-                              )}
-                              <span>Lưu</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingAgenda(true)}
-                              className="px-2 py-0.5 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              <Pencil className="w-3 h-3 text-slate-500" />
-                              <span>Sửa</span>
-                            </button>
                           )}
                         </div>
-                      </div>
-
-                      {agendaSavedToast && (
-                        <div className="mb-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in">
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span>Đã lưu và cập nhật Agenda cho Asightant AI!</span>
-                        </div>
-                      )}
-
-                      {isEditingAgenda ? (
-                        <div className="space-y-2">
-                          <textarea
-                            rows={5}
-                            value={agendaInput}
-                            onChange={(e) => setAgendaInput(e.target.value)}
-                            placeholder="Nhập nội dung chương trình họp (Agenda)..."
-                            className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 resize-y leading-relaxed"
-                          />
-                          <div className="flex items-center justify-between text-[10px] text-slate-400">
-                            <span>Bấm 'Lưu' để cập nhật vào hệ thống.</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAgendaInput(meeting?.description || meeting?.agenda || '');
-                                setIsEditingAgenda(false);
-                              }}
-                              className="text-slate-500 hover:text-slate-800 underline"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="max-h-32 overflow-y-auto pr-1 text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 scrollbar-thin">
-                          {(meeting?.description || meeting?.agenda || '').trim() ? (
-                            <p className="whitespace-pre-line leading-relaxed text-[11.5px]">
-                              {meeting?.description || meeting?.agenda}
-                            </p>
-                          ) : (
-                            <p className="text-[11px] italic text-slate-400">
-                              Chưa có nội dung Agenda. Bấm 'Sửa' hoặc biểu tượng tải tệp ở trên để nạp kế hoạch cuộc họp cho Asightant.
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 2. Tasks Subheader */}
-                    <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5 text-amber-500" />
-                          Task
-                        </span>
-                        <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-bold">
-                          {actionItems.length}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleTriggerAiExtract}
-                          disabled={isExtractingTasks}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                          title="Quét lại bản ghi để trích xuất Task bằng AI"
-                        >
-                          {isExtractingTasks ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3 h-3 text-blue-600" />
-                          )}
-                          <span>Quét Task AI</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleOpenJiraWorkspace}
-                          disabled={isOpeningJira}
-                          className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                          title="Mở Mini Jira Kanban Board của phiên họp"
-                        >
-                          {isOpeningJira ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Kanban className="w-3 h-3 text-blue-600" />
-                          )}
-                          <span>Bảng Jira</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-200">
-                      {actionItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-center p-4 text-slate-400 text-xs my-auto">
-                          <CheckSquare className="w-8 h-8 text-slate-400 mb-2" />
-                          <p className="font-semibold text-slate-700">Chưa có Task nào</p>
-                          <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                            Bấm "Quét Task AI" hoặc "Tổng Kết MoM" trên thanh tiêu đề để AI tự động trích xuất nhiệm vụ và phân bổ cho các thành viên.
-                          </p>
-                        </div>
-                      ) : (
-                        actionItems.map((item: ActionItemResponse) => (
-                          <div
-                            key={item.id}
-                            className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-all text-xs"
-                          >
-                            {editingTaskId === item.id ? (
-                              <div className="flex flex-col gap-2.5">
-                                <input
-                                  type="text"
-                                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
-                                  value={editForm.title}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
-                                  }
-                                  placeholder="Tiêu đề task..."
-                                />
-                                <div className="flex flex-col gap-2">
-                                  <select
-                                    className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
-                                    value={editForm.assignee_id}
-                                    onChange={(e) =>
-                                      setEditForm((prev) => ({
-                                        ...prev,
-                                        assignee_id: e.target.value,
-                                      }))
-                                    }
-                                  >
-                                    <option value="">-- Chọn người phụ trách --</option>
-                                    {meetingMembers.map((m) => (
-                                      <option key={m.user_id} value={m.user_id}>
-                                        {m.user_name || m.user_email || 'Người dùng ẩn danh'}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <CustomDateTimePicker
-                                    value={editForm.deadline}
-                                    onChange={(val) =>
-                                      setEditForm((prev) => ({ ...prev, deadline: val }))
-                                    }
-                                  />
-                                </div>
-                                <div className="flex justify-end gap-2 mt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingTaskId(null)}
-                                    className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                                  >
-                                    <X className="w-3.5 h-3.5" /> Hủy
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(item.id)}
-                                    className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-                                  >
-                                    <Check className="w-3.5 h-3.5" /> Lưu
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex items-start gap-2">
-                                  <div className="mt-1 shrink-0">
-                                    <span
-                                      className={`inline-block w-2 h-2 rounded-full ${
-                                        item.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-amber-500'
-                                      }`}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                      <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
-                                        {item.title}
-                                      </span>
-                                    </div>
-                                    <p className="text-slate-700 text-xs leading-relaxed">
-                                      {item.description || ''}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
-                                  <div className="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium">
-                                    <span className="flex items-center gap-1">
-                                      <User className="w-3 h-3 text-slate-400" />
-                                      <span className="text-slate-800 font-semibold">{item.assignee_name || 'Chưa gán'}</span>
-                                    </span>
-                                    <span className="text-slate-300">|</span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="w-3 h-3 text-slate-400" />
-                                      <span>
-                                        {(item as any).deadline || item.due_date
-                                          ? new Date((item as any).deadline || item.due_date).toLocaleString('vi-VN', {
-                                              hour: '2-digit',
-                                              minute: '2-digit',
-                                              day: '2-digit',
-                                              month: '2-digit',
-                                            })
-                                          : 'Không có hạn'}
-                                      </span>
-                                    </span>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEdit(item)}
-                                    className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                                    title="Chỉnh sửa task"
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ─────────────────────────────────────────────────────────────
-                      TAB 3: LIVEKIT CHAT (SCROLLABLE MESSAGES & SPEAKER SEPARATION)
-                  ───────────────────────────────────────────────────────────── */}
-                  <div
-                    className={`flex-1 flex-col bg-white min-h-0 overflow-hidden ${
-                      activeRightTab === 'chat' ? 'flex' : 'hidden'
-                    }`}
-                  >
-                    <CustomLiveKitChat />
-                  </div>
-
-                  {/* ─────────────────────────────────────────────────────────────
-                      TAB 4: ASIGHTANT AI AGENT (RAG & CONTEXT Q&A)
-                  ───────────────────────────────────────────────────────────── */}
-                  <div
-                    className={`flex-1 flex-col min-h-0 overflow-hidden bg-white ${
-                      activeRightTab === 'ai' ? 'flex' : 'hidden'
-                    }`}
-                  >
-                    <div className="flex flex-col w-full h-full min-h-0 bg-white">
-                      {/* Subheader info */}
-                      <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0 text-[11px] text-slate-600">
-                        <span className="flex items-center gap-1.5 font-bold text-amber-700">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          Asightant • Phân tích Agenda & Hội thoại
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-mono font-semibold">
-                          Qwen RAG Live
-                        </span>
-                      </div>
-
-                      {/* AI Chat message list */}
-                      <ul className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-3.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-200">
-                        {aiMessages.length === 0 && (
-                          <div className="flex flex-col items-center justify-center my-auto p-4 text-center text-xs text-slate-500">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-100 via-blue-50 to-indigo-100 border border-amber-200 flex items-center justify-center mb-2.5 shadow-sm">
-                              <Sparkles className="w-6 h-6 text-amber-600" />
-                            </div>
-                            <p className="font-bold text-slate-900 text-sm">Trợ Lý Asightant AI</p>
-                            <p className="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">
-                              Đã nạp toàn bộ Agenda cuộc họp và theo dõi từng câu phát biểu theo thời gian thực để giải đáp mọi thắc mắc.
-                            </p>
-                            <div className="flex flex-wrap gap-1.5 justify-center mt-3.5 max-w-xs">
-                              {[
-                                'Agenda cuộc họp gồm những gì?',
-                                'Tóm tắt các phát biểu vừa qua',
-                                'Ai đang được phân công việc?',
-                                'Các điểm thống nhất chính',
-                              ].map((prompt) => (
-                                <button
-                                  key={prompt}
-                                  type="button"
-                                  onClick={() => {
-                                    setAiQueryMsg(prompt);
-                                  }}
-                                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-[11px] text-slate-700 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
-                                >
-                                  {prompt}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {aiMessages.map((msg, i) => (
-                          <li
-                            key={i}
-                            className={`flex flex-col gap-1.5 ${
-                              msg.isAi ? 'items-start' : 'items-end'
-                            }`}
-                          >
-                            {/* Speaker Header */}
-                            <div className="flex items-center gap-1.5 text-[11px] px-1">
-                              {msg.isAi ? (
-                                <>
-                                  <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-2xs">
-                                    <Sparkles className="w-2.5 h-2.5 text-white" />
-                                  </div>
-                                  <span className="font-bold text-amber-700">
-                                    Asightant
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="font-semibold text-blue-600">
-                                    {msg.sender || 'Bạn'}
-                                  </span>
-                                  <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
-                                    {(msg.sender || 'U').charAt(0).toUpperCase()}
-                                  </div>
-                                </>
-                              )}
-                              <span className="text-slate-400 font-mono text-[10px]">
-                                [{msg.time}]
-                              </span>
-                            </div>
-
-                            {/* Message Card */}
-                            <div
-                              className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs break-words whitespace-pre-wrap ${
-                                msg.isAi
-                                  ? 'bg-gradient-to-br from-amber-50/60 via-slate-50 to-white border border-amber-200/80 text-slate-800 rounded-tl-xs shadow-sm'
-                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-xs self-end max-w-[85%]'
-                              }`}
-                            >
-                              {msg.text}
-                            </div>
-                          </li>
-                        ))}
-
-                        {/* Animated Thinking State */}
-                        {isAiLoading && (
-                          <li className="flex flex-col gap-1.5 items-start">
-                            <div className="flex items-center gap-1.5 text-[11px] px-1 text-amber-700 font-bold">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-                              <span>Asightant đang xử lý...</span>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2 rounded-tl-xs animate-pulse">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
-                              <span>Đang đối chiếu Agenda và phân tích ngữ cảnh cuộc họp...</span>
-                            </div>
-                          </li>
-                        )}
-                      </ul>
-
-                      {/* Sticky Input Bar */}
-                      <form
-                        onSubmit={handleSendAiQuery}
-                        className="border-t border-slate-200 p-2.5 bg-slate-50 shrink-0 flex items-center gap-2"
-                      >
-                        <input
-                          type="text"
-                          value={aiQueryMsg}
-                          onChange={(e) => setAiQueryMsg(e.target.value)}
-                          disabled={isAiLoading}
-                          placeholder={
-                            isAiLoading
-                              ? 'Asightant đang đọc context...'
-                              : 'Hỏi Asightant về agenda, transcript, task...'
-                          }
-                          className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 transition-colors"
-                        />
-                        <button
-                          type="submit"
-                          disabled={isAiLoading || !aiQueryMsg.trim()}
-                          className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0"
-                        >
-                          {isAiLoading ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            'Hỏi AI'
-                          )}
-                        </button>
-                      </form>
-                    </div>
+                      ))
+                    )}
+                    <div ref={transcriptEndRef} />
                   </div>
                 </div>
-              </aside>
+
+                {/* ─────────────────────────────────────────────────────────────
+                      TAB 2: AGENDA & MEETING NOTES & AI ACTION ITEMS (JIRA)
+                  ───────────────────────────────────────────────────────────── */}
+                <div
+                  className={`flex-1 flex-col overflow-hidden min-h-0 ${
+                    activeRightTab === 'transcript' ? 'flex' : 'hidden'
+                  }`}
+                >
+                  {/* 1. Interactive Meeting Agenda Section (Trong cuộc họp) */}
+                  <div className="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                          Agenda Cuộc Họp
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="file"
+                          ref={inMeetingFileInputRef}
+                          onChange={handleInMeetingAgendaUpload}
+                          accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv"
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => inMeetingFileInputRef.current?.click()}
+                          className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-white text-[11px] font-medium transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                          title="Nạp tệp Agenda mới (.txt, .md, .docx, .pdf)"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                        </button>
+                        {isEditingAgenda ? (
+                          <button
+                            type="button"
+                            onClick={handleSaveAgenda}
+                            disabled={isSavingAgenda}
+                            className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isSavingAgenda ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Save className="w-3 h-3" />
+                            )}
+                            <span>Lưu</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingAgenda(true)}
+                            className="px-2 py-0.5 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <Pencil className="w-3 h-3 text-slate-500" />
+                            <span>Sửa</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {agendaSavedToast && (
+                      <div className="mb-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Đã lưu và cập nhật Agenda cho Asightant AI!</span>
+                      </div>
+                    )}
+
+                    {isEditingAgenda ? (
+                      <div className="space-y-2">
+                        <textarea
+                          rows={5}
+                          value={agendaInput}
+                          onChange={(e) => setAgendaInput(e.target.value)}
+                          placeholder="Nhập nội dung chương trình họp (Agenda)..."
+                          className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 resize-y leading-relaxed"
+                        />
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span>Bấm 'Lưu' để cập nhật vào hệ thống.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAgendaInput(meeting?.description || meeting?.agenda || '');
+                              setIsEditingAgenda(false);
+                            }}
+                            className="text-slate-500 hover:text-slate-800 underline"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="max-h-32 overflow-y-auto pr-1 text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 scrollbar-thin">
+                        {(meeting?.description || meeting?.agenda || '').trim() ? (
+                          <p className="whitespace-pre-line leading-relaxed text-[11.5px]">
+                            {meeting?.description || meeting?.agenda}
+                          </p>
+                        ) : (
+                          <p className="text-[11px] italic text-slate-400">
+                            Chưa có nội dung Agenda. Bấm 'Sửa' hoặc biểu tượng tải tệp ở trên để nạp
+                            kế hoạch cuộc họp cho Asightant.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Tasks Subheader */}
+                  <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        Task
+                      </span>
+                      <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-bold">
+                        {actionItems.length}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleTriggerAiExtract}
+                        disabled={isExtractingTasks}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                        title="Quét lại bản ghi để trích xuất Task bằng AI"
+                      >
+                        {isExtractingTasks ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3 text-blue-600" />
+                        )}
+                        <span>Quét Task AI</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenJiraWorkspace}
+                        disabled={isOpeningJira}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                        title="Mở Mini Jira Kanban Board của phiên họp"
+                      >
+                        {isOpeningJira ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Kanban className="w-3 h-3 text-blue-600" />
+                        )}
+                        <span>Bảng Jira</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-200">
+                    {actionItems.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-48 text-center p-4 text-slate-400 text-xs my-auto">
+                        <CheckSquare className="w-8 h-8 text-slate-400 mb-2" />
+                        <p className="font-semibold text-slate-700">Chưa có Task nào</p>
+                        <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                          Bấm "Quét Task AI" hoặc "Tổng Kết MoM" trên thanh tiêu đề để AI tự động
+                          trích xuất nhiệm vụ và phân bổ cho các thành viên.
+                        </p>
+                      </div>
+                    ) : (
+                      actionItems.map((item: ActionItemResponse) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-all text-xs"
+                        >
+                          {editingTaskId === item.id ? (
+                            <div className="flex flex-col gap-2.5">
+                              <input
+                                type="text"
+                                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
+                                value={editForm.title}
+                                onChange={(e) =>
+                                  setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                                }
+                                placeholder="Tiêu đề task..."
+                              />
+                              <div className="flex flex-col gap-2">
+                                <select
+                                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
+                                  value={editForm.assignee_id}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      assignee_id: e.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="">-- Chọn người phụ trách --</option>
+                                  {meetingMembers.map((m) => (
+                                    <option key={m.user_id} value={m.user_id}>
+                                      {m.user_name || m.user_email || 'Người dùng ẩn danh'}
+                                    </option>
+                                  ))}
+                                </select>
+                                <CustomDateTimePicker
+                                  value={editForm.deadline}
+                                  onChange={(val) =>
+                                    setEditForm((prev) => ({ ...prev, deadline: val }))
+                                  }
+                                />
+                              </div>
+                              <div className="flex justify-end gap-2 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingTaskId(null)}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Hủy
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEdit(item.id)}
+                                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Lưu
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-start gap-2">
+                                <div className="mt-1 shrink-0">
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full ${
+                                      item.status === 'CONFIRMED'
+                                        ? 'bg-emerald-500'
+                                        : 'bg-amber-500'
+                                    }`}
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
+                                      {item.title}
+                                    </span>
+                                  </div>
+                                  <p className="text-slate-700 text-xs leading-relaxed">
+                                    {item.description || ''}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
+                                <div className="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium">
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-3 h-3 text-slate-400" />
+                                    <span className="text-slate-800 font-semibold">
+                                      {item.assignee_name || 'Chưa gán'}
+                                    </span>
+                                  </span>
+                                  <span className="text-slate-300">|</span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    <span>
+                                      {(item as any).deadline || item.due_date
+                                        ? new Date(
+                                            (item as any).deadline || item.due_date
+                                          ).toLocaleString('vi-VN', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                          })
+                                        : 'Không có hạn'}
+                                    </span>
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(item)}
+                                  className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                                  title="Chỉnh sửa task"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* ─────────────────────────────────────────────────────────────
+                      TAB 3: LIVEKIT CHAT (SCROLLABLE MESSAGES & SPEAKER SEPARATION)
+                  ───────────────────────────────────────────────────────────── */}
+                <div
+                  className={`flex-1 flex-col bg-white min-h-0 overflow-hidden ${
+                    activeRightTab === 'chat' ? 'flex' : 'hidden'
+                  }`}
+                >
+                  <CustomLiveKitChat />
+                </div>
+
+                {/* ─────────────────────────────────────────────────────────────
+                      TAB 4: ASIGHTANT AI AGENT (RAG & CONTEXT Q&A)
+                  ───────────────────────────────────────────────────────────── */}
+                <div
+                  className={`flex-1 flex-col min-h-0 overflow-hidden bg-white ${
+                    activeRightTab === 'ai' ? 'flex' : 'hidden'
+                  }`}
+                >
+                  <div className="flex flex-col w-full h-full min-h-0 bg-white">
+                    {/* Subheader info */}
+                    <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0 text-[11px] text-slate-600">
+                      <span className="flex items-center gap-1.5 font-bold text-amber-700">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        Asightant • Phân tích Agenda & Hội thoại
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-mono font-semibold">
+                        Qwen RAG Live
+                      </span>
+                    </div>
+
+                    {/* AI Chat message list */}
+                    <ul className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-3.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-200">
+                      {aiMessages.length === 0 && (
+                        <div className="flex flex-col items-center justify-center my-auto p-4 text-center text-xs text-slate-500">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-100 via-blue-50 to-indigo-100 border border-amber-200 flex items-center justify-center mb-2.5 shadow-sm">
+                            <Sparkles className="w-6 h-6 text-amber-600" />
+                          </div>
+                          <p className="font-bold text-slate-900 text-sm">Trợ Lý Asightant AI</p>
+                          <p className="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">
+                            Đã nạp toàn bộ Agenda cuộc họp và theo dõi từng câu phát biểu theo thời
+                            gian thực để giải đáp mọi thắc mắc.
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 justify-center mt-3.5 max-w-xs">
+                            {[
+                              'Agenda cuộc họp gồm những gì?',
+                              'Tóm tắt các phát biểu vừa qua',
+                              'Ai đang được phân công việc?',
+                              'Các điểm thống nhất chính',
+                            ].map((prompt) => (
+                              <button
+                                key={prompt}
+                                type="button"
+                                onClick={() => {
+                                  setAiQueryMsg(prompt);
+                                }}
+                                className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-[11px] text-slate-700 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
+                              >
+                                {prompt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {aiMessages.map((msg, i) => (
+                        <li
+                          key={i}
+                          className={`flex flex-col gap-1.5 ${
+                            msg.isAi ? 'items-start' : 'items-end'
+                          }`}
+                        >
+                          {/* Speaker Header */}
+                          <div className="flex items-center gap-1.5 text-[11px] px-1">
+                            {msg.isAi ? (
+                              <>
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-2xs">
+                                  <Sparkles className="w-2.5 h-2.5 text-white" />
+                                </div>
+                                <span className="font-bold text-amber-700">Asightant</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-semibold text-blue-600">
+                                  {msg.sender || 'Bạn'}
+                                </span>
+                                <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                                  {(msg.sender || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              </>
+                            )}
+                            <span className="text-slate-400 font-mono text-[10px]">
+                              [{msg.time}]
+                            </span>
+                          </div>
+
+                          {/* Message Card */}
+                          <div
+                            className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs break-words whitespace-pre-wrap ${
+                              msg.isAi
+                                ? 'bg-gradient-to-br from-amber-50/60 via-slate-50 to-white border border-amber-200/80 text-slate-800 rounded-tl-xs shadow-sm'
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-xs self-end max-w-[85%]'
+                            }`}
+                          >
+                            {msg.text}
+                          </div>
+                        </li>
+                      ))}
+
+                      {/* Animated Thinking State */}
+                      {isAiLoading && (
+                        <li className="flex flex-col gap-1.5 items-start">
+                          <div className="flex items-center gap-1.5 text-[11px] px-1 text-amber-700 font-bold">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                            <span>Asightant đang xử lý...</span>
+                          </div>
+                          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2 rounded-tl-xs animate-pulse">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
+                            <span>Đang đối chiếu Agenda và phân tích ngữ cảnh cuộc họp...</span>
+                          </div>
+                        </li>
+                      )}
+                    </ul>
+
+                    {/* Sticky Input Bar */}
+                    <form
+                      onSubmit={handleSendAiQuery}
+                      className="border-t border-slate-200 p-2.5 bg-slate-50 shrink-0 flex items-center gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={aiQueryMsg}
+                        onChange={(e) => setAiQueryMsg(e.target.value)}
+                        disabled={isAiLoading}
+                        placeholder={
+                          isAiLoading
+                            ? 'Asightant đang đọc context...'
+                            : 'Hỏi Asightant về agenda, transcript, task...'
+                        }
+                        className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 transition-colors"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isAiLoading || !aiQueryMsg.trim()}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0"
+                      >
+                        {isAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Hỏi AI'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </aside>
           </LiveKitRoom>
         )}
       </main>

@@ -51,28 +51,32 @@ const PRESET_BACKGROUNDS: BackgroundOption[] = [
     name: 'Văn phòng',
     type: 'preset',
     url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=200&q=60',
+    thumbnail:
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=200&q=60',
   },
   {
     id: 'minimal',
     name: 'Studio',
     type: 'preset',
     url: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=1200&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=200&q=60',
+    thumbnail:
+      'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=200&q=60',
   },
   {
     id: 'library',
     name: 'Ấm cúng',
     type: 'preset',
     url: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1200&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=200&q=60',
+    thumbnail:
+      'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=200&q=60',
   },
   {
     id: 'tech',
     name: 'Command',
     type: 'preset',
     url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=200&q=60',
+    thumbnail:
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=200&q=60',
   },
 ];
 
@@ -360,7 +364,11 @@ export function MeetingPreJoinLobby({
                 <div className="relative z-10 flex flex-col items-center justify-center gap-3 text-center p-4">
                   <div className="relative">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary/30 to-blue-500/20 border-2 border-primary/40 flex items-center justify-center text-2xl font-extrabold text-white shadow-2xl">
-                      {participantName ? participantName.charAt(0).toUpperCase() : <UserIcon className="w-8 h-8" />}
+                      {participantName ? (
+                        participantName.charAt(0).toUpperCase()
+                      ) : (
+                        <UserIcon className="w-8 h-8" />
+                      )}
                     </div>
                     <span className="absolute bottom-0 right-0 p-1.5 rounded-full bg-red-500 text-white shadow-md">
                       <VideoOff className="w-3.5 h-3.5" />
@@ -368,7 +376,9 @@ export function MeetingPreJoinLobby({
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-slate-200">Máy ảnh đang tắt</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Bật camera để mọi người nhìn thấy bạn</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Bật camera để mọi người nhìn thấy bạn
+                    </p>
                   </div>
                 </div>
               )}
@@ -378,7 +388,8 @@ export function MeetingPreJoinLobby({
                 <div className="absolute inset-0 z-30 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                   <h3 className="text-sm font-bold text-white mb-1">Cần cấp quyền thiết bị</h3>
                   <p className="text-xs text-slate-300 max-w-sm leading-relaxed mb-4">
-                    {permissionError || 'Vui lòng nhấn vào biểu tượng ổ khóa trên thanh địa chỉ để cấp quyền Máy ảnh và Micro.'}
+                    {permissionError ||
+                      'Vui lòng nhấn vào biểu tượng ổ khóa trên thanh địa chỉ để cấp quyền Máy ảnh và Micro.'}
                   </p>
                   <button
                     onClick={() => window.location.reload()}
@@ -564,7 +575,9 @@ export function MeetingPreJoinLobby({
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute inset-x-0 bottom-0 bg-slate-900/70 backdrop-blur-xs py-0.5 px-0.5 text-center">
-                              <span className="text-[8.5px] font-semibold text-white block truncate">{bg.name}</span>
+                              <span className="text-[8.5px] font-semibold text-white block truncate">
+                                {bg.name}
+                              </span>
                             </div>
                           </>
                         )}
@@ -598,7 +611,9 @@ export function MeetingPreJoinLobby({
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-x-0 bottom-0 bg-blue-900/80 py-0.5 px-0.5 text-center">
-                        <span className="text-[8.5px] font-bold text-white block truncate">Ảnh của bạn</span>
+                        <span className="text-[8.5px] font-bold text-white block truncate">
+                          Ảnh của bạn
+                        </span>
                       </div>
                     </button>
                   )}
@@ -630,18 +645,30 @@ export function MeetingPreJoinLobby({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-slate-400">Tham gia với tư cách</p>
-                  <p className="text-xs font-bold text-slate-800 truncate">{participantName || 'Thành viên'}</p>
+                  <p className="text-xs font-bold text-slate-800 truncate">
+                    {participantName || 'Thành viên'}
+                  </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${micEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                  Micro: <strong className={micEnabled ? 'text-emerald-700' : 'text-red-600'}>{micEnabled ? 'Đang bật' : 'Đã tắt'}</strong>
+                  <span
+                    className={`w-2 h-2 rounded-full ${micEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
+                  />
+                  Micro:{' '}
+                  <strong className={micEnabled ? 'text-emerald-700' : 'text-red-600'}>
+                    {micEnabled ? 'Đang bật' : 'Đã tắt'}
+                  </strong>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${camEnabled ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                  Camera: <strong className={camEnabled ? 'text-slate-700' : 'text-red-600'}>{camEnabled ? 'Đang bật' : 'Đã tắt'}</strong>
+                  <span
+                    className={`w-2 h-2 rounded-full ${camEnabled ? 'bg-emerald-500' : 'bg-red-500'}`}
+                  />
+                  Camera:{' '}
+                  <strong className={camEnabled ? 'text-slate-700' : 'text-red-600'}>
+                    {camEnabled ? 'Đang bật' : 'Đã tắt'}
+                  </strong>
                 </span>
               </div>
             </div>
@@ -668,7 +695,8 @@ export function MeetingPreJoinLobby({
                   <p className="whitespace-pre-line text-[11.5px] font-normal">{meetingAgenda}</p>
                 ) : (
                   <p className="text-[11px] italic text-slate-400">
-                    Chưa có nội dung Agenda. Bạn vẫn có thể nhập hoặc import tệp sau khi vào phòng họp.
+                    Chưa có nội dung Agenda. Bạn vẫn có thể nhập hoặc import tệp sau khi vào phòng
+                    họp.
                   </p>
                 )}
               </div>

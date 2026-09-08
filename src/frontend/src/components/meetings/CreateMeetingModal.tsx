@@ -72,7 +72,9 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
       setUploadedFileName(file.name);
     } catch (err: any) {
       console.warn('File read error:', err);
-      setError(err?.message || 'Không thể trích xuất nội dung tệp. Bạn có thể dán trực tiếp nội dung.');
+      setError(
+        err?.message || 'Không thể trích xuất nội dung tệp. Bạn có thể dán trực tiếp nội dung.'
+      );
     } finally {
       setIsParsingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -228,7 +230,9 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
 
             {uploadedFileName && (
               <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px]">
-                <span className="truncate">📎 Đã nạp từ tệp: <strong>{uploadedFileName}</strong></span>
+                <span className="truncate">
+                  📎 Đã nạp từ tệp: <strong>{uploadedFileName}</strong>
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -253,7 +257,9 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
             />
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-              <span>💡 Asightant sẽ đọc toàn bộ nội dung này để trả lời và tổng kết trong phòng họp.</span>
+              <span>
+                💡 Asightant sẽ đọc toàn bộ nội dung này để trả lời và tổng kết trong phòng họp.
+              </span>
               <span>{agendaText.length} ký tự</span>
             </div>
           </div>
