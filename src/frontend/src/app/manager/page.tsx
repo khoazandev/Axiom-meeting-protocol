@@ -79,10 +79,6 @@ export default function ManagerWorkspacePage() {
           <Link href="/manager" className="flex items-center gap-2 group">
             <Logo size={34} showText={true} subtitle="DX-OS" />
           </Link>
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50/80 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/60 text-[11px] text-blue-600 dark:text-blue-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span>Rê chuột mép trái để mở menu</span>
-          </div>
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200/70 dark:border-blue-800/60 text-[10.5px] font-extrabold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
             TRƯỞNG PHÒNG
           </div>

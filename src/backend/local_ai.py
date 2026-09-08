@@ -1,8 +1,10 @@
 import asyncio
 import io
+import re
 import edge_tts
 import av
 import numpy as np
+import concurrent.futures
 from typing import Optional, Union, List
 from livekit import rtc
 from livekit.agents import stt
@@ -12,6 +14,7 @@ import os
 
 _global_whisper_model = None
 _global_vad = None
+_stt_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="stt_worker")
 
 def preload_models():
     """Load models in a separate thread to avoid blocking event loop"""
@@ -23,9 +26,10 @@ def preload_models():
     if _global_vad is None:
         from livekit.plugins import silero
         _global_vad = silero.VAD.load(
-            min_speech_duration=0.25,
-            min_silence_duration=0.5,
-            activation_threshold=0.6,
+            min_speech_duration=0.05,
+            min_silence_duration=0.35,
+            activation_threshold=0.30,
+            prefix_padding_duration=0.5,
         )
 
 def get_vad():
@@ -35,14 +39,10 @@ def get_vad():
     return _global_vad
 
 class FasterWhisperSTT(stt.STT):
-    def __init__(self, model_size: Optional[str] = None, language: Optional[str] = None):
+    def __init__(self, model_size: Optional[str] = None, language: Optional[str] = "vi"):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
-        self._language = language
-        self._initial_prompt = (
-            "Chào mọi người, trong cuộc họp hôm nay chúng ta sẽ review tiến độ sprint, "
-            "thảo luận các task trên Jira và bàn về kế hoạch triển khai dự án. "
-            "Let's start the meeting and review the updates."
-        )
+        self._language = language or "vi"
+        self._initial_prompt = "Cuộc họp trực tuyến bằng tiếng Việt, trao đổi công việc và thảo luận."
         
         target_model = model_size or os.getenv("WHISPER_MODEL_SIZE", "small")
         cpu_threads = int(os.getenv("WHISPER_CPU_THREADS", "6"))
@@ -92,111 +92,108 @@ class FasterWhisperSTT(stt.STT):
             dur_sec = len(audio_float32) / 16000.0
             rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
             peak = float(np.max(np.abs(audio_float32))) if len(audio_float32) > 0 else 0.0
-            if rms < 0.012 or dur_sec < 0.40 or peak < 0.035:
+            if rms < 0.00005 or dur_sec < 0.20 or peak < 0.0003:
                 logger.info(f"Audio energy too low (RMS={rms:.5f}, peak={peak:.4f}, dur={dur_sec:.2f}s), skipping silence.")
                 return "", "vi"
 
-            # Normalize audio with max 5.0x gain to prevent amplifying background hiss
-            gain = min(0.89 / peak, 5.0) if peak > 0 else 1.0
+            # Normalize audio with max 60.0x gain to properly amplify quiet laptop mics
+            gain = min(0.85 / peak, 60.0) if peak > 0 else 1.0
             normalized_audio = audio_float32 * gain
 
-            # Quick bilingual language determination: STRICTLY between 'vi' and 'en'
+            # Strictly recognize Vietnamese (Tiếng Việt)
+            detected = "vi"
             try:
-                if lang_code in ("vi", "en"):
-                    target_lang = lang_code
-                    vi_prob, en_prob = (1.0, 0.0) if lang_code == "vi" else (0.0, 1.0)
-                else:
-                    _, _, all_probs = self._model.detect_language(normalized_audio)
-                    prob_dict = dict(all_probs)
-                    vi_prob = prob_dict.get("vi", 0.0)
-                    en_prob = prob_dict.get("en", 0.0)
-                    
-                    if en_prob > 0.35 and en_prob > vi_prob * 1.5:
-                        target_lang = "en"
-                    elif vi_prob > 0.15:
-                        target_lang = "vi"
-                    elif en_prob > vi_prob:
-                        target_lang = "en"
-                    else:
-                        target_lang = "vi"
-
-                logger.info(f"Bilingual STT selected language: '{target_lang}' (vi_prob={vi_prob:.2f}, en_prob={en_prob:.2f}, hint={lang_code}, dur={dur_sec:.2f}s, RMS={rms:.4f})")
-
-                # Transcribe constrained strictly to target_lang (vi or en)
+                logger.info(f"Vietnamese STT processing: dur={dur_sec:.2f}s, RMS={rms:.4f}, peak={peak:.4f}")
                 segments, info = self._model.transcribe(
                     normalized_audio,
                     beam_size=1,
                     best_of=1,
                     temperature=0.0,
-                    language=target_lang,
+                    language="vi",
+                    task="transcribe",
                     condition_on_previous_text=False,
                     vad_filter=False,
-                    no_speech_threshold=0.5,
-                    log_prob_threshold=-0.8,
-                    compression_ratio_threshold=2.2,
+                    no_speech_threshold=0.85,
+                    log_prob_threshold=-1.0,
+                    compression_ratio_threshold=2.4,
                     initial_prompt=self._initial_prompt
                 )
-                detected = target_lang
 
-                valid_segments = []
+                raw_segments = []
                 for segment in segments:
-                    if getattr(segment, "no_speech_prob", 0) > 0.5:
-                        continue
-                    valid_segments.append(segment.text)
-                res = " ".join(valid_segments).strip()
+                    no_speech = getattr(segment, "no_speech_prob", 0.0)
+                    avg_logprob = getattr(segment, "avg_logprob", 0.0)
+                    logger.info(f"Whisper raw segment: text='{segment.text}', no_speech_prob={no_speech:.4f}, avg_logprob={avg_logprob:.4f}")
+                    raw_segments.append(segment.text)
+                res = " ".join(raw_segments).strip()
             except Exception as e:
                 logger.error(f"Error in transcribe: {e}", exc_info=True)
                 return "", "vi"
 
+            if not res:
+                logger.info("Transcribe returned empty text")
+                return "", detected
+
+            # Clean out common Whisper hallucinated promo sentences in Vietnamese
+            promo_patterns = [
+                r'hãy subscribe[^\.\!\?]*[\.\!\?]?',
+                r'đăng ký kênh[^\.\!\?]*[\.\!\?]?',
+                r'để không bỏ lỡ[^\.\!\?]*[\.\!\?]?',
+                r'like và chia sẻ[^\.\!\?]*[\.\!\?]?',
+                r'chúc các bạn xem video[^\.\!\?]*[\.\!\?]?',
+                r'ghiền mì gõ[^\.\!\?]*[\.\!\?]?',
+                r'la la school[^\.\!\?]*[\.\!\?]?',
+                r'subtitles by[^\.\!\?]*[\.\!\?]?',
+                r'thank you for watching[^\.\!\?]*[\.\!\?]?',
+            ]
+            for p in promo_patterns:
+                res = re.sub(p, '', res, flags=re.IGNORECASE)
+            res = re.sub(r'\s+', ' ', res).strip()
+            if not res:
+                return "", detected
 
             # 1. Script filter: discard any CJK, Cyrillic, Arabic scripts immediately
-            import re
             if re.search(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff]', res):
                 logger.info(f"Discarded non-Latin/Vietnamese script: '{res}'")
                 return "", detected
 
-            # 2. Hallucination filter for silence in Vietnamese & English
+            # 2. Filter out single characters or lone punctuation
+            cleaned = re.sub(r'[^\w\s]', '', res).strip()
+            if len(cleaned) <= 1:
+                logger.info(f"Suppressed single char / punctuation: '{res}'")
+                return "", detected
+
+            # 3. Hallucination filter for YouTube / silence artifacts
             hallucinations = [
-                "hãy subscribe cho kênh ghiền mì gõ",
-                "hãy subscribe cho kênh",
+                "hãy subscribe",
+                "ghiền mì gõ",
+                "subscribe",
                 "cảm ơn các bạn đã theo dõi",
-                "chúc các bạn xem video vui vẻ",
+                "chúc các bạn xem video",
                 "thank you for watching",
                 "thanks for watching",
                 "thank you very much",
-                "thank you",
-                "good day",
                 "subtitles by",
                 "see you next time",
                 "see you in the next",
                 "see you again",
                 "oh god damn",
-                "oh, god, damn",
                 "oh my god",
-                "c'est lui",
-                "bye",
-                "bye!",
-                "bye bye",
-                "you",
+                "like và chia sẻ",
+                "đăng ký kênh",
+                "hẹn gặp lại các bạn",
             ]
             lower_res = res.lower().strip()
             clean_token = re.sub(r'[^\w\s]', '', lower_res).strip()
-            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) or clean_token in ["thank you", "good day", "you", "bye"]:
-                if rms < 0.045:
+            if any(h in lower_res for h in hallucinations) or clean_token in ["thank you", "good day", "you", "bye"]:
+                if rms < 0.005:
                     logger.info(f"Suppressed silence hallucination: '{res}' (RMS={rms:.4f})")
                     return "", detected
 
-
-            # Filter out single characters or punctuation
-            cleaned = re.sub(r'[^\w\s]', '', res).strip()
-            if len(cleaned) <= 1:
-                logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
-                return "", detected
-
-            logger.info(f"Transcribe thread finished (detected={detected}, vi={vi_prob:.2f}, en={en_prob:.2f}): '{res}'")
+            logger.info(f"Transcribe thread finished (detected={detected}): '{res}'")
             return res, detected
             
-        text, detected_lang = await loop.run_in_executor(None, transcribe)
+        text, detected_lang = await loop.run_in_executor(_stt_executor, transcribe)
         logger.info(f"Transcribe executor returned: text='{text}', lang='{detected_lang}'")
 
         return stt.SpeechEvent(
@@ -264,11 +261,11 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
             vad_stream.end_input()
 
         async def _recognize_interim_loop() -> None:
-            """periodically recognize speech from the buffer while speaking (sub-second interim updates)"""
+            """Periodic fast interim transcription to stream partial text immediately"""
             import logging
             interim_logger = logging.getLogger("local-ai.interim")
             while True:
-                await asyncio.sleep(0.45)
+                await asyncio.sleep(0.25)
                 if not self._is_speaking or not self._speech_buffer:
                     continue
 
@@ -278,14 +275,7 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                 total_samples = sum(f.samples_per_channel for f in self._speech_buffer)
                 sample_rate = self._speech_buffer[0].sample_rate if self._speech_buffer else 16000
                 dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
-                if dur_sec < 0.6:
-                    continue
-
-                # Skip if speech buffer contains only silence or dead mic (RMS < 15)
-                raw_bytes = b"".join(f.data for f in self._speech_buffer[-15:])
-                pcm16 = np.frombuffer(raw_bytes, dtype=np.int16)
-                buf_rms = float(np.sqrt(np.mean(pcm16.astype(np.float32)**2))) if len(pcm16) > 0 else 0
-                if buf_rms < 15.0:
+                if dur_sec < 0.35:
                     continue
 
                 # 1. Check 5-second forced segmentation cap (prevents audio buffer bloat on long speech)
@@ -350,8 +340,13 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
             import logging
             vad_logger = logging.getLogger("local-ai.vad")
             async for event in vad_stream:
-                if event.type != VADEventType.INFERENCE_DONE:
+                if event.type == VADEventType.INFERENCE_DONE:
+                    prob = getattr(event, "probability", 0.0)
+                    if prob > 0.15:
+                        vad_logger.info(f"VAD speech energy detected: prob={prob:.2f}")
+                else:
                     vad_logger.info(f"VAD Event received: type={event.type}")
+
                 if event.type == VADEventType.START_OF_SPEECH:
                     self._is_speaking = True
                     # Pre-populate speech buffer with the pre-buffer frames to catch initial syllables
@@ -367,7 +362,9 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                         )
                     )
 
-                    frames_to_finalize = list(self._speech_buffer) if self._speech_buffer else (list(event.frames) if event.frames else [])
+                    frames_to_finalize = list(self._speech_buffer)
+                    if not frames_to_finalize and event.frames:
+                        frames_to_finalize = list(event.frames)
                     self._speech_buffer = []
 
                     if not frames_to_finalize:
@@ -376,7 +373,7 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                     total_samples = sum(f.samples_per_channel for f in frames_to_finalize)
                     sample_rate = frames_to_finalize[0].sample_rate if frames_to_finalize else 16000
                     dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
-                    if dur_sec < 0.3:
+                    if dur_sec < 0.20:
                         vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
                         continue
 

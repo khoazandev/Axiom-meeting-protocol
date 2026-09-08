@@ -67,8 +67,18 @@ def _extract_docx(content: bytes) -> str:
     from docx import Document
 
     doc = Document(io.BytesIO(content))
-    parts = [para.text for para in doc.paragraphs if para.text.strip()]
-    return "\n".join(parts)
+    parts = []
+    for para in doc.paragraphs:
+        txt = para.text.strip()
+        if txt:
+            parts.append(txt)
+    # Also extract text from any tables in the document
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+            if row_text and row_text not in parts:
+                parts.append(row_text)
+    return "\n\n".join(parts)
 
 
 def _extract_xlsx(content: bytes) -> str:

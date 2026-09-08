@@ -15,8 +15,12 @@ import {
   FileText,
   Search,
   ExternalLink,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import { meetingsApi, Meeting } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { CreateMeetingModal } from '@/components/meetings/CreateMeetingModal';
 
 interface MemberMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -24,12 +28,13 @@ interface MemberMeetingsTabProps {
 
 export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -46,27 +51,27 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     load();
   }, []);
 
+  const handleDeleteMeeting = async (id: string, title: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa cuộc họp "${title}" không? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+    setDeletingId(id);
+    try {
+      await meetingsApi.delete(id);
+      setMeetings((prev) => prev.filter((m) => String(m.id) !== id));
+      onNotify(`Đã xóa cuộc họp "${title}" thành công.`);
+    } catch (err: any) {
+      console.error('Failed to delete meeting:', err);
+      onNotify(`Lỗi khi xóa: ${err?.message || 'Có lỗi xảy ra'}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleJoinByCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (joinCode.trim()) {
       router.push(`/meetings/${joinCode.trim()}`);
-    }
-  };
-
-  const handleCreateMeeting = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    try {
-      const created = await meetingsApi.create({ title: newTitle.trim() });
-      setMeetings([created, ...meetings]);
-      setIsCreateModalOpen(false);
-      setNewTitle('');
-      onNotify(`Đã tạo phòng họp mới: ${created.title}`);
-      router.push(`/meetings/${created.id}`);
-    } catch (err) {
-      console.error('Failed to create meeting:', err);
-      onNotify('Không thể tạo cuộc họp. Vui lòng thử lại!');
     }
   };
 
@@ -206,14 +211,32 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     <span>Tham Gia Ngay</span>
                   </a>
 
-                  <button
-                    type="button"
-                    onClick={() => onNotify('Biên bản AI sẽ sẵn sàng ngay sau khi kết thúc họp.')}
-                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <FileText size={12} />
-                    <span>Biên Bản AI</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onNotify('Biên bản AI sẽ sẵn sàng ngay sau khi kết thúc họp.')}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <FileText size={12} />
+                      <span>Biên Bản AI</span>
+                    </button>
+
+                    {user && (user.id === mtg.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN') && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMeeting(String(mtg.id), mtg.title)}
+                        disabled={deletingId === String(mtg.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                        title="Xóa cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
+                      >
+                        {deletingId === String(mtg.id) ? (
+                          <Loader2 size={13} className="animate-spin text-rose-500" />
+                        ) : (
+                          <Trash2 size={13} />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -221,57 +244,15 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
         )}
       </div>
 
-      {/* Modal Tạo Cuộc Họp Mới */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
-                Tạo Cuộc Họp Mới
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateMeeting} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Chủ đề cuộc họp *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="VD: Thảo luận kiến trúc LiveKit SFU"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
-                >
-                  Vào Phòng Ngay
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal Tạo Cuộc Họp Mới có Agenda Import */}
+      <CreateMeetingModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={(meetingId) => {
+          onNotify('Đã tạo cuộc họp và nạp Agenda thành công!');
+          router.push(`/meetings/${meetingId}`);
+        }}
+      />
     </div>
   );
 }

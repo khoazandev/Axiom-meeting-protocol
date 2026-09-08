@@ -108,11 +108,6 @@ export function HeroSection() {
               loop={true}
               className="w-[280px] h-auto max-h-[280px]"
             />
-
-            {/* "Chúng ta có mặt ở đây để làm gì?" floating bubble */}
-            <div className="absolute top-[30px] right-[-140px] bg-white rounded-full border border-[#e3e7f1] px-5 py-2.5 text-[13px] text-[#18181a] shadow-sm whitespace-nowrap">
-              Chúng ta có mặt ở đây để làm gì?
-            </div>
           </div>
 
           {/* Floating 3D Icon: Blue Folder (top-left) */}

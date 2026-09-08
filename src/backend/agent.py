@@ -176,6 +176,11 @@ async def entrypoint(ctx: JobContext):
         logger.info(f"Updated preferences for {participant.identity}: {state.participant_prefs[participant.identity]}")
 
     async def handle_track(track: rtc.Track, participant: rtc.RemoteParticipant):
+        attrs = participant.attributes or {}
+        if attrs.get("client_stt") == "true":
+            logger.info(f"Participant {participant.identity} has client_stt enabled (Web Speech API realtime). Skipping server-side Whisper CPU.")
+            return
+
         logger.info(f"Waiting for AI models to finish loading before processing track from {participant.identity}...")
         await models_ready.wait()
         
@@ -183,9 +188,9 @@ async def entrypoint(ctx: JobContext):
         logger.info(f"Participant {participant.identity} using language: {lang}")
         audio_stream = rtc.AudioStream(track)
         
-        # Create STT plugin with automatic language detection (language=None)
+        # Create STT plugin strictly for Vietnamese
         stt_plugin = local_ai.RealtimeStreamAdapter(
-            stt=local_ai.FasterWhisperSTT(language=None),
+            stt=local_ai.FasterWhisperSTT(language="vi"),
             vad=local_ai.get_vad()
         )
         stt_stream = stt_plugin.stream()
@@ -194,6 +199,9 @@ async def entrypoint(ctx: JobContext):
             try:
                 frame_count = 0
                 async for event in audio_stream:
+                    if (participant.attributes or {}).get("client_stt") == "true":
+                        logger.info(f"Participant {participant.identity} enabled client_stt. Aborting server feed_stt.")
+                        break
                     if frame_count == 0:
                         logger.info(f"Received first audio frame. Sample rate: {event.frame.sample_rate}, Channels: {event.frame.num_channels}")
                     frame_count += 1
@@ -201,7 +209,8 @@ async def entrypoint(ctx: JobContext):
                         pcm = np.frombuffer(event.frame.data, dtype=np.int16)
                         rms = float(np.sqrt(np.mean(pcm.astype(np.float32)**2))) if len(pcm) > 0 else 0.0
                         max_amp = int(np.max(np.abs(pcm))) if len(pcm) > 0 else 0
-                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity} (frame RMS={rms:.2f}, peak={max_amp})")
+                        muted_str = " [TRACK MUTED]" if getattr(track, "muted", False) else ""
+                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity}{muted_str} (frame RMS={rms:.2f}, peak={max_amp})")
                     stt_stream.push_frame(event.frame)
                 stt_stream.end_input()
             except Exception as e:
@@ -219,22 +228,21 @@ async def entrypoint(ctx: JobContext):
                         continue
                     text = event.alternatives[0].text
                     
-                    logger.info(f"STT Event: type={event.type}, text='{text}'")
+                    logger.info(f"STT Event ({'FINAL' if is_final else 'INTERIM'}): '{text}'")
                     
                     if not text.strip():
                         continue
                     
-                    detected_lang = getattr(event.alternatives[0], "language", None) or lang or "vi"
-                    if detected_lang not in ("vi", "en"):
-                        detected_lang = "vi"
+                    # Strictly Vietnamese
+                    detected_lang = "vi"
 
-                    # 1. Pipeline 1: Original Transcript -> Records
+                    # Pipeline: Original Vietnamese Transcript -> Live DataChannel
                     record_payload = {
                         "type": "original_transcript",
                         "participant_identity": participant.identity,
                         "participant_name": participant.name or participant.identity,
                         "original_text": text,
-                        "language": detected_lang,
+                        "language": "vi",
                         "is_final": is_final
                     }
                     logger.info(f"Publishing record via DataChannel (topic=records): {record_payload}")
@@ -242,14 +250,6 @@ async def entrypoint(ctx: JobContext):
                         json.dumps(record_payload).encode("utf-8"),
                         topic="records"
                     )
-                    
-                    # 2. Pipeline 2: Speech Translation (Automatic Bilingual: vi <-> en)
-                    if is_final:
-                        target_lang = "en" if detected_lang == "vi" else "vi"
-                        logger.info(f"Auto-translating for {participant.identity}: {detected_lang} -> {target_lang}")
-                        asyncio.create_task(
-                            process_translation(state, text, participant, target_lang, detected_lang)
-                        )
         except Exception as e:
             logger.error(f"Error in stt_stream processing for {participant.identity}: {e}", exc_info=True)
 
@@ -270,8 +270,19 @@ async def entrypoint(ctx: JobContext):
             return
 
         if track.kind == rtc.TrackKind.KIND_AUDIO:
-            logger.info(f"Subscribed to audio track from {participant.identity}")
+            logger.info(f"Subscribed to audio track from {participant.identity} (initially muted={getattr(track, 'muted', False)})")
             
+            try:
+                @track.on("muted")
+                def _on_track_muted():
+                    logger.warning(f"⚠️ Audio track from {participant.identity} is now MUTED!")
+
+                @track.on("unmuted")
+                def _on_track_unmuted():
+                    logger.info(f"🔊 Audio track from {participant.identity} is now UNMUTED! Voice streaming active.")
+            except Exception:
+                pass
+
             # Initial setup of prefs if they have any
             attrs = participant.attributes
             if attrs:
