@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: axiom
       POSTGRES_PASSWORD: axiom_dev_password
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
       dockerfile: docker/Dockerfile.backend
     restart: unless-stopped
     ports:
-      - '8000:8000'
+      - '8001:8000'
       - '8765:8765' # STT WebSocket
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -45,8 +45,11 @@ services:
       EXTRACTION_MODEL: ${EXTRACTION_MODEL:-qwen3:0.6b}
       EXTRACTION_TIMEOUT: ${EXTRACTION_TIMEOUT:-900}
       # Follow-up Task Extraction
-      TASK_EXTRACTOR_MODEL: ${TASK_EXTRACTOR_MODEL:-task-extractor01}
+      TASK_EXTRACTOR_MODEL: ${TASK_EXTRACTOR_MODEL:-lamphat03102004/task-extractor01}
       TASK_EXTRACTOR_TIMEOUT: ${TASK_EXTRACTOR_TIMEOUT:-900}
+    volumes:
+      - ./src/backend:/app/src/backend
+      - ./models:/app/models
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,7 +65,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '3001:3000'
     environment:
       NEXT_PUBLIC_LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
       BACKEND_URL: http://backend:8000
@@ -79,14 +82,38 @@ services:
       - '7882:7882/udp' # WebRTC UDP
     environment:
       LIVEKIT_KEYS: '${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}'
-    command: --dev --bind 0.0.0.0
+    command: --dev --bind 0.0.0.0 --node-ip ${LIVEKIT_NODE_IP:-127.0.0.1}
+
+  # ─── Babel Fish Agent (LiveKit Worker) ─────────────────────
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - WHISPER_MODEL_SIZE=small
+      - WHISPER_CPU_THREADS=6
+      - TRANSLATION_MODEL=translategemma:4b
+    depends_on:
+      - livekit
+    volumes:
+      - hf_cache:/home/appuser/.cache/huggingface
+      - ./src/backend:/app/src/backend
+    command: python -m src.backend.agent start
 
   # ─── Redis (for future AI queue pipeline) ────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '16379:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -95,3 +122,4 @@ services:
 
 volumes:
   postgres_data:
+  hf_cache:

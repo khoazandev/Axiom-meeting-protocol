@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, File, UploadFile
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,11 @@ from src.backend.models import (
     MeetingMemberRoleEnum,
     MeetingMemberStatusEnum,
     MeetingStatusEnum,
+    FollowUpTask,
+    TranscriptSegment,
+    MeetingSummary,
+    MeetingDocument,
+    KnowledgeChunk,
     User,
 )
 from src.backend.schemas.meeting import (
@@ -65,7 +70,7 @@ def create_meeting(
     """Create a new meeting. Creator is auto-added as HOST."""
     meeting = Meeting(
         title=payload.title,
-        description=payload.description,
+        description=payload.description or payload.agenda,
         organization_id=payload.organization_id,
         department_id=payload.department_id,
         created_by_id=current_user.id,
@@ -133,6 +138,8 @@ def update_meeting(
         meeting.title = payload.title
     if payload.description is not None:
         meeting.description = payload.description
+    elif payload.agenda is not None:
+        meeting.description = payload.agenda
     if payload.scheduled_at is not None:
         meeting.scheduled_at = payload.scheduled_at
     if payload.status is not None:
@@ -153,18 +160,106 @@ def update_meeting(
     return meeting
 
 
-@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{meeting_id}")
 def delete_meeting(
     meeting_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """Delete a meeting. Only HOST or creator can delete."""
+    """Delete a meeting. Only creator, HOST or organization admin can delete."""
     meeting = _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+
+    # Permission check: Creator, HOST, or OWNER/ADMIN can delete
+    is_creator = meeting.created_by_id == current_user.id
+    is_host = False
+    member = (
+        db.query(MeetingMember)
+        .filter(
+            MeetingMember.meeting_id == meeting_id,
+            MeetingMember.user_id == current_user.id,
+        )
+        .first()
+    )
+    if member and member.role == MeetingMemberRoleEnum.HOST:
+        is_host = True
+
+    is_admin = getattr(current_user, "role", None) in ("OWNER", "ADMIN")
+
+    if not (is_creator or is_host or is_admin):
+        raise ForbiddenException("Bạn không có quyền xóa cuộc họp này. Chỉ người tạo hoặc chủ tọa mới có quyền xóa.")
+
+    # Delete dependent child rows to prevent foreign key errors
+    try:
+        from sqlalchemy import text
+        # 1. Jira projects & issues
+        jp_ids = [r[0] for r in db.execute(text('SELECT id FROM jira_projects WHERE meeting_id = :mid'), {'mid': meeting_id}).fetchall()]
+        if jp_ids:
+            jp_tuple = tuple(jp_ids)
+            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE project_id IN :jpids OR meeting_id = :mid)'), {'jpids': jp_tuple, 'mid': meeting_id})
+            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
+            db.execute(text('DELETE FROM issues WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
+            db.execute(text('DELETE FROM sprints WHERE project_id IN :jpids'), {'jpids': jp_tuple})
+            db.execute(text('DELETE FROM jira_projects WHERE id IN :jpids'), {'jpids': jp_tuple})
+        else:
+            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE meeting_id = :mid)'), {'mid': meeting_id})
+            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE meeting_id = :mid'), {'mid': meeting_id})
+            db.execute(text('DELETE FROM issues WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 2. follow up tasks FIRST (has FK to transcript_segments)
+        db.execute(text('DELETE FROM follow_up_tasks WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 3. extraction corrections
+        db.execute(text('DELETE FROM extraction_corrections WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 4. meeting chat messages
+        db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 5. knowledge chunks
+        db.execute(text('DELETE FROM knowledge_chunks WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 6. meeting summaries
+        db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 7. transcript segments
+        db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 8. meeting documents
+        db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 9. meeting members
+        db.execute(text('DELETE FROM meeting_members WHERE meeting_id = :mid'), {'mid': meeting_id})
+    except Exception as e:
+        logger.warning(f"Note when cleaning child records for meeting {meeting_id}: {e}")
 
     db.delete(meeting)
     db.commit()
+    return {"message": "Đã xóa cuộc họp thành công", "deleted_id": meeting_id}
+
+
+@router.post("/parse-agenda")
+async def parse_agenda_file(
+    file: UploadFile = File(...),
+    current_user: User | None = Depends(deps.get_optional_current_user),
+):
+    """
+    Parse an uploaded agenda file (.docx, .pdf, .txt, .md, .csv, .xlsx)
+    and return clean text content without binary garbage.
+    """
+    from src.backend.services import text_extractor
+
+    try:
+        content = await file.read()
+        if not content:
+            return {"filename": file.filename, "content": "", "char_count": 0}
+
+        clean_text = text_extractor.extract_text(content, file.filename or "agenda.txt", file.content_type or "")
+        clean_text = clean_text.strip()
+        return {
+            "filename": file.filename,
+            "content": clean_text,
+            "char_count": len(clean_text),
+        }
+    except Exception as e:
+        logger.error(f"Error parsing agenda file {file.filename}: {e}")
+        return {
+            "filename": file.filename,
+            "content": "",
+            "char_count": 0,
+            "error": f"Không thể trích xuất nội dung tệp: {str(e)}",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +275,10 @@ def list_meeting_members(
     _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
+    from sqlalchemy.orm import joinedload
     return (
         db.query(MeetingMember)
+        .options(joinedload(MeetingMember.user))
         .filter(MeetingMember.meeting_id == meeting_id)
         .all()
     )
@@ -282,24 +379,79 @@ class RagQueryResponse(_PydanticBaseModel):
     context_used: list[str]
 
 
+import uuid
+
+import json
+
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
 def get_meeting_token(
     meeting_id: str,
     participant_name: str,
+    language: str = "vi",
     db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
     _get_meeting_or_404(db, meeting_id)
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    token.with_identity(participant_name)
+    unique_identity = f"user_{current_user.id}"
+    token.with_identity(unique_identity)
     token.with_name(participant_name)
+    token.with_metadata(json.dumps({"target_lang": language}))
     token.with_grants(
         livekit_api.VideoGrants(
             room_join=True,
             room=f"meeting-{meeting_id}",
+            can_publish=True,
+            can_subscribe=True,
+            can_publish_data=True,
+            can_update_own_metadata=True,
         )
     )
+
+    # Automatically ensure AI Agent is dispatched to the room
+    try:
+        def _auto_dispatch():
+            async def _inner():
+                try:
+                    http_url = settings.livekit_url.replace("ws://", "http://").replace("wss://", "https://")
+                    lk = livekit_api.LiveKitAPI(http_url, settings.livekit_api_key, settings.livekit_api_secret)
+                    room_name = f"meeting-{meeting_id}"
+                    try:
+                        participants = await lk.room.list_participants(livekit_api.ListParticipantsRequest(room=room_name))
+                        has_agent = any(
+                            p.identity.startswith("agent-")
+                            or "agent" in p.identity.lower()
+                            or getattr(p, "kind", None) == livekit_api.ParticipantKind.PARTICIPANT_KIND_AGENT
+                            for p in participants.participants
+                        )
+                    except Exception:
+                        has_agent = False
+
+                    if not has_agent:
+                        try:
+                            dispatches = await lk.agent_dispatch.list_dispatch(room_name)
+                            for d in dispatches:
+                                try:
+                                    await lk.agent_dispatch.delete_dispatch(d.id, room_name)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
+                        req = livekit_api.CreateAgentDispatchRequest(room=room_name, agent_name="")
+                        await lk.agent_dispatch.create_dispatch(req)
+                    await lk.aclose()
+                except Exception as ex:
+                    logger.debug(f"Agent dispatch check error: {ex}")
+            import asyncio
+            asyncio.run(_inner())
+        import threading
+        threading.Thread(target=_auto_dispatch, daemon=True).start()
+    except Exception as e:
+        logger.warning(f"Failed to auto-dispatch agent for meeting {meeting_id}: {e}")
+
     return TokenResponse(token=token.to_jwt())
 
 
@@ -310,13 +462,48 @@ def rag_query(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """In-meeting RAG chatbot query."""
+    """In-meeting RAG chatbot query: provides comprehensive answer using Agenda, Transcripts, and Notes."""
     meeting = _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
     sources = []
-    if meeting.description:
-        sources.append({"type": "agenda", "snippet": meeting.description})
+
+    # 1. Full Agenda from meeting description
+    if meeting.description and meeting.description.strip():
+        sources.append({
+            "type": "agenda",
+            "snippet": f"Agenda / Kế hoạch cuộc họp:\n{meeting.description.strip()}"
+        })
+
+    # 2. Transcripts from DB if available
+    try:
+        from src.backend.models import TranscriptSegment
+        segments = (
+            db.query(TranscriptSegment)
+            .filter(TranscriptSegment.meeting_id == meeting_id)
+            .order_by(TranscriptSegment.sequence.asc())
+            .all()
+        )
+        if segments:
+            lines = [f"- {s.speaker_name or 'Người tham gia'}: {s.content}" for s in segments[-25:]]
+            sources.append({
+                "type": "transcript",
+                "snippet": "Biên bản phát biểu cuộc họp gần đây:\n" + "\n".join(lines)
+            })
+    except Exception as e:
+        logger.debug(f"Could not load transcript segments for meeting {meeting_id}: {e}")
+
+    # 3. Meeting Summary & Decisions if available
+    try:
+        from src.backend.models import MeetingSummary
+        summary = db.query(MeetingSummary).filter(MeetingSummary.meeting_id == meeting_id).first()
+        if summary and summary.summary:
+            sources.append({
+                "type": "file",
+                "snippet": f"Tóm tắt cuộc họp: {summary.summary}\nCác điểm chính: {summary.key_points or ''}\nNghị quyết thống nhất: {summary.decisions or ''}"
+            })
+    except Exception as e:
+        logger.debug(f"Could not load meeting summary for meeting {meeting_id}: {e}")
 
     answer = build_rag_answer(
         question=payload.question,
@@ -331,4 +518,60 @@ def rag_query(
         sources=[RagSourceItem(**s) for s in sources],
         context_used=[s["snippet"] for s in sources],
     )
+
+
+from pydantic import BaseModel
+
+class QuickTranslateRequest(BaseModel):
+    text: str
+    from_lang: str = "vi"
+    to_lang: str = "en"
+
+class QuickTranslateResponse(BaseModel):
+    original_text: str
+    translated_text: str
+    from_lang: str
+    to_lang: str
+
+
+@router.post("/translate", response_model=QuickTranslateResponse)
+def translate_sentence(
+    req: QuickTranslateRequest,
+    current_user: User | None = Depends(deps.get_optional_current_user)
+):
+    """
+    Sub-second bilingual translation using CTranslate2 INT8 models (~100-180ms).
+    """
+    from src.backend import ct2_translator
+    text = req.text.strip()
+    if not text:
+        return QuickTranslateResponse(
+            original_text="",
+            translated_text="",
+            from_lang=req.from_lang,
+            to_lang=req.to_lang
+        )
+
+    from_l = (req.from_lang or "vi").lower().split("-")[0]
+    to_l = (req.to_lang or "en").lower().split("-")[0]
+
+    translated = None
+    if from_l == "vi" and to_l == "en":
+        translated = ct2_translator.translate_vi_to_en(text)
+    elif from_l == "en" and to_l == "vi":
+        translated = ct2_translator.translate_en_to_vi(text)
+    elif from_l == "vi":
+        translated = ct2_translator.translate_vi_to_en(text)
+    elif from_l == "en":
+        translated = ct2_translator.translate_en_to_vi(text)
+    else:
+        translated = ct2_translator.translate_vi_to_en(text) or text
+
+    return QuickTranslateResponse(
+        original_text=text,
+        translated_text=translated or text,
+        from_lang=req.from_lang,
+        to_lang=req.to_lang
+    )
+
 

@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
   avatar_url?: string | null;
+  role?: string | null;
   provider: string;
   is_active: boolean;
 }
@@ -30,44 +32,42 @@ interface AuthState {
   ) => void;
   setActiveOrganization: (organization: Organization) => void;
   setOrganizations: (organizations: Organization[]) => void;
+  updateUser: (partialUser: Partial<User>) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null,
-  activeOrganization:
-    typeof window !== 'undefined'
-      ? JSON.parse(localStorage.getItem('axiom_organization') || 'null')
-      : null,
-  organizations: [],
-  setAuth: (user, token, organizations, activeOrganization) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('axiom_token', token);
-      if (activeOrganization) {
-        localStorage.setItem('axiom_organization', JSON.stringify(activeOrganization));
-      }
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      activeOrganization: null,
+      organizations: [],
+      setAuth: (user, token, organizations, activeOrganization) => {
+        set({
+          user,
+          token,
+          organizations,
+          activeOrganization:
+            activeOrganization || (organizations.length > 0 ? organizations[0] : null),
+        });
+      },
+      setActiveOrganization: (organization) => {
+        set({ activeOrganization: organization });
+      },
+      setOrganizations: (organizations) => set({ organizations }),
+      updateUser: (partialUser) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partialUser } : null,
+        }));
+      },
+      logout: () => {
+        set({ user: null, token: null, activeOrganization: null, organizations: [] });
+      },
+    }),
+    {
+      name: 'axiom-auth-storage', // name of the item in the storage (must be unique)
+      storage: createJSONStorage(() => localStorage),
     }
-    set({
-      user,
-      token,
-      organizations,
-      activeOrganization:
-        activeOrganization || (organizations.length > 0 ? organizations[0] : null),
-    });
-  },
-  setActiveOrganization: (organization) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('axiom_organization', JSON.stringify(organization));
-    }
-    set({ activeOrganization: organization });
-  },
-  setOrganizations: (organizations) => set({ organizations }),
-  logout: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('axiom_token');
-      localStorage.removeItem('axiom_organization');
-    }
-    set({ user: null, token: null, activeOrganization: null, organizations: [] });
-  },
-}));
+  )
+);

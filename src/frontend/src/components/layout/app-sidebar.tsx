@@ -1,168 +1,375 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import {
   Video,
   CheckSquare,
   Calendar,
   BookOpen,
   Settings,
-  ChevronLeft,
-  ChevronRight,
+  ShieldCheck,
   Building,
   Plus,
-  ShieldCheck,
+  ChevronsUpDown,
+  LogOut,
+  Sparkles,
+  Kanban,
+  LayoutGrid,
+  ListTodo,
+  Clock,
+  FileText,
+  GitBranch,
+  UserCircle,
+  Users,
 } from 'lucide-react';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-interface SidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
-}
-
-export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
+export function AppSidebar() {
   const pathname = usePathname();
-  const { user, activeOrganization, organizations, setActiveOrganization } = useAuthStore();
-  const { t } = useLanguageStore();
+  const router = useRouter();
+  const { user, activeOrganization, organizations, setActiveOrganization, logout } = useAuthStore();
+  const { isMobile, state } = useSidebar();
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
-  const navItems = [
-    { label: t.nav.meetings, href: '/meetings', icon: Video, badge: null },
-    { label: t.nav.tasks, href: '/tasks', icon: CheckSquare, badge: 'New' },
-    { label: t.nav.calendar, href: '/calendar', icon: Calendar, badge: null },
-    { label: t.nav.knowledge, href: '/knowledge', icon: BookOpen, badge: 'AI' },
-    { label: t.nav.admin, href: '/admin', icon: ShieldCheck, badge: 'Gov' },
-    { label: t.nav.settings, href: '/settings', icon: Settings, badge: null },
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  const navWorkspace = [
+    { title: 'Meetings Hub', url: '/meetings', icon: Video, badge: null },
+    { title: 'Tasks & Actions', url: '/tasks', icon: CheckSquare, badge: 'AI' },
+    { title: 'Calendar', url: '/calendar', icon: Calendar, badge: null },
+    { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen, badge: 'RAG' },
   ];
 
+  const navJira = [
+    { title: 'Jira Projects', url: '/member?tab=jira', icon: Kanban, badge: null },
+    { title: 'Project Board', url: '/member?tab=jira', icon: LayoutGrid, badge: null },
+    { title: 'Backlog & Sprints', url: '/member?tab=jira', icon: ListTodo, badge: null },
+  ];
+
+  const isOwner = user?.email === 'admin@axiom.com';
+  const isManager = user?.email === 'manager.khoa@axiom.com';
+  const isMember = !isOwner && !isManager;
+
+  const navSystem = [
+    ...(isOwner ? [{ title: 'Admin Center', url: '/admin', icon: ShieldCheck, badge: 'Gov' }] : []),
+    ...(isManager
+      ? [{ title: 'Bàn Làm Việc Manager', url: '/manager', icon: ShieldCheck, badge: 'Lead' }]
+      : []),
+    ...(isMember
+      ? [{ title: 'Bàn Làm Việc Thành Viên', url: '/member', icon: ShieldCheck, badge: 'User' }]
+      : []),
+    { title: 'Settings', url: '/settings', icon: Settings, badge: null },
+  ];
+
+  const userName = user?.full_name || 'Alex Rivera (Kỹ sư AI / Thành viên)';
+  const userEmail = user?.email || 'alex@axiom.com';
+  const roleLabel = isOwner ? 'CHỦ TỊCH / CEO' : isManager ? 'TRƯỞNG PHÒNG' : 'THÀNH VIÊN (MEMBER)';
+  const userInitials = (
+    userName
+      .split(' ')
+      .map((n) => n[0])
+      .join('') || 'A'
+  )
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <aside
-      className={`relative flex flex-col h-screen bg-[#0E1526] border-r border-blue-950/60 transition-all duration-300 z-30 select-none ${
-        collapsed ? 'w-20' : 'w-64'
-      }`}
-    >
-      {/* Workspace Header Switcher */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-blue-950/40">
-        {!collapsed ? (
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
-              <Building className="w-4 h-4" />
-            </div>
-            <select
-              value={activeOrganization?.id || ''}
-              onChange={(e) => {
-                const org = organizations.find((o) => o.id === e.target.value);
-                if (org) setActiveOrganization(org);
-              }}
-              className="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer truncate w-full"
-            >
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id} className="bg-[#131B2E] text-white">
-                  {org.name}
-                </option>
-              ))}
-              {organizations.length === 0 && (
-                <option value="" className="bg-[#131B2E] text-slate-400">
-                  {t.nav.defaultWorkspace}
-                </option>
-              )}
-            </select>
-          </div>
-        ) : (
-          <div className="w-full flex justify-center">
-            <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold">
-              {activeOrganization?.name ? activeOrganization.name[0].toUpperCase() : 'A'}
-            </div>
-          </div>
-        )}
-      </div>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      {/* ─── Header: Workspace Switcher ────────────────────────── */}
+      <SidebarHeader className="border-b border-sidebar-border p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+                    <Building className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      {activeOrganization?.name || 'Axiom Workspace'}
+                    </span>
+                    <span className="truncate text-xs text-sidebar-foreground/70">
+                      Enterprise Plan
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                align="start"
+                side={isMobile ? 'bottom' : 'right'}
+                sideOffset={4}
+              >
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Workspaces
+                </DropdownMenuLabel>
+                {organizations.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => setActiveOrganization(org)}
+                    className="gap-2 p-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-sm border bg-background text-xs font-semibold">
+                      {org.name[0]?.toUpperCase() || 'W'}
+                    </div>
+                    {org.name}
+                  </DropdownMenuItem>
+                ))}
+                {organizations.length === 0 && (
+                  <DropdownMenuItem className="gap-2 p-2 text-muted-foreground">
+                    Default Workspace
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => router.push('/admin')}
+                  className="gap-2 p-2 cursor-pointer"
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="font-medium text-muted-foreground">Add workspace</div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
-      {/* Quick Action Button */}
-      <div className="p-3">
-        <Link
-          href="/meetings/create"
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg shadow-blue-600/20 transition-all ${
-            collapsed ? 'px-0' : 'px-4'
-          }`}
-          title={t.nav.newMeeting}
-        >
-          <Plus className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm font-semibold">{t.nav.newMeeting}</span>}
-        </Link>
-      </div>
+      {/* ─── Content: Navigation Groups ────────────────────────── */}
+      <SidebarContent>
+        {/* Workspace Hub */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navWorkspace.map((item) => {
+                const isActive =
+                  pathname === item.url ||
+                  (item.url !== '/meetings' && pathname.startsWith(item.url));
+                const Icon = item.icon;
 
-      {/* Navigation Section */}
-      <div className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto">
-        {!collapsed && (
-          <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-            {t.nav.workspaceShell}
-          </div>
-        )}
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link href={item.url}>
+                        <Icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {item.badge && (
+                      <SidebarMenuBadge className="bg-primary/10 text-primary border border-primary/20">
+                        {item.badge}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
+        {/* Jira Suite */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Jira Integration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navJira.map((item) => {
+                const isActive =
+                  pathname === item.url || (item.url === '/jira' && pathname === '/jira');
+                const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-              }`}
-              title={item.label}
-            >
-              <div className="flex items-center gap-3">
-                <Icon
-                  className={`w-5 h-5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
-                />
-                {!collapsed && <span>{item.label}</span>}
-              </div>
-              {!collapsed && item.badge && (
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link href={item.url}>
+                        <Icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-      {/* Active User Footer */}
-      <div className="p-3 border-t border-blue-950/40">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {user?.full_name
-                ? user.full_name[0].toUpperCase()
-                : user?.email
-                  ? user.email[0].toUpperCase()
-                  : 'U'}
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-white truncate">
-                  {user?.full_name || 'Enterprise User'}
-                </div>
-                <div className="text-[10px] text-slate-400 truncate">
-                  {user?.email || 'user@company.com'}
-                </div>
-              </div>
-            )}
-          </div>
+        {/* System & Governance */}
+        <SidebarGroup>
+          <SidebarGroupLabel>System</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navSystem.map((item) => {
+                const isActive = pathname.startsWith(item.url);
+                const Icon = item.icon;
 
-          <button
-            onClick={onToggle}
-            className="p-1.5 rounded-lg bg-slate-900 border border-blue-950/80 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            aria-label="Toggle Sidebar"
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-    </aside>
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link href={item.url}>
+                        <Icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {item.badge && (
+                      <SidebarMenuBadge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        {item.badge}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* ─── Footer: User Account & Logout ─────────────────────── */}
+      <SidebarFooter className="border-t border-sidebar-border p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage
+                      src={user?.avatar_url || generateInitialsAvatar(userName)}
+                      alt={userName}
+                    />
+                    <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{userName}</span>
+                    <span className="truncate text-[10.5px] font-bold text-blue-600 dark:text-blue-400">
+                      {roleLabel}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side={isMobile ? 'bottom' : 'right'}
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage
+                        src={user?.avatar_url || generateInitialsAvatar(userName)}
+                        alt={userName}
+                      />
+                      <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{userName}</span>
+                      <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                        {roleLabel}
+                      </span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
+                  <UserCircle className="mr-2 h-4 w-4 text-blue-500" />
+                  <span className="font-medium">Hồ Sơ & Đổi Avatar</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push('/settings')}
+                  className="cursor-pointer"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Cài Đặt Hệ Thống
+                </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem
+                    onClick={() => router.push('/admin')}
+                    className="cursor-pointer"
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4 text-amber-500" />
+                    Trung Tâm Quản Trị (Admin Center)
+                  </DropdownMenuItem>
+                )}
+                {isManager && (
+                  <DropdownMenuItem
+                    onClick={() => router.push('/manager')}
+                    className="cursor-pointer"
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4 text-blue-500" />
+                    Bàn Làm Việc Trưởng Phòng
+                  </DropdownMenuItem>
+                )}
+                {!isOwner && !isManager && (
+                  <DropdownMenuItem
+                    onClick={() => router.push('/member')}
+                    className="cursor-pointer"
+                  >
+                    <Users className="mr-2 h-4 w-4 text-emerald-500" />
+                    Bàn Làm Việc Thành Viên
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:bg-destructive/10 cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
+
+      {/* Profile & Avatar Modal */}
+      <UserProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+    </Sidebar>
   );
 }

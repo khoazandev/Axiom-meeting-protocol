@@ -2,13 +2,13 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     password: str = Field(..., min_length=6)
     full_name: str = Field(..., min_length=1)
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -27,3 +27,9 @@ class UserResponse(BaseModel):
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    avatar_url: str | None = None
+

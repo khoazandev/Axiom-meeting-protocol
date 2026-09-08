@@ -1,0 +1,12 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Chỉ copy package.json để cài dependencies (tận dụng Docker cache)
+COPY src/frontend/package.json src/frontend/package-lock.json* ./
+RUN npm install
+
+# Mã nguồn sẽ được mount trực tiếp qua volumes trong docker-compose
+EXPOSE 3000
+
+# Chạy Next.js ở chế độ dev
+CMD ["npm", "run", "dev"]

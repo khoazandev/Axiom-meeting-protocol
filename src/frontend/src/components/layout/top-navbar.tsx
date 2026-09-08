@@ -22,11 +22,13 @@ import {
   Menu,
   X,
   ChevronDown,
+  Kanban,
 } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 const NAV_ITEMS = [
   { href: '/meetings', icon: Video, labelKey: 'meetings' as const },
-  { href: '/tasks', icon: CheckSquare, labelKey: 'tasks' as const },
+  { href: '/jira', icon: Kanban, labelKey: 'tasks' as const },
   { href: '/calendar', icon: CalendarDays, labelKey: 'calendar' as const },
   { href: '/knowledge', icon: FolderOpen, labelKey: 'knowledge' as const },
 ];
@@ -100,11 +102,8 @@ export function TopNavbar() {
           </button>
 
           {/* Logo */}
-          <Link href="/meetings" className="flex items-center gap-2 shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <span className="text-accent-foreground font-bold text-xs">A</span>
-            </div>
-            <span className="text-text-primary font-semibold text-sm hidden sm:inline">Axiom</span>
+          <Link href="/member" className="flex items-center gap-2 shrink-0 group">
+            <Logo size={28} showText={true} subtitle="OS" />
           </Link>
 
           {/* Desktop Nav Links */}

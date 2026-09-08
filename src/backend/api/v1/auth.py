@@ -11,20 +11,30 @@ from src.backend.core.security import (
 )
 from src.backend.database import get_db
 from src.backend.models import User
-from src.backend.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
+from src.backend.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+import re
+
+def normalize_email(email: str) -> str:
+    cleaned = email.strip().lower()
+    if "@" not in cleaned:
+        return cleaned + "@gmail.com"
+    return cleaned
+
+
 @router.post("/register", response_model=UserResponse)
 def register_user(payload: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise ValidationException("A user with this email already exists")
 
     hashed_pw = hash_password(payload.password)
     user = User(
-        email=payload.email,
+        email=email,
         password_hash=hashed_pw,
         full_name=payload.full_name,
         provider="local",
@@ -37,7 +47,8 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login_user(payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    user = db.query(User).filter(User.email == email).first()
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise AuthenticationException("Invalid email or password")
 
@@ -49,3 +60,22 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+@router.put("/me", response_model=UserResponse)
+def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.full_name is not None:
+        trimmed = payload.full_name.strip()
+        if trimmed:
+            current_user.full_name = trimmed
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
