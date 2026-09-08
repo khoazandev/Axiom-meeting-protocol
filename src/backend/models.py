@@ -312,6 +312,14 @@ class Meeting(database.Base):
         "MeetingMember", back_populates="meeting", cascade="all, delete-orphan"
     )
 
+    @property
+    def agenda(self) -> str | None:
+        return self.description
+
+    @agenda.setter
+    def agenda(self, value: str | None) -> None:
+        self.description = value
+
 
 class MeetingMember(database.Base):
     __tablename__ = "meeting_members"

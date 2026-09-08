@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class MeetingCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
+    agenda: str | None = None
     organization_id: str | None = None
     department_id: str | None = None
     scheduled_at: datetime | None = None
@@ -16,6 +17,7 @@ class MeetingCreate(BaseModel):
 class MeetingUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    agenda: str | None = None
     scheduled_at: datetime | None = None
     status: str | None = None
 
@@ -24,6 +26,7 @@ class MeetingResponse(BaseModel):
     id: str
     title: str
     description: str | None = None
+    agenda: str | None = None
     organization_id: str | None = None
     department_id: str | None = None
     created_by_id: str

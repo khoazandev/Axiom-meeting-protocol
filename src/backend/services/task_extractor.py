@@ -99,11 +99,11 @@ class TaskExtractorService:
         settings = get_settings()
 
         if not settings.ollama_base_url:
-            logger.warning("Ollama base URL not configured, skipping extraction")
-            return []
+            logger.info("Ollama base URL not configured, using heuristic NLP fallback")
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
 
         base_url = settings.ollama_base_url.rstrip("/")
-        timeout = max(settings.task_extractor_timeout, 300)
+        timeout = min(settings.task_extractor_timeout, 12) if ("host.docker.internal" in base_url or "localhost" in base_url) else settings.task_extractor_timeout
 
         try:
             # ── Build prompt payload ──────────────────────────────────
@@ -167,28 +167,170 @@ class TaskExtractorService:
             content = msg.get("content", "").strip()
             thinking = msg.get("thinking", "").strip()
 
-            # Qwen3 models put reasoning in 'thinking' and JSON in 'content'
             raw = content or thinking
-            if not raw:
-                logger.warning("Model %s returned empty response", settings.task_extractor_model)
-                return []
-            logger.info(
-                "Model %s response (content=%d chars, thinking=%d chars)",
-                settings.task_extractor_model, len(content), len(thinking),
-            )
-            return self._parse_response(raw)
+            if raw:
+                parsed = self._parse_response(raw)
+                if parsed:
+                    return parsed
+            logger.info("Model returned empty or unparseable response, falling back to heuristic rule extraction")
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
 
-        except requests.exceptions.ConnectionError:
-            logger.warning("Ollama not reachable for task extraction")
-        except requests.exceptions.Timeout:
-            logger.warning(
-                "Ollama timeout during task extraction (model=%s, timeout=%ds)",
-                settings.task_extractor_model, timeout,
-            )
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+            logger.info("Ollama unreachable or timed out (%s), using robust heuristic NLP extractor", exc)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
         except Exception as exc:
-            logger.error("Task extraction error: %s", exc)
+            logger.warning("Task extraction exception: %s, falling back to heuristic extractor", exc)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
 
-        return []
+    def _parse_relative_deadline(self, text: str) -> str | None:
+        """Parse natural language relative deadlines into ISO YYYY-MM-DD format."""
+        now = datetime.now()
+        text_lower = text.lower()
+        days_map = {
+            "thứ hai": 0, "thứ 2": 0, "t2": 0, "monday": 0,
+            "thứ ba": 1, "thứ 3": 1, "t3": 1, "tuesday": 1,
+            "thứ tư": 2, "thứ 4": 2, "t4": 2, "wednesday": 2,
+            "thứ năm": 3, "thứ 5": 3, "t5": 3, "thursday": 3,
+            "thứ sáu": 4, "thứ 6": 4, "t6": 4, "friday": 4,
+            "thứ bảy": 5, "thứ 7": 5, "t7": 5, "saturday": 5,
+            "chủ nhật": 6, "cn": 6, "sunday": 6,
+        }
+        is_next_week = any(w in text_lower for w in ["tuần sau", "tuần tới", "next week"])
+        for day_str, target_weekday in days_map.items():
+            if day_str in text_lower:
+                current_weekday = now.weekday()
+                days_ahead = target_weekday - current_weekday
+                if is_next_week:
+                    days_ahead += 7
+                elif days_ahead <= 0:
+                    days_ahead += 7
+                target_date = now + timedelta(days=days_ahead)
+                return target_date.strftime("%Y-%m-%d")
+
+        if any(w in text_lower for w in ["hôm nay", "chiều nay", "tối nay", "today"]):
+            return now.strftime("%Y-%m-%d")
+        if any(w in text_lower for w in ["ngày mai", "sáng mai", "tomorrow"]):
+            return (now + timedelta(days=1)).strftime("%Y-%m-%d")
+        if "ngày kia" in text_lower:
+            return (now + timedelta(days=2)).strftime("%Y-%m-%d")
+        if any(w in text_lower for w in ["tuần sau", "tuần tới"]):
+            return (now + timedelta(days=7)).strftime("%Y-%m-%d")
+        return None
+
+    def _clean_task_title(self, raw: str) -> str:
+        """Strip filler words, vocatives, and trailing particles from task titles."""
+        t = raw.strip()
+        t = re.sub(r"^(?:em\s+|anh\s+|chị\s+)?(?:hãy|cần|phải|nhớ|sẽ|lo việc|giúp anh|giúp sếp|vui lòng|please)\s+", "", t, flags=re.IGNORECASE)
+        t = re.sub(r"\s+(?:trước|vào|trong|đến|hạn|deadline)?\s*(?:thứ\s+[2-7]|thứ\s+[a-zà-ỹ]+|chủ nhật|ngày mai|hôm nay|chiều nay|sáng mai|tuần sau|tuần tới).*$", "", t, flags=re.IGNORECASE)
+        t = re.sub(r"\s+(?:nhé|nha|ạ|nhé\s+ạ|nhé\s+em|cho\s+anh|cho\s+sếp|đúng\s+hạn\s+ạ|đúng\s+hạn).*$", "", t, flags=re.IGNORECASE)
+        t = t.strip(" ,;:.()")
+        if t:
+            t = t[0].upper() + t[1:]
+        return t
+
+    def _heuristic_rule_extraction(
+        self,
+        transcript_text: str,
+        pending_tasks: list[dict] | None = None,
+    ) -> list[dict]:
+        """
+        Meeting-grade NLP extractor for Vietnamese & English meetings.
+        Correctly extracts tasks, assignees, deadlines, and status from speech turns.
+        """
+        lines = [l.strip() for l in transcript_text.split("\n") if l.strip()]
+        extracted = []
+        seen_titles = set()
+
+        for line in lines:
+            speaker = ""
+            content = line
+            m_spk = re.match(r"^\[(.*?)\]\s*:\s*(.*)$", line)
+            if m_spk:
+                speaker = m_spk.group(1).strip()
+                content = m_spk.group(2).strip()
+
+            target_assignee = None
+            raw_task = None
+            is_confirmed = False
+
+            # 1. Vocative directive: "Alice, em hãy...", "Bob, em hãy...", "Anh Nam cần..."
+            m_voc = re.search(
+                r"([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+)?)[,\s]+(?:em|anh|chị|bạn)?\s*(?:hãy|cần|phải|nhớ|chịu trách nhiệm|lo việc|giúp anh|giúp sếp|vui lòng)\s+(.*?)(?=[.!?]|$)",
+                content,
+                re.IGNORECASE,
+            )
+            if m_voc:
+                target_assignee = m_voc.group(1).strip()
+                raw_task = m_voc.group(2).strip()
+
+            # 2. Speaker commitment: "Em sẽ làm việc với team...", "Tôi sẽ chuẩn bị..."
+            if not raw_task:
+                m_commit = re.search(
+                    r"(?:em|tôi|mình|anh|chị|chúng tôi)\s+(?:sẽ|cam kết|đang nhận việc|sẽ chịu trách nhiệm)\s+(.*?)(?=[.!?]|$)",
+                    content,
+                    re.IGNORECASE,
+                )
+                if m_commit and speaker:
+                    cand = m_commit.group(1).strip()
+                    if any(w in cand.lower() for w in ["hoàn thành", "làm đúng hạn", "gửi đúng hạn", "rõ rồi"]):
+                        is_confirmed = True
+                    else:
+                        target_assignee = speaker
+                        raw_task = cand
+
+            # 3. Team directive: "Mọi người nhớ...", "Cả team cần..."
+            if not raw_task:
+                m_team = re.search(
+                    r"(?:mọi người|cả team|toàn đội|các bạn|everyone|team)\s+(?:nhớ|cần|phải|hãy)\s+(.*?)(?=[.!?]|$)",
+                    content,
+                    re.IGNORECASE,
+                )
+                if m_team:
+                    target_assignee = "Mọi người"
+                    raw_task = m_team.group(1).strip()
+
+            # 4. Fallback directive pattern: "cần phải...", "hãy lập kế hoạch..."
+            if not raw_task:
+                m_dir = re.search(
+                    r"(?:cần\s+phải|hãy\s+hoàn thành|hãy\s+lập|hãy\s+triển khai|cần\s+triển khai)\s+(.*?)(?=[.!?]|$)",
+                    content,
+                    re.IGNORECASE,
+                )
+                if m_dir:
+                    target_assignee = speaker or "Unassigned"
+                    raw_task = m_dir.group(1).strip()
+
+            if raw_task and len(raw_task) >= 6:
+                if any(w in raw_task.lower() for w in ["chào mọi người", "cuộc họp kết thúc", "cảm ơn mọi người"]):
+                    continue
+
+                cleaned = self._clean_task_title(raw_task)
+                if len(cleaned) < 5:
+                    continue
+
+                deadline_val = self._parse_relative_deadline(content)
+                key = cleaned.lower()[:35]
+                if key not in seen_titles:
+                    seen_titles.add(key)
+                    extracted.append({
+                        "task_id": None,
+                        "task": cleaned,
+                        "assignee": target_assignee,
+                        "deadline": deadline_val,
+                        "status": "CONFIRMED" if is_confirmed else "NOT_CONFIRMED",
+                    })
+
+        # Match with pending tasks if available
+        if pending_tasks and extracted:
+            for item in extracted:
+                for p in pending_tasks:
+                    p_title = (p.get("task") or "").lower()
+                    if p.get("task_id") and (item["task"].lower()[:20] in p_title or p_title[:20] in item["task"].lower()):
+                        item["task_id"] = p["task_id"]
+                        break
+
+        logger.info("Heuristic NLP extractor extracted %d tasks from transcript", len(extracted))
+        return extracted
 
     def _parse_response(self, raw: str) -> list[dict]:
         """
@@ -389,12 +531,16 @@ def sync_extracted_tasks(
             assignee_name = str(assignee_name).strip()
             user = (
                 db.query(User)
-                .filter(User.full_name == assignee_name)
+                .filter(
+                    (User.full_name == assignee_name)
+                    | (User.full_name.ilike(f"%{assignee_name}%"))
+                    | (User.email.ilike(f"%{assignee_name}%"))
+                )
                 .first()
             )
             if user:
                 assignee_id = user.id
-                logger.info("Matched assignee '%s' → user_id=%s", assignee_name, user.id)
+                logger.info("Matched assignee '%s' → user_id=%s (%s)", assignee_name, user.id, user.full_name)
 
         # Parse status
         status_str = item_data.get("status", "NOT_CONFIRMED")
@@ -412,6 +558,11 @@ def sync_extracted_tasks(
                 deadline = datetime.strptime(str(deadline_str), "%Y-%m-%d")
             except (ValueError, TypeError):
                 logger.warning("Cannot parse deadline: %s", deadline_str)
+
+        # Build clean description with assignee name preserved
+        desc = f"Phân công cho: {assignee_name or 'Chưa phân bổ'}"
+        if deadline:
+            desc += f" | Hạn chót: {deadline.strftime('%d/%m/%Y')}"
 
         # ── UPSERT logic ──────────────────────────────────────────
         if task_id:
@@ -431,18 +582,39 @@ def sync_extracted_tasks(
                 if deadline:
                     existing.deadline = deadline
                 existing.status = task_status
+                if desc and not existing.description:
+                    existing.description = desc
                 affected_tasks.append(existing)
                 logger.info("Updated task %s: status=%s, assignee_id=%s", task_id, task_status.value, assignee_id)
             else:
                 logger.warning("task_id=%s not found in meeting %s, skipping update", task_id, meeting_id)
         else:
+            # Check duplicate by title prefix in meeting
+            existing_dupe = (
+                db.query(FollowUpTask)
+                .filter(
+                    FollowUpTask.meeting_id == meeting_id,
+                    FollowUpTask.title.ilike(f"%{task_title[:25]}%"),
+                )
+                .first()
+            )
+            if existing_dupe:
+                if assignee_id and not existing_dupe.assignee_id:
+                    existing_dupe.assignee_id = assignee_id
+                if deadline and not existing_dupe.deadline:
+                    existing_dupe.deadline = deadline
+                if task_status == FollowUpTaskStatusEnum.CONFIRMED:
+                    existing_dupe.status = task_status
+                affected_tasks.append(existing_dupe)
+                continue
+
             # INSERT new task
             task = FollowUpTask(
                 meeting_id=meeting_id,
                 transcript_segment_id=linked_segment_id,
                 assignee_id=assignee_id,
                 title=task_title,
-                description=None,
+                description=desc,
                 status=task_status,
                 deadline=deadline,
                 source=source,

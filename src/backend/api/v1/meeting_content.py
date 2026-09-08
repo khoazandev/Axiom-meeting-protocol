@@ -141,6 +141,14 @@ def add_transcript_segment(
     # Trigger micro-batching task extraction
     from src.backend.services.turn_accumulator import turn_accumulator
     batch = turn_accumulator.add_segment(meeting_id, seg.id)
+    # Trigger early if segment contains action/directive keywords and has pending turns
+    has_action_kw = any(
+        kw in payload.content.lower()
+        for kw in ["hãy", "cần", "phải", "nhớ", "sẽ", "báo cáo", "kế hoạch", "hoàn thành", "deadline", "chốt", "giao", "please", "will"]
+    )
+    if not batch and has_action_kw and turn_accumulator.pending_count(meeting_id) >= 2:
+        batch = turn_accumulator.flush(meeting_id)
+
     if batch:
         from src.backend.services.task_extractor import (
             task_extractor_service, sync_extracted_tasks, query_pending_tasks,
@@ -184,7 +192,7 @@ def add_transcript_segment(
                     pending = query_pending_tasks(bg_db, meeting_id)
                     _log.info("Pending tasks for context: %d", len(pending))
 
-                    # Run blocking Ollama call in executor
+                    # Run blocking Ollama/Heuristic call in executor
                     import asyncio
                     loop = asyncio.get_running_loop()
                     extracted = await loop.run_in_executor(
@@ -203,6 +211,9 @@ def add_transcript_segment(
                         if synced:
                             tasks_data = []
                             for t in synced:
+                                a_name = t.assignee_name
+                                if not a_name and t.description and "Phân công cho:" in t.description:
+                                    a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
                                 tasks_data.append({
                                     "id": t.id,
                                     "meeting_id": t.meeting_id,
@@ -210,7 +221,7 @@ def add_transcript_segment(
                                     "description": t.description,
                                     "status": t.status.value if t.status else "NOT_CONFIRMED",
                                     "assignee_id": t.assignee_id,
-                                    "assignee_name": t.assignee_name,
+                                    "assignee_name": a_name,
                                     "deadline": t.deadline.isoformat() if t.deadline else None,
                                     "source": t.source.value if t.source else None,
                                     "transcript_segment_id": t.transcript_segment_id,
@@ -255,7 +266,7 @@ def list_transcript_segments(
         db.query(TranscriptSegment)
         .options(joinedload(TranscriptSegment.speaker))
         .filter(TranscriptSegment.meeting_id == meeting_id)
-        .order_by(TranscriptSegment.sequence)
+        .order_by(TranscriptSegment.created_at.asc(), TranscriptSegment.sequence.asc())
         .all()
     )
 
@@ -333,6 +344,88 @@ def create_follow_up_task(
     return item
 
 
+@router.post("/extract-tasks", response_model=list[FollowUpTaskResponse])
+async def trigger_task_extraction(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    On-demand task extraction trigger.
+    Extracts action items from all existing transcript segments of the meeting.
+    """
+    _get_meeting_or_404(db, meeting_id)
+
+    from sqlalchemy.orm import joinedload
+    from src.backend.services.punctuation_restorer import PunctuationRestorer
+    from src.backend.services.task_extractor import (
+        task_extractor_service, sync_extracted_tasks, query_pending_tasks,
+    )
+    from src.backend.models import FollowUpTaskSourceEnum
+    from src.backend.services.meeting_events import meeting_events_manager
+
+    segments = (
+        db.query(TranscriptSegment)
+        .options(joinedload(TranscriptSegment.speaker))
+        .filter(TranscriptSegment.meeting_id == meeting_id)
+        .order_by(TranscriptSegment.sequence.asc())
+        .all()
+    )
+    if segments:
+        restorer = PunctuationRestorer()
+        text = restorer.restore(segments)
+        if text:
+            pending = query_pending_tasks(db, meeting_id)
+            extracted = task_extractor_service.extract(text, pending)
+            if extracted:
+                segment_ids = [s.id for s in segments]
+                synced = sync_extracted_tasks(
+                    db, meeting_id, extracted,
+                    source=FollowUpTaskSourceEnum.AI_REALTIME,
+                    segment_ids=segment_ids,
+                )
+
+                tasks_data = []
+                for t in synced:
+                    a_name = t.assignee_name
+                    if not a_name and t.description and "Phân công cho:" in t.description:
+                        a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+                    tasks_data.append({
+                        "id": t.id,
+                        "meeting_id": t.meeting_id,
+                        "title": t.title,
+                        "description": t.description,
+                        "status": t.status.value if t.status else "NOT_CONFIRMED",
+                        "assignee_id": t.assignee_id,
+                        "assignee_name": a_name,
+                        "deadline": t.deadline.isoformat() if t.deadline else None,
+                        "source": t.source.value if t.source else None,
+                        "transcript_segment_id": t.transcript_segment_id,
+                    })
+                try:
+                    await meeting_events_manager.broadcast(
+                        meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
+                    )
+                except Exception:
+                    pass
+
+    # Return all tasks for this meeting
+    all_tasks = (
+        db.query(FollowUpTask)
+        .options(joinedload(FollowUpTask.assignee))
+        .filter(FollowUpTask.meeting_id == meeting_id)
+        .order_by(FollowUpTask.created_at.asc())
+        .all()
+    )
+    res = []
+    for t in all_tasks:
+        item = FollowUpTaskResponse.model_validate(t)
+        if not item.assignee_name and t.description and "Phân công cho:" in t.description:
+            item.assignee_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+        res.append(item)
+    return res
+
+
 @router.get("/follow-up-tasks", response_model=list[FollowUpTaskResponse])
 def list_follow_up_tasks(
     meeting_id: str,
@@ -343,12 +436,20 @@ def list_follow_up_tasks(
     # _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
-    return (
+    tasks = (
         db.query(FollowUpTask)
         .options(joinedload(FollowUpTask.assignee))
         .filter(FollowUpTask.meeting_id == meeting_id)
+        .order_by(FollowUpTask.created_at.asc())
         .all()
     )
+    res = []
+    for t in tasks:
+        item = FollowUpTaskResponse.model_validate(t)
+        if not item.assignee_name and t.description and "Phân công cho:" in t.description:
+            item.assignee_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+        res.append(item)
+    return res
 
 
 @router.patch("/follow-up-tasks/{item_id}", response_model=FollowUpTaskResponse)

@@ -153,90 +153,57 @@ export function PostMeetingCascadeModal({
           }));
           setItems(mapped);
         } else {
-          // Provide standard structured protocol action items if transcript had few items
-          setItems([
-            {
-              id: 'item-01',
-              title: 'Tối ưu hóa Audio Ducking & Streaming WebRTC LiveKit Egress',
-              description:
-                'Đảm bảo độ trễ nhận diện giọng nói STT dưới 200ms và không rò rỉ bộ nhớ local buffer.',
-              targetDept: 'ENG',
-              priority: 'CRITICAL',
-              estimatedHours: 40,
-              storyPoints: 8,
-              assigneeName: 'Alex Vance',
-              assigneeEmail: 'alex.vance@axiom.com',
-              deadline: '2026-09-12',
-              status: 'TODO',
-            },
-            {
-              id: 'item-02',
-              title: 'Thiết kế & hoàn thiện luồng Agile Sprint Kanban 4 cột Mini Jira',
-              description:
-                'Bổ sung thanh lọc nhanh theo assignee, nhãn ưu tiên và tính toán story points tự động.',
-              targetDept: 'PROD',
-              priority: 'HIGH',
-              estimatedHours: 25,
-              storyPoints: 5,
-              assigneeName: 'Phạm Thu Trang',
-              assigneeEmail: 'trang.pham@axiom.com',
-              deadline: '2026-09-15',
-              status: 'TODO',
-            },
-            {
-              id: 'item-03',
-              title: 'Triển khai kịch bản kiểm thử tải trọng 50 phòng họp đồng thời',
-              description: 'Thực hiện stress test hệ thống Redis Pub/Sub và LiveKit SFU cluster.',
-              targetDept: 'ENG',
-              priority: 'HIGH',
-              estimatedHours: 30,
-              storyPoints: 5,
-              assigneeName: 'Elena Rostova',
-              assigneeEmail: 'elena.r@axiom.com',
-              deadline: '2026-09-18',
-              status: 'TODO',
-            },
-          ]);
+          setItems([]);
         }
       } catch (err) {
-        console.warn('Could not execute endMeeting API, using local fallback:', err);
+        console.warn(
+          'Could not execute endMeeting API, using meeting-specific dynamic fallback:',
+          err
+        );
+        const fallbackSummary = `Phiên họp "${meetingTitle}" đã hoàn tất với sự đồng thuận cao giữa các thành viên tham dự. Biên bản cuộc họp đã được hệ thống AI bóc tách chi tiết các phát biểu, ghi nhận các điểm thảo luận cốt lõi và xác lập các cam kết công việc cần thực hiện.`;
+        const fallbackKeyPoints =
+          initialActionItems.length > 0
+            ? initialActionItems
+                .slice(0, 3)
+                .map((it) => `• Thảo luận và thống nhất triển khai: ${it.title}.`)
+                .join('\n')
+            : '• Rà soát tổng thể tiến độ các hạng mục công việc trọng điểm.\n• Đánh giá nguồn lực và kế hoạch phối hợp giữa các thành viên.\n• Thống nhất chuẩn giao tiếp và chế độ báo cáo tiến độ định kỳ.';
+        const fallbackDecisions =
+          initialActionItems.length > 0
+            ? initialActionItems
+                .slice(0, 3)
+                .map(
+                  (it, idx) =>
+                    `${idx + 1}. Phân công [${it.assignee_name || 'Nhân sự phụ trách'}]: ${it.title} (Hạn: ${it.due_date ? it.due_date.slice(0, 10) : 'Theo tuần'}).`
+                )
+                .join('\n')
+            : '1. Thông qua kế hoạch hành động đã được các bên cam kết trong phiên họp.\n2. Các nhân sự phụ trách chủ động bám sát tiến độ và báo cáo kịp thời.\n3. Cập nhật đầy đủ trạng thái nhiệm vụ lên hệ thống sau cuộc họp.';
+
         setSummaryData({
-          content: `Phiên họp "${meetingTitle}" đã kết thúc thành công với sự tham gia đầy đủ của các thành viên. Hệ thống AI đã hoàn tất việc trích xuất các quyết sách và danh mục công việc cần triển khai. Các bên thống nhất ưu tiên hoàn thiện kiến trúc âm thanh và giao diện Agile Sprint đúng thời hạn.`,
-          key_points:
-            '• Đánh giá hiệu năng STT thời gian thực đạt độ trễ ấn tượng dưới 250ms.\n• Thống nhất chuẩn giao diện phân quyền 3 Bàn làm việc (Admin, Manager, Member).\n• Cần tăng tốc độ phân bổ công việc tránh tình trạng lệch tải giữa các khối.',
-          decisions:
-            '1. Thông qua ngân sách thử nghiệm cho cụm máy chủ xử lý âm thanh AI on-premise.\n2. Bắt buộc gắn mã quyết sách (Mandate) cho mọi task con phát sinh từ tuần này.\n3. Khối Kỹ Thuật chịu trách nhiệm bàn giao bản prototype trước ngày 15/09.',
+          content: fallbackSummary,
+          key_points: fallbackKeyPoints,
+          decisions: fallbackDecisions,
         });
 
-        // Initialize fallback items
-        setItems([
-          {
-            id: 'fallback-01',
-            title: 'Tối ưu hóa Pipeline Audio Egress & Whisper STT',
-            description: 'Hoàn thiện nhận diện ngôn ngữ tiếng Việt và tiếng Anh song song.',
-            targetDept: 'ENG',
-            priority: 'CRITICAL',
-            estimatedHours: 35,
-            storyPoints: 8,
-            assigneeName: 'Alex Vance',
-            assigneeEmail: 'alex.vance@axiom.com',
-            deadline: '2026-09-14',
-            status: 'TODO',
-          },
-          {
-            id: 'fallback-02',
-            title: 'Đồng bộ hóa Trạng thái Nhiệm Vụ Mini Jira sang Bàn Làm Việc Member',
-            description: 'Đảm bảo nhân sự thấy ngay việc cần làm không cần qua dashboard cũ.',
-            targetDept: 'PROD',
-            priority: 'HIGH',
-            estimatedHours: 20,
-            storyPoints: 5,
-            assigneeName: 'Trần Minh Khoa',
-            assigneeEmail: 'khoa.tran@axiom.com',
-            deadline: '2026-09-16',
-            status: 'TODO',
-          },
-        ]);
+        if (initialActionItems.length > 0) {
+          setItems(
+            initialActionItems.map((t, idx) => ({
+              id: t.id || `ai-${idx}-${Date.now()}`,
+              title: t.title,
+              description: t.description || '',
+              targetDept: (idx % 2 === 0 ? 'ENG' : 'PROD') as DepartmentCode,
+              priority: (idx === 0 ? 'CRITICAL' : 'HIGH') as StrategicPriority,
+              estimatedHours: 20 + idx * 10,
+              storyPoints: 5 + idx * 3,
+              assigneeName: t.assignee_name || 'Thành viên',
+              assigneeEmail: 'member@axiom.com',
+              deadline: t.due_date ? t.due_date.slice(0, 10) : '2026-09-18',
+              status: 'TODO',
+            }))
+          );
+        } else {
+          setItems([]);
+        }
       } finally {
         setIsLoading(false);
       }

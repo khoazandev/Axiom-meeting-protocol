@@ -349,11 +349,6 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                   )}
                 </div>
 
-                <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Mặc định hệ thống tự sinh avatar chữ cái đại diện theo họ tên của bạn. Bạn cũng có
-                  thể tải ảnh tùy thích từ thiết bị.
-                </p>
-
                 {/* Quick Action Buttons */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
                   <input
@@ -368,7 +363,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                   >
                     {isUploading ? (
                       <>
@@ -382,18 +377,6 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                       </>
                     )}
                   </button>
-
-                  {isCustomUpload && (
-                    <button
-                      type="button"
-                      onClick={handleResetToAutoAvatar}
-                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                      title="Quay lại avatar chữ cái tự động theo tên"
-                    >
-                      <RotateCcw size={12} />
-                      <span>Dùng Avatar Theo Tên</span>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>

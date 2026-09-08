@@ -13,6 +13,7 @@ export interface Meeting {
   id: string;
   title: string;
   description?: string | null;
+  agenda?: string | null;
   scheduled_at?: string | null;
   started_at?: string | null;
   ended_at?: string | null;
@@ -232,7 +233,18 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     );
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return {} as T;
+  }
+  const text = await response.text();
+  if (!text || !text.trim()) {
+    return {} as T;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text as unknown as T;
+  }
 }
 
 // ── Auth API ─────────────────────────────────────────────
@@ -334,11 +346,57 @@ export const meetingsApi = {
     });
   },
 
+  /** Update a meeting by ID (including agenda). */
+  update(
+    id: number | string,
+    data: {
+      title?: string;
+      description?: string | null;
+      agenda?: string | null;
+      scheduled_at?: string | null;
+      status?: string | null;
+    }
+  ): Promise<Meeting> {
+    return apiFetch<Meeting>(`/api/v1/meetings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
   /** Delete a meeting by ID. */
   delete(id: number | string): Promise<{ message: string }> {
     return apiFetch<{ message: string }>(`/api/v1/meetings/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  /** Upload and parse an agenda file (.docx, .pdf, .txt, .md, .csv, .xlsx) into clean plain text. */
+  async parseAgenda(
+    file: File
+  ): Promise<{ filename: string; content: string; char_count: number; error?: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = useAuthStore.getState().token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const activeOrganization = useAuthStore.getState().activeOrganization;
+    if (activeOrganization?.id) {
+      headers['X-Organization-ID'] = activeOrganization.id;
+    }
+
+    const res = await fetch(`${BASE_URL}/api/v1/meetings/parse-agenda`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.detail || err?.message || 'Không thể trích xuất nội dung tệp');
+    }
+    return res.json();
   },
 
   /** Get a LiveKit token for a meeting room. */
@@ -368,6 +426,34 @@ export const meetingsApi = {
         live_transcript: liveTranscript,
         chat_history: chatHistory,
       }),
+    });
+  },
+
+  /** Sub-second bilingual translation using CTranslate2 INT8 model (~100-180ms). */
+  translate(
+    text: string,
+    fromLang: string = 'vi',
+    toLang: string = 'en',
+    signal?: AbortSignal
+  ): Promise<{
+    original_text: string;
+    translated_text: string;
+    from_lang: string;
+    to_lang: string;
+  }> {
+    return apiFetch<{
+      original_text: string;
+      translated_text: string;
+      from_lang: string;
+      to_lang: string;
+    }>('/api/v1/meetings/translate', {
+      method: 'POST',
+      body: JSON.stringify({
+        text,
+        from_lang: fromLang,
+        to_lang: toLang,
+      }),
+      signal,
     });
   },
 
@@ -426,6 +512,13 @@ export const meetingsApi = {
   /** End a meeting (HOST only). Triggers full extraction + summary + room close. */
   endMeeting(meetingId: number | string): Promise<MeetingEndResponse> {
     return apiFetch<MeetingEndResponse>(`/api/v1/meetings/${meetingId}/end`, {
+      method: 'POST',
+    });
+  },
+
+  /** On-demand AI task extraction from meeting transcripts. */
+  extractTasks(meetingId: number | string): Promise<FollowUpTask[]> {
+    return apiFetch<FollowUpTask[]>(`/api/v1/meetings/${meetingId}/extract-tasks`, {
       method: 'POST',
     });
   },

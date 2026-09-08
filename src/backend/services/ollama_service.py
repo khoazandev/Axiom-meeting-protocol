@@ -96,24 +96,24 @@ def _detect_intent(question: str) -> str:
 # ── System prompts ────────────────────────────────────────────────────────────
 
 _SYSTEM_IDENTITY = """\
-Bạn là Axiom AI — trợ lý họp thông minh, được tích hợp trực tiếp vào phòng họp.
-Khi được hỏi về bản thân, hãy giới thiệu ngắn gọn, thân thiện, đề cập các khả năng chính."""
+Bạn là Asightant — trợ lý họp thông minh (AI Copilot), được tích hợp trực tiếp vào phòng họp.
+Khi được hỏi về bản thân, hãy giới thiệu ngắn gọn, thân thiện, đề cập các khả năng chính như đọc Agenda, bóc tách phát biểu theo thời gian thực và hỗ trợ ra quyết định."""
 
 _SYSTEM_GREETING = """\
-Bạn là Axiom AI — trợ lý họp thông minh. Trả lời ngắn, ấm áp, tự nhiên như đồng nghiệp."""
+Bạn là Asightant — trợ lý họp thông minh. Trả lời ngắn, ấm áp, tự nhiên như đồng nghiệp trong phòng họp."""
 
 _SYSTEM_OFFTOPIC = """\
-Bạn là Axiom AI — trợ lý họp thông minh. Nhiệm vụ của bạn chỉ là hỗ trợ trong phạm vi cuộc họp.
+Bạn là Asightant — trợ lý họp thông minh. Nhiệm vụ của bạn là hỗ trợ trong phạm vi cuộc họp, Agenda và các tài liệu liên quan.
 Nếu câu hỏi ngoài phạm vi, hãy từ chối nhẹ nhàng, tự nhiên, và gợi ý người dùng hỏi về cuộc họp."""
 
 _SYSTEM_RAG = r"""\
-Bạn là Axiom AI — trợ lý họp thông minh cấp cao (Executive AI Assistant), được tích hợp trực tiếp vào phòng họp theo thời gian thực.
+Bạn là Asightant — trợ lý họp thông minh cấp cao (Executive AI Assistant), được tích hợp trực tiếp vào phòng họp theo thời gian thực.
 Giọng văn: chuyên nghiệp, nhạy bén, tự nhiên, hỗ trợ chủ động như một đồng nghiệp xuất sắc trong phòng họp.
 
 BỘ NGUYÊN TẮC PHẢN XẠ CỐT LÕI (REFLEX RULES):
-- Rule 1 (Always Context-Aware): Luôn đọc kỹ Lịch sử trò chuyện gần nhất và Nhật ký phòng họp trước khi trả lời.
+- Rule 1 (Always Context-Aware): Luôn đọc kỹ Toàn bộ Agenda, Lịch sử trò chuyện gần nhất và Nhật ký phòng họp trước khi trả lời.
 - Rule 2 (Proactive, Not Reactive): Sau khi giải đáp, luôn chủ động gợi ý bước tiếp theo (Next Action) hoặc câu hỏi làm rõ cho người dùng.
-- Rule 3 (Show the Proof / Citation): Luôn dẫn chứng bằng chứng rõ ràng (Timestamp [HH:MM:SS], Tên người phát biểu, Tên file hoặc Event Log).
+- Rule 3 (Show the Proof / Citation): Luôn dẫn chứng bằng chứng rõ ràng (Agenda, Timestamp [HH:MM:SS], Tên người phát biểu, Tên file hoặc Event Log).
 - Rule 4 (Graceful Degradation): Nếu thông tin không có trong cuộc họp, từ chối lịch sự và gợi ý cách tìm khác, tuyệt đối không bịa đặt.
 
 BỘ 4 KỊCH BẢN ỨNG XỬ CỐT LÕI (CORE BEHAVIORAL PATTERNS):
@@ -161,13 +161,13 @@ def build_rag_answer(
         prompt = (
             f"{_SYSTEM_IDENTITY}\n\n"
             f"Người dùng hỏi: {question}\n"
-            f"Axiom AI:"
+            f"Asightant:"
         )
-        return _call_ollama(prompt, max_tokens=120) or (
-            "Mình là Axiom AI — trợ lý họp thông minh được tích hợp ngay trong phòng họp này. "
-            "Mình có thể giúp bạn: tra cứu nội dung agenda, tìm thông tin trong tài liệu đã upload, "
-            "tóm tắt những gì đã được thảo luận, và theo dõi mọi nhật ký sự kiện hệ thống theo thời gian thực. "
-            "Bạn muốn hỏi gì về cuộc họp hôm nay không? 🎯"
+        return _call_ollama(prompt, max_tokens=150) or (
+            "Mình là Asightant — trợ lý họp thông minh (AI Copilot) được tích hợp ngay trong phòng họp này. "
+            "Mình nắm rõ toàn bộ nội dung Agenda cuộc họp, theo dõi các phát biểu theo thời gian thực, "
+            "hỗ trợ tra cứu tài liệu và giải đáp mọi câu hỏi liên quan đến phiên họp. "
+            "Bạn muốn Asightant hỗ trợ điều gì hôm nay? ✨"
         )
 
     # ── Greeting ──────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ def build_rag_answer(
         prompt = (
             f"{_SYSTEM_GREETING}\n\n"
             f"Người dùng: {question}\n"
-            f"Axiom AI:"
+            f"Asightant:"
         )
         return _call_ollama(prompt, max_tokens=80) or _greeting_fallback(question)
 
@@ -184,11 +184,11 @@ def build_rag_answer(
         prompt = (
             f"{_SYSTEM_OFFTOPIC}\n\n"
             f"Câu hỏi ngoài phạm vi cuộc họp: {question}\n"
-            f"Axiom AI:"
+            f"Asightant:"
         )
         return _call_ollama(prompt, max_tokens=100) or (
-            "Câu hỏi này nằm ngoài phạm vi của mình — mình chỉ hỗ trợ về nội dung và hoạt động cuộc họp thôi. "
-            "Bạn muốn hỏi gì về agenda, tài liệu, hoặc những gì đang được thảo luận không? 😊"
+            "Câu hỏi này nằm ngoài phạm vi cuộc họp và Agenda hiện tại. "
+            "Mình là Asightant, chuyên hỗ trợ về nội dung cuộc họp, kế hoạch thảo luận và các phát biểu. Bạn muốn hỏi gì về phiên họp không? 😊"
         )
 
     # ── Meeting RAG ───────────────────────────────────────────────────────────
@@ -237,22 +237,25 @@ def build_rag_answer(
 
     # 2. Live transcript (highest priority — what's happening RIGHT NOW)
     if live_transcript and live_transcript.strip():
-        recent = live_transcript.strip()[-2000:]
+        recent = live_transcript.strip()[-2500:]
         context_lines.append(f"[Cuộc họp đang diễn ra - ghi âm trực tiếp]:\n{recent}")
 
     # 3. Static sources (agenda, files, bookmarks, DB transcript)
-    for src in sources[:5]:
+    for src in sources[:6]:
+        stype = src.get("type", "")
         label = {
-            "agenda": "Agenda",
-            "transcript": "Biên bản trước",
+            "agenda": "Agenda cuộc họp",
+            "transcript": "Biên bản phát biểu trước",
             "file": "Tài liệu",
             "bookmark": "Ghi chú",
-        }.get(src.get("type", ""), "Nguồn")
+        }.get(stype, "Nguồn")
         snippet = src.get("snippet", "").strip()
         if snippet:
             fname = src.get("filename", "")
             prefix = f"[{label} — {fname}]" if fname else f"[{label}]"
-            context_lines.append(f"{prefix}: {snippet[:400]}")
+            # For agenda, retain full content up to 4000 chars so full agenda is preserved
+            max_len = 4000 if stype == "agenda" else 1200
+            context_lines.append(f"{prefix}:\n{snippet[:max_len]}")
 
     if not context_lines and not info_block:
         prompt = (
@@ -260,11 +263,11 @@ def build_rag_answer(
             f"{history_block}"
             f"Câu hỏi: {question}\n\n"
             f"Lưu ý: Chưa có tài liệu hoặc transcript nào trong cuộc họp này.\n"
-            f"Axiom AI:"
+            f"Asightant:"
         )
         return _call_ollama(prompt, max_tokens=150) or (
-            "Mình chưa tìm thấy thông tin về điều này trong cuộc họp. "
-            "Thử upload tài liệu vào tab Files hoặc hỏi sau khi cuộc họp có thêm nội dung nhé!"
+            "Asightant chưa tìm thấy thông tin về điều này trong cuộc họp. "
+            "Bạn có thể bổ sung Agenda hoặc tiếp tục thảo luận để Asightant ghi nhận nhé!"
         )
 
     context_block = history_block + info_block + "\n\n".join(context_lines)
@@ -272,10 +275,10 @@ def build_rag_answer(
         f"{_SYSTEM_RAG}\n\n"
         f"=== Ngữ cảnh cuộc họp & Lịch sử ===\n{context_block}\n\n"
         f"=== Câu hỏi người dùng ===\n{question}\n\n"
-        f"Axiom AI:"
+        f"Asightant:"
     )
 
-    return _call_ollama(prompt, max_tokens=450) or _heuristic_answer(question, sources, live_transcript)
+    return _call_ollama(prompt, max_tokens=600) or _heuristic_answer(question, sources, live_transcript)
 
 
 # ── Ollama call ───────────────────────────────────────────────────────────────
@@ -304,7 +307,7 @@ def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
         response.raise_for_status()
         text = response.json().get("response", "").strip()
         # Strip accidental system-prompt leakage
-        for prefix in ["Axiom AI:", "AI:", "Assistant:"]:
+        for prefix in ["Asightant:", "Axiom AI:", "AI:", "Assistant:"]:
             if text.startswith(prefix):
                 text = text[len(prefix):].strip()
         return text if text else None
@@ -323,10 +326,10 @@ def _greeting_fallback(question: str) -> str:
     """Natural fallback for greetings when Ollama is offline."""
     q = question.lower()
     if any(w in q for w in ["cảm ơn", "cám ơn", "thank"]):
-        return "Không có gì! Bạn cần hỏi thêm gì về cuộc họp không? 😊"
+        return "Không có gì! Asightant luôn sẵn sàng hỗ trợ bạn và mọi người trong phiên họp. 😊"
     if any(w in q for w in ["tạm biệt", "bye"]):
-        return "Tạm biệt! Chúc cuộc họp thành công nhé 👋"
-    return "Chào bạn! 👋 Mình là Axiom AI. Bạn muốn hỏi gì về cuộc họp hôm nay?"
+        return "Tạm biệt! Chúc phiên họp đạt được nhiều nghị quyết thành công nhé! 👋"
+    return "Chào bạn! 👋 Mình là Asightant — trợ lý họp AI. Mình đã nắm rõ toàn bộ Agenda cuộc họp và luôn sẵn sàng hỗ trợ bạn tra cứu mọi thông tin!"
 
 
 def _heuristic_answer(
@@ -334,23 +337,41 @@ def _heuristic_answer(
     sources: List[Dict[str, Any]],
     live_transcript: Optional[str] = None,
 ) -> str:
-    """Fallback when Ollama is unavailable — show most relevant snippets."""
+    """Fallback when Ollama is unavailable — show full agenda and relevant meeting context."""
+    q_lower = question.lower()
+    is_asking_agenda = any(w in q_lower for w in ["agenda", "kế hoạch", "chương trình", "nội dung", "mục tiêu", "thảo luận gì", "lịch trình"])
+    agenda_src = next((s for s in sources if s.get("type") == "agenda"), None)
+
+    if is_asking_agenda and agenda_src:
+        agenda_text = agenda_src.get("snippet", "").strip()
+        if agenda_text:
+            return (
+                f"📋 **Asightant đã trích xuất Agenda cuộc họp:**\n\n"
+                f"{agenda_text}\n\n"
+                f"💡 _(Bạn có thể hỏi Asightant chi tiết về bất kỳ mục nào ở trên hoặc diễn biến thảo luận trực tiếp!)_"
+            )
+
     results = []
 
     # Show live transcript first if available
     if live_transcript and live_transcript.strip():
-        recent = live_transcript.strip()[-500:]
+        recent = live_transcript.strip()[-600:]
         results.append(f"📝 **Đang diễn ra trong cuộc họp:**\n{recent}")
 
     # Then file/agenda snippets
-    snippets = [s.get("snippet", "").strip() for s in sources[:2] if s.get("snippet")]
-    if snippets:
-        results.append("📄 " + " … ".join(s[:200] for s in snippets))
+    for s in sources[:3]:
+        snip = s.get("snippet", "").strip()
+        if snip:
+            stype = s.get("type", "")
+            if stype == "agenda":
+                results.append(f"📋 **Agenda:**\n{snip}")
+            else:
+                results.append(f"📄 {snip[:400]}")
 
     if not results:
-        return "Mình không tìm thấy thông tin liên quan trong cuộc họp."
+        return "Asightant chưa tìm thấy thông tin phù hợp trong Agenda hoặc phát biểu của cuộc họp này."
 
-    return "\n\n".join(results) + "\n\n_(AI đang offline — kết quả tìm kiếm trực tiếp)_"
+    return "\n\n".join(results)
 
 
 def is_ollama_available() -> bool:

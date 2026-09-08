@@ -38,6 +38,27 @@ def get_current_user(
     return user
 
 
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Returns the current user if valid credentials provided, else None."""
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = decode_token(token)
+        if not payload:
+            return None
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        return db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    except Exception:
+        return None
+
+
+
 def get_current_org_member(
     organization_id: str | None = Header(None, alias="X-Organization-ID"),
     credentials: HTTPAuthorizationCredentials | None = Depends(security),

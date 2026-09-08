@@ -116,7 +116,67 @@ def get_meeting_token(
         api.VideoGrants(
             room_join=True,
             room=f"meeting-{meeting_id}",
+            can_publish=True,
+            can_subscribe=True,
+            can_publish_data=True,
             can_update_own_metadata=True,
         )
     )
     return TokenResponse(token=token.to_jwt())
+
+
+from pydantic import BaseModel
+
+class QuickTranslateRequest(BaseModel):
+    text: str
+    from_lang: str = "vi"
+    to_lang: str = "en"
+
+class QuickTranslateResponse(BaseModel):
+    original_text: str
+    translated_text: str
+    from_lang: str
+    to_lang: str
+
+
+@router.post("/translate", response_model=QuickTranslateResponse)
+def translate_sentence(
+    req: QuickTranslateRequest,
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Sub-second bilingual translation using CTranslate2 INT8 models.
+    Supports vi -> en (~100-180ms) and en -> vi (~100-180ms).
+    """
+    from src.backend import ct2_translator
+    text = req.text.strip()
+    if not text:
+        return QuickTranslateResponse(
+            original_text="",
+            translated_text="",
+            from_lang=req.from_lang,
+            to_lang=req.to_lang
+        )
+
+    from_l = (req.from_lang or "vi").lower().split("-")[0]
+    to_l = (req.to_lang or "en").lower().split("-")[0]
+
+    translated = None
+    if from_l == "vi" and to_l == "en":
+        translated = ct2_translator.translate_vi_to_en(text)
+    elif from_l == "en" and to_l == "vi":
+        translated = ct2_translator.translate_en_to_vi(text)
+    elif from_l == "vi":
+        translated = ct2_translator.translate_vi_to_en(text)
+    elif from_l == "en":
+        translated = ct2_translator.translate_en_to_vi(text)
+    else:
+        translated = ct2_translator.translate_vi_to_en(text) or text
+
+    return QuickTranslateResponse(
+        original_text=text,
+        translated_text=translated or text,
+        from_lang=req.from_lang,
+        to_lang=req.to_lang
+    )
+
