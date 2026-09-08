@@ -56,6 +56,47 @@ def seed_admin_user(db: Session) -> dict:
         )
         db.add(member)
 
+    # 4. Create Member Account (Alex Rivera)
+    member_role = db.query(Role).filter(Role.name == "MEMBER", Role.is_system == True).first()
+    alex_member = db.query(User).filter(User.email == "alex@axiom.com").first()
+    if not alex_member:
+        alex_member = User(
+            email="alex@axiom.com",
+            password_hash=hash_password("password123"),
+            full_name="Alex Rivera",
+            provider="local",
+        )
+        db.add(alex_member)
+        db.flush()
+        if member_role:
+            db.add(OrganizationMember(
+                organization_id=org.id,
+                user_id=alex_member.id,
+                role_id=member_role.id,
+                status=OrgMemberStatusEnum.ACTIVE,
+            ))
+
+    # 5. Create Manager Account (Trần Minh Khoa)
+    manager_role = db.query(Role).filter(Role.name == "MANAGER", Role.is_system == True).first()
+    manager = db.query(User).filter(User.email == "manager.khoa@axiom.com").first()
+    if not manager:
+        manager = User(
+            email="manager.khoa@axiom.com",
+            password_hash=hash_password("password123"),
+            full_name="Trần Minh Khoa (Trưởng Khối Kỹ Thuật)",
+            avatar_url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+            provider="local",
+        )
+        db.add(manager)
+        db.flush()
+        if manager_role:
+            db.add(OrganizationMember(
+                organization_id=org.id,
+                user_id=manager.id,
+                role_id=manager_role.id,
+                status=OrgMemberStatusEnum.ACTIVE,
+            ))
+
     db.commit()
     db.refresh(user)
 
@@ -63,6 +104,7 @@ def seed_admin_user(db: Session) -> dict:
         "email": admin_email,
         "password": admin_password,
         "full_name": admin_name,
+        "director": "director@axiom.com",
         "org": org.name,
     }
 

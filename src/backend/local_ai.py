@@ -8,17 +8,25 @@ from livekit import rtc
 from livekit.agents import stt
 from faster_whisper import WhisperModel
 
+import os
+
 _global_whisper_model = None
 _global_vad = None
 
 def preload_models():
     """Load models in a separate thread to avoid blocking event loop"""
     global _global_whisper_model, _global_vad
+    model_size = os.getenv("WHISPER_MODEL_SIZE", "small")
+    cpu_threads = int(os.getenv("WHISPER_CPU_THREADS", "6"))
     if _global_whisper_model is None:
-        _global_whisper_model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
+        _global_whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8", cpu_threads=cpu_threads)
     if _global_vad is None:
         from livekit.plugins import silero
-        _global_vad = silero.VAD.load(min_silence_duration=1.0)
+        _global_vad = silero.VAD.load(
+            min_speech_duration=0.2,
+            min_silence_duration=0.45,
+            activation_threshold=0.5,
+        )
 
 def get_vad():
     global _global_vad
@@ -27,13 +35,15 @@ def get_vad():
     return _global_vad
 
 class FasterWhisperSTT(stt.STT):
-    def __init__(self, model_size: str = "large-v3-turbo", language: str = "en"):
+    def __init__(self, model_size: Optional[str] = None, language: str = "en"):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
         self._language = language
         
+        target_model = model_size or os.getenv("WHISPER_MODEL_SIZE", "small")
+        cpu_threads = int(os.getenv("WHISPER_CPU_THREADS", "6"))
         global _global_whisper_model
         if _global_whisper_model is None:
-            _global_whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            _global_whisper_model = WhisperModel(target_model, device="cpu", compute_type="int8", cpu_threads=cpu_threads)
         self._model = _global_whisper_model
 
     async def _recognize_impl(
@@ -70,14 +80,65 @@ class FasterWhisperSTT(stt.STT):
         
         import logging
         logger = logging.getLogger("local-ai")
-        logger.info(f"Received {len(frames)} frames. First frame size: {len(frames[0].data) if frames else 0}. Resampled to {len(resampled_frames)} frames. Bytes: {len(audio_data)}")
         
         # Run transcription in a thread to not block event loop
         loop = asyncio.get_event_loop()
         def transcribe():
-            logger.info("Transcribe thread starting...")
-            segments, info = self._model.transcribe(audio_float32, beam_size=1, language=lang_code, condition_on_previous_text=False)
-            res = " ".join([segment.text for segment in segments]).strip()
+            dur_sec = len(audio_float32) / 16000.0
+            rms = float(np.sqrt(np.mean(audio_float32**2))) if len(audio_float32) > 0 else 0.0
+            if rms < 0.005 or dur_sec < 0.2:
+                logger.info(f"Audio energy too low or too short (RMS={rms:.5f}, dur={dur_sec:.2f}s), skipping silence.")
+                return ""
+
+            logger.info(f"Transcribe thread starting (duration: {dur_sec:.2f}s, RMS={rms:.4f})...")
+            try:
+                segments, info = self._model.transcribe(
+                    audio_float32,
+                    beam_size=1,
+                    temperature=0.0,
+                    language=lang_code,
+                    condition_on_previous_text=False,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=250),
+                    no_speech_threshold=0.6,
+                    log_prob_threshold=-1.0
+                )
+                valid_segments = []
+                for segment in segments:
+                    if getattr(segment, "no_speech_prob", 0) > 0.6:
+                        continue
+                    valid_segments.append(segment.text)
+                res = " ".join(valid_segments).strip()
+            except Exception as e:
+                logger.error(f"Error in transcribe: {e}", exc_info=True)
+                return ""
+
+            # Hallucination filter for silence in Vietnamese & English
+            hallucinations = [
+                "hãy subscribe cho kênh ghiền mì gõ",
+                "hãy subscribe cho kênh",
+                "cảm ơn các bạn đã theo dõi",
+                "chúc các bạn xem video vui vẻ",
+                "thank you for watching",
+                "thanks for watching",
+                "subtitles by",
+                "bye",
+                "bye!",
+                "bye bye",
+                "you",
+            ]
+            lower_res = res.lower().strip()
+            if any(h == lower_res or lower_res.startswith(h) for h in hallucinations) and rms < 0.03:
+                logger.info(f"Suppressed silence hallucination: '{res}'")
+                return ""
+
+            # Filter out single characters or punctuation
+            import re
+            cleaned = re.sub(r'[^\w\s]', '', res).strip()
+            if len(cleaned) <= 1:
+                logger.info(f"Suppressed single char / punctuation hallucination: '{res}'")
+                return ""
+
             logger.info(f"Transcribe thread finished: '{res}'")
             return res
             
@@ -205,7 +266,11 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
 
         async def _recognize_vad() -> None:
             """recognize speech from vad events"""
+            import logging
+            vad_logger = logging.getLogger("local-ai.vad")
             async for event in vad_stream:
+                if event.type != VADEventType.INFERENCE_DONE:
+                    vad_logger.info(f"VAD Event received: type={event.type}")
                 if event.type == VADEventType.START_OF_SPEECH:
                     self._is_speaking = True
                     self._speech_buffer = []
@@ -220,24 +285,37 @@ class RealtimeStreamAdapterWrapper(RecognizeStream):
                         )
                     )
 
-                    merged_frames = utils.merge_frames(event.frames)
-                    t_event = await self._wrapped_stt.recognize(
-                        buffer=merged_frames,
-                        language=self._language,
-                        conn_options=self._wrapped_stt_conn_options,
-                    )
-
-                    if len(t_event.alternatives) == 0:
-                        continue
-                    elif not t_event.alternatives[0].text:
+                    if not event.frames:
                         continue
 
-                    self._event_ch.send_nowait(
-                        SpeechEvent(
-                            type=SpeechEventType.FINAL_TRANSCRIPT,
-                            alternatives=[t_event.alternatives[0]],
+                    total_samples = sum(f.samples_per_channel for f in event.frames)
+                    sample_rate = event.frames[0].sample_rate
+                    dur_sec = total_samples / float(sample_rate) if sample_rate > 0 else 0
+                    if dur_sec < 0.2:
+                        vad_logger.info(f"Ignoring END_OF_SPEECH: duration {dur_sec:.2f}s is too short")
+                        continue
+
+                    try:
+                        merged_frames = utils.merge_frames(event.frames)
+                        t_event = await self._wrapped_stt.recognize(
+                            buffer=merged_frames,
+                            language=self._language,
+                            conn_options=self._wrapped_stt_conn_options,
                         )
-                    )
+
+                        if len(t_event.alternatives) == 0:
+                            continue
+                        elif not t_event.alternatives[0].text:
+                            continue
+
+                        self._event_ch.send_nowait(
+                            SpeechEvent(
+                                type=SpeechEventType.FINAL_TRANSCRIPT,
+                                alternatives=[t_event.alternatives[0]],
+                            )
+                        )
+                    except Exception as err:
+                        vad_logger.error(f"Error recognizing speech event: {err}", exc_info=True)
 
         tasks = [
             asyncio.create_task(_forward_input(), name="forward_input"),

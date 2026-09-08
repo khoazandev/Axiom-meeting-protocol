@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Dict, Optional, Set
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,9 +35,10 @@ class AgentState:
             ollama_url = f"{ollama_url.rstrip('/')}/v1"
             
         self.llm_plugin = openai.LLM(
-            model="translategemma:4b",
+            model=os.getenv("TRANSLATION_MODEL", "translategemma:4b"),
             base_url=ollama_url,
-            api_key="ollama"
+            api_key="ollama",
+            timeout=30.0
         )
         
         # To avoid overlapping TTS in the same language, we could use queues, 
@@ -83,13 +85,10 @@ async def process_translation(state: AgentState, source_text: str, source_partic
     source_lang_name, source_lang_code = LANGUAGE_MAP.get(source_lang, (source_lang.capitalize(), source_lang))
     target_lang_name, target_lang_code = LANGUAGE_MAP.get(target_lang, (target_lang.capitalize(), target_lang))
 
-    # 1. Translate using TranslateGemma Prompt Format
+    # 1. Translate using concise Prompt Format for maximum speed
     prompt = (
-        f"You are a professional {source_lang_name} ({source_lang_code}) to {target_lang_name} ({target_lang_code}) translator. "
-        f"Your goal is to accurately convey the meaning and nuances of the original {source_lang_name} text while adhering to {target_lang_name} grammar, vocabulary, and cultural sensitivities.\n"
-        f"Produce only the {target_lang_name} translation, without any additional explanations or commentary. "
-        f"Please translate the following {source_lang_name} text into {target_lang_name}:\n\n\n"
-        f"{source_text}"
+        f"Translate the following text from {source_lang_name} to {target_lang_name}. "
+        f"Output ONLY the translated text without quotes, explanation, or commentary:\n\n{source_text}"
     )
     try:
         from livekit.agents.llm import ChatContext
@@ -101,9 +100,6 @@ async def process_translation(state: AgentState, source_text: str, source_partic
         async for chunk in stream:
             if chunk.delta and chunk.delta.content:
                 translated_text += chunk.delta.content
-        
-        translated_text = translated_text.strip()
-        logger.info(f"Translated to {target_lang}: {translated_text}")
         
         # Publish translation to frontend via DataChannel
         translation_payload = {
@@ -117,6 +113,21 @@ async def process_translation(state: AgentState, source_text: str, source_partic
         await state.ctx.room.local_participant.publish_data(
             json.dumps(translation_payload).encode("utf-8"),
             topic="translations"
+        )
+        
+        # Also broadcast to "records" topic so Records tab and subtitles show translation immediately
+        record_update = {
+            "type": "translation_record",
+            "participant_identity": source_participant.identity,
+            "original_text": source_text,
+            "translated_text": translated_text,
+            "from_language": source_lang,
+            "to_language": target_lang,
+            "is_final": True
+        }
+        await state.ctx.room.local_participant.publish_data(
+            json.dumps(record_update).encode("utf-8"),
+            topic="records"
         )
         
         # 2. Get TTS Source and lock
@@ -181,6 +192,14 @@ async def entrypoint(ctx: JobContext):
     # Initialize preferences for participants already in the room
     logger.info(f"Agent connected. Remote participants: {len(ctx.room.remote_participants)}")
     for p in ctx.room.remote_participants.values():
+        if (
+            p.identity.startswith("agent-")
+            or "agent" in p.identity.lower()
+            or getattr(p, "kind", None) == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT
+        ):
+            logger.info(f"Skipping agent participant: {p.identity}")
+            continue
+
         logger.info(f"Found participant: {p.identity}, attributes: {p.attributes}, metadata: {p.metadata}")
         if p.attributes:
             enabled = p.attributes.get("translation_enabled") == "true"
@@ -223,7 +242,7 @@ async def entrypoint(ctx: JobContext):
         
         # Create STT plugin specific to this user's language using local Faster-Whisper
         stt_plugin = local_ai.RealtimeStreamAdapter(
-            stt=local_ai.FasterWhisperSTT(model_size="large-v3-turbo", language=lang),
+            stt=local_ai.FasterWhisperSTT(language=lang),
             vad=local_ai.get_vad()
         )
         stt_stream = stt_plugin.stream()
@@ -236,7 +255,10 @@ async def entrypoint(ctx: JobContext):
                         logger.info(f"Received first audio frame. Sample rate: {event.frame.sample_rate}, Channels: {event.frame.num_channels}")
                     frame_count += 1
                     if frame_count % 100 == 0:
-                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity}")
+                        pcm = np.frombuffer(event.frame.data, dtype=np.int16)
+                        rms = float(np.sqrt(np.mean(pcm.astype(np.float32)**2))) if len(pcm) > 0 else 0.0
+                        max_amp = int(np.max(np.abs(pcm))) if len(pcm) > 0 else 0
+                        logger.info(f"Pushed {frame_count} frames to STT for {participant.identity} (frame RMS={rms:.2f}, peak={max_amp})")
                     stt_stream.push_frame(event.frame)
                 stt_stream.end_input()
             except Exception as e:
@@ -277,18 +299,18 @@ async def entrypoint(ctx: JobContext):
                     
                     # 2. Pipeline 2: Speech Translation (ONLY when finalized)
                     if is_final:
-                        # Find all users who want translation FROM this language
+                        # Find all users who want translation
                         target_langs = set()
                         logger.info(f"Checking targets for lang {detected_lang}. Prefs: {state.participant_prefs}")
                         for pid, pref in state.participant_prefs.items():
-                            if pref["translation_enabled"] and pref["translation_source"] == detected_lang:
+                            if pref.get("translation_enabled"):
                                 target_p = next((p for p in ctx.room.remote_participants.values() if p.identity == pid), None)
-                                logger.info(f"DEBUG: Found target_p for {pid}: {target_p}. Remote participants: {[p.identity for p in ctx.room.remote_participants.values()]}")
-                                if target_p:
-                                    logger.info(f"DEBUG: target_p.metadata is: {target_p.metadata}")
-                                lang_t = get_participant_language(target_p)
-                                logger.info(f"DEBUG: get_participant_language({target_p}) returned: {lang_t}")
-                                target_langs.add(lang_t)
+                                lang_t = get_participant_language(target_p) if target_p else "vi"
+                                if lang_t and lang_t != detected_lang:
+                                    target_langs.add(lang_t)
+                                else:
+                                    fallback_t = "en" if detected_lang == "vi" else "vi"
+                                    target_langs.add(fallback_t)
                                 
                         logger.info(f"Target languages for translation: {target_langs}")
                         
@@ -296,7 +318,7 @@ async def entrypoint(ctx: JobContext):
                         for t_lang in target_langs:
                             if t_lang and t_lang != detected_lang:
                                 asyncio.create_task(
-                                    handle_translation_and_tts(text, detected_lang, t_lang, participant)
+                                    process_translation(state, text, participant, t_lang, detected_lang)
                                 )
         except Exception as e:
             logger.error(f"Error in stt_stream processing for {participant.identity}: {e}", exc_info=True)
@@ -304,6 +326,19 @@ async def entrypoint(ctx: JobContext):
 
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(track: rtc.Track, publication: rtc.TrackPublication, participant: rtc.RemoteParticipant):
+        # Strictly ignore audio tracks from any agent or TTS track to prevent feedback loops
+        if (
+            participant.identity.startswith("agent-")
+            or "agent" in participant.identity.lower()
+            or getattr(participant, "kind", None) == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT
+        ):
+            logger.info(f"Ignoring audio from agent participant: {participant.identity}")
+            return
+
+        if publication and publication.name and (publication.name.startswith("tts_") or "tts" in publication.name.lower()):
+            logger.info(f"Ignoring TTS publication track: {publication.name}")
+            return
+
         if track.kind == rtc.TrackKind.KIND_AUDIO:
             logger.info(f"Subscribed to audio track from {participant.identity}")
             

@@ -97,8 +97,8 @@ export function Navbar() {
           <Link href="#security" className="hover:text-foreground transition-colors duration-200">
             Security
           </Link>
-          <Link href="/meetings" className="hover:text-foreground transition-colors duration-200">
-            Dashboard
+          <Link href="/member" className="hover:text-foreground transition-colors duration-200">
+            Workspace
           </Link>
         </nav>
       </div>
@@ -151,13 +151,13 @@ export function HeroSection() {
                 </Button>
               </ClickSpark>
             </Link>
-            <Link href="/meetings">
+            <Link href="/member">
               <Button
                 variant="outline"
                 size="lg"
                 className="rounded-full h-12 px-8 font-semibold text-sm hover:bg-secondary transition-colors cursor-pointer"
               >
-                View Dashboard
+                View Workspace
               </Button>
             </Link>
           </div>

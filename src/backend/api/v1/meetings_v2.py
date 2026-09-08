@@ -286,10 +286,13 @@ class RagQueryResponse(_PydanticBaseModel):
 
 import uuid
 
+import json
+
 @router.get("/{meeting_id}/token", response_model=TokenResponse)
 def get_meeting_token(
     meeting_id: str,
     participant_name: str,
+    language: str = "vi",
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
@@ -303,6 +306,7 @@ def get_meeting_token(
     unique_identity = f"user_{current_user.id}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
+    token.with_metadata(json.dumps({"target_lang": language}))
     token.with_grants(
         livekit_api.VideoGrants(
             room_join=True,
@@ -310,6 +314,46 @@ def get_meeting_token(
             can_update_own_metadata=True,
         )
     )
+
+    # Automatically ensure AI Agent is dispatched to the room
+    try:
+        def _auto_dispatch():
+            async def _inner():
+                try:
+                    http_url = settings.livekit_url.replace("ws://", "http://").replace("wss://", "https://")
+                    lk = livekit_api.LiveKitAPI(http_url, settings.livekit_api_key, settings.livekit_api_secret)
+                    room_name = f"meeting-{meeting_id}"
+                    try:
+                        participants = await lk.room.list_participants(livekit_api.ListParticipantsRequest(room=room_name))
+                        has_agent = any(
+                            p.identity.startswith("agent-")
+                            or "agent" in p.identity.lower()
+                            or getattr(p, "kind", None) == livekit_api.ParticipantKind.PARTICIPANT_KIND_AGENT
+                            for p in participants.participants
+                        )
+                    except Exception:
+                        has_agent = False
+
+                    if not has_agent:
+                        try:
+                            dispatches = await lk.agent_dispatch.list_dispatch(room_name)
+                            has_dispatch = len(dispatches) > 0
+                        except Exception:
+                            has_dispatch = False
+
+                        if not has_dispatch:
+                            req = livekit_api.CreateAgentDispatchRequest(room=room_name, agent_name="")
+                            await lk.agent_dispatch.create_dispatch(req)
+                    await lk.aclose()
+                except Exception as ex:
+                    logger.debug(f"Agent dispatch check error: {ex}")
+            import asyncio
+            asyncio.run(_inner())
+        import threading
+        threading.Thread(target=_auto_dispatch, daemon=True).start()
+    except Exception as e:
+        logger.warning(f"Failed to auto-dispatch agent for meeting {meeting_id}: {e}")
+
     return TokenResponse(token=token.to_jwt())
 
 

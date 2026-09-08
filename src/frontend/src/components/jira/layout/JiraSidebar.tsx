@@ -117,7 +117,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
             <Layers className="w-4 h-4" />
           </Link>
           <Link
-            href="/meetings"
+            href="/member?tab=meetings"
             className="p-2 rounded-lg hover:bg-bg-elevated text-text-muted hover:text-text-primary transition-colors"
             title="Meetings"
           >
@@ -360,7 +360,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
             )}
 
             <Link
-              href="/meetings"
+              href="/member?tab=meetings"
               className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
               <Users className="w-3.5 h-3.5 text-text-muted" />
