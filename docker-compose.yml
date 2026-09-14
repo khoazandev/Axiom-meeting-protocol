@@ -50,6 +50,7 @@ services:
       TASK_EXTRACTOR_TIMEOUT: ${TASK_EXTRACTOR_TIMEOUT:-900}
     volumes:
       - ./src/backend:/app/src/backend
+      - ./storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,6 +107,7 @@ services:
     volumes:
       - hf_cache:/home/appuser/.cache/huggingface
       - ./src/backend:/app/src/backend
+      - ./storage:/app/storage
     command: python -m src.backend.agent start
 
   # ─── Redis (for future AI queue pipeline) ────────────────────

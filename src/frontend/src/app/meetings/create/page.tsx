@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { meetingsApi, ApiRequestError } from '@/lib/api';
+import { meetingsApi, utilsApi, knowledgeApi, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { ArrowLeft, Loader2, AlertCircle, Upload, X, Paperclip } from 'lucide-react';
 
@@ -26,7 +26,25 @@ export default function CreateMeetingPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    agenda_text: '',
   });
+
+  const [agendaFile, setAgendaFile] = useState<File | null>(null);
+  const agendaFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAgendaFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAgendaFile(file);
+    try {
+      const { text } = await utilsApi.extractText(file);
+      if (text) {
+        setFormData(prev => ({ ...prev, agenda_text: text }));
+      }
+    } catch (err) {
+      console.error('Failed to extract text from agenda file:', err);
+    }
+  };
 
   // Files to upload after meeting is created
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -54,6 +72,7 @@ export default function CreateMeetingPage() {
         title: formData.title,
         description: formData.description,
         organization_id: activeOrganization?.id || null,
+        agenda_text: formData.agenda_text || null,
       };
       const created = await meetingsApi.create(payload);
       const meetingId = created.id;
@@ -77,6 +96,11 @@ export default function CreateMeetingPage() {
         );
       }
 
+      // Tải lên Agenda nếu có file
+      if (agendaFile) {
+        await knowledgeApi.uploadDocument(meetingId, agendaFile);
+      }
+
       // 3. Navigate to meeting room
       router.push(`/meetings/${meetingId}`);
     } catch (err: unknown) {
@@ -91,35 +115,34 @@ export default function CreateMeetingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 md:p-10 flex flex-col items-center justify-center">
-      <div className="w-full max-w-2xl space-y-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
         {/* Header Back Button */}
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại</span>
+          Quay lại
         </button>
 
-        <div className="bg-card border border-border rounded-3xl p-8 shadow-xl space-y-6">
-          <div className="border-b border-border pb-5">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              Deploy New Meeting
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              Configure a structured meeting for automated AI post-meeting analytics.
-            </p>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Tạo phòng họp mới
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Thiết lập thông tin và agenda cho cuộc họp.
+          </p>
+        </div>
+
+        {error && (
+          <div className="flex items-start gap-2 bg-destructive/10 text-destructive text-sm font-medium p-3 rounded-lg border border-destructive/20">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <p>{error}</p>
           </div>
+        )}
 
-          {error && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium flex items-center gap-3">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 Meeting Title
@@ -136,14 +159,62 @@ export default function CreateMeetingPage() {
             
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Agenda Outline (Optional)
+                Description (Optional)
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full mt-2 rounded-xl bg-muted border border-border px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors min-h-[100px] resize-y"
+                  placeholder="Nhập mục tiêu, bối cảnh cuộc họp (tuỳ chọn)..."
+                />
               </label>
+            </div>
+
+            {/* Agenda Textarea / File Upload */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Nội dung Agenda
+                </label>
+                <label className="cursor-pointer px-3 py-1.5 rounded-md text-xs font-semibold bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File</span>
+                  <input
+                    type="file"
+                    ref={agendaFileInputRef}
+                    className="hidden"
+                    accept=".txt,.md,.pdf,.doc,.docx"
+                    onChange={handleAgendaFileSelect}
+                  />
+                </label>
+              </div>
+
+              {agendaFile && (
+                <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-foreground truncate">{agendaFile.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAgendaFile(null)}
+                    className="text-muted-foreground hover:text-destructive shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="e.g. 1. Review Q3 Metrics\n2. Vote on New Architecture"
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary/50 transition-colors min-h-[100px] resize-y"
+                id="agenda_text"
+                value={formData.agenda_text}
+                onChange={(e) => setFormData({ ...formData, agenda_text: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary/50 transition-colors min-h-[120px] resize-y"
+                placeholder={agendaFile ? "Văn bản đã được tự động trích xuất từ file (bạn có thể chỉnh sửa)..." : "Nhập nội dung Agenda (mỗi dòng là một Topic)\nVí dụ:\n1. Báo cáo tiến độ dự án\n2. Phân tích rủi ro hệ thống\n3. Tổng kết"}
               />
+              <p className="text-[10px] text-muted-foreground">
+                Hệ thống AI sẽ tự động phân tích và chia các chủ đề (Topic) dựa trên nội dung bạn cung cấp hoặc text được trích xuất từ file.
+              </p>
             </div>
 
             {/* ── File Attachments ── */}
@@ -228,7 +299,6 @@ export default function CreateMeetingPage() {
               )}
             </button>
           </form>
-        </div>
       </div>
     </div>
   );

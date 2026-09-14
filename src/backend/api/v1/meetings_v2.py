@@ -83,6 +83,43 @@ def create_meeting(
         status=MeetingMemberStatusEnum.ACCEPTED,
     )
     db.add(host)
+    db.flush()
+
+    if payload.agenda_text:
+        from src.backend.models import Topic, TopicStatusEnum
+        import re
+        lines = [line.strip() for line in payload.agenda_text.split("\n") if line.strip()]
+        
+        # Smart extraction: If there are numbered lists, extract ONLY those (sub-bullets are ignored)
+        numbered_pattern = re.compile(r"^\d+[\.\)]\s+")
+        numbered_lines = [line for line in lines if numbered_pattern.match(line)]
+        
+        if numbered_lines:
+            lines = numbered_lines
+        else:
+            # Fallback to bullet points if no numbers
+            bullet_pattern = re.compile(r"^[\-\*\•]\s+")
+            bullet_lines = [line for line in lines if bullet_pattern.match(line)]
+            if bullet_lines:
+                lines = bullet_lines
+
+        for i, line in enumerate(lines):
+            # Clean up bullet points
+            title = line
+            for prefix in ["- ", "* ", "• "]:
+                if title.startswith(prefix):
+                    title = title[len(prefix):]
+            # Clean up numbers
+            title = re.sub(r"^\d+[\.\)]\s+", "", title)
+            
+            topic = Topic(
+                meeting_id=meeting.id,
+                title=title,
+                status=TopicStatusEnum.PENDING,
+                order_index=i
+            )
+            db.add(topic)
+
     db.commit()
     db.refresh(meeting)
     return meeting
@@ -161,7 +198,25 @@ def delete_meeting(
 ):
     """Delete a meeting. Only HOST or creator can delete."""
     meeting = _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    member = _require_meeting_member(db, meeting_id, current_user.id)
+
+    if meeting.created_by_id != current_user.id and member.role != MeetingMemberRoleEnum.HOST:
+        raise ForbiddenException("Only the HOST or creator can delete this meeting")
+
+    # Manually delete dependent records to avoid Foreign Key violations
+    from src.backend.models import (
+        TranscriptSegment, Topic, FollowUpTask, MeetingDecision,
+        MeetingDocument, MeetingSummary, KnowledgeDocument
+    )
+    
+    # Delete in order to respect FKs between these tables if any
+    db.query(FollowUpTask).filter(FollowUpTask.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(MeetingDecision).filter(MeetingDecision.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(TranscriptSegment).filter(TranscriptSegment.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(Topic).filter(Topic.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(MeetingSummary).filter(MeetingSummary.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(MeetingDocument).filter(MeetingDocument.meeting_id == meeting_id).delete(synchronize_session=False)
+    db.query(KnowledgeDocument).filter(KnowledgeDocument.meeting_id == meeting_id).delete(synchronize_session=False)
 
     db.delete(meeting)
     db.commit()

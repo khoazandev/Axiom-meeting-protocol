@@ -88,6 +88,13 @@ async def _generate_meeting_summary(db: Session, meeting_id: str, transcript_tex
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     title = meeting.title if meeting else "Unknown"
     agenda = meeting.description if meeting and meeting.description else "No agenda provided"
+    
+    date_str = "Unknown"
+    if meeting:
+        if meeting.started_at:
+            date_str = meeting.started_at.strftime("%d/%m/%Y")
+        elif meeting.created_at:
+            date_str = meeting.created_at.strftime("%d/%m/%Y")
 
     tasks = query_pending_tasks(db, meeting_id)
     decisions = query_pending_decisions(db, meeting_id)
@@ -96,45 +103,39 @@ async def _generate_meeting_summary(db: Session, meeting_id: str, transcript_tex
     decisions_json = json.dumps(decisions, ensure_ascii=False, indent=2)
 
     system_prompt = (
-        "You are an expert AI meeting assistant. Your task is to generate a comprehensive Meeting Note based on the provided meeting transcript, extracted decisions, and extracted tasks.\n\n"
-        "You MUST format the output strictly as a structured Markdown document using headings and lists, following the exact structure below.\n\n"
-        "In the \"Summary\" section, you MUST explicitly highlight and categorize key points into:\n"
-        "- **Facts**: Important information stated during the meeting.\n"
-        "- **Problems**: Issues, roadblocks, or concerns raised.\n"
-        "- **Questions**: Unanswered questions or topics needing further clarification.\n\n"
-        "### Output Format (Markdown Document)\n\n"
-        "# [Insert Meeting Name here]\n\n"
-        "## A - THÔNG TIN (INFORMATION)\n"
-        "- **Ngày họp (Date)**: [Insert Date]\n"
-        "- **Thành phần tham dự (Attendance)**: [List of attendees]\n"
-        "- **Nội dung chính (Agenda Outline)**:\n"
-        "  - [Topic 1]\n"
-        "  - [Topic 2]\n\n"
-        "## B - HÀNH ĐỘNG (ACTION)\n"
-        "- **Mục tiêu (Goal)**: [Main objective of the meeting]\n\n"
-        "### 1. Tóm tắt nội dung (Summary)\n"
-        "**Facts (Sự thật/Thông tin quan trọng)**:\n"
-        "- [Fact 1]\n"
-        "- [Fact 2]\n\n"
-        "**Problems (Vấn đề/Khó khăn)**:\n"
-        "- [Problem 1]\n"
-        "- [Problem 2]\n\n"
-        "**Questions (Câu hỏi/Chưa rõ)**:\n"
-        "- [Question 1]\n"
-        "- [Question 2]\n\n"
-        "### 2. Các quyết định đã chốt (Decisions Made)\n"
-        "- [List all decisions from the Decision Extractor]\n\n"
-        "### 3. Các công việc cần làm (Action Items)\n"
-        "- [List all tasks from Task Extractor format: Who - Task - Deadline]\n\n"
-        "Write the content in Vietnamese."
+        "You are an expert AI meeting assistant. Your task is to generate a comprehensive, beautifully formatted Meeting Note in Markdown based ONLY on the extracted decisions and tasks.\n\n"
+        "Please follow EXACTLY this structure using separate Markdown tables for each section:\n\n"
+        "# [MEETING NAME]\n\n"
+        "## 1. Thông tin chung (General Information)\n"
+        "| Mục (Item) | Chi tiết (Details) |\n"
+        "|---|---|\n"
+        "| **Ngày (Date)** | [Meeting Date] |\n"
+        "| **Thành phần tham dự (Attendance)** | [List of participants inferred from tasks/decisions] |\n"
+        "| **Nội dung chính (Agenda Outline)** | [Brief outline] |\n"
+        "| **Mục tiêu (Goal)** | [Stated or inferred goal of the meeting] |\n\n"
+        "## 2. Tóm tắt nội dung (Summary)\n"
+        "| Phân loại | Nội dung |\n"
+        "|---|---|\n"
+        "| **Thực tế (Facts)** | [Key facts inferred] |\n"
+        "| **Vấn đề (Problems)** | [Key problems discussed] |\n"
+        "| **Câu hỏi (Questions)** | [Key questions raised] |\n\n"
+        "## 3. Danh sách Quyết định (List of Decisions Made)\n"
+        "| STT | Nội dung Quyết định |\n"
+        "|---|---|\n"
+        "| 1 | [Quyết định 1] |\n\n"
+        "## 4. Danh sách Công việc (List of Action Items)\n"
+        "| Người thực hiện (Who) | Công việc (Task) | Hạn chót (Deadline) |\n"
+        "|---|---|---|\n"
+        "| [Assignee] | [Task Description] | [Deadline] |\n\n"
+        "Write the content entirely in Vietnamese."
     )
 
     user_prompt = (
         f"Meeting Title: {title}\n"
+        f"Meeting Date: {date_str}\n"
         f"Agenda Outline:\n{agenda}\n\n"
         f"EXTRACTED_DECISIONS:\n{decisions_json}\n\n"
-        f"EXTRACTED_TASKS:\n{tasks_json}\n\n"
-        f"Transcript:\n{transcript_text[:8000]}"
+        f"EXTRACTED_TASKS:\n{tasks_json}"
     )
 
     try:
@@ -290,10 +291,80 @@ async def end_meeting(
             pending_decisions_list = query_pending_decisions(db, meeting_id)
             
             import asyncio
+            from src.backend.services.speech_act_classifier import speech_act_classifier_service
+            
+            # 1. Classify
+            classified_lines = await speech_act_classifier_service.classify(remaining_text)
+            
+            # 2. Annotate
+            annotated_text = remaining_text
+            valid_task_quotes = set()
+            valid_decision_quotes = set()
+            
+            if classified_lines:
+                annotated_lines = []
+                for line in remaining_text.split('\n'):
+                    if not line.strip():
+                        continue
+                    
+                    act = "Other"
+                    for cl in classified_lines:
+                        if cl["quote"] and (cl["quote"] in line or line in cl["quote"]):
+                            act = cl["act"]
+                            if act == "Assignment":
+                                valid_task_quotes.add(cl["quote"])
+                            if act == "Decision":
+                                valid_decision_quotes.add(cl["quote"])
+                            break
+                    annotated_lines.append(f"{line} ({act})")
+                annotated_text = "\n".join(annotated_lines)
+
+            # 3. Extract
             extracted_tasks, extracted_decisions = await asyncio.gather(
-                task_extractor_service.extract(remaining_text, pending_tasks_list),
-                decision_extractor_service.extract(remaining_text, pending_decisions_list)
+                task_extractor_service.extract(annotated_text, pending_tasks_list),
+                decision_extractor_service.extract(annotated_text, pending_decisions_list)
             )
+            
+            # 4. Validate Tasks
+            validated_tasks = []
+            for t in extracted_tasks:
+                ev = t.get("evidence_quote", "")
+                ev_clean = ev.strip().lower()
+                if ev_clean and len(ev_clean) >= 10:
+                    matched = False
+                    for vq in valid_task_quotes:
+                        vq_clean = vq.strip().lower()
+                        if ev_clean in vq_clean or vq_clean in ev_clean:
+                            matched = True
+                            break
+                    if matched:
+                        validated_tasks.append(t)
+                    else:
+                        logger.info("Rejected task due to invalid evidence/act: %s", t)
+                else:
+                    logger.info("Rejected task due to missing/short evidence: %s", t)
+            
+            # 5. Validate Decisions
+            validated_decisions = []
+            for d in extracted_decisions:
+                ev = d.get("evidence_quote", "")
+                ev_clean = ev.strip().lower()
+                if ev_clean and len(ev_clean) >= 10:
+                    matched = False
+                    for vq in valid_decision_quotes:
+                        vq_clean = vq.strip().lower()
+                        if ev_clean in vq_clean or vq_clean in ev_clean:
+                            matched = True
+                            break
+                    if matched:
+                        validated_decisions.append(d)
+                    else:
+                        logger.info("Rejected decision due to invalid evidence/act: %s", d)
+                else:
+                    logger.info("Rejected decision due to missing/short evidence: %s", d)
+
+            extracted_tasks = validated_tasks
+            extracted_decisions = validated_decisions
             
             if extracted_tasks:
                 sync_extracted_tasks(

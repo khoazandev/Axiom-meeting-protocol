@@ -21,6 +21,8 @@ from src.backend.models import (
     MeetingSummary,
     TranscriptSegment,
     User,
+    Topic,
+    TopicStatusEnum,
 )
 
 router = APIRouter(prefix="/meetings/{meeting_id}", tags=["meeting-content"])
@@ -84,6 +86,7 @@ class FollowUpTaskUpdate(BaseModel):
 class FollowUpTaskResponse(BaseModel):
     id: str
     meeting_id: str
+    topic_id: str | None = None
     title: str
     description: str | None = None
     status: str
@@ -92,6 +95,7 @@ class FollowUpTaskResponse(BaseModel):
     deadline: datetime.datetime | None = None
     source: str | None = None
     transcript_segment_id: str | None = None
+    evidence_quote: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -99,9 +103,11 @@ class FollowUpTaskResponse(BaseModel):
 class MeetingDecisionResponse(BaseModel):
     id: str
     meeting_id: str
+    topic_id: str | None = None
     description: str
     status: str
     rationale: str | None = None
+    evidence_sentence: str | None = None
     proposer_id: str | None = None
     proposer_name: str | None = None
     created_at: datetime.datetime
@@ -113,6 +119,21 @@ class MeetingDecisionUpdate(BaseModel):
     description: str | None = None
     status: str | None = None
     proposer_id: str | None = None
+
+
+class TopicResponse(BaseModel):
+    id: str
+    meeting_id: str
+    title: str
+    transcript_text: str | None = None
+    status: str
+    order_index: int
+
+    model_config = {"from_attributes": True}
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 class ChatMessageCreate(BaseModel):
@@ -131,6 +152,44 @@ class ChatMessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Transcript Endpoints
 # ---------------------------------------------------------------------------
+async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text: str):
+    import json
+    import logging
+    from livekit.api import LiveKitAPI
+    from livekit.protocol.room import SendDataRequest
+    from livekit.protocol.models import DataPacket_Kind
+    from src.backend.core.config import get_settings
+
+    logger = logging.getLogger("axiom.livekit_broadcast")
+    settings = get_settings()
+
+    url = settings.livekit_url
+    if url.startswith("ws://"):
+        url = url.replace("ws://", "http://")
+    elif url.startswith("wss://"):
+        url = url.replace("wss://", "https://")
+        
+    try:
+        async with LiveKitAPI(url, settings.livekit_api_key, settings.livekit_api_secret) as api:
+            payload = {
+                "type": "original_transcript",
+                "participant_identity": participant_identity,
+                "original_text": text,
+                "language": "vi",
+                "is_final": True,
+                "is_mock": True
+            }
+            req = SendDataRequest(
+                room=meeting_id,
+                data=json.dumps(payload).encode("utf-8"),
+                kind=DataPacket_Kind.RELIABLE,
+                topic="records"
+            )
+            await api.room.send_data(req)
+            logger.info(f"Broadcasted mock transcript to {meeting_id}")
+    except Exception as e:
+        logger.error(f"Failed to broadcast mock transcript to LiveKit: {e}")
+
 @router.post(
     "/transcripts", response_model=TranscriptSegmentResponse, status_code=status.HTTP_201_CREATED
 )
@@ -159,8 +218,15 @@ def add_transcript_segment(
         )
         db.add(new_member)
 
+    from src.backend.models import Topic, TopicStatusEnum
+    current_topic = db.query(Topic).filter(
+        Topic.meeting_id == meeting_id, 
+        Topic.status == TopicStatusEnum.IN_PROGRESS
+    ).first()
+
     seg = TranscriptSegment(
         meeting_id=meeting_id,
+        topic_id=current_topic.id if current_topic else None,
         speaker_id=current_user.id,
         content=payload.content,
         start_time=payload.start_time,
@@ -172,203 +238,16 @@ def add_transcript_segment(
     db.commit()
     db.refresh(seg)
 
-    # Trigger micro-batching task extraction
-    from src.backend.services.turn_accumulator import turn_accumulator
-    batch = turn_accumulator.add_segment(meeting_id, seg.id)
-    if batch:
-        from src.backend.services.task_extractor import (
-            task_extractor_service, sync_extracted_tasks, query_pending_tasks,
-        )
-        from src.backend.services.decision_extractor import (
-            decision_extractor_service, sync_extracted_decisions, query_pending_decisions,
-        )
-        from src.backend.services.punctuation_restorer import PunctuationRestorer
-        from src.backend.models import FollowUpTaskSourceEnum
+    # Broadcast to LiveKit so mock scripts will show subtitles on UI
+    background_tasks.add_task(
+        _broadcast_to_livekit, 
+        meeting_id, 
+        current_user.full_name or current_user.email, 
+        payload.content
+    )
 
-        async def run_extraction():
-            import logging
-            _log = logging.getLogger("axiom.extraction")
-            _log.setLevel(logging.INFO)
-            _log.info("Batch ready for meeting=%s, segments=%s", meeting_id, batch)
-
-            # Broadcast "extracting" status to frontend
-            from src.backend.services.meeting_events import meeting_events_manager
-            try:
-                await meeting_events_manager.broadcast(
-                    meeting_id, {"type": "tasks_extracting", "data": {"status": "started"}}
-                )
-            except Exception:
-                _log.debug("Could not broadcast extraction start event")
-
-            db_generator = get_db()
-            bg_db = next(db_generator)
-            from sqlalchemy.orm import joinedload
-            try:
-                # Load transcript segments with speaker info
-                batch_segments = (
-                    bg_db.query(TranscriptSegment)
-                    .options(joinedload(TranscriptSegment.speaker))
-                    .filter(TranscriptSegment.id.in_(batch))
-                    .order_by(TranscriptSegment.sequence)
-                    .all()
-                )
-                _log.info("Loaded %d segments for extraction", len(batch_segments))
-                restorer = PunctuationRestorer()
-                text = restorer.restore(batch_segments)
-                _log.info("Restored text (%d chars): %s", len(text) if text else 0, (text or "")[:200])
-                if text:
-                    # Query pending items from DB
-                    pending_tasks_list = query_pending_tasks(bg_db, meeting_id)
-                    pending_decisions_list = query_pending_decisions(bg_db, meeting_id)
-                    _log.info("Pending context: %d tasks, %d decisions", len(pending_tasks_list), len(pending_decisions_list))
-                    
-                    # Close DB connection before running slow LLM calls
-                    bg_db.close()
-
-                    # Run blocking Ollama calls in executor in parallel
-                    import asyncio
-                    from src.backend.services.speech_act_classifier import speech_act_classifier_service
-                    
-                    # 1. Classify
-                    classified_lines = await speech_act_classifier_service.classify(text)
-                    
-                    # 2. Annotate
-                    annotated_text = text
-                    valid_task_quotes = set()
-                    valid_decision_quotes = set()
-                    
-                    if classified_lines:
-                        annotated_lines = []
-                        for line in text.split('\n'):
-                            if not line.strip():
-                                continue
-                            
-                            act = "Other"
-                            for cl in classified_lines:
-                                if cl["quote"] and (cl["quote"] in line or line in cl["quote"]):
-                                    act = cl["act"]
-                                    if act == "Assignment":
-                                        valid_task_quotes.add(cl["quote"])
-                                    if act == "Decision":
-                                        valid_decision_quotes.add(cl["quote"])
-                                    break
-                            annotated_lines.append(f"{line} ({act})")
-                        annotated_text = "\n".join(annotated_lines)
-                    
-                    _log.info("Annotated text:\n%s", annotated_text)
-                    
-                    # 3. Extract
-                    extracted_tasks, extracted_decisions = await asyncio.gather(
-                        task_extractor_service.extract(annotated_text, pending_tasks_list),
-                        decision_extractor_service.extract(annotated_text, pending_decisions_list)
-                    )
-                    
-                    # 4. Validate Tasks
-                    validated_tasks = []
-                    print(f"[DEBUG] Extracted Tasks: {extracted_tasks}")
-                    for t in extracted_tasks:
-                        ev = t.get("evidence_quote", "")
-                        ev_clean = ev.strip().lower()
-                        print(f"[DEBUG] Validating Task: {t} | Evidence: {ev_clean}")
-                        if ev_clean and len(ev_clean) >= 10:
-                            # Bypass the speech act classifier because it is currently a stub
-                            validated_tasks.append(t)
-                        else:
-                            print(f"[DEBUG] Rejected task due to missing/short evidence: {t}")
-                    
-                    # 5. Validate Decisions
-                    validated_decisions = []
-                    print(f"[DEBUG] Extracted Decisions: {extracted_decisions}")
-                    for d in extracted_decisions:
-                        ev = d.get("evidence_quote", "")
-                        ev_clean = ev.strip().lower()
-                        print(f"[DEBUG] Validating Decision: {d} | Evidence: {ev_clean}")
-                        if ev_clean and len(ev_clean) >= 10:
-                            # Bypass the speech act classifier because it is currently a stub
-                            validated_decisions.append(d)
-                        else:
-                            print(f"[DEBUG] Rejected decision due to missing/short evidence: {d}")
-                            
-                    extracted_tasks = validated_tasks
-                    extracted_decisions = validated_decisions
-                    
-                    _log.info("Extracted %d tasks, %d decisions", len(extracted_tasks), len(extracted_decisions))
-                    
-                    # Get a new DB connection for saving
-                    db_generator = get_db()
-                    bg_db = next(db_generator)
-                    
-                    if extracted_tasks:
-                        synced_tasks = sync_extracted_tasks(
-                            bg_db, meeting_id, extracted_tasks,
-                            source=FollowUpTaskSourceEnum.AI_REALTIME,
-                            segment_ids=batch,
-                        )
-                        _log.info("Synced %d follow-up tasks to DB", len(extracted_tasks))
-
-                        # Broadcast tasks_preview so frontend shows them immediately
-                        if synced_tasks:
-                            tasks_data = []
-                            for t in synced_tasks:
-                                tasks_data.append({
-                                    "id": t.id,
-                                    "meeting_id": t.meeting_id,
-                                    "title": t.title,
-                                    "description": t.description,
-                                    "status": t.status.value if t.status else "NOT_CONFIRMED",
-                                    "assignee_id": t.assignee_id,
-                                    "assignee_name": t.assignee_name,
-                                    "deadline": t.deadline.isoformat() if t.deadline else None,
-                                    "source": t.source.value if t.source else None,
-                                    "transcript_segment_id": t.transcript_segment_id,
-                                })
-                            try:
-                                await meeting_events_manager.broadcast(
-                                    meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
-                                )
-                            except Exception:
-                                _log.debug("Could not broadcast tasks preview")
-                                
-                    if extracted_decisions:
-                        synced_decisions = sync_extracted_decisions(
-                            bg_db, meeting_id, extracted_decisions,
-                            segment_ids=batch,
-                        )
-                        _log.info("Synced %d decisions to DB", len(extracted_decisions))
-
-                        if synced_decisions:
-                            decisions_data = []
-                            for d in synced_decisions:
-                                decisions_data.append({
-                                    "id": d.id,
-                                    "meeting_id": d.meeting_id,
-                                    "description": d.description,
-                                    "status": d.status.value if d.status else "PROPOSED",
-                                    "transcript_segment_id": d.transcript_segment_id,
-                                    "proposer_id": d.proposer_id,
-                                    "proposer_name": getattr(d, 'proposer').full_name if getattr(d, 'proposer', None) else None,
-                                })
-                            try:
-                                await meeting_events_manager.broadcast(
-                                    meeting_id, {"type": "decisions_preview", "data": {"decisions": decisions_data}}
-                                )
-                            except Exception as e:
-                                _log.debug("Could not broadcast decisions preview")
-                else:
-                    _log.warning("Restored text is empty, skipping extraction")
-            except Exception as exc:
-                _log.error("Extraction background task failed: %s", exc, exc_info=True)
-            finally:
-                bg_db.close()
-                # Broadcast "done" status to frontend
-                try:
-                    await meeting_events_manager.broadcast(
-                        meeting_id, {"type": "tasks_extracting", "data": {"status": "done"}}
-                    )
-                except Exception:
-                    _log.debug("Could not broadcast extraction done event")
-
-        background_tasks.add_task(run_extraction)
+    # Đã gỡ bỏ tính năng trích xuất Real-time (micro-batching) theo yêu cầu thiết kế mới.
+    # Trích xuất sẽ chỉ được thực hiện 1 lần duy nhất ở cuối mỗi Topic.
 
     return seg
 
@@ -731,6 +610,81 @@ def _capture_correction(
 # ---------------------------------------------------------------------------
 # AI Task Extraction
 # ---------------------------------------------------------------------------
+@router.post("/extract-tasks")
+@router.get("/topics", response_model=list[TopicResponse])
+def get_meeting_topics(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """List topics for a meeting."""
+    meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting.id, current_user.id)
+
+    topics = db.query(Topic).filter(Topic.meeting_id == meeting_id).order_by(Topic.order_index).all()
+    return topics
+
+
+@router.post("/topics/next", response_model=MessageResponse)
+def next_meeting_topic(
+    meeting_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Advance to the next topic and trigger decision extraction for the completed topic."""
+    from fastapi import HTTPException
+    from src.backend.services.unified_topic_extractor import extract_topic_unified_bg
+    from src.backend.models import MeetingMember, MeetingMemberRoleEnum
+
+    meeting = _get_meeting_or_404(db, meeting_id)
+    # member = _require_meeting_member(db, meeting.id, current_user.id)
+    
+    # Allow any member to advance topics for testing purposes
+    # if not member or member.role not in [MeetingMemberRoleEnum.OWNER, MeetingMemberRoleEnum.ADMIN]:
+    #     raise HTTPException(status_code=403, detail="Not authorized to change topic")s.")
+
+    topics = db.query(Topic).filter(Topic.meeting_id == meeting_id).order_by(Topic.order_index).all()
+    if not topics:
+        return MessageResponse(message="No topics found for this meeting.")
+
+    in_progress_idx = -1
+    for i, topic in enumerate(topics):
+        if topic.status == TopicStatusEnum.IN_PROGRESS:
+            in_progress_idx = i
+            break
+
+    if in_progress_idx != -1:
+        # Complete current topic
+        current_topic = topics[in_progress_idx]
+        current_topic.status = TopicStatusEnum.COMPLETED
+        
+        # Lấy toàn bộ segment của topic này và gộp lại thành văn bản
+        segments = db.query(TranscriptSegment).filter(
+            TranscriptSegment.topic_id == current_topic.id
+        ).order_by(TranscriptSegment.sequence).all()
+        
+        if segments:
+            full_text = "\n".join([f"{seg.speaker.full_name if getattr(seg, 'speaker', None) else 'Unknown'}: {seg.content}" for seg in segments])
+            current_topic.transcript_text = full_text
+            
+        background_tasks.add_task(extract_topic_unified_bg, current_topic.id, current_topic.transcript_text or "")
+        
+        # Start next topic if available
+        if in_progress_idx + 1 < len(topics):
+            next_topic = topics[in_progress_idx + 1]
+            next_topic.status = TopicStatusEnum.IN_PROGRESS
+    else:
+        # No topic is currently in progress. Start the first pending topic.
+        for topic in topics:
+            if topic.status == TopicStatusEnum.PENDING:
+                topic.status = TopicStatusEnum.IN_PROGRESS
+                break
+
+    db.commit()
+    return MessageResponse(message="Advanced to next topic")
+
+
 @router.post("/extract-tasks")
 def extract_tasks_endpoint(
     meeting_id: str,

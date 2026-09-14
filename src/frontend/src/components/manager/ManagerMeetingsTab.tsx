@@ -11,15 +11,10 @@ import {
   Users,
   Clock,
   Calendar,
-  Plus,
-  FileCheck2,
-  AlertTriangle,
-  Play,
-  ExternalLink,
-  Search,
-  CheckCircle2,
 } from 'lucide-react';
+import { Plus, FileCheck2, AlertTriangle, Play, ExternalLink, Search, CheckCircle2, FileText } from 'lucide-react';
 import { MatIcon } from '@/components/ui/MatIcon';
+import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 import { MOCK_EXECUTIVE_MANDATES, ExecutiveMandate } from '@/lib/workloadProtocolData';
 
 export interface DepartmentMeeting {
@@ -166,7 +161,9 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newRoomCode, setNewRoomCode] = useState('');
+  const [newAgendaText, setNewAgendaText] = useState('');
   const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);
   const [engMandates, setEngMandates] = useState<ExecutiveMandate[]>(
     MOCK_EXECUTIVE_MANDATES.filter((m) => m.targetDepartment === 'ENG')
   );
@@ -235,7 +232,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     try {
       const created = await meetingsApi.create({
         title: newTitle.trim(),
-        agenda: 'Nghị quyết và kế hoạch triển khai sprint của khối kỹ thuật.',
+        agenda: newAgendaText.trim() || undefined,
       });
 
       const newMtg: DepartmentMeeting = {
@@ -573,6 +570,16 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                   >
                     <Sparkles size={15} />
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMeetingForDetails({id: mtg.id, title: mtg.title})}
+                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5 px-3"
+                    title="Xem Biên Bản AI"
+                  >
+                    <FileText size={15} />
+                    <span className="text-xs font-bold">Biên Bản AI</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -581,6 +588,13 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
       </div>
 
       {/* Modal Tạo Cuộc Họp Khối */}
+      {selectedMeetingForDetails && (
+        <MeetingDetailsModal
+          meetingId={selectedMeetingForDetails.id}
+          meetingTitle={selectedMeetingForDetails.title}
+          onClose={() => setSelectedMeetingForDetails(null)}
+        />
+      )}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
@@ -608,6 +622,19 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                   placeholder="VD: Sprint Retrospective & Code Review"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Nội dung Agenda / Các topic (Mỗi dòng 1 topic)
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="VD:\n1. Review tiến độ dự án\n2. Phân công task mới"
+                  value={newAgendaText}
+                  onChange={(e) => setNewAgendaText(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>

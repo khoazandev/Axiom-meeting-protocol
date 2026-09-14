@@ -118,3 +118,4 @@ export default function KnowledgeDashboardPage() {
     </div>
   );
 }
+// Trigger hot reload

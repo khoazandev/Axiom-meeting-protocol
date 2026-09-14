@@ -86,6 +86,7 @@ export interface RagQueryResponse {
 export interface ActionItemResponse {
   id: string;
   meeting_id: string;
+  topic_id?: string;
   title: string;
   description: string | null;
   status: string;
@@ -176,9 +177,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
+
+  if (!(options?.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   // Inject token and active organization header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
@@ -216,20 +220,30 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
       // Response body is not JSON
     }
 
-    if (errorData?.error) {
-      throw new ApiRequestError(
-        response.status,
-        errorData.error.code,
-        errorData.error.message,
-        errorData.error.detail
+    const apiError = errorData?.error
+      ? new ApiRequestError(
+          response.status,
+          errorData.error.code,
+          errorData.error.message,
+          errorData.error.detail
+        )
+      : new ApiRequestError(
+          response.status,
+          'UNKNOWN_ERROR',
+          `Request failed with status ${response.status}`
+        );
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('api-error', { detail: apiError })
       );
     }
 
-    throw new ApiRequestError(
-      response.status,
-      'UNKNOWN_ERROR',
-      `Request failed with status ${response.status}`
-    );
+    throw apiError;
+  }
+
+  if (response.status === 204) {
+    return null as any;
   }
 
   return response.json();
@@ -431,6 +445,13 @@ export const meetingsApi = {
   endMeeting(meetingId: number | string): Promise<MeetingEndResponse> {
     return apiFetch<MeetingEndResponse>(`/api/v1/meetings/${meetingId}/end`, {
       method: 'POST',
+    });
+  },
+
+  pushToJira(meetingId: number | string, tasks: {id: string, title: string, assignee_id: string | null, deadline: string | null}[]): Promise<{status: string, message: string}> {
+    return apiFetch<{status: string, message: string}>(`/api/v1/meetings/${meetingId}/push-to-jira`, {
+      method: 'POST',
+      body: JSON.stringify({ tasks })
     });
   },
 
@@ -777,4 +798,65 @@ export const jiraApi = {
       body: JSON.stringify(data),
     });
   },
+};
+
+// ── Knowledge Documents ─────────────────────────────────
+export interface KnowledgeDocument {
+  id: string;
+  organization_id: string;
+  uploaded_by_id: string;
+  filename: string;
+  file_path: string;
+  file_size: number;
+  vector_status: string;
+  meeting_id?: string | null;
+  created_at: string;
+}
+
+export interface Topic {
+  id: string;
+  meeting_id: string;
+  title: string;
+  transcript_text: string | null;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  order_index: number;
+}
+
+export const topicsApi = {
+  list: (meetingId: string): Promise<Topic[]> =>
+    apiFetch<Topic[]>(`/api/v1/meetings/${meetingId}/topics`),
+  next: (meetingId: string): Promise<{message: string}> =>
+    apiFetch<{message: string}>(`/api/v1/meetings/${meetingId}/topics/next`, { method: 'POST' }),
+};
+
+export const knowledgeApi = {
+  uploadDocument: (meetingId: string, file: File): Promise<KnowledgeDocument> => {
+    const formData = new FormData();
+    formData.append('meeting_id', meetingId);
+    formData.append('file', file);
+    return apiFetch<KnowledgeDocument>('/api/v1/knowledge/documents', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+  listDocuments: (meetingId: string): Promise<KnowledgeDocument[]> => {
+    return apiFetch<KnowledgeDocument[]>(`/api/v1/knowledge/documents?meeting_id=${meetingId}`);
+  },
+  deleteDocument: (docId: string): Promise<void> => {
+    return apiFetch<void>(`/api/v1/knowledge/documents/${docId}`, { method: 'DELETE' });
+  },
+  getDocumentContent: (docId: string): Promise<{text: string}> => {
+    return apiFetch<{text: string}>(`/api/v1/knowledge/documents/${docId}/content`);
+  }
+};
+
+export const utilsApi = {
+  extractText: (file: File): Promise<{text: string}> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch<{text: string}>('/api/v1/knowledge/utils/extract-text', {
+      method: 'POST',
+      body: formData,
+    });
+  }
 };

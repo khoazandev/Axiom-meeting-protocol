@@ -1,5 +1,5 @@
 # Modelfile for Decision Extractor
-FROM qwen2.5:3b
+FROM qwen2.5:7b
 
 PARAMETER num_predict 2048
 PARAMETER num_ctx 4096

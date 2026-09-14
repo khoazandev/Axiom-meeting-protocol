@@ -15,8 +15,15 @@ import {
   FileText,
   Search,
   ExternalLink,
+  Trash2,
+  Upload,
+  X,
+  Paperclip,
+  Loader2,
 } from 'lucide-react';
-import { meetingsApi, Meeting } from '@/lib/api';
+import { meetingsApi, Meeting, knowledgeApi, utilsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 
 interface MemberMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -24,12 +31,18 @@ interface MemberMeetingsTabProps {
 
 export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [newAgendaText, setNewAgendaText] = useState('');
+  const [agendaFile, setAgendaFile] = useState<File | null>(null);
+  const agendaFileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -46,6 +59,35 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     load();
   }, []);
 
+  const handleAgendaFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAgendaFile(file);
+    try {
+      const { text } = await utilsApi.extractText(file);
+      if (text) {
+        setNewAgendaText(text);
+      }
+    } catch (err) {
+      console.error('Failed to extract text from file:', err);
+      onNotify('Lỗi đọc file. Vui lòng thử lại.');
+      setAgendaFile(null);
+    }
+  };
+
+  const handleDeleteMeeting = async (id: string, title: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa phòng họp "${title}" không? Hành động này không thể hoàn tác.`)) {
+      try {
+        await meetingsApi.delete(id);
+        setMeetings(meetings.filter(m => m.id !== id));
+        onNotify(`Đã xóa phòng họp: ${title}`);
+      } catch (err) {
+        console.error('Failed to delete meeting:', err);
+        onNotify('Không thể xóa phòng họp. Vui lòng thử lại!');
+      }
+    }
+  };
+
   const handleJoinByCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (joinCode.trim()) {
@@ -58,15 +100,28 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     if (!newTitle.trim()) return;
 
     try {
-      const created = await meetingsApi.create({ title: newTitle.trim() });
+      setIsCreating(true);
+      const created = await meetingsApi.create({
+        title: newTitle.trim(),
+        agenda: newAgendaText.trim() || undefined,
+      });
+
+      if (agendaFile) {
+        await knowledgeApi.uploadDocument(created.id, agendaFile);
+      }
+
       setMeetings([created, ...meetings]);
       setIsCreateModalOpen(false);
       setNewTitle('');
+      setNewAgendaText('');
+      setAgendaFile(null);
       onNotify(`Đã tạo phòng họp mới: ${created.title}`);
       router.push(`/meetings/${created.id}`);
     } catch (err) {
       console.error('Failed to create meeting:', err);
       onNotify('Không thể tạo cuộc họp. Vui lòng thử lại!');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -206,20 +261,41 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     <span>Tham Gia Ngay</span>
                   </a>
 
-                  <button
-                    type="button"
-                    onClick={() => onNotify('Biên bản AI sẽ sẵn sàng ngay sau khi kết thúc họp.')}
-                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <FileText size={12} />
-                    <span>Biên Bản AI</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMeetingForDetails({id: mtg.id, title: mtg.title})}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <FileText size={12} />
+                      <span>Biên Bản AI</span>
+                    </button>
+
+                    {mtg.created_by_id === user?.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMeeting(mtg.id, mtg.title)}
+                        className="text-[11px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Trash2 size={12} />
+                        <span>Xóa</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {selectedMeetingForDetails && (
+        <MeetingDetailsModal
+          meetingId={selectedMeetingForDetails.id}
+          meetingTitle={selectedMeetingForDetails.title}
+          onClose={() => setSelectedMeetingForDetails(null)}
+        />
+      )}
 
       {/* Modal Tạo Cuộc Họp Mới */}
       {isCreateModalOpen && (
@@ -253,6 +329,49 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                 />
               </div>
 
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Nội dung Agenda / Các topic (Mỗi dòng 1 topic)
+                  </label>
+                  <label className="cursor-pointer px-2 py-1 rounded text-[10px] font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-1">
+                    <Upload className="w-3 h-3" />
+                    <span>Tải file</span>
+                    <input
+                      type="file"
+                      ref={agendaFileInputRef}
+                      className="hidden"
+                      accept=".txt,.md,.pdf,.doc,.docx"
+                      onChange={handleAgendaFileSelect}
+                    />
+                  </label>
+                </div>
+
+                {agendaFile && (
+                  <div className="mb-2 p-2 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-900/20 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <Paperclip className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate">{agendaFile.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAgendaFile(null)}
+                      className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <textarea
+                  rows={4}
+                  placeholder={agendaFile ? "Nội dung trích xuất (có thể sửa)..." : "VD:\n1. Báo cáo tiến độ\n2. Kế hoạch tuần tới"}
+                  value={newAgendaText}
+                  onChange={(e) => setNewAgendaText(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -263,9 +382,17 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
+                  disabled={isCreating}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Vào Phòng Ngay
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    'Vào Phòng Ngay'
+                  )}
                 </button>
               </div>
             </form>

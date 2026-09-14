@@ -36,7 +36,9 @@ class Settings(BaseSettings):
     # OpenRouter / LLM
     openrouter_api_key: str = ""
     llm_fallback_models: list[str] = [
-        "gemma4:12b"
+        "openai/gpt-4o-mini",
+        "google/gemini-flash-1.5",
+        "qwen2.5:7b"
     ]
     task_extractor_model: str = "task-extractor"
     decision_extractor_model: str = "decision-extractor"

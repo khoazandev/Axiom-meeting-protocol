@@ -132,7 +132,8 @@ async def build_rag_answer(
             f"Người dùng hỏi: {question}\n"
             f"Axiom AI:"
         )
-        return _call_llm(prompt, max_tokens=120) or (
+        answer = await _call_llm(prompt, max_tokens=120)
+        return answer or (
             "Mình là Axiom AI — trợ lý họp thông minh được tích hợp ngay trong phòng họp này. "
             "Mình có thể giúp bạn: tra cứu nội dung agenda, tìm thông tin trong tài liệu đã upload, "
             "tóm tắt những gì đã được thảo luận, và theo dõi mọi nhật ký sự kiện hệ thống theo thời gian thực. "
@@ -146,7 +147,8 @@ async def build_rag_answer(
             f"Người dùng: {question}\n"
             f"Axiom AI:"
         )
-        return _call_llm(prompt, max_tokens=80) or _greeting_fallback(question)
+        answer = await _call_llm(prompt, max_tokens=80)
+        return answer or _greeting_fallback(question)
 
     # ── Off-topic ─────────────────────────────────────────────────────────────
     if intent == "offtopic":

@@ -1,0 +1,18 @@
+MEETING AGENDA
+
+Date: 15/09/2026
+Time: 10:00 AM - 11:30 AM
+Location: Axiom Meeting Room
+
+1. Roll Call & Introductions (5 mins)
+2. Project Status Update (20 mins)
+   - Frontend development progress
+   - Backend API integration
+3. New Features Discussion (30 mins)
+   - Knowledge base architecture
+   - Agenda upload feature review
+4. Q&A and Feedback (20 mins)
+5. Action Items & Next Steps (15 mins)
+
+Notes:
+Please review the documents before the meeting.

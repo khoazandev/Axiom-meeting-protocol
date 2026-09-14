@@ -134,7 +134,8 @@ class TaskExtractorService:
                 '  "task": "description of the task",\n'
                 '  "assignee": "Name of assignee" or null,\n'
                 '  "deadline": "YYYY-MM-DD" or null,\n'
-                '  "status": "CONFIRMED" or "NOT_CONFIRMED"\n'
+                '  "status": "CONFIRMED" or "NOT_CONFIRMED",\n'
+                '  "evidence_quote": "Must be an EXACT verbatim quote from the transcript representing the FINAL confirmation or agreement. Do not summarize or use intermediate discussion sentences."\n'
                 "}\n\n"
             )
 
@@ -238,6 +239,7 @@ class TaskExtractorService:
                 "assignee": assignee,
                 "deadline": item.get("deadline"),  # YYYY-MM-DD or null
                 "status": status,
+                "evidence_quote": item.get("evidence_quote", ""),
             })
         return valid_items
 
@@ -320,6 +322,7 @@ def sync_extracted_tasks(
     extracted_items: list[dict],
     source: FollowUpTaskSourceEnum,
     segment_ids: list[str] | None = None,
+    topic_id: str | None = None,
 ) -> list[FollowUpTask]:
     """
     Sync LLM output to database using UPSERT logic.
@@ -357,12 +360,19 @@ def sync_extracted_tasks(
             assignee_name = str(assignee_name).strip()
             user = (
                 db.query(User)
-                .filter(User.full_name == assignee_name)
+                .filter(User.full_name.ilike(f"%{assignee_name}%"))
                 .first()
             )
+            # Nếu không tìm thấy, thử tìm ngược lại (tên db nằm trong chuỗi assignee_name)
+            if not user:
+                users = db.query(User).all()
+                for u in users:
+                    if u.full_name.lower() in assignee_name.lower() or assignee_name.lower() in u.full_name.lower():
+                        user = u
+                        break
             if user:
                 assignee_id = user.id
-                logger.info("Matched assignee '%s' → user_id=%s", assignee_name, user.id)
+                logger.info("Matched assignee '%s' → user_id=%s (%s)", assignee_name, user.id, user.full_name)
 
         # Parse status
         status_str = item_data.get("status", "NOT_CONFIRMED")
@@ -381,7 +391,22 @@ def sync_extracted_tasks(
             except (ValueError, TypeError):
                 logger.warning("Cannot parse deadline: %s", deadline_str)
 
+        # ── Find current topic if not explicitly provided ──────────────────
+        active_topic_id = topic_id
+        if not active_topic_id:
+            # We can look up the IN_PROGRESS topic for this meeting
+            from src.backend.models import Topic, TopicStatusEnum
+            active_topic = db.query(Topic).filter(Topic.meeting_id == meeting_id, Topic.status == TopicStatusEnum.IN_PROGRESS).first()
+            if active_topic:
+                active_topic_id = active_topic.id
+
         # ── UPSERT logic ──────────────────────────────────────────
+        evidence_quote = item_data.get("evidence_quote")
+        if evidence_quote:
+            import re
+            # Strip potential speaker name prefix like "Khoa: " or "Trang : " or "Nguyên-"
+            evidence_quote = re.sub(r"^[\w\s]+:\s*", "", evidence_quote).strip()
+
         if task_id:
             # UPDATE existing task
             existing = (
@@ -398,7 +423,12 @@ def sync_extracted_tasks(
                     existing.assignee_id = assignee_id
                 if deadline:
                     existing.deadline = deadline
+                if evidence_quote:
+                    existing.evidence_quote = evidence_quote
                 existing.status = task_status
+                # Optionally update topic if it's currently null
+                if not existing.topic_id and active_topic_id:
+                    existing.topic_id = active_topic_id
                 affected_tasks.append(existing)
                 logger.info("Updated task %s: status=%s, assignee_id=%s", task_id, task_status.value, assignee_id)
             else:
@@ -407,6 +437,7 @@ def sync_extracted_tasks(
             # INSERT new task
             task = FollowUpTask(
                 meeting_id=meeting_id,
+                topic_id=active_topic_id,
                 transcript_segment_id=linked_segment_id,
                 assignee_id=assignee_id,
                 title=task_title,
@@ -414,6 +445,7 @@ def sync_extracted_tasks(
                 status=task_status,
                 deadline=deadline,
                 source=source,
+                evidence_quote=evidence_quote,
             )
             db.add(task)
             affected_tasks.append(task)

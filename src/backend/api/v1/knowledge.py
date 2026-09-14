@@ -38,7 +38,7 @@ async def upload_knowledge_document(
     meeting_id: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(deps.get_current_user),
-    member: OrganizationMember = Depends(deps.get_current_organization_member),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
     db: Session = Depends(get_db),
 ):
     ws_storage_dir = os.path.join(STORAGE_DIR, member.organization_id)
@@ -68,7 +68,7 @@ async def upload_knowledge_document(
 @router.get("/documents", response_model=List[KnowledgeDocumentResponse])
 def list_knowledge_documents(
     meeting_id: str,
-    member: OrganizationMember = Depends(deps.get_current_organization_member),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
     db: Session = Depends(get_db),
 ):
     return (
@@ -83,7 +83,7 @@ def list_knowledge_documents(
 @router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_knowledge_document(
     doc_id: str,
-    member: OrganizationMember = Depends(deps.get_current_organization_member),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
     db: Session = Depends(get_db),
 ):
     doc = (
@@ -105,10 +105,46 @@ def delete_knowledge_document(
     return None
 
 
+@router.get("/documents/{doc_id}/content")
+def get_knowledge_document_content(
+    doc_id: str,
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+    db: Session = Depends(get_db),
+):
+    doc = (
+        db.query(KnowledgeDocument)
+        .filter(KnowledgeDocument.id == doc_id, KnowledgeDocument.organization_id == member.organization_id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File missing on disk")
+        
+    try:
+        from src.backend.services.text_extractor import extract_text
+        with open(doc.file_path, "rb") as f:
+            content = f.read()
+        text = extract_text(content, doc.filename)
+        return {"text": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/utils/extract-text")
+async def extract_text_from_file_util(file: UploadFile = File(...)):
+    from src.backend.services.text_extractor import extract_text
+    contents = await file.read()
+    extracted = extract_text(contents, file.filename, file.content_type or "")
+    return {"text": extracted}
+
+
+
 @router.post("/search")
 def search_knowledge(
     req: KnowledgeQueryRequest,
-    member: OrganizationMember = Depends(deps.get_current_organization_member),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
     db: Session = Depends(get_db),
 ):
     query_lower = req.query.lower()

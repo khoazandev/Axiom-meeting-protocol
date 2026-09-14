@@ -11,6 +11,7 @@ import {
   Sparkles,
   FileText,
   ChevronRight,
+  Quote,
   Zap,
   Mic,
   MicOff,
@@ -25,6 +26,17 @@ import {
   Pencil,
   Check,
   X,
+  AlertTriangle,
+  UploadCloud,
+  Trash2,
+  Paperclip,
+  List,
+  Eye,
+  EyeOff,
+  Bold,
+  Italic,
+  Underline,
+  Type,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -42,11 +54,15 @@ import {
   meetingsApi,
   jiraApi,
   authApi,
+  knowledgeApi,
   type Meeting,
   type RagSource,
   type ActionItemResponse,
   type TranscriptResponse,
   type MeetingMember,
+  type KnowledgeDocument,
+  type Topic,
+  topicsApi,
   ApiRequestError,
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
@@ -55,7 +71,7 @@ import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADCo
 import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTranslationAudioMuting';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
-import { PostMeetingCascadeModal } from '@/components/meetings/PostMeetingCascadeModal';
+import { EndMeetingModal } from '@/components/meetings/EndMeetingModal';
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useRoomContext, useConnectionState } from '@livekit/components-react';
 import { ConnectionState } from 'livekit-client';
@@ -163,7 +179,7 @@ function RecordsListener({
           is_final: data.is_final,
         });
 
-        if (data.is_final && onTranscriptFinalized) {
+        if (data.is_final && !data.is_mock && onTranscriptFinalized) {
           onTranscriptFinalized(data.original_text, timeStr);
         }
       } else if (data.type === 'translation_record') {
@@ -402,9 +418,24 @@ export function MeetingRoomClient() {
   const [selectedLanguage, setSelectedLanguage] = useState('vi');
   const [isJoining, setIsJoining] = useState(false);
   const [liveKitError, setLiveKitError] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'records' | 'ai'>(
-    'records'
+  const [apiError, setApiError] = useState<{ message: string; status?: number } | null>(null);
+  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'records' | 'ai' | 'agenda'>(
+    'agenda'
   );
+
+  // Agendas / Knowledge Documents
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [agendas, setAgendas] = useState<KnowledgeDocument[]>([]);
+  const [agendaContents, setAgendaContents] = useState<Record<string, string>>({});
+  const [isUploadingAgenda, setIsUploadingAgenda] = useState(false);
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
+  
+  // Evidence Link state
+  const [highlightedRecordId, setHighlightedRecordId] = useState<string | null>(null);
+  const [returnToAgendaState, setReturnToAgendaState] = useState<{ active: boolean; expandedTopicId: string | null }>({ active: false, expandedTopicId: null });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [recordsHistory, setRecordsHistory] = useState<RecordEntry[]>([]);
@@ -436,6 +467,7 @@ export function MeetingRoomClient() {
   );
 
   const transcriptSequenceRef = useRef(1);
+
 
   const handleTranscriptFinalized = useCallback(
     async (text: string, timestamp: string) => {
@@ -483,6 +515,7 @@ export function MeetingRoomClient() {
 
   // Action Items and Transcripts state
   const [actionItems, setActionItems] = useState<ActionItemResponse[]>([]);
+  const [decisions, setDecisions] = useState<any[]>([]);
   const [dbTranscripts, setDbTranscripts] = useState<TranscriptResponse[]>([]);
   const [meetingMembers, setMeetingMembers] = useState<MeetingMember[]>([]);
 
@@ -498,19 +531,37 @@ export function MeetingRoomClient() {
     deadline: '',
   });
 
+  // Edit Decision state
+  const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
+  const [editDecisionForm, setEditDecisionForm] = useState<{
+    description: string;
+    proposer_id: string;
+    status: string;
+  }>({
+    description: '',
+    proposer_id: '',
+    status: 'PROPOSED',
+  });
+
   // Poll for action items
   useEffect(() => {
     if (!meetingId) return;
     const fetchActionItems = async () => {
       try {
-        const [items, transcripts, members] = await Promise.all([
+        const [items, decs, transcripts, members, m, meetingTopics] = await Promise.all([
           meetingsApi.getActionItems(meetingId),
+          meetingsApi.getDecisions(meetingId),
           meetingsApi.getTranscripts(meetingId),
           meetingsApi.getMembers(meetingId),
+          meetingsApi.get(meetingId),
+          topicsApi.list(meetingId),
         ]);
         setActionItems(items);
+        setDecisions(decs);
         setDbTranscripts(transcripts);
         setMeetingMembers(members);
+        setTopics(meetingTopics);
+
       } catch (err) {
         console.error('Failed to fetch meeting content:', err);
       }
@@ -520,6 +571,37 @@ export function MeetingRoomClient() {
     const interval = setInterval(fetchActionItems, 5000);
     return () => clearInterval(interval);
   }, [meetingId]);
+
+  // Handle viewing evidence
+  const handleViewEvidence = (quote: string | null | undefined) => {
+    if (!quote) return;
+    const targetQuote = quote.toLowerCase().trim();
+    // Find the record that contains this quote
+    const foundRecord = dbTranscripts.find(r => r.content?.toLowerCase().includes(targetQuote));
+    if (foundRecord) {
+      setHighlightedRecordId(foundRecord.id);
+      setReturnToAgendaState({ active: true, expandedTopicId });
+      setActiveRightTab('records');
+    } else {
+      console.warn('Quote not found in records:', quote);
+    }
+  };
+
+  useEffect(() => {
+    if (highlightedRecordId && activeRightTab === 'records') {
+      setTimeout(() => {
+        const el = document.getElementById(`record-${highlightedRecordId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300); // small delay to allow DOM to render records tab
+
+      const timeout = setTimeout(() => {
+        setHighlightedRecordId(null);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [highlightedRecordId, activeRightTab]);
 
   const handleSaveEdit = async (taskId: string) => {
     if (!meetingId) return;
@@ -573,6 +655,67 @@ export function MeetingRoomClient() {
     });
   };
 
+  const handleSaveDecisionEdit = async (decisionId: string) => {
+    if (!meetingId) return;
+    try {
+      const payload: any = { 
+        description: editDecisionForm.description,
+        status: editDecisionForm.status 
+      };
+      if (editDecisionForm.proposer_id) payload.proposer_id = editDecisionForm.proposer_id;
+
+      await meetingsApi.updateDecision(meetingId, decisionId, payload);
+      setEditingDecisionId(null);
+      // Cập nhật local state ngay lập tức cho mượt
+      setDecisions((prev) =>
+        prev.map((item) => {
+          if (item.id === decisionId) {
+            const proposerName =
+              meetingMembers.find((m) => m.user_id === editDecisionForm.proposer_id)?.user_name ||
+              item.proposer_name;
+            return {
+              ...item,
+              description: editDecisionForm.description,
+              proposer_id: editDecisionForm.proposer_id,
+              proposer_name: proposerName,
+              status: editDecisionForm.status,
+            };
+          }
+          return item;
+        })
+      );
+    } catch (err) {
+      console.error('Failed to update decision:', err);
+    }
+  };
+
+  const handleNextTopic = async () => {
+    if (!meetingId) return;
+    try {
+      await topicsApi.next(meetingId);
+      const res = await topicsApi.list(meetingId);
+      const newTopics = res || [];
+      setTopics(newTopics);
+      
+      // Auto-expand IN_PROGRESS topic if none is expanded
+      const inProgressTopic = newTopics.find((t: any) => t.status === 'IN_PROGRESS');
+      if (inProgressTopic && !expandedTopicId) {
+        setExpandedTopicId(inProgressTopic.id);
+      }
+    } catch (err) {
+      console.error('Failed to move to next topic:', err);
+    }
+  };
+
+  const handleStartDecisionEdit = (item: any) => {
+    setEditingDecisionId(item.id);
+    setEditDecisionForm({
+      description: item.description || '',
+      proposer_id: item.proposer_id || '',
+      status: item.status || 'PROPOSED',
+    });
+  };
+
   const [isOpeningJira, setIsOpeningJira] = useState(false);
   const handleOpenJiraWorkspace = async () => {
     if (!meetingId) return;
@@ -605,7 +748,7 @@ export function MeetingRoomClient() {
 
   const user = useAuthStore((state) => state.user);
   const [participantName, setParticipantName] = useState(() => user?.full_name || '');
-  const [isPostMeetingModalOpen, setIsPostMeetingModalOpen] = useState(false);
+  const [isEndMeetingModalOpen, setIsEndMeetingModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.full_name) {
@@ -627,7 +770,7 @@ export function MeetingRoomClient() {
     }
   }, [user]);
 
-  const handleExitMeeting = useCallback(() => {
+  const handleLeaveRoomDirectly = useCallback(() => {
     const role = user?.role;
     if (role === 'OWNER' || role === 'ADMIN') {
       router.push('/admin');
@@ -637,6 +780,15 @@ export function MeetingRoomClient() {
       router.push('/member?tab=meetings');
     }
   }, [user, router]);
+
+  const handleExitMeeting = useCallback(() => {
+    const isHost = meetingMembers.some(m => m.user_id === user?.id && m.role === 'HOST');
+    if (isHost) {
+      setIsEndMeetingModalOpen(true);
+    } else {
+      handleLeaveRoomDirectly();
+    }
+  }, [meetingMembers, user, handleLeaveRoomDirectly]);
 
   // Load meeting data
   useEffect(() => {
@@ -651,17 +803,63 @@ export function MeetingRoomClient() {
       })
       .catch((err) => {
         if (!controller.signal.aborted && err?.name !== 'AbortError') {
+          if (err instanceof ApiRequestError) {
+            setApiError({ message: err.message, status: err.status });
+          }
           setLoading(false);
         }
       });
     return () => controller.abort();
   }, [meetingId]);
 
+  // Load Agendas
+  useEffect(() => {
+    if (meetingId) {
+      knowledgeApi.listDocuments(meetingId).then((docs) => {
+        setAgendas(docs);
+        docs.forEach(doc => {
+          knowledgeApi.getDocumentContent(doc.id).then(res => {
+            setAgendaContents(prev => ({...prev, [doc.id]: res.text}));
+          }).catch(console.error);
+        });
+      }).catch(console.error);
+    }
+  }, [meetingId]);
+
+  // Upload Agenda Logic
+  const handleUploadAgenda = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !meetingId) return;
+    setIsUploadingAgenda(true);
+    try {
+      const doc = await knowledgeApi.uploadDocument(meetingId, file);
+      setAgendas((prev) => [...prev, doc]);
+      // Auto fetch content for new document
+      const res = await knowledgeApi.getDocumentContent(doc.id);
+      setAgendaContents(prev => ({...prev, [doc.id]: res.text}));
+    } catch (err) {
+      console.error('Failed to upload agenda:', err);
+    } finally {
+      setIsUploadingAgenda(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleDeleteAgenda = async (docId: string) => {
+    try {
+      await knowledgeApi.deleteDocument(docId);
+      setAgendas((prev) => prev.filter((d) => d.id !== docId));
+    } catch (err) {
+      console.error('Failed to delete agenda:', err);
+    }
+  };
+
   // Join Meeting Logic
   const handleJoinMeeting = async () => {
     if (!meeting || !participantName) return;
     setIsJoining(true);
     setLiveKitError(false);
+    setApiError(null);
     try {
       const data = await meetingsApi.getToken(meeting.id, participantName, selectedLanguage);
       if (data?.token) {
@@ -670,7 +868,11 @@ export function MeetingRoomClient() {
       }
     } catch (err) {
       console.error('Failed to get token:', err);
-      setLiveKitError(true);
+      if (err instanceof ApiRequestError) {
+        setApiError({ message: err.message, status: err.status });
+      } else {
+        setLiveKitError(true);
+      }
     } finally {
       setIsJoining(false);
     }
@@ -746,6 +948,28 @@ export function MeetingRoomClient() {
     );
   }
 
+  if (apiError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4 p-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-2">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-destructive">
+          {apiError.status === 403 ? 'Từ chối truy cập' : 'Đã xảy ra lỗi'}
+        </h1>
+        <p className="text-muted-foreground text-sm max-w-md">
+          {apiError.message}
+        </p>
+        <button
+          onClick={handleExitMeeting}
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-lg shadow-primary/25 transition-all cursor-pointer"
+        >
+          Quay lại danh sách
+        </button>
+      </div>
+    );
+  }
+
   if (!meeting) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4 p-4 text-center">
@@ -763,49 +987,73 @@ export function MeetingRoomClient() {
     );
   }
 
+  if (meeting.status === 'COMPLETED') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-4 p-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-2">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-destructive">
+          Cuộc họp đã kết thúc
+        </h1>
+        <p className="text-muted-foreground text-sm max-w-md">
+          Bạn không thể tham gia lại cuộc họp này.
+        </p>
+        <button
+          onClick={handleExitMeeting}
+          className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-lg shadow-primary/25 transition-all cursor-pointer"
+        >
+          Quay lại danh sách
+        </button>
+      </div>
+    );
+  }
+
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
 
   if (!hasJoined) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground space-y-6 p-4">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-2">
-          <Video className="w-8 h-8" />
-        </div>
-        <h1 className="text-3xl font-extrabold tracking-tight">{meeting.title}</h1>
-        <p className="text-muted-foreground text-sm max-w-md text-center">
-          Vui lòng chọn ngôn ngữ bạn sẽ sử dụng để nói trong cuộc họp này. Hệ thống sẽ dùng ngôn ngữ
-          này để nhận diện và hiển thị phụ đề.
-        </p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-2 mx-auto">
+            <Video className="w-8 h-8" />
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-center">{meeting.title}</h1>
+          <p className="text-muted-foreground text-sm text-center">
+            Vui lòng chọn ngôn ngữ bạn sẽ sử dụng để nói trong cuộc họp này. Hệ thống sẽ dùng ngôn ngữ
+            này để nhận diện và hiển thị phụ đề.
+          </p>
 
-        <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
-          <label className="text-sm font-semibold">Language you use in this call</label>
-          <select
-            className="flex h-11 w-full rounded-xl border border-input bg-card text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
+          <div className="flex flex-col gap-2 w-full mt-2">
+            <label className="text-sm font-semibold">Language you use in this call</label>
+            <select
+              className="flex h-11 w-full rounded-xl border border-input bg-card text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+            >
+              <option value="vi">Tiếng Việt (Vietnamese)</option>
+              <option value="en">Tiếng Anh (English)</option>
+              <option value="ja">Tiếng Nhật (Japanese)</option>
+              <option value="ko">Tiếng Hàn (Korean)</option>
+              <option value="zh">Tiếng Trung (Chinese)</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleJoinMeeting}
+            disabled={isJoining}
+            className="mt-4 px-8 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all w-full flex items-center justify-center gap-2"
           >
-            <option value="vi">Tiếng Việt (Vietnamese)</option>
-            <option value="en">Tiếng Anh (English)</option>
-            <option value="ja">Tiếng Nhật (Japanese)</option>
-            <option value="ko">Tiếng Hàn (Korean)</option>
-            <option value="zh">Tiếng Trung (Chinese)</option>
-          </select>
+            {isJoining ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Đang tham gia...
+              </>
+            ) : (
+              'Vào phòng họp'
+            )}
+          </button>
         </div>
-
-        <button
-          onClick={handleJoinMeeting}
-          disabled={isJoining}
-          className="mt-6 px-8 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all w-full max-w-xs flex items-center justify-center gap-2"
-        >
-          {isJoining ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Đang tham gia...
-            </>
-          ) : (
-            'Join Meeting'
-          )}
-        </button>
       </div>
     );
   }
@@ -834,18 +1082,10 @@ export function MeetingRoomClient() {
               {meeting.title}
             </span>
           </div>
+          
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsPostMeetingModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
-            title="Kích hoạt AI tổng kết phiên họp và phân bổ action items cho Khối / Member"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Tổng Kết & Phân Bổ Task (MoM)</span>
-          </button>
-        </div>
+
       </header>
 
       {/* Main Content Area */}
@@ -860,7 +1100,7 @@ export function MeetingRoomClient() {
             token={token}
             serverUrl={livekitUrl}
             connect={true}
-            audio={true}
+            audio={false}
             data-lk-theme="default"
             className="w-full h-full flex overflow-hidden"
             onDisconnected={() => {
@@ -978,18 +1218,6 @@ export function MeetingRoomClient() {
                     <span>Records</span>
                   </button>
                   <button
-                    onClick={() => setActiveRightTab('transcript')}
-                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                      activeRightTab === 'transcript'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-muted text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Notes</span>
-                  </button>
-
-                  <button
                     onClick={() => setActiveRightTab('ai')}
                     className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                       activeRightTab === 'ai'
@@ -998,7 +1226,18 @@ export function MeetingRoomClient() {
                     }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>AI Agent</span>
+                    <span>AI</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveRightTab('agenda')}
+                    className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      activeRightTab === 'agenda'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                    <span>Agenda</span>
                   </button>
                 </div>
 
@@ -1018,7 +1257,12 @@ export function MeetingRoomClient() {
                       {dbTranscripts.map((t, idx) => (
                         <div
                           key={`db-${t.id || idx}`}
-                          className="bg-muted p-3 rounded-lg text-sm transition-opacity duration-200 opacity-100 border border-primary/20"
+                          id={`record-${t.id}`}
+                          className={`p-3 rounded-lg text-sm transition-all duration-1000 border ${
+                            highlightedRecordId === t.id
+                              ? 'bg-primary/20 ring-1 ring-primary border-primary'
+                              : 'bg-muted border-primary/20 opacity-100'
+                          }`}
                         >
                           <div className="font-semibold text-primary text-xs mb-1 flex items-center justify-between">
                             <span>
@@ -1065,156 +1309,27 @@ export function MeetingRoomClient() {
                       )}
                       <div ref={transcriptEndRef} />
                     </div>
-                  </div>
-
-                  <div
-                    className={`flex-1 flex-col overflow-hidden bg-muted/30 ${activeRightTab === 'transcript' ? 'flex' : 'hidden'}`}
-                  >
-                    <div className="p-3 border-b border-border bg-card/80 sticky top-0 z-10 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5" />
-                          Meeting Notes
-                        </span>
-                        <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/30">
-                          {actionItems.length}
-                        </span>
+                    {/* Floating Back Button */}
+                    {returnToAgendaState.active && (
+                      <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+                        <button 
+                          onClick={() => {
+                            setActiveRightTab('agenda');
+                            if (returnToAgendaState.expandedTopicId) {
+                              setExpandedTopicId(returnToAgendaState.expandedTopicId);
+                            }
+                            setReturnToAgendaState({ active: false, expandedTopicId: null });
+                          }}
+                          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-semibold shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all hover:-translate-y-0.5 border border-primary/20"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          Trở về Task/Decision
+                        </button>
                       </div>
-
-                      <button
-                        onClick={handleOpenJiraWorkspace}
-                        disabled={isOpeningJira}
-                        className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
-                        title="Open Jira Board for this Meeting"
-                      >
-                        {isOpeningJira ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Kanban className="w-3 h-3" />
-                        )}
-                        <span>Jira Board</span>
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                      {actionItems.length === 0 ? (
-                        <div className="text-center py-6 text-muted-foreground text-xs">
-                          Chưa có Meeting Notes nào được AI trích xuất.
-                        </div>
-                      ) : (
-                        actionItems.map((item: ActionItemResponse) => (
-                          <div
-                            key={item.id}
-                            className="text-xs p-2.5 rounded-lg bg-card border border-border"
-                          >
-                            {editingTaskId === item.id ? (
-                              <div className="flex flex-col gap-3">
-                                <input
-                                  type="text"
-                                  className="w-full text-sm p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
-                                  value={editForm.title}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
-                                  }
-                                  placeholder="Tiêu đề task..."
-                                />
-                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                  <select
-                                    className="flex-1 text-xs p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
-                                    value={editForm.assignee_id}
-                                    onChange={(e) =>
-                                      setEditForm((prev) => ({
-                                        ...prev,
-                                        assignee_id: e.target.value,
-                                      }))
-                                    }
-                                  >
-                                    <option value="">-- Chọn người phụ trách --</option>
-                                    {meetingMembers.map((m) => (
-                                      <option key={m.user_id} value={m.user_id}>
-                                        {m.user_name || m.user_email || 'Người dùng ẩn danh'}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <CustomDateTimePicker
-                                    value={editForm.deadline}
-                                    onChange={(val) =>
-                                      setEditForm((prev) => ({ ...prev, deadline: val }))
-                                    }
-                                  />
-                                </div>
-                                <div className="flex justify-end gap-2 mt-2">
-                                  <button
-                                    onClick={() => setEditingTaskId(null)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-md text-xs font-medium transition-colors"
-                                  >
-                                    <X className="w-3.5 h-3.5" /> Hủy
-                                  </button>
-                                  <button
-                                    onClick={() => handleSaveEdit(item.id)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md text-xs font-medium transition-colors shadow-sm"
-                                  >
-                                    <Check className="w-3.5 h-3.5" /> Lưu
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex items-start gap-2">
-                                  <div className="mt-1.5 shrink-0">
-                                    <div
-                                      className={`w-2 h-2 rounded-full ${
-                                        item.status === 'CONFIRMED' ? 'bg-success' : 'bg-warning'
-                                      }`}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className="font-bold text-success bg-success/10 px-1.5 py-0.5 rounded mr-1.5">
-                                      {item.title}
-                                    </span>
-                                    <span className="text-foreground leading-relaxed">
-                                      {item.description || ''}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-between border-t border-border/50 pt-2 mt-1">
-                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                    <span className="flex items-center gap-1">
-                                      <User className="w-3 h-3" />
-                                      {item.assignee_name || 'Chưa gán'}
-                                    </span>
-                                    <span className="text-border">|</span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      {/* ActionItemResponse has due_date, FollowUpTask has deadline. Handle both. */}
-                                      {(item as any).deadline || item.due_date
-                                        ? new Date(
-                                            (item as any).deadline || item.due_date
-                                          ).toLocaleString('vi-VN', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                          })
-                                        : 'Không có hạn'}
-                                    </span>
-                                  </div>
-                                  <div
-                                    onClick={() => handleStartEdit(item)}
-                                    className="w-4 h-4 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-muted-foreground hover:text-primary"
-                                    title="Chỉnh sửa task"
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
+                    )}
                   </div>
+
+
 
                   <div
                     className={`flex-1 flex-col bg-background ${activeRightTab === 'ai' ? 'flex' : 'hidden'}`}
@@ -1265,6 +1380,323 @@ export function MeetingRoomClient() {
                       </form>
                     </div>
                   </div>
+
+                  <div
+                    className={`flex-1 flex-col overflow-hidden bg-background ${activeRightTab === 'agenda' ? 'flex' : 'hidden'}`}
+                  >
+                    {/* Topics Section */}
+                    <div className="p-3 border-b border-border bg-card/80 flex items-center justify-between shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <List className="w-3.5 h-3.5" />
+                        Nội dung cuộc họp
+                      </span>
+                      {user?.role !== 'MEMBER' && topics.some(t => t.status !== 'COMPLETED') && (
+                        <button
+                          onClick={handleNextTopic}
+                          className="text-[10px] font-bold bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors"
+                        >
+                          {topics.some(t => t.status === 'IN_PROGRESS') ? 'Next Topic' : 'Bắt đầu họp'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="p-3 border-b border-border space-y-2 overflow-y-auto max-h-[60%] flex-1">
+                      {topics.length === 0 ? (
+                        <div className="text-center py-4 text-muted-foreground text-xs italic">
+                          Chưa có chủ đề nào.
+                        </div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {topics.map((t) => {
+                            const topicDecisions = decisions.filter(d => d.topic_id === t.id);
+                            const topicTasks = actionItems.filter(task => task.topic_id === t.id);
+                            const isExpanded = expandedTopicId === t.id;
+
+                            return (
+                              <li key={t.id} className="border border-border/50 rounded-md overflow-hidden bg-card transition-all">
+                                {/* Accordion Header */}
+                                <button 
+                                  onClick={() => setExpandedTopicId(isExpanded ? null : t.id)} 
+                                  className="w-full text-left p-2.5 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                    <span className={`shrink-0 text-[10px] uppercase font-bold tracking-wider ${t.status === 'COMPLETED' ? 'text-muted-foreground line-through' : t.status === 'IN_PROGRESS' ? 'text-primary' : 'text-muted-foreground'}`}>
+                                      [{t.status === 'COMPLETED' ? 'Đã xong' : t.status === 'IN_PROGRESS' ? 'Đang tiến hành' : 'Chưa tiến hành'}]
+                                    </span>
+                                    <span className={`truncate font-medium text-xs ${t.status === 'IN_PROGRESS' ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
+                                      {t.title}
+                                    </span>
+                                  </div>
+                                  <div className="shrink-0 text-[10px] text-muted-foreground font-medium">
+                                    ({topicDecisions.length} Quyết định, {topicTasks.length} Task)
+                                  </div>
+                                </button>
+                                
+                                {/* Accordion Body */}
+                                {isExpanded && (
+                                  <div className="p-3 border-t border-border/30 bg-background space-y-4">
+                                    {/* Decisions */}
+                                    <div>
+                                      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Decisions</div>
+                                      {topicDecisions.length === 0 ? (
+                                        <div className="text-[11px] italic text-muted-foreground/70">Không có quyết định nào.</div>
+                                      ) : (
+                                        <ul className="space-y-2">
+                                          {topicDecisions.map((d: any) => (
+                                            <li key={d.id} className="text-[11px] text-foreground group">
+                                              {editingDecisionId === d.id ? (
+                                                <div className="flex flex-col gap-2 mt-1">
+                                                  <input
+                                                    type="text"
+                                                    className="w-full p-1.5 bg-muted/50 border border-border rounded focus:outline-none focus:border-primary"
+                                                    value={editDecisionForm.description}
+                                                    onChange={(e) => setEditDecisionForm((prev) => ({ ...prev, description: e.target.value }))}
+                                                    autoFocus
+                                                  />
+                                                  <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setEditingDecisionId(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Hủy</button>
+                                                    <button onClick={() => handleSaveDecisionEdit(d.id)} className="text-[10px] font-bold text-primary">Lưu</button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-1.5 leading-relaxed">
+                                                    <span className="text-muted-foreground shrink-0 mt-0.5">•</span>
+                                                    <span>{d.description}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                    {d.evidence_sentence && (
+                                                      <button onClick={() => handleViewEvidence(d.evidence_sentence)} title="Xem trích dẫn" className="text-muted-foreground hover:text-primary">
+                                                        <Quote className="w-3 h-3" />
+                                                      </button>
+                                                    )}
+                                                    <button onClick={() => handleStartDecisionEdit(d)} className="text-[10px] text-primary">Sửa</button>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Action Items */}
+                                    <div>
+                                      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Action Items</div>
+                                      {topicTasks.length === 0 ? (
+                                        <div className="text-[11px] italic text-muted-foreground/70">Không có công việc nào.</div>
+                                      ) : (
+                                        <ul className="space-y-2">
+                                          {topicTasks.map((task: any) => (
+                                            <li key={task.id} className="text-[11px] text-foreground group">
+                                              {editingTaskId === task.id ? (
+                                                <div className="flex flex-col gap-3 mt-2 mb-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                                                  <input
+                                                    type="text"
+                                                    className="w-full text-xs p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
+                                                    value={editForm.title}
+                                                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                                                    placeholder="Tên task..."
+                                                    autoFocus
+                                                  />
+                                                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                                    <div className="shrink-0 w-[170px]">
+                                                      <select
+                                                        className="w-full text-[11px] p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm truncate"
+                                                        value={editForm.assignee_id}
+                                                        title={editForm.assignee_id || "Chọn người phụ trách"}
+                                                        onChange={(e) =>
+                                                          setEditForm((prev) => ({
+                                                            ...prev,
+                                                            assignee_id: e.target.value,
+                                                          }))
+                                                        }
+                                                      >
+                                                        <option value="">-- Chọn Assignee --</option>
+                                                        {meetingMembers.map((m) => (
+                                                          <option key={m.user_id} value={m.user_id}>
+                                                            {m.user_name || m.user_email || 'Ẩn danh'}
+                                                          </option>
+                                                        ))}
+                                                      </select>
+                                                    </div>
+                                                    <CustomDateTimePicker
+                                                      value={editForm.deadline}
+                                                      onChange={(val) =>
+                                                        setEditForm((prev) => ({ ...prev, deadline: val }))
+                                                      }
+                                                    />
+                                                  </div>
+                                                  <div className="flex justify-end gap-2 mt-1">
+                                                    <button onClick={() => setEditingTaskId(null)} className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-md text-[10px] font-medium transition-colors">
+                                                      <X className="w-3 h-3" /> Hủy
+                                                    </button>
+                                                    <button onClick={() => handleSaveEdit(task.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md text-[10px] font-medium transition-colors shadow-sm">
+                                                      <Check className="w-3 h-3" /> Lưu
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-1.5 leading-relaxed">
+                                                    <span className="text-primary shrink-0 mt-0.5"><Check className="w-3 h-3" /></span>
+                                                    <div className="flex flex-col">
+                                                      <span>{task.title}</span>
+                                                      <div className="flex items-center gap-2 mt-0.5 text-muted-foreground/80 text-[10px]">
+                                                        {task.assignee_name && (
+                                                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> {task.assignee_name}</span>
+                                                        )}
+                                                        {task.deadline && (
+                                                          <>
+                                                            <span>•</span>
+                                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(task.deadline).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                    {task.evidence_quote && (
+                                                      <button onClick={() => handleViewEvidence(task.evidence_quote)} title="Xem trích dẫn" className="text-muted-foreground hover:text-primary">
+                                                        <Quote className="w-3.5 h-3.5" />
+                                                      </button>
+                                                    )}
+                                                    <button onClick={() => handleStartEdit(task)} className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-2 py-1 rounded transition-colors flex items-center gap-1">
+                                                      <Pencil className="w-3 h-3" /> Sửa
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Loading State for IN_PROGRESS */}
+                                    {t.status === 'IN_PROGRESS' && (
+                                      <div className="text-[10px] italic text-muted-foreground/50 mt-4 flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
+                                        AI đang theo dõi và tự động trích xuất...
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Documents Section */}
+                    <div className="p-3 border-b border-border bg-card/80 flex items-center justify-between shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        Tài liệu cuộc họp
+                      </span>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                        disabled={isUploadingAgenda}
+                      >
+                        {isUploadingAgenda ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
+                        <span>Tải lên</span>
+                      </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleUploadAgenda}
+                        accept=".pdf,.doc,.docx,.txt"
+                      />
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                      {agendas.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-xs italic">
+                          Chưa có tài liệu nào.
+                        </div>
+                      ) : (
+                        agendas.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="text-xs p-2.5 rounded-lg bg-card border border-border flex flex-col gap-2 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5 truncate pr-2">
+                                <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                <span className="truncate">{doc.filename}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setViewingDocId(viewingDocId === doc.id ? null : doc.id)}
+                                  className={`p-1.5 rounded transition-colors shrink-0 ${viewingDocId === doc.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                                  title={viewingDocId === doc.id ? "Thu gọn" : "Xem nội dung"}
+                                >
+                                  {viewingDocId === doc.id ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAgenda(doc.id)}
+                                  className="text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors shrink-0"
+                                  title="Xóa tài liệu"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium mt-1">
+                              <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                              <span className="text-border">|</span>
+                              <span>Trạng thái: {doc.vector_status}</span>
+                            </div>
+                            
+                            {/* Document Content Viewer - Toggled by Eye icon */}
+                            {viewingDocId === doc.id && (
+                              <div className="mt-2 flex flex-col border border-border rounded-md overflow-hidden shadow-sm">
+                                {/* Formatting Toolbar */}
+                                <div className="flex items-center gap-1 bg-muted/50 p-1.5 border-b border-border">
+                                  <button onClick={() => document.execCommand('bold')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="Bôi đậm (Bold)">
+                                    <Bold className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => document.execCommand('italic')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="In nghiêng (Italic)">
+                                    <Italic className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => document.execCommand('underline')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="Gạch chân (Underline)">
+                                    <Underline className="w-3.5 h-3.5" />
+                                  </button>
+                                  <div className="w-px h-3.5 bg-border mx-1"></div>
+                                  <button onClick={() => document.execCommand('hiliteColor', false, 'yellow')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="Highlight">
+                                    <div className="w-3.5 h-3.5 bg-yellow-300 border border-yellow-400 rounded-sm"></div>
+                                  </button>
+                                  <button onClick={() => document.execCommand('fontSize', false, '5')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground flex items-center gap-0.5" title="Chữ to">
+                                    <Type className="w-3.5 h-3.5" />+
+                                  </button>
+                                  <button onClick={() => document.execCommand('fontSize', false, '2')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground flex items-center gap-0.5" title="Chữ nhỏ">
+                                    <Type className="w-3 h-3" />-
+                                  </button>
+                                </div>
+                                
+                                {/* Editable Content Area */}
+                                <div 
+                                  className="p-3 bg-background text-foreground text-xs leading-relaxed max-h-64 overflow-y-auto focus:outline-none"
+                                  contentEditable={true}
+                                  suppressContentEditableWarning={true}
+                                  dangerouslySetInnerHTML={{
+                                    __html: agendaContents[doc.id] === undefined 
+                                      ? '<div class="flex justify-center"><span class="animate-spin text-primary">...</span></div>'
+                                      : (agendaContents[doc.id] || '<span class="italic text-muted-foreground">Tài liệu trống.</span>')
+                                  }}
+                                  onBlur={(e) => {
+                                    // Optionally save it back to state so it persists if they close and reopen
+                                    setAgendaContents(prev => ({...prev, [doc.id]: e.currentTarget.innerHTML}));
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               </aside>
             )}
@@ -1279,15 +1711,20 @@ export function MeetingRoomClient() {
         onClose={() => setInviteModalOpen(false)}
       />
 
-      {/* Post-Meeting Summary & Action Item Cascade Modal */}
-      <PostMeetingCascadeModal
-        isOpen={isPostMeetingModalOpen}
-        onClose={() => setIsPostMeetingModalOpen(false)}
-        meetingId={meetingId}
-        meetingTitle={meeting?.title || 'Cuộc họp'}
-        userRole={user?.role}
-        initialActionItems={actionItems}
-        onComplete={(target) => router.push(target)}
+      {/* End Meeting Modal */}
+      <EndMeetingModal
+        isOpen={isEndMeetingModalOpen}
+        onClose={() => setIsEndMeetingModalOpen(false)}
+        onLeave={handleLeaveRoomDirectly}
+        members={meetingMembers}
+        onEndMeeting={async () => {
+          const res = await meetingsApi.endMeeting(meetingId);
+          return {
+            summary: res.summary?.content || null,
+            tasks: res.follow_up_tasks || [],
+            meetingId: meetingId
+          };
+        }}
       />
     </div>
   );

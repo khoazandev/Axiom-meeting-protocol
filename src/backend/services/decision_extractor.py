@@ -103,7 +103,8 @@ class DecisionExtractorService:
                 '  "description": "description of the decision made",\n'
                 '  "rationale": "reasoning behind the decision" or null,\n'
                 '  "status": "AGREED", "PROPOSED" or "REJECTED",\n'
-                '  "proposer": "Tên người đề xuất hoặc null"\n'
+                '  "proposer": "Tên người đề xuất hoặc null",\n'
+                '  "evidence_quote": "Must be an EXACT verbatim quote from the transcript representing the FINAL confirmation or agreement. Do not summarize or use intermediate discussion sentences."\n'
                 "}\n\n"
             )
 
@@ -192,6 +193,7 @@ class DecisionExtractorService:
                 "description": description[:500],
                 "status": status,
                 "proposer": str(item.get("proposer")).strip() if item.get("proposer") else None,
+                "evidence_quote": item.get("evidence_quote", ""),
             })
         return valid_items
 
@@ -233,13 +235,34 @@ def sync_extracted_decisions(
         proposer_str = item_data.get("proposer")
         resolved_proposer_id = None
         if proposer_str and proposer_str.lower() != "null":
+            proposer_str = str(proposer_str).strip()
             from src.backend.models import User
-            user = db.query(User).filter(User.full_name == proposer_str).first()
+            user = (
+                db.query(User)
+                .filter(User.full_name.ilike(f"%{proposer_str}%"))
+                .first()
+            )
+            if not user:
+                users = db.query(User).all()
+                for u in users:
+                    if u.full_name.lower() in proposer_str.lower() or proposer_str.lower() in u.full_name.lower():
+                        user = u
+                        break
             if user:
                 resolved_proposer_id = user.id
-                logger.info("Matched proposer '%s' → user_id=%s", proposer_str, user.id)
+                logger.info("Matched proposer '%s' → user_id=%s (%s)", proposer_str, user.id, user.full_name)
+
+        # ── Find current topic if not explicitly provided ──────────────────
+        active_topic_id = None
+        # We can look up the IN_PROGRESS topic for this meeting
+        from src.backend.models import Topic, TopicStatusEnum
+        active_topic = db.query(Topic).filter(Topic.meeting_id == meeting_id, Topic.status == TopicStatusEnum.IN_PROGRESS).first()
+        if active_topic:
+            active_topic_id = active_topic.id
 
         # ── UPSERT logic ──────────────────────────────────────────
+        evidence_sentence = item_data.get("evidence_quote")
+        
         if decision_id:
             # UPDATE existing decision
             existing = (
@@ -255,6 +278,11 @@ def sync_extracted_decisions(
                 existing.status = decision_status
                 if resolved_proposer_id:
                     existing.proposer_id = resolved_proposer_id
+                if evidence_sentence:
+                    existing.evidence_sentence = evidence_sentence
+                # Optionally update topic if it's currently null
+                if not existing.topic_id and active_topic_id:
+                    existing.topic_id = active_topic_id
                 affected_decisions.append(existing)
                 logger.info("Updated decision %s: status=%s", decision_id, decision_status.value)
             else:
@@ -263,10 +291,12 @@ def sync_extracted_decisions(
             # INSERT new decision
             decision = MeetingDecision(
                 meeting_id=meeting_id,
+                topic_id=active_topic_id,
                 transcript_segment_id=linked_segment_id,
                 description=description,
                 status=decision_status,
                 proposer_id=resolved_proposer_id,
+                evidence_sentence=evidence_sentence,
             )
             db.add(decision)
             affected_decisions.append(decision)

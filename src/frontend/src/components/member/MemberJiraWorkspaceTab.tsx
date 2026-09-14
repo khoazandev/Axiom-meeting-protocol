@@ -53,7 +53,7 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
     try {
       setLoading(true);
       const projects = await jiraApi.getProjects();
-      const defaultProj = projects.find((p) => p.key === 'SMA') || projects[0];
+      const defaultProj = projects.find((p) => p.key === 'DX') || projects[0];
 
       if (defaultProj) {
         setProject(defaultProj);

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { getAuthHeaders } from '@/lib/api';
 import { X, FileText, UploadCloud, Trash2, Loader2, List, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MeetingDetailsModalProps {
   meetingId: string;
@@ -146,7 +148,9 @@ export function MeetingDetailsModal({ meetingId, meetingTitle, onClose }: Meetin
                     <>
                       <div className="p-6 rounded-xl bg-bg-elevated border border-border space-y-4">
                         <h3 className="text-base font-bold text-accent">Tóm tắt</h3>
-                        <p className="text-sm text-text-primary whitespace-pre-wrap">{summary.summary}</p>
+                        <div className="text-sm text-text-primary [&_table]:w-full [&_table]:border-collapse [&_table]:mb-6 [&_th]:border [&_th]:border-border [&_th]:bg-bg-card [&_th]:p-3 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:p-3 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
+                        </div>
                       </div>
                       
                       {summary.decisions && summary.decisions.length > 0 && (
@@ -178,7 +182,11 @@ export function MeetingDetailsModal({ meetingId, meetingTitle, onClose }: Meetin
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-bold text-text-primary">{t.speaker?.full_name || 'Khách'}</span>
-                            <span className="text-[10px] text-text-muted">{format(new Date(t.start_time * 1000), 'HH:mm:ss')}</span>
+                            <span className="text-[10px] text-text-muted">
+                              {typeof t.start_time === 'number'
+                                ? format(new Date(t.start_time * 1000), 'HH:mm:ss')
+                                : t.start_time}
+                            </span>
                           </div>
                           <p className="text-sm text-text-secondary">{t.content}</p>
                         </div>

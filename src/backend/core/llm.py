@@ -46,7 +46,10 @@ async def generate_json(model_or_models: str | list[str], prompt: str, max_token
             if not content:
                 continue
                 
-            # Robust JSON extraction: Find the first { or [ and last } or ]
+            content = response.choices[0].message.content
+            print(f"[{model}] RAW JSON OUTPUT: {repr(content)}")
+            
+            # Clean up the response
             content = content.strip()
             start_idx = -1
             for i, c in enumerate(content):
@@ -62,10 +65,14 @@ async def generate_json(model_or_models: str | list[str], prompt: str, max_token
                     
             if start_idx != -1 and end_idx != -1 and end_idx >= start_idx:
                 content = content[start_idx:end_idx+1]
-            
             try:
-                return json.loads(content)
-            except json.JSONDecodeError as e:
+                import json_repair
+                parsed = json_repair.loads(content)
+                if parsed and (isinstance(parsed, dict) or isinstance(parsed, list)):
+                    return parsed
+                else:
+                    raise ValueError("Parsed output is not a JSON object or array")
+            except Exception as e:
                 logger.warning(f"Failed to parse JSON from LLM ({model}): {e}. Raw extracted content: {repr(content)}. Trying next model...")
                 continue
             
