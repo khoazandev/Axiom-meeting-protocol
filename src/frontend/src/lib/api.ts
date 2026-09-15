@@ -338,12 +338,26 @@ export const organizationApi = {
 
 export const topicsApi = {
   list: (meetingId: string): Promise<Topic[]> =>
-    apiFetch<Topic[]>(/api/v1/meetings//topics),
-  next: (meetingId: string): Promise<{message: string}> =>
-    apiFetch<{message: string}>(/api/v1/meetings//topics/next, { method: 'POST' }),
+    apiFetch<Topic[]>(`/api/v1/meetings/${meetingId}/topics`),
+  next: (meetingId: string): Promise<{ message: string }> =>
+    apiFetch<{ message: string }>(`/api/v1/meetings/${meetingId}/topics/next`, { method: 'POST' }),
 };
 
 export const meetingsApi = {
+  getDecisions(meetingId: number | string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/decisions`);
+  },
+  updateDecision(
+    meetingId: number | string,
+    decisionId: string,
+    data: { description?: string; status?: string; proposer_id?: string }
+  ): Promise<any> {
+    return apiFetch<any>(`/api/v1/meetings/${meetingId}/decisions/${decisionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   /** List all meetings with optional pagination. */
   list(skip = 0, limit = 100, signal?: AbortSignal): Promise<Meeting[]> {
     return apiFetch<Meeting[]>(`/api/v1/meetings?skip=${skip}&limit=${limit}`, { signal });
