@@ -1,0 +1,315 @@
+                  >
+                    {/* Topics Section */}
+                    <div className="p-3 border-b border-border bg-card/80 flex items-center justify-between shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <List className="w-3.5 h-3.5" />
+                        Nß╗Öi dung cuß╗Öc hß╗ìp
+                      </span>
+                      {user?.role !== 'MEMBER' && topics.some(t => t.status !== 'COMPLETED') && (
+                        <button
+                          onClick={handleNextTopic}
+                          className="text-[10px] font-bold bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors"
+                        >
+                          {topics.some(t => t.status === 'IN_PROGRESS') ? 'Next Topic' : 'Bß║»t ─æß║ºu hß╗ìp'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="p-3 border-b border-border space-y-2 overflow-y-auto max-h-[60%] flex-1">
+                      {topics.length === 0 ? (
+                        <div className="text-center py-4 text-muted-foreground text-xs italic">
+                          Ch╞░a c├│ chß╗º ─æß╗ü n├áo.
+                        </div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {topics.map((t) => {
+                            const topicDecisions = decisions.filter(d => d.topic_id === t.id);
+                            const topicTasks = actionItems.filter(task => task.topic_id === t.id);
+                            const isExpanded = expandedTopicId === t.id;
+
+                            return (
+                              <li key={t.id} className="border border-border/50 rounded-md overflow-hidden bg-card transition-all">
+                                {/* Accordion Header */}
+                                <button 
+                                  onClick={() => setExpandedTopicId(isExpanded ? null : t.id)} 
+                                  className="w-full text-left p-2.5 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                    <span className={`shrink-0 text-[10px] uppercase font-bold tracking-wider ${t.status === 'COMPLETED' ? 'text-muted-foreground line-through' : t.status === 'IN_PROGRESS' ? 'text-primary' : 'text-muted-foreground'}`}>
+                                      [{t.status === 'COMPLETED' ? '─É├ú xong' : t.status === 'IN_PROGRESS' ? '─Éang tiß║┐n h├ánh' : 'Ch╞░a tiß║┐n h├ánh'}]
+                                    </span>
+                                    <span className={`truncate font-medium text-xs ${t.status === 'IN_PROGRESS' ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
+                                      {t.title}
+                                    </span>
+                                  </div>
+                                  <div className="shrink-0 text-[10px] text-muted-foreground font-medium">
+                                    ({topicDecisions.length} Quyß║┐t ─æß╗ïnh, {topicTasks.length} Task)
+                                  </div>
+                                </button>
+                                
+                                {/* Accordion Body */}
+                                {isExpanded && (
+                                  <div className="p-3 border-t border-border/30 bg-background space-y-4">
+                                    {/* Decisions */}
+                                    <div>
+                                      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Decisions</div>
+                                      {topicDecisions.length === 0 ? (
+                                        <div className="text-[11px] italic text-muted-foreground/70">Kh├┤ng c├│ quyß║┐t ─æß╗ïnh n├áo.</div>
+                                      ) : (
+                                        <ul className="space-y-2">
+                                          {topicDecisions.map((d: any) => (
+                                            <li key={d.id} className="text-[11px] text-foreground group">
+                                              {editingDecisionId === d.id ? (
+                                                <div className="flex flex-col gap-2 mt-1">
+                                                  <input
+                                                    type="text"
+                                                    className="w-full p-1.5 bg-muted/50 border border-border rounded focus:outline-none focus:border-primary"
+                                                    value={editDecisionForm.description}
+                                                    onChange={(e) => setEditDecisionForm((prev) => ({ ...prev, description: e.target.value }))}
+                                                    autoFocus
+                                                  />
+                                                  <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setEditingDecisionId(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Hß╗ºy</button>
+                                                    <button onClick={() => handleSaveDecisionEdit(d.id)} className="text-[10px] font-bold text-primary">L╞░u</button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-1.5 leading-relaxed">
+                                                    <span className="text-muted-foreground shrink-0 mt-0.5">ΓÇó</span>
+                                                    <span>{d.description}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                    {d.evidence_sentence && (
+                                                      <button onClick={() => handleViewEvidence(d.evidence_sentence)} title="Xem tr├¡ch dß║½n" className="text-muted-foreground hover:text-primary">
+                                                        <Quote className="w-3 h-3" />
+                                                      </button>
+                                                    )}
+                                                    <button onClick={() => handleStartDecisionEdit(d)} className="text-[10px] text-primary">Sß╗¡a</button>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Action Items */}
+                                    <div>
+                                      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Action Items</div>
+                                      {topicTasks.length === 0 ? (
+                                        <div className="text-[11px] italic text-muted-foreground/70">Kh├┤ng c├│ c├┤ng viß╗çc n├áo.</div>
+                                      ) : (
+                                        <ul className="space-y-2">
+                                          {topicTasks.map((task: any) => (
+                                            <li key={task.id} className="text-[11px] text-foreground group">
+                                              {editingTaskId === task.id ? (
+                                                <div className="flex flex-col gap-3 mt-2 mb-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                                                  <input
+                                                    type="text"
+                                                    className="w-full text-xs p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm"
+                                                    value={editForm.title}
+                                                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                                                    placeholder="T├¬n task..."
+                                                    autoFocus
+                                                  />
+                                                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                                    <div className="shrink-0 w-[170px]">
+                                                      <select
+                                                        className="w-full text-[11px] p-2 bg-background border border-border rounded-md focus:outline-none focus:border-primary text-foreground shadow-sm truncate"
+                                                        value={editForm.assignee_id}
+                                                        title={editForm.assignee_id || "Chß╗ìn ng╞░ß╗¥i phß╗Ñ tr├ích"}
+                                                        onChange={(e) =>
+                                                          setEditForm((prev) => ({
+                                                            ...prev,
+                                                            assignee_id: e.target.value,
+                                                          }))
+                                                        }
+                                                      >
+                                                        <option value="">-- Chß╗ìn Assignee --</option>
+                                                        {meetingMembers.map((m) => (
+                                                          <option key={m.user_id} value={m.user_id}>
+                                                            {m.user_name || m.user_email || 'ß║¿n danh'}
+                                                          </option>
+                                                        ))}
+                                                      </select>
+                                                    </div>
+                                                    <CustomDateTimePicker
+                                                      value={editForm.deadline}
+                                                      onChange={(val) =>
+                                                        setEditForm((prev) => ({ ...prev, deadline: val }))
+                                                      }
+                                                    />
+                                                  </div>
+                                                  <div className="flex justify-end gap-2 mt-1">
+                                                    <button onClick={() => setEditingTaskId(null)} className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-md text-[10px] font-medium transition-colors">
+                                                      <X className="w-3 h-3" /> Hß╗ºy
+                                                    </button>
+                                                    <button onClick={() => handleSaveEdit(task.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md text-[10px] font-medium transition-colors shadow-sm">
+                                                      <Check className="w-3 h-3" /> L╞░u
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-1.5 leading-relaxed">
+                                                    <span className="text-primary shrink-0 mt-0.5"><Check className="w-3 h-3" /></span>
+                                                    <div className="flex flex-col">
+                                                      <span>{task.title}</span>
+                                                      <div className="flex items-center gap-2 mt-0.5 text-muted-foreground/80 text-[10px]">
+                                                        {task.assignee_name && (
+                                                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> {task.assignee_name}</span>
+                                                        )}
+                                                        {task.deadline && (
+                                                          <>
+                                                            <span>ΓÇó</span>
+                                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(task.deadline).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                    {task.evidence_quote && (
+                                                      <button onClick={() => handleViewEvidence(task.evidence_quote)} title="Xem tr├¡ch dß║½n" className="text-muted-foreground hover:text-primary">
+                                                        <Quote className="w-3.5 h-3.5" />
+                                                      </button>
+                                                    )}
+                                                    <button onClick={() => handleStartEdit(task)} className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-2 py-1 rounded transition-colors flex items-center gap-1">
+                                                      <Pencil className="w-3 h-3" /> Sß╗¡a
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Loading State for IN_PROGRESS */}
+                                    {t.status === 'IN_PROGRESS' && (
+                                      <div className="text-[10px] italic text-muted-foreground/50 mt-4 flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
+                                        AI ─æang theo d├╡i v├á tß╗▒ ─æß╗Öng tr├¡ch xuß║Ñt...
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Documents Section */}
+                    <div className="p-3 border-b border-border bg-card/80 flex items-center justify-between shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        T├ái liß╗çu cuß╗Öc hß╗ìp
+                      </span>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                        disabled={isUploadingAgenda}
+                      >
+                        {isUploadingAgenda ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
+                        <span>Tß║úi l├¬n</span>
+                      </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleUploadAgenda}
+                        accept=".pdf,.doc,.docx,.txt"
+                      />
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                      {agendas.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-xs italic">
+                          Ch╞░a c├│ t├ái liß╗çu n├áo.
+                        </div>
+                      ) : (
+                        agendas.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="text-xs p-2.5 rounded-lg bg-card border border-border flex flex-col gap-2 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5 truncate pr-2">
+                                <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                <span className="truncate">{doc.filename}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setViewingDocId(viewingDocId === doc.id ? null : doc.id)}
+                                  className={`p-1.5 rounded transition-colors shrink-0 ${viewingDocId === doc.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                                  title={viewingDocId === doc.id ? "Thu gß╗ìn" : "Xem nß╗Öi dung"}
+                                >
+                                  {viewingDocId === doc.id ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAgenda(doc.id)}
+                                  className="text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors shrink-0"
+                                  title="X├│a t├ái liß╗çu"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium mt-1">
+                              <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                              <span className="text-border">|</span>
+                              <span>Trß║íng th├íi: {doc.vector_status}</span>
+                            </div>
+                            
+                            {/* Document Content Viewer - Toggled by Eye icon */}
+                            {viewingDocId === doc.id && (
+                              <div className="mt-2 flex flex-col border border-border rounded-md overflow-hidden shadow-sm">
+                                {/* Formatting Toolbar */}
+                                <div className="flex items-center gap-1 bg-muted/50 p-1.5 border-b border-border">
+                                  <button onClick={() => document.execCommand('bold')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="B├┤i ─æß║¡m (Bold)">
+                                    <Bold className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => document.execCommand('italic')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="In nghi├¬ng (Italic)">
+                                    <Italic className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => document.execCommand('underline')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="Gß║ích ch├ón (Underline)">
+                                    <Underline className="w-3.5 h-3.5" />
+                                  </button>
+                                  <div className="w-px h-3.5 bg-border mx-1"></div>
+                                  <button onClick={() => document.execCommand('hiliteColor', false, 'yellow')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground" title="Highlight">
+                                    <div className="w-3.5 h-3.5 bg-yellow-300 border border-yellow-400 rounded-sm"></div>
+                                  </button>
+                                  <button onClick={() => document.execCommand('fontSize', false, '5')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground flex items-center gap-0.5" title="Chß╗» to">
+                                    <Type className="w-3.5 h-3.5" />+
+                                  </button>
+                                  <button onClick={() => document.execCommand('fontSize', false, '2')} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground flex items-center gap-0.5" title="Chß╗» nhß╗Å">
+                                    <Type className="w-3 h-3" />-
+                                  </button>
+                                </div>
+                                
+                                {/* Editable Content Area */}
+                                <div 
+                                  className="p-3 bg-background text-foreground text-xs leading-relaxed max-h-64 overflow-y-auto focus:outline-none"
+                                  contentEditable={true}
+                                  suppressContentEditableWarning={true}
+                                  dangerouslySetInnerHTML={{
+                                    __html: agendaContents[doc.id] === undefined 
+                                      ? '<div class="flex justify-center"><span class="animate-spin text-primary">...</span></div>'
+                                      : (agendaContents[doc.id] || '<span class="italic text-muted-foreground">T├ái liß╗çu trß╗æng.</span>')
+                                  }}
+                                  onBlur={(e) => {
+                                    // Optionally save it back to state so it persists if they close and reopen
+                                    setAgendaContents(prev => ({...prev, [doc.id]: e.currentTarget.innerHTML}));
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>

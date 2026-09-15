@@ -9,6 +9,15 @@ import { useAuthStore } from './store/useAuthStore';
 
 // ── Types ────────────────────────────────────────────────
 
+export interface Topic {
+  id: string;
+  meeting_id: string;
+  title: string;
+  transcript_text: string | null;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  order_index: number;
+}
+
 export interface Meeting {
   id: string;
   title: string;
@@ -326,6 +335,13 @@ export const organizationApi = {
 };
 
 // ── Meeting API ──────────────────────────────────────────
+
+export const topicsApi = {
+  list: (meetingId: string): Promise<Topic[]> =>
+    apiFetch<Topic[]>(/api/v1/meetings//topics),
+  next: (meetingId: string): Promise<{message: string}> =>
+    apiFetch<{message: string}>(/api/v1/meetings//topics/next, { method: 'POST' }),
+};
 
 export const meetingsApi = {
   /** List all meetings with optional pagination. */
