@@ -74,7 +74,8 @@ import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADController';
 import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTranslationAudioMuting';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
+import { InviteMembersModal } from \'@/components/meetings/InviteMembersModal\';
+import { EndMeetingModal } from \'@/components/meetings/EndMeetingModal\';
 
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useWebSpeech } from '@/hooks/useWebSpeech';
@@ -2590,6 +2591,12 @@ export function MeetingRoomClient() {
       />
 
 
+      <EndMeetingModal
+        isOpen={isEndMeetingModalOpen}
+        onClose={() => setIsEndMeetingModalOpen(false)}
+        meetingId={meetingId}
+        onComplete={() => router.push('/member?tab=meetings')}
+      />
     </div>
   );
 }

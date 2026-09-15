@@ -3,17 +3,16 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { meetingsApi } from '@/lib/api';
-import { Video, MicOff, Lock, Sparkles, Users, Clock, Calendar } from 'lucide-react';
 import {
-  Plus,
-  FileCheck2,
-  AlertTriangle,
-  Play,
-  ExternalLink,
-  Search,
-  CheckCircle2,
-  FileText,
+  Video,
+  MicOff,
+  Lock,
+  Sparkles,
+  Users,
+  Clock,
+  Calendar,
 } from 'lucide-react';
+import { Plus, FileCheck2, AlertTriangle, Play, ExternalLink, Search, CheckCircle2, FileText } from 'lucide-react';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 import { MOCK_EXECUTIVE_MANDATES, ExecutiveMandate } from '@/lib/workloadProtocolData';
@@ -164,10 +163,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const [newRoomCode, setNewRoomCode] = useState('');
   const [newAgendaText, setNewAgendaText] = useState('');
   const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
-  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);
   const [engMandates, setEngMandates] = useState<ExecutiveMandate[]>(
     MOCK_EXECUTIVE_MANDATES.filter((m) => m.targetDepartment === 'ENG')
   );
@@ -577,7 +573,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedMeetingForDetails({ id: mtg.id, title: mtg.title })}
+                    onClick={() => setSelectedMeetingForDetails({id: mtg.id, title: mtg.title})}
                     className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5 px-3"
                     title="Xem Biên Bản AI"
                   >

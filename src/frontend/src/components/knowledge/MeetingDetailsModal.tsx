@@ -13,11 +13,7 @@ interface MeetingDetailsModalProps {
   onClose: () => void;
 }
 
-export function MeetingDetailsModal({
-  meetingId,
-  meetingTitle,
-  onClose,
-}: MeetingDetailsModalProps) {
+export function MeetingDetailsModal({ meetingId, meetingTitle, onClose }: MeetingDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript' | 'docs'>('summary');
   const [loading, setLoading] = useState(true);
 
@@ -101,16 +97,14 @@ export function MeetingDetailsModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-bg-card w-full max-w-5xl h-[85vh] rounded-2xl border border-border flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-bg-base">
           <div>
             <h2 className="text-lg font-bold text-text-primary">{meetingTitle}</h2>
             <p className="text-xs text-text-secondary mt-1">Hồ sơ kiến thức cuộc họp</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors"
-          >
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -120,14 +114,14 @@ export function MeetingDetailsModal({
           {[
             { id: 'summary', label: 'Biên bản', icon: List },
             { id: 'transcript', label: 'Bản ghi', icon: MessageSquare },
-            { id: 'docs', label: 'Tài liệu', icon: FileText },
-          ].map((tab) => (
+            { id: 'docs', label: 'Tài liệu', icon: FileText }
+          ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`py-4 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-accent text-accent'
+                activeTab === tab.id 
+                  ? 'border-accent text-accent' 
                   : 'border-transparent text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -149,28 +143,22 @@ export function MeetingDetailsModal({
               {activeTab === 'summary' && (
                 <div className="max-w-3xl mx-auto space-y-6">
                   {!summary ? (
-                    <div className="text-center text-text-secondary py-12">
-                      Chưa có biên bản cho cuộc họp này.
-                    </div>
+                    <div className="text-center text-text-secondary py-12">Chưa có biên bản cho cuộc họp này.</div>
                   ) : (
                     <>
                       <div className="p-6 rounded-xl bg-bg-elevated border border-border space-y-4">
                         <h3 className="text-base font-bold text-accent">Tóm tắt</h3>
                         <div className="text-sm text-text-primary [&_table]:w-full [&_table]:border-collapse [&_table]:mb-6 [&_th]:border [&_th]:border-border [&_th]:bg-bg-card [&_th]:p-3 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:p-3 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {summary.summary}
-                          </ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
                         </div>
                       </div>
-
+                      
                       {summary.decisions && summary.decisions.length > 0 && (
                         <div className="p-6 rounded-xl bg-bg-elevated border border-border space-y-4">
                           <h3 className="text-base font-bold text-amber-500">Quyết định</h3>
                           <ul className="list-disc pl-5 space-y-2">
                             {summary.decisions.map((d: string, i: number) => (
-                              <li key={i} className="text-sm text-text-primary">
-                                {d}
-                              </li>
+                              <li key={i} className="text-sm text-text-primary">{d}</li>
                             ))}
                           </ul>
                         </div>
@@ -184,23 +172,16 @@ export function MeetingDetailsModal({
               {activeTab === 'transcript' && (
                 <div className="max-w-3xl mx-auto space-y-4">
                   {transcripts.length === 0 ? (
-                    <div className="text-center text-text-secondary py-12">
-                      Chưa có bản ghi nào.
-                    </div>
+                    <div className="text-center text-text-secondary py-12">Chưa có bản ghi nào.</div>
                   ) : (
                     transcripts.map((t, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-4 p-4 rounded-xl bg-bg-elevated border border-border/50"
-                      >
+                      <div key={i} className="flex gap-4 p-4 rounded-xl bg-bg-elevated border border-border/50">
                         <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs shrink-0">
                           {t.speaker?.full_name?.charAt(0) || '?'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-text-primary">
-                              {t.speaker?.full_name || 'Khách'}
-                            </span>
+                            <span className="text-xs font-bold text-text-primary">{t.speaker?.full_name || 'Khách'}</span>
                             <span className="text-[10px] text-text-muted">
                               {typeof t.start_time === 'number'
                                 ? format(new Date(t.start_time * 1000), 'HH:mm:ss')
@@ -221,53 +202,32 @@ export function MeetingDetailsModal({
                   {/* Upload Card */}
                   <label className="border-2 border-dashed border-border hover:border-accent/40 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-bg-elevated group">
                     <UploadCloud className="w-8 h-8 text-text-muted group-hover:text-accent transition-colors mb-3" />
-                    <span className="text-sm font-bold text-text-primary">
-                      Tải lên tài liệu cho cuộc họp này
-                    </span>
-                    <span className="text-xs text-text-secondary mt-1">
-                      PDF / DOCX (Tự động chuyển đổi AI)
-                    </span>
-                    <input
-                      type="file"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="hidden"
-                    />
+                    <span className="text-sm font-bold text-text-primary">Tải lên tài liệu cho cuộc họp này</span>
+                    <span className="text-xs text-text-secondary mt-1">PDF / DOCX (Tự động chuyển đổi AI)</span>
+                    <input type="file" onChange={handleFileUpload} disabled={isUploading} className="hidden" />
                   </label>
 
                   {/* List */}
                   <div className="space-y-3">
                     {documents.length === 0 ? (
-                      <div className="text-center text-text-secondary py-8 text-sm">
-                        Chưa có tài liệu nào được đính kèm.
-                      </div>
+                      <div className="text-center text-text-secondary py-8 text-sm">Chưa có tài liệu nào được đính kèm.</div>
                     ) : (
-                      documents.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="p-4 rounded-xl bg-bg-elevated border border-border flex items-center justify-between"
-                        >
+                      documents.map(doc => (
+                        <div key={doc.id} className="p-4 rounded-xl bg-bg-elevated border border-border flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="p-2.5 rounded-lg bg-accent/10">
                               <FileText className="w-5 h-5 text-accent" />
                             </div>
                             <div>
-                              <div className="text-sm font-bold text-text-primary">
-                                {doc.filename}
-                              </div>
-                              <div className="text-xs text-text-secondary font-mono mt-0.5">
-                                {(doc.file_size / 1024).toFixed(1)} KB
-                              </div>
+                              <div className="text-sm font-bold text-text-primary">{doc.filename}</div>
+                              <div className="text-xs text-text-secondary font-mono mt-0.5">{(doc.file_size / 1024).toFixed(1)} KB</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="px-2.5 py-1 rounded-full bg-success/10 text-success border border-emerald-500/30 text-[10px] font-bold uppercase">
                               {doc.vector_status}
                             </span>
-                            <button
-                              onClick={() => handleDeleteDoc(doc.id)}
-                              className="p-2 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-                            >
+                            <button onClick={() => handleDeleteDoc(doc.id)} className="p-2 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>

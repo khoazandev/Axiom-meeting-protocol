@@ -12,9 +12,7 @@ export default function KnowledgeDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMeeting, setSelectedMeeting] = useState<{ id: string; title: string } | null>(
-    null
-  );
+  const [selectedMeeting, setSelectedMeeting] = useState<{id: string, title: string} | null>(null);
 
   useEffect(() => {
     loadMeetings();
@@ -32,10 +30,9 @@ export default function KnowledgeDashboardPage() {
     }
   }
 
-  const filteredMeetings = meetings.filter(
-    (m) =>
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.status.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMeetings = meetings.filter(m => 
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.status.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -79,30 +76,26 @@ export default function KnowledgeDashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredMeetings.map((meeting) => (
-              <div
-                key={meeting.id}
+              <div 
+                key={meeting.id} 
                 className="group p-5 rounded-xl border border-border bg-bg-elevated hover:border-accent/50 cursor-pointer transition-all duration-200"
-                onClick={() => setSelectedMeeting({ id: meeting.id, title: meeting.title })}
+                onClick={() => setSelectedMeeting({id: meeting.id, title: meeting.title})}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="p-2.5 rounded-lg bg-accent/10 text-accent group-hover:scale-110 transition-transform">
                     <Folder className="w-5 h-5" />
                   </div>
-                  <span
-                    className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      meeting.status === 'COMPLETED'
-                        ? 'bg-success/10 text-success'
-                        : meeting.status === 'IN_PROGRESS'
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-text-muted/10 text-text-secondary'
-                    }`}
-                  >
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    meeting.status === 'COMPLETED' ? 'bg-success/10 text-success' :
+                    meeting.status === 'IN_PROGRESS' ? 'bg-warning/10 text-warning' :
+                    'bg-text-muted/10 text-text-secondary'
+                  }`}>
                     {meeting.status}
                   </span>
                 </div>
-
+                
                 <h3 className="font-bold text-text-primary mb-1 line-clamp-1">{meeting.title}</h3>
-
+                
                 <div className="flex items-center gap-4 text-xs text-text-secondary mt-4">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
