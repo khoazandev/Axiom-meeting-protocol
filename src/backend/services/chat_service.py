@@ -132,20 +132,13 @@ async def build_rag_answer(
             f"Người dùng hỏi: {question}\n"
             f"Asightant:"
         )
-<<<<<<< HEAD:src/backend/services/ollama_service.py
-        return _call_ollama(prompt, max_tokens=150) or (
-            "Mình là Asightant — trợ lý họp thông minh (AI Copilot) được tích hợp ngay trong phòng họp này. "
-            "Mình nắm rõ toàn bộ nội dung Agenda cuộc họp, theo dõi các phát biểu theo thời gian thực, "
-            "hỗ trợ tra cứu tài liệu và giải đáp mọi câu hỏi liên quan đến phiên họp. "
-            "Bạn muốn Asightant hỗ trợ điều gì hôm nay? ✨"
-=======
         answer = await _call_llm(prompt, max_tokens=120)
         return answer or (
             "Mình là Axiom AI — trợ lý họp thông minh được tích hợp ngay trong phòng họp này. "
             "Mình có thể giúp bạn: tra cứu nội dung agenda, tìm thông tin trong tài liệu đã upload, "
             "tóm tắt những gì đã được thảo luận, và theo dõi mọi nhật ký sự kiện hệ thống theo thời gian thực. "
             "Bạn muốn hỏi gì về cuộc họp hôm nay không? 🎯"
->>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
+
         )
 
     # ── Greeting ──────────────────────────────────────────────────────────────
@@ -165,16 +158,11 @@ async def build_rag_answer(
             f"Câu hỏi ngoài phạm vi cuộc họp: {question}\n"
             f"Asightant:"
         )
-<<<<<<< HEAD:src/backend/services/ollama_service.py
-        return _call_ollama(prompt, max_tokens=100) or (
-            "Câu hỏi này nằm ngoài phạm vi cuộc họp và Agenda hiện tại. "
-            "Mình là Asightant, chuyên hỗ trợ về nội dung cuộc họp, kế hoạch thảo luận và các phát biểu. Bạn muốn hỏi gì về phiên họp không? 😊"
-=======
         answer = await _call_llm(prompt, max_tokens=100)
         return answer or (
             "Câu hỏi này nằm ngoài phạm vi của mình — mình chỉ hỗ trợ về nội dung và hoạt động cuộc họp thôi. "
             "Bạn muốn hỏi gì về agenda, tài liệu, hoặc những gì đang được thảo luận không? 😊"
->>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
+
         )
 
     # ── Meeting RAG ───────────────────────────────────────────────────────────
@@ -251,16 +239,11 @@ async def build_rag_answer(
             f"Lưu ý: Chưa có tài liệu hoặc transcript nào trong cuộc họp này.\n"
             f"Asightant:"
         )
-<<<<<<< HEAD:src/backend/services/ollama_service.py
-        return _call_ollama(prompt, max_tokens=150) or (
-            "Asightant chưa tìm thấy thông tin về điều này trong cuộc họp. "
-            "Bạn có thể bổ sung Agenda hoặc tiếp tục thảo luận để Asightant ghi nhận nhé!"
-=======
         answer = await _call_llm(prompt, max_tokens=150)
         return answer or (
             "Mình chưa tìm thấy thông tin về điều này trong cuộc họp. "
             "Thử upload tài liệu vào tab Files hoặc hỏi sau khi cuộc họp có thêm nội dung nhé!"
->>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
+
         )
 
     context_block = history_block + info_block + "\n\n".join(context_lines)
@@ -271,12 +254,9 @@ async def build_rag_answer(
         f"Asightant:"
     )
 
-<<<<<<< HEAD:src/backend/services/ollama_service.py
-    return _call_ollama(prompt, max_tokens=600) or _heuristic_answer(question, sources, live_transcript)
-=======
     answer = await _call_llm(prompt, max_tokens=450)
     return answer or _heuristic_answer(question, sources, live_transcript)
->>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
+
 
 
 # ── LLM call ───────────────────────────────────────────────────────────────
