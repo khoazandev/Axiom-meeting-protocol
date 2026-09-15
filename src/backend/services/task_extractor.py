@@ -133,8 +133,7 @@ class TaskExtractorService:
             # Combine
             user_content = time_context + pending_section + transcript_section + corrections_section
 
-            from src.backend.services.ollama_service import get_active_model
-            model_to_use = get_active_model() or settings.task_extractor_model
+            model_to_use = settings.task_extractor_model
 
             if "task-extractor" not in model_to_use:
                 user_content += (

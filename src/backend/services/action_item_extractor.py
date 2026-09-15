@@ -105,8 +105,7 @@ def _call_ollama_extraction(transcript_text: str) -> list[dict] | None:
         return None
 
     user_prompt = USER_PROMPT_TEMPLATE.format(transcript=transcript_text)
-    from src.backend.services.ollama_service import get_active_model
-    model_to_use = get_active_model() or settings.extraction_model
+    model_to_use = settings.extraction_model
 
     try:
         response = requests.post(

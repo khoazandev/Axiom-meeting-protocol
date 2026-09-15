@@ -86,9 +86,7 @@ def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str
     )
 
     try:
-        from src.backend.services.ollama_service import get_active_model
-
-        model_name = get_active_model()
+        model_name = settings.default_model
 
         response = requests.post(
             f"{settings.ollama_base_url.rstrip('/')}/api/generate",

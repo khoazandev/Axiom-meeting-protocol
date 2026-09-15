@@ -352,7 +352,7 @@ def remove_meeting_member(
 from pydantic import BaseModel as _PydanticBaseModel
 from livekit import api as livekit_api
 from src.backend.core.config import get_settings
-from src.backend.services.ollama_service import build_rag_answer
+from src.backend.services.chat_service import build_rag_answer
 
 
 class TokenResponse(_PydanticBaseModel):
