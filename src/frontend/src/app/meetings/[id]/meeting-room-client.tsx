@@ -1110,6 +1110,7 @@ export function MeetingRoomClient() {
 
   // Action Items and Transcripts state
   const [actionItems, setActionItems] = useState<ActionItemResponse[]>([]);
+  const [isEndMeetingModalOpen, setIsEndMeetingModalOpen] = useState(false);
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
@@ -1285,15 +1286,23 @@ export function MeetingRoomClient() {
   }, [user]);
 
   const handleExitMeeting = useCallback(() => {
-    const role = user?.role;
-    if (role === 'OWNER' || role === 'ADMIN') {
-      router.push('/admin');
-    } else if (role === 'MANAGER') {
-      router.push('/manager');
-    } else {
-      router.push('/member?tab=meetings');
+    const isHost = meetingMembers.some(m => m.user_id === user?.id && m.role === 'HOST');
+    if (isHost) {
+      setIsEndMeetingModalOpen(true);
+      return;
     }
-  }, [user, router]);
+    
+    if (window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc họp?')) {
+      const role = user?.role;
+      if (role === 'OWNER' || role === 'ADMIN') {
+        router.push('/admin');
+      } else if (role === 'MANAGER') {
+        router.push('/manager');
+      } else {
+        router.push('/member?tab=meetings');
+      }
+    }
+  }, [meetingMembers, user, router]);
 
   const getSpeakerDisplayName = useCallback(
     (identity?: string, name?: string) => {
