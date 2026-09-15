@@ -1,38 +1,19 @@
-with open('src/frontend/src/components/member/MemberMeetingsTab.tsx', 'r', encoding='utf-8') as f:
-    content = f.read()
+import re
 
-import_str = \"import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';\n\"
-if import_str not in content:
-    content = content.replace(\"import { meetingsApi\", import_str + \"import { meetingsApi\")
+with open('src/frontend/src/app/meetings/[id]/meeting-room-client.tsx', 'r', encoding='utf-8') as f:
+    text = f.read()
 
-state_str = \"const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);\"
-if state_str not in content:
-    content = content.replace(\"const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);\", \"const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);\\n  \" + state_str)
+# Remove import
+text = re.sub(r\"import\s+\{\s*PostMeetingCascadeModal\s*\}\s+from\s+['\"].*?['\"];\n?\", '', text)
 
-button_str = \"\"\"
-                      <button
-                        onClick={() => setSelectedMeetingForDetails({ id: m.id, title: m.title })}
-                        className=\"flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shrink-0\"
-                        title=\"Biên b?n AI\"
-                      >
-                        <Sparkles className=\"w-4 h-4\" />
-                        <span className=\"text-sm font-medium\">Biên B?n AI</span>
-                      </button>
-\"\"\"
-if \"Biên B?n AI\" not in content:
-    content = content.replace(\"{/* Actions */}\", \"{/* Actions */}\\n\" + button_str)
+# Remove state
+text = re.sub(r\"const\s+\[isPostMeetingModalOpen,\s*setIsPostMeetingModalOpen\]\s*=\s*useState\(false\);\n?\", '', text)
 
-modal_str = \"\"\"
-      {selectedMeetingForDetails && (
-        <MeetingDetailsModal
-          meetingId={selectedMeetingForDetails.id}
-          meetingTitle={selectedMeetingForDetails.title}
-          onClose={() => setSelectedMeetingForDetails(null)}
-        />
-      )}
-\"\"\"
-if \"MeetingDetailsModal meetingId\" not in content:
-    content = content.replace(\"export function MemberMeetingsTab\", modal_str + \"\\nexport function MemberMeetingsTab\")
+# Remove MoM Cascade Trigger button (line 1697 to 1705 roughly)
+text = re.sub(r\"\{\/\*\s*MoM Cascade Trigger\s*\*\/\}\s*<button[^>]*onClick=\{\(\)\s*=>\s*setIsPostMeetingModalOpen\(true\)\}[^>]*>.*?<\/button>\", '', text, flags=re.DOTALL)
 
-with open('src/frontend/src/components/member/MemberMeetingsTab.tsx', 'w', encoding='utf-8') as f:
-    f.write(content)
+# Remove Modal usage
+text = re.sub(r\"\{\/\*\s*Post-Meeting Summary & Action Item Cascade Modal\s*\*\/\}\s*<PostMeetingCascadeModal[^>]*\/>\", '', text, flags=re.DOTALL)
+
+with open('src/frontend/src/app/meetings/[id]/meeting-room-client.tsx', 'w', encoding='utf-8') as f:
+    f.write(text)
