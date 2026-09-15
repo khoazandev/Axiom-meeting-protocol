@@ -119,6 +119,27 @@ def delete_meeting(
     meeting = query.first()
     if meeting is None:
         raise NotFoundException(resource="Meeting")
+        
+    # Manually delete related entities in strict order to avoid foreign key violations
+    db.query(models.KnowledgeChunk).filter(models.KnowledgeChunk.meeting_id == meeting.id).delete()
+    db.query(models.KnowledgeDocument).filter(models.KnowledgeDocument.meeting_id == meeting.id).delete()
+    db.query(models.ExtractionCorrection).filter(models.ExtractionCorrection.meeting_id == meeting.id).delete()
+    db.query(models.MeetingChatMessage).filter(models.MeetingChatMessage.meeting_id == meeting.id).delete()
+    db.query(models.MeetingDecision).filter(models.MeetingDecision.meeting_id == meeting.id).delete()
+    
+    # Issue references TranscriptSegment, so delete Issue first
+    db.query(models.Issue).filter(models.Issue.meeting_id == meeting.id).delete()
+    
+    # FollowUpTask and TranscriptSegment reference Topic, so delete them before Topic
+    db.query(models.FollowUpTask).filter(models.FollowUpTask.meeting_id == meeting.id).delete()
+    db.query(models.TranscriptSegment).filter(models.TranscriptSegment.meeting_id == meeting.id).delete()
+    
+    db.query(models.Topic).filter(models.Topic.meeting_id == meeting.id).delete()
+    db.query(models.MeetingSummary).filter(models.MeetingSummary.meeting_id == meeting.id).delete()
+    db.query(models.MeetingDocument).filter(models.MeetingDocument.meeting_id == meeting.id).delete()
+    db.query(models.MeetingMember).filter(models.MeetingMember.meeting_id == meeting.id).delete()
+    db.query(models.JiraProject).filter(models.JiraProject.meeting_id == meeting.id).delete()
+
     db.delete(meeting)
     db.commit()
     return MessageResponse(message="Meeting deleted successfully")
