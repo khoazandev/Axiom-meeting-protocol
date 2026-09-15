@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Plus,
   Trash2,
-  Send
+  Send,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,7 +21,7 @@ interface EndMeetingModalProps {
   onClose: () => void;
   onLeave: () => void;
   members: any[];
-  onEndMeeting: () => Promise<{summary: string | null, tasks: any[], meetingId: string} | null>;
+  onEndMeeting: () => Promise<{ summary: string | null; tasks: any[]; meetingId: string } | null>;
 }
 
 export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
@@ -48,19 +48,19 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
       if (result) {
         let cleanSummary = result.summary || '';
         // Strip out table if it was generated
-        cleanSummary = cleanSummary.replace(/## 7\. Danh sách Công vi?c[\s\S]*/g, '');
-        
+        cleanSummary = cleanSummary.replace(/## 7\. Danh sï¿½ch Cï¿½ng vi?c[\s\S]*/g, '');
+
         setSummaryData(cleanSummary.trim());
         setTasks(result.tasks || []);
         setMeetingId(result.meetingId);
         setStep('summary');
       } else {
-        setError('Không th? t?o b?n tóm t?t cu?c h?p.');
+        setError('Khï¿½ng th? t?o b?n tï¿½m t?t cu?c h?p.');
         setStep('prompt');
       }
     } catch (err) {
       console.error(err);
-      setError('Ðã x?y ra l?i khi k?t thúc cu?c h?p.');
+      setError('ï¿½ï¿½ x?y ra l?i khi k?t thï¿½c cu?c h?p.');
       setStep('prompt');
     }
   };
@@ -73,18 +73,18 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
   const handlePushToJira = async () => {
     try {
       setIsPushing(true);
-      const payload = tasks.map(t => ({
+      const payload = tasks.map((t) => ({
         id: t.id,
         title: t.title,
         assignee_id: t.assignee_id,
-        deadline: t.deadline
+        deadline: t.deadline,
       }));
       await meetingsApi.pushToJira(meetingId, payload);
-      alert("Ðã d?y thành công lên MiniJira!");
+      alert('ï¿½ï¿½ d?y thï¿½nh cï¿½ng lï¿½n MiniJira!');
       handleDone();
-    } catch(err) {
+    } catch (err) {
       console.error(err);
-      alert("L?i khi d?y lên Jira.");
+      alert('L?i khi d?y lï¿½n Jira.');
     } finally {
       setIsPushing(false);
     }
@@ -103,19 +103,25 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
   };
 
   const addTask = () => {
-    setTasks([...tasks, { id: Date.now().toString(), title: '', assignee_id: null, deadline: null }]);
+    setTasks([
+      ...tasks,
+      { id: Date.now().toString(), title: '', assignee_id: null, deadline: null },
+    ]);
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-card w-full max-w-4xl rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[90vh]">
-        
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             {step === 'prompt' && <LogOut className="w-5 h-5 text-primary" />}
             {step === 'loading' && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
             {step === 'summary' && <FileText className="w-5 h-5 text-emerald-500" />}
-            {step === 'prompt' ? 'R?i phòng h?p' : step === 'loading' ? 'Ðang k?t thúc cu?c h?p...' : 'Biên b?n & Giao vi?c'}
+            {step === 'prompt'
+              ? 'R?i phï¿½ng h?p'
+              : step === 'loading'
+                ? 'ï¿½ang k?t thï¿½c cu?c h?p...'
+                : 'Biï¿½n b?n & Giao vi?c'}
           </h2>
           {step !== 'loading' && (
             <button
@@ -131,9 +137,10 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
           {step === 'prompt' && (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground">
-                B?n là Ch? t?a (Host) c?a cu?c h?p này. B?n mu?n ch? t?m th?i r?i phòng, hay mu?n k?t thúc hoàn toàn cu?c h?p cho t?t c? m?i ngu?i?
+                B?n lï¿½ Ch? t?a (Host) c?a cu?c h?p nï¿½y. B?n mu?n ch? t?m th?i r?i phï¿½ng, hay mu?n
+                k?t thï¿½c hoï¿½n toï¿½n cu?c h?p cho t?t c? m?i ngu?i?
               </div>
-              
+
               {error && (
                 <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
                   {error}
@@ -149,8 +156,10 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
                     <LogOut className="w-6 h-6 text-foreground" />
                   </div>
                   <div>
-                    <div className="font-bold text-foreground mb-1">Ch? r?i phòng</div>
-                    <div className="text-xs text-muted-foreground">Cu?c h?p v?n ti?p t?c cho nh?ng ngu?i khác.</div>
+                    <div className="font-bold text-foreground mb-1">Ch? r?i phï¿½ng</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cu?c h?p v?n ti?p t?c cho nh?ng ngu?i khï¿½c.
+                    </div>
                   </div>
                 </button>
 
@@ -162,8 +171,10 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
                     <Power className="w-6 h-6 text-destructive" />
                   </div>
                   <div>
-                    <div className="font-bold text-destructive mb-1">K?t thúc cho t?t c?</div>
-                    <div className="text-xs text-muted-foreground">Ðóng phòng h?p & kích ho?t AI t?o Biên b?n.</div>
+                    <div className="font-bold text-destructive mb-1">K?t thï¿½c cho t?t c?</div>
+                    <div className="text-xs text-muted-foreground">
+                      ï¿½ï¿½ng phï¿½ng h?p & kï¿½ch ho?t AI t?o Biï¿½n b?n.
+                    </div>
                   </div>
                 </button>
               </div>
@@ -174,7 +185,8 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <div className="text-sm font-medium text-muted-foreground text-center max-w-md">
-                H? th?ng dang t?ng h?p Quy?t d?nh và Công vi?c d? sinh Biên b?n cu?c h?p. Quá trình này có th? m?t vài giây...
+                H? th?ng dang t?ng h?p Quy?t d?nh vï¿½ Cï¿½ng vi?c d? sinh Biï¿½n b?n cu?c h?p. Quï¿½ trï¿½nh
+                nï¿½y cï¿½ th? m?t vï¿½i giï¿½y...
               </div>
             </div>
           )}
@@ -182,77 +194,100 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
           {step === 'summary' && (
             <div className="flex flex-col gap-8">
               <div className="prose prose-sm dark:prose-invert max-w-none bg-muted/20 p-6 rounded-xl border border-border">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {summaryData}
-                </ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryData}</ReactMarkdown>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                    Duy?t & Phân công Công vi?c
+                    Duy?t & Phï¿½n cï¿½ng Cï¿½ng vi?c
                   </h3>
-                  <button onClick={addTask} className="text-xs font-medium px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Thêm vi?c
+                  <button
+                    onClick={addTask}
+                    className="text-xs font-medium px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Thï¿½m vi?c
                   </button>
                 </div>
-                
+
                 <div className="border border-border rounded-xl overflow-hidden">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
                       <tr>
-                        <th className="px-4 py-3">Tên công vi?c</th>
-                        <th className="px-4 py-3 w-48">Ngu?i ph? trách</th>
-                        <th className="px-4 py-3 w-40">H?n chót</th>
-                        <th className="px-4 py-3 w-16 text-center">Xóa</th>
+                        <th className="px-4 py-3">Tï¿½n cï¿½ng vi?c</th>
+                        <th className="px-4 py-3 w-48">Ngu?i ph? trï¿½ch</th>
+                        <th className="px-4 py-3 w-40">H?n chï¿½t</th>
+                        <th className="px-4 py-3 w-16 text-center">Xï¿½a</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {tasks.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground italic">
-                            Không có công vi?c nào du?c trích xu?t
+                          <td
+                            colSpan={4}
+                            className="px-4 py-6 text-center text-muted-foreground italic"
+                          >
+                            Khï¿½ng cï¿½ cï¿½ng vi?c nï¿½o du?c trï¿½ch xu?t
                           </td>
                         </tr>
-                      ) : tasks.map((task, idx) => (
-                        <tr key={idx} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2">
-                            <input 
-                              type="text" 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
-                              value={task.title}
-                              onChange={e => updateTask(idx, 'title', e.target.value)}
-                              placeholder="Nh?p tên công vi?c..."
-                            />
-                          </td>
-                          <td className="px-4 py-2">
-                            <select 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors appearance-none"
-                              value={task.assignee_id || ''}
-                              onChange={e => updateTask(idx, 'assignee_id', e.target.value || null)}
-                            >
-                              <option value="">-- Ch?n ngu?i --</option>
-                              {members.map(m => (
-                                <option key={m.user_id} value={m.user_id}>{m.user_name || m.user_id}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-2">
-                            <input 
-                              type="date" 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
-                              value={task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : ''}
-                              onChange={e => updateTask(idx, 'deadline', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                            />
-                          </td>
-                          <td className="px-4 py-2 text-center">
-                            <button onClick={() => removeTask(idx)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      ) : (
+                        tasks.map((task, idx) => (
+                          <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
+                                value={task.title}
+                                onChange={(e) => updateTask(idx, 'title', e.target.value)}
+                                placeholder="Nh?p tï¿½n cï¿½ng vi?c..."
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <select
+                                className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors appearance-none"
+                                value={task.assignee_id || ''}
+                                onChange={(e) =>
+                                  updateTask(idx, 'assignee_id', e.target.value || null)
+                                }
+                              >
+                                <option value="">-- Ch?n ngu?i --</option>
+                                {members.map((m) => (
+                                  <option key={m.user_id} value={m.user_id}>
+                                    {m.user_name || m.user_id}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="date"
+                                className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
+                                value={
+                                  task.deadline
+                                    ? new Date(task.deadline).toISOString().split('T')[0]
+                                    : ''
+                                }
+                                onChange={(e) =>
+                                  updateTask(
+                                    idx,
+                                    'deadline',
+                                    e.target.value ? new Date(e.target.value).toISOString() : null
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <button
+                                onClick={() => removeTask(idx)}
+                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -267,15 +302,19 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
               onClick={handleDone}
               className="px-5 py-2.5 rounded-xl border border-border bg-card text-foreground hover:bg-muted font-medium transition-colors"
             >
-              Ðóng (Không d?y Jira)
+              ï¿½ï¿½ng (Khï¿½ng d?y Jira)
             </button>
             <button
               onClick={handlePushToJira}
               disabled={isPushing}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {isPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Luu & Ð?y lên MiniJira
+              {isPushing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Luu & ï¿½?y lï¿½n MiniJira
             </button>
           </div>
         )}

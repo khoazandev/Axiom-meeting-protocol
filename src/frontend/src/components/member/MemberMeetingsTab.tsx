@@ -36,7 +36,10 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -230,7 +233,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     {user && (
                       <button
                         type="button"
-                        onClick={() => setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })}
+                        onClick={() =>
+                          setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })
+                        }
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shrink-0 cursor-pointer"
                         title="Biên bản AI"
                       >

@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type MemberSectionKey =
-  'meetings' | 'jira' | 'calendar' | 'knowledge' | 'settings';
+export type MemberSectionKey = 'meetings' | 'jira' | 'calendar' | 'knowledge' | 'settings';
 
 export interface MemberNavSectionItem {
   id: MemberSectionKey;
