@@ -75,7 +75,7 @@ import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADCo
 import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTranslationAudioMuting';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
-import { PostMeetingCascadeModal } from '@/components/meetings/PostMeetingCascadeModal';
+
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useWebSpeech } from '@/hooks/useWebSpeech';
 import { MeetingPreJoinLobby, BackgroundOption } from '@/components/meetings/MeetingPreJoinLobby';
@@ -1251,7 +1251,7 @@ export function MeetingRoomClient() {
 
   const user = useAuthStore((state) => state.user);
   const [participantName, setParticipantName] = useState(() => user?.full_name || '');
-  const [isPostMeetingModalOpen, setIsPostMeetingModalOpen] = useState(false);
+
 
   useEffect(() => {
     if (user?.full_name) {
@@ -1694,16 +1694,7 @@ export function MeetingRoomClient() {
             )}
           </button>
 
-          {/* MoM Cascade Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsPostMeetingModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
-            title="Kích hoạt AI tổng kết phiên họp và phân bổ action items cho Khối / Member"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tổng Kết MoM</span>
-          </button>
+
 
           {/* Invite Members Modal Trigger */}
           <button
@@ -2598,16 +2589,7 @@ export function MeetingRoomClient() {
         onClose={() => setInviteModalOpen(false)}
       />
 
-      {/* Post-Meeting Summary & Action Item Cascade Modal */}
-      <PostMeetingCascadeModal
-        isOpen={isPostMeetingModalOpen}
-        onClose={() => setIsPostMeetingModalOpen(false)}
-        meetingId={meetingId}
-        meetingTitle={meeting?.title || 'Cuộc họp'}
-        userRole={user?.role}
-        initialActionItems={actionItems}
-        onComplete={(target) => router.push(target)}
-      />
+
     </div>
   );
 }
