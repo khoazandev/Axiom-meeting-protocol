@@ -108,7 +108,7 @@ def read_meeting(
 
 @router.delete("/{meeting_id}", response_model=MessageResponse)
 def delete_meeting(
-    meeting_id: int,
+    meeting_id: str,
     member: WorkspaceMember | None = Depends(get_optional_workspace_member),
     db: Session = Depends(get_db),
 ):
