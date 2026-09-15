@@ -205,18 +205,23 @@ def delete_meeting(
             db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE meeting_id = :mid'), {'mid': meeting_id})
             db.execute(text('DELETE FROM issues WHERE meeting_id = :mid'), {'mid': meeting_id})
 
-        # 2. follow up tasks FIRST (has FK to transcript_segments)
+        # 1.5 meeting decisions
+        db.execute(text('DELETE FROM meeting_decisions WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 2. follow up tasks FIRST (has FK to transcript_segments and topics)
         db.execute(text('DELETE FROM follow_up_tasks WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 3. extraction corrections
         db.execute(text('DELETE FROM extraction_corrections WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 4. meeting chat messages
         db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 5. knowledge chunks
+        # 5. knowledge chunks & documents
         db.execute(text('DELETE FROM knowledge_chunks WHERE meeting_id = :mid'), {'mid': meeting_id})
+        db.execute(text('DELETE FROM knowledge_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 6. meeting summaries
         db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 7. transcript segments
         db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 7.5 topics (must be deleted after transcript segments and tasks)
+        db.execute(text('DELETE FROM topics WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 8. meeting documents
         db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
         # 9. meeting members
