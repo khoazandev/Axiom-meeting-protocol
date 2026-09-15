@@ -16,7 +16,7 @@ import {
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type MemberSectionKey =
-  'meetings' | 'tasks' | 'jira' | 'calendar' | 'knowledge' | 'settings';
+  'meetings' | 'jira' | 'calendar' | 'knowledge' | 'settings';
 
 export interface MemberNavSectionItem {
   id: MemberSectionKey;
@@ -25,31 +25,22 @@ export interface MemberNavSectionItem {
   icon: React.ElementType;
   badge?: string;
   badgeColor?: string;
-  shortcut: string;
+  shortcut?: string;
 }
 
 export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
   {
     id: 'meetings',
-    label: 'Cuộc Họp & Radar',
-    sublabel: 'Live SFU & Vào họp nhanh',
+    label: 'Phòng Họp & Ghi Âm',
+    sublabel: 'Tham gia, xem lại biên bản AI',
     icon: Video,
     badge: '1 Live',
     badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     shortcut: '⌘1',
   },
   {
-    id: 'tasks',
-    label: 'Nhiệm Vụ AI Của Tôi',
-    sublabel: 'Action items bóc tách sau họp',
-    icon: CheckSquare,
-    badge: '3 Mới',
-    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
-    shortcut: '⌘2',
-  },
-  {
     id: 'jira',
-    label: 'Mini Jira Workspace',
+    label: 'Không Gian MiniJira Workspace',
     sublabel: 'Bảng Agile Sprint Kanban 4 cột',
     icon: Kanban,
     badge: 'SMA',

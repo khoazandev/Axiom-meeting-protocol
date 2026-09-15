@@ -132,6 +132,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        import logging
+        logging.getLogger("axiom.error").error("Unhandled exception at %s: %s", request.url, exc, exc_info=True)
         # Log the real error in production (future: error tracking service)
         return _error_response(
             500,

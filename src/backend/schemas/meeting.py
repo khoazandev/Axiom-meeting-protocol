@@ -12,6 +12,7 @@ class MeetingCreate(BaseModel):
     organization_id: str | None = None
     department_id: str | None = None
     scheduled_at: datetime | None = None
+    agenda_text: str | None = None
 
 
 class MeetingUpdate(BaseModel):
@@ -61,3 +62,14 @@ class MeetingMemberResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     token: str
+
+
+class PushToJiraTaskRequest(BaseModel):
+    id: str
+    title: str
+    assignee_id: str | None = None
+    deadline: datetime | None = None
+
+
+class PushToJiraRequest(BaseModel):
+    tasks: list[PushToJiraTaskRequest]

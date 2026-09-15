@@ -31,12 +31,43 @@ def create_meeting(
     """Create a new meeting.
     """
     meeting_data = meeting.model_dump()
+    agenda_text = meeting_data.pop("agenda_text", None)
     if member:
         meeting_data["workspace_id"] = member.workspace_id
         meeting_data["created_by_id"] = member.user_id
 
     db_meeting = models.Meeting(**meeting_data)
     db.add(db_meeting)
+    db.flush()
+
+    if agenda_text:
+        import re
+        lines = [line.strip() for line in agenda_text.split("\n") if line.strip()]
+        
+        # Smart extraction: Extract both numbered lists AND bullet points
+        valid_pattern = re.compile(r"^(\d+[\.\)]|[\-\*\•])\s+")
+        valid_lines = [line for line in lines if valid_pattern.match(line)]
+        
+        if valid_lines:
+            lines = valid_lines
+
+        for i, line in enumerate(lines):
+            # Clean up bullet points (e.g. "- ", "1. ", "• ")
+            title = line
+            for prefix in ["- ", "* ", "• "]:
+                if title.startswith(prefix):
+                    title = title[len(prefix):]
+            # For numbers like "1. " or "1) "
+            title = re.sub(r"^\d+[\.\)]\s+", "", title)
+            
+            topic = models.Topic(
+                meeting_id=db_meeting.id,
+                title=title,
+                status=models.TopicStatusEnum.PENDING,
+                order_index=i
+            )
+            db.add(topic)
+
     db.commit()
     db.refresh(db_meeting)
     return db_meeting
@@ -102,9 +133,17 @@ def get_meeting_token(
     meeting_id: str, 
     participant_name: str,
     language: str = "vi",
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """Generate a LiveKit access token for a meeting room."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise NotFoundException(resource="Meeting")
+    if meeting.status == models.MeetingStatusEnum.COMPLETED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Cuộc họp đã kết thúc. Không thể tham gia lại.")
+
     settings = get_settings()
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     unique_identity = f"user_{current_user.id}"
@@ -180,3 +219,88 @@ def translate_sentence(
         to_lang=req.to_lang
     )
 
+from typing import List
+
+class TopicResponse(BaseModel):
+    id: str
+    meeting_id: str
+    title: str
+    transcript_text: str | None = None
+    status: str
+    order_index: int
+
+    model_config = {"from_attributes": True}
+
+@router.get("/{meeting_id}/topics", response_model=List[TopicResponse])
+def get_meeting_topics(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """List topics for a meeting."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise NotFoundException(resource="Meeting")
+    topics = db.query(models.Topic).filter(models.Topic.meeting_id == meeting_id).order_by(models.Topic.order_index).all()
+    return topics
+
+from fastapi import BackgroundTasks
+
+@router.post("/{meeting_id}/topics/next", response_model=MessageResponse)
+def next_meeting_topic(
+    meeting_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Advance the meeting to the next topic and trigger decision extraction for the completed topic."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise NotFoundException(resource="Meeting")
+    if meeting.created_by_id != current_user.id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Only host can advance topics.")
+    
+    # Get all topics for the meeting sorted by order_index
+    topics = db.query(models.Topic).filter(models.Topic.meeting_id == meeting_id).order_by(models.Topic.order_index).all()
+    if not topics:
+        return MessageResponse(message="No topics found for this meeting.")
+    
+    current_topic = None
+    next_topic = None
+    
+    for i, topic in enumerate(topics):
+        if topic.status == models.TopicStatusEnum.IN_PROGRESS:
+            current_topic = topic
+            if i + 1 < len(topics):
+                next_topic = topics[i + 1]
+            break
+    
+    # If no topic is IN_PROGRESS, maybe it's the start of the meeting. Find the first PENDING.
+    if not current_topic:
+        for topic in topics:
+            if topic.status == models.TopicStatusEnum.PENDING:
+                next_topic = topic
+                break
+    
+    if current_topic:
+        # Mark as completed
+        current_topic.status = models.TopicStatusEnum.COMPLETED
+        # Aggregate transcripts for this topic
+        segments = db.query(models.TranscriptSegment).filter(
+            models.TranscriptSegment.topic_id == current_topic.id
+        ).order_by(models.TranscriptSegment.sequence).all()
+        
+        if segments:
+            full_text = "\n".join([f"{seg.speaker.full_name if seg.speaker else 'Unknown'}: {seg.content}" for seg in segments])
+            current_topic.transcript_text = full_text
+        
+        # Trigger AI extraction in background
+        from src.backend.services.topic_extraction import extract_decisions_from_topic_bg
+        background_tasks.add_task(extract_decisions_from_topic_bg, current_topic.id, current_topic.transcript_text)
+    
+    if next_topic:
+        next_topic.status = models.TopicStatusEnum.IN_PROGRESS
+    
+    db.commit()
+    return MessageResponse(message="Moved to next topic successfully.")

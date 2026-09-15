@@ -9,7 +9,6 @@ import {
   MEMBER_NAV_SECTIONS,
 } from '@/components/member/MemberCurlyBracketSidebar';
 import { MemberMeetingsTab } from '@/components/member/MemberMeetingsTab';
-import { MemberTasksTab } from '@/components/member/MemberTasksTab';
 import { MemberJiraWorkspaceTab } from '@/components/member/MemberJiraWorkspaceTab';
 import { MemberCalendarTab } from '@/components/member/MemberCalendarTab';
 import { MemberKnowledgeTab } from '@/components/member/MemberKnowledgeTab';
@@ -254,13 +253,6 @@ function MemberWorkspaceInner() {
         {/* Tab View Container - 100% Full Width, EXACTLY 1 SIDEBAR */}
         <div className="w-full transition-opacity duration-200">
           {activeSection === 'meetings' && <MemberMeetingsTab onNotify={showToast} />}
-
-          {activeSection === 'tasks' && (
-            <MemberTasksTab
-              onNotify={showToast}
-              onNavigateToJira={() => handleSelectSection('jira')}
-            />
-          )}
 
           {activeSection === 'jira' && <MemberJiraWorkspaceTab onNotify={showToast} />}
 

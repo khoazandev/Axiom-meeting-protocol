@@ -81,6 +81,18 @@ class FollowUpTaskSourceEnum(str, enum.Enum):
     MANUAL = "MANUAL"
 
 
+class MeetingDecisionStatusEnum(str, enum.Enum):
+    PROPOSED = "PROPOSED"
+    AGREED = "AGREED"
+    REJECTED = "REJECTED"
+
+
+class TopicStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+
 class OrgInvitationStatusEnum(str, enum.Enum):
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
@@ -311,6 +323,9 @@ class Meeting(database.Base):
     members = relationship(
         "MeetingMember", back_populates="meeting", cascade="all, delete-orphan"
     )
+    decisions = relationship(
+        "MeetingDecision", back_populates="meeting", cascade="all, delete-orphan"
+    )
 
     @property
     def agenda(self) -> str | None:
@@ -429,6 +444,9 @@ class TranscriptSegment(database.Base):
     meeting_id = Column(
         String, ForeignKey("meetings.id"), nullable=False, index=True
     )
+    topic_id = Column(
+        String, ForeignKey("topics.id"), nullable=True, index=True
+    )
     speaker_id = Column(String, ForeignKey("users.id"), nullable=True)
     content = Column(Text, nullable=False)
     start_time = Column(String, nullable=False)
@@ -438,6 +456,7 @@ class TranscriptSegment(database.Base):
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
     meeting = relationship("Meeting")
+    topic = relationship("Topic")
     speaker = relationship("User", foreign_keys=[speaker_id])
 
     @property
@@ -472,6 +491,9 @@ class FollowUpTask(database.Base):
     meeting_id = Column(
         String, ForeignKey("meetings.id"), nullable=False, index=True
     )
+    topic_id = Column(
+        String, ForeignKey("topics.id"), nullable=True, index=True
+    )
     transcript_segment_id = Column(
         String, ForeignKey("transcript_segments.id"), nullable=True
     )
@@ -484,6 +506,7 @@ class FollowUpTask(database.Base):
 
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    evidence_quote = Column(Text, nullable=True)
     deadline = Column(DateTime, nullable=True)
     status = Column(
         Enum(FollowUpTaskStatusEnum),
@@ -495,6 +518,7 @@ class FollowUpTask(database.Base):
         default=FollowUpTaskSourceEnum.MANUAL,
         nullable=False,
     )
+    issue_id = Column(String(36), ForeignKey("issues.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -504,6 +528,88 @@ class FollowUpTask(database.Base):
 
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
+
+
+class Topic(database.Base):
+    __tablename__ = "topics"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(
+        String, ForeignKey("meetings.id"), nullable=False, index=True
+    )
+    title = Column(String, nullable=False)
+    transcript_text = Column(Text, nullable=True)
+    status = Column(
+        Enum(TopicStatusEnum),
+        default=TopicStatusEnum.PENDING,
+        nullable=False,
+    )
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    meeting = relationship("Meeting")
+
+
+class MeetingDecision(database.Base):
+    __tablename__ = "meeting_decisions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    meeting_id = Column(
+        String, ForeignKey("meetings.id"), nullable=False, index=True
+    )
+    topic_id = Column(
+        String, ForeignKey("topics.id"), nullable=True, index=True
+    )
+    transcript_segment_id = Column(
+        String, ForeignKey("transcript_segments.id"), nullable=True
+    )
+    proposer_id = Column(String, ForeignKey("users.id"), nullable=True)
+    description = Column(Text, nullable=False)
+    key_message = Column(String, nullable=True)
+    evidence_sentence = Column(Text, nullable=True)
+    status = Column(
+        Enum(MeetingDecisionStatusEnum),
+        default=MeetingDecisionStatusEnum.PROPOSED,
+        nullable=False,
+    )
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    meeting = relationship("Meeting", back_populates="decisions")
+    topic = relationship("Topic")
+    transcript_segment = relationship("TranscriptSegment")
+    proposer = relationship("User", foreign_keys=[proposer_id])
+
+    @property
+    def proposer_name(self) -> str | None:
+        return self.proposer.full_name if self.proposer else None
+
+
+class KnowledgeDocument(database.Base):
+    __tablename__ = "knowledge_documents"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=True, index=True)
+    uploaded_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    file_size = Column(Integer, nullable=False)
+    vector_status = Column(String, default="READY")
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    organization = relationship("Organization")
+    meeting = relationship("Meeting")
+    uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
 
 
 class KnowledgeChunk(database.Base):

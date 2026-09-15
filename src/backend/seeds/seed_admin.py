@@ -12,7 +12,7 @@ def seed_admin_user(db: Session) -> dict:
     seed_roles_and_permissions(db)
 
     admin_email = "admin@axiom.com"
-    admin_password = "admin"  # or admin123
+    admin_password = "password123"  # Sync with frontend's AuthQuickAccess
     admin_name = "System Admin"
 
     # Remove old invalid emails if any
@@ -21,29 +21,32 @@ def seed_admin_user(db: Session) -> dict:
 
     existing_user = db.query(User).filter(User.email == admin_email).first()
     if existing_user:
-        return {
-            "email": existing_user.email,
-            "password": admin_password,
-            "full_name": existing_user.full_name,
-        }
+        existing_user.password_hash = hash_password(admin_password)
+        db.commit()
+        user = existing_user
+        org = db.query(Organization).filter(Organization.created_by_id == user.id).first()
+        if not org:
+            org = Organization(name="Axiom Enterprise", created_by_id=user.id)
+            db.add(org)
+            db.flush()
+    else:
+        # 1. Create Admin User
+        user = User(
+            email=admin_email,
+            password_hash=hash_password(admin_password),
+            full_name=admin_name,
+            provider="local",
+        )
+        db.add(user)
+        db.flush()
 
-    # 1. Create Admin User
-    user = User(
-        email=admin_email,
-        password_hash=hash_password(admin_password),
-        full_name=admin_name,
-        provider="local",
-    )
-    db.add(user)
-    db.flush()
-
-    # 2. Create Default Organization
-    org = Organization(
-        name="Axiom Enterprise",
-        created_by_id=user.id,
-    )
-    db.add(org)
-    db.flush()
+        # 2. Create Default Organization
+        org = Organization(
+            name="Axiom Enterprise",
+            created_by_id=user.id,
+        )
+        db.add(org)
+        db.flush()
 
     # 3. Assign OWNER Role
     owner_role = db.query(Role).filter(Role.name == "OWNER", Role.is_system == True).first()

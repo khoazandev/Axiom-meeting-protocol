@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
+import { Toaster } from '@/components/ui/sonner';
+import { GlobalErrorListener } from '@/components/shared/global-error-listener';
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: '--font-sans',
@@ -69,6 +71,8 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ErrorBoundary>{children}</ErrorBoundary>
+        <Toaster />
+        <GlobalErrorListener />
       </body>
     </html>
   );

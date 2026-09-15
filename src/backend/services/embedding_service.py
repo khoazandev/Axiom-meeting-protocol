@@ -31,7 +31,7 @@ class EmbeddingService:
             list[float] (768-dim) or None if embedding fails.
         """
         settings = get_settings()
-        base_url = (settings.ollama_base_url or "http://localhost:11434").rstrip("/")
+        base_url = (getattr(settings, "ollama_base_url", None) or "http://localhost:11434").rstrip("/")
 
         try:
             resp = requests.post(

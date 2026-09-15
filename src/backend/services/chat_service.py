@@ -1,6 +1,5 @@
 """
-Ollama Service — Qwen2.5 integration for in-meeting RAG chatbot.
-Uses Ollama local HTTP API: http://localhost:11434
+Chat Service — OpenRouter integration for in-meeting RAG chatbot.
 """
 
 from __future__ import annotations
@@ -9,41 +8,11 @@ import logging
 import re
 from typing import List, Dict, Any, Optional
 
-import requests
-
-import os
-import requests
+import asyncio
+from src.backend.core.config import get_settings
+from src.backend.core.llm import generate_text
 
 logger = logging.getLogger(__name__)
-
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
-OLLAMA_TIMEOUT = 90  # seconds
-
-def get_active_model() -> str:
-    """Dynamically select the best installed Ollama model or fallback to qwen2.5:3b."""
-    env_model = os.environ.get("OLLAMA_MODEL")
-    if env_model:
-        return env_model
-    if not OLLAMA_BASE_URL:
-        return "qwen2.5:3b"
-    try:
-        r = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=3)
-        if r.status_code == 200:
-            installed = [m.get("name", "") for m in r.json().get("models", [])]
-            # Prioritize Qwen models by size / generation
-            candidates = [
-                "qwen3.6", "qwen3.5", "qwen3", "qwen2.5:14b", "qwen2.5:7b", "qwen2.5:latest",
-                "qwen2.5:3b", "qwen2.5:1.5b", "qwen2.5:0.5b", "llama3.2:3b", "llama3:8b"
-            ]
-            for candidate in candidates:
-                if any(m.startswith(candidate) or candidate in m for m in installed):
-                    return candidate
-            # If any other model is installed in Ollama, pick the first one
-            if installed:
-                return installed[0]
-    except Exception:
-        pass
-    return "qwen2.5:3b"
 
 # ── Intent patterns ──────────────────────────────────────────────────────────
 
@@ -141,7 +110,7 @@ BỘ 4 KỊCH BẢN ỨNG XỬ CỐT LÕI (CORE BEHAVIORAL PATTERNS):
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def build_rag_answer(
+async def build_rag_answer(
     question: str,
     sources: List[Dict[str, Any]],
     live_transcript: Optional[str] = None,
@@ -163,11 +132,20 @@ def build_rag_answer(
             f"Người dùng hỏi: {question}\n"
             f"Asightant:"
         )
+<<<<<<< HEAD:src/backend/services/ollama_service.py
         return _call_ollama(prompt, max_tokens=150) or (
             "Mình là Asightant — trợ lý họp thông minh (AI Copilot) được tích hợp ngay trong phòng họp này. "
             "Mình nắm rõ toàn bộ nội dung Agenda cuộc họp, theo dõi các phát biểu theo thời gian thực, "
             "hỗ trợ tra cứu tài liệu và giải đáp mọi câu hỏi liên quan đến phiên họp. "
             "Bạn muốn Asightant hỗ trợ điều gì hôm nay? ✨"
+=======
+        answer = await _call_llm(prompt, max_tokens=120)
+        return answer or (
+            "Mình là Axiom AI — trợ lý họp thông minh được tích hợp ngay trong phòng họp này. "
+            "Mình có thể giúp bạn: tra cứu nội dung agenda, tìm thông tin trong tài liệu đã upload, "
+            "tóm tắt những gì đã được thảo luận, và theo dõi mọi nhật ký sự kiện hệ thống theo thời gian thực. "
+            "Bạn muốn hỏi gì về cuộc họp hôm nay không? 🎯"
+>>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
         )
 
     # ── Greeting ──────────────────────────────────────────────────────────────
@@ -177,7 +155,8 @@ def build_rag_answer(
             f"Người dùng: {question}\n"
             f"Asightant:"
         )
-        return _call_ollama(prompt, max_tokens=80) or _greeting_fallback(question)
+        answer = await _call_llm(prompt, max_tokens=80)
+        return answer or _greeting_fallback(question)
 
     # ── Off-topic ─────────────────────────────────────────────────────────────
     if intent == "offtopic":
@@ -186,9 +165,16 @@ def build_rag_answer(
             f"Câu hỏi ngoài phạm vi cuộc họp: {question}\n"
             f"Asightant:"
         )
+<<<<<<< HEAD:src/backend/services/ollama_service.py
         return _call_ollama(prompt, max_tokens=100) or (
             "Câu hỏi này nằm ngoài phạm vi cuộc họp và Agenda hiện tại. "
             "Mình là Asightant, chuyên hỗ trợ về nội dung cuộc họp, kế hoạch thảo luận và các phát biểu. Bạn muốn hỏi gì về phiên họp không? 😊"
+=======
+        answer = await _call_llm(prompt, max_tokens=100)
+        return answer or (
+            "Câu hỏi này nằm ngoài phạm vi của mình — mình chỉ hỗ trợ về nội dung và hoạt động cuộc họp thôi. "
+            "Bạn muốn hỏi gì về agenda, tài liệu, hoặc những gì đang được thảo luận không? 😊"
+>>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
         )
 
     # ── Meeting RAG ───────────────────────────────────────────────────────────
@@ -265,9 +251,16 @@ def build_rag_answer(
             f"Lưu ý: Chưa có tài liệu hoặc transcript nào trong cuộc họp này.\n"
             f"Asightant:"
         )
+<<<<<<< HEAD:src/backend/services/ollama_service.py
         return _call_ollama(prompt, max_tokens=150) or (
             "Asightant chưa tìm thấy thông tin về điều này trong cuộc họp. "
             "Bạn có thể bổ sung Agenda hoặc tiếp tục thảo luận để Asightant ghi nhận nhé!"
+=======
+        answer = await _call_llm(prompt, max_tokens=150)
+        return answer or (
+            "Mình chưa tìm thấy thông tin về điều này trong cuộc họp. "
+            "Thử upload tài liệu vào tab Files hoặc hỏi sau khi cuộc họp có thêm nội dung nhé!"
+>>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
         )
 
     context_block = history_block + info_block + "\n\n".join(context_lines)
@@ -278,45 +271,33 @@ def build_rag_answer(
         f"Asightant:"
     )
 
+<<<<<<< HEAD:src/backend/services/ollama_service.py
     return _call_ollama(prompt, max_tokens=600) or _heuristic_answer(question, sources, live_transcript)
+=======
+    answer = await _call_llm(prompt, max_tokens=450)
+    return answer or _heuristic_answer(question, sources, live_transcript)
+>>>>>>> origin/feat/ai-summary-updates:src/backend/services/chat_service.py
 
 
-# ── Ollama call ───────────────────────────────────────────────────────────────
+# ── LLM call ───────────────────────────────────────────────────────────────
 
-def _call_ollama(prompt: str, max_tokens: int = 300) -> str | None:
-    """Call Ollama generate API. Returns stripped response text or None on failure."""
-    if not OLLAMA_BASE_URL:
-        return None
+async def _call_llm(prompt: str, max_tokens: int = 300) -> str | None:
+    """Call OpenRouter generate API. Returns stripped response text or None on failure."""
+    settings = get_settings()
+    # (Removed openrouter_api_key check to support local AI)
     try:
-        model_to_use = get_active_model()
-        response = requests.post(
-            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
-            json={
-                "model": model_to_use,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "repeat_penalty": 1.1,
-                    "num_predict": max_tokens,
-                },
-            },
-            timeout=OLLAMA_TIMEOUT,
-        )
-        response.raise_for_status()
-        text = response.json().get("response", "").strip()
+        text = await generate_text(settings.llm_fallback_models, prompt, max_tokens=max_tokens, temperature=0.7)
+        
+        if not text:
+            return None
+            
         # Strip accidental system-prompt leakage
         for prefix in ["Asightant:", "Axiom AI:", "AI:", "Assistant:"]:
             if text.startswith(prefix):
                 text = text[len(prefix):].strip()
         return text if text else None
-    except requests.exceptions.ConnectionError:
-        logger.warning("Ollama not reachable, using heuristic fallback")
-    except requests.exceptions.Timeout:
-        logger.warning("Ollama timeout, using heuristic fallback")
     except Exception as exc:
-        logger.error("Ollama error: %s", exc)
+        logger.error("LLM error: %s", exc)
     return None
 
 
@@ -374,12 +355,6 @@ def _heuristic_answer(
     return "\n\n".join(results)
 
 
-def is_ollama_available() -> bool:
-    """Check if Ollama service is running."""
-    if not OLLAMA_BASE_URL:
-        return False
-    try:
-        r = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=3)
-        return r.status_code == 200
-    except Exception:
-        return False
+def is_llm_available() -> bool:
+    """Check if LLM service is configured."""
+    return True

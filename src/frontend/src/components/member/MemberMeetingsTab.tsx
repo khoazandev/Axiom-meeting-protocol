@@ -21,6 +21,7 @@ import {
 import { meetingsApi, Meeting } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { CreateMeetingModal } from '@/components/meetings/CreateMeetingModal';
+import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 
 interface MemberMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -35,6 +36,7 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{id: string, title: string} | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -225,6 +227,18 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                       <span>Biên Bản AI</span>
                     </button>
 
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shrink-0 cursor-pointer"
+                        title="Biên bản AI"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">Biên Bản AI</span>
+                      </button>
+                    )}
+
                     {user &&
                       (user.id === mtg.created_by_id ||
                         user.role === 'OWNER' ||
@@ -250,6 +264,14 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
           </div>
         )}
       </div>
+
+      {selectedMeetingForDetails && (
+        <MeetingDetailsModal
+          meetingId={selectedMeetingForDetails.id}
+          meetingTitle={selectedMeetingForDetails.title}
+          onClose={() => setSelectedMeetingForDetails(null)}
+        />
+      )}
 
       {/* Modal Tạo Cuộc Họp Mới có Agenda Import */}
       <CreateMeetingModal

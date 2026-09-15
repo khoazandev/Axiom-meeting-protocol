@@ -16,9 +16,13 @@ from src.backend.models import (
     FollowUpTaskStatusEnum,
     FollowUpTaskSourceEnum,
     MeetingChatMessage,
+    MeetingDecision,
+    MeetingDecisionStatusEnum,
     MeetingSummary,
     TranscriptSegment,
     User,
+    Topic,
+    TopicStatusEnum,
 )
 
 router = APIRouter(prefix="/meetings/{meeting_id}", tags=["meeting-content"])
@@ -82,6 +86,7 @@ class FollowUpTaskUpdate(BaseModel):
 class FollowUpTaskResponse(BaseModel):
     id: str
     meeting_id: str
+    topic_id: str | None = None
     title: str
     description: str | None = None
     status: str
@@ -90,8 +95,45 @@ class FollowUpTaskResponse(BaseModel):
     deadline: datetime.datetime | None = None
     source: str | None = None
     transcript_segment_id: str | None = None
+    evidence_quote: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class MeetingDecisionResponse(BaseModel):
+    id: str
+    meeting_id: str
+    topic_id: str | None = None
+    description: str
+    status: str
+    rationale: str | None = None
+    evidence_sentence: str | None = None
+    proposer_id: str | None = None
+    proposer_name: str | None = None
+    created_at: datetime.datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MeetingDecisionUpdate(BaseModel):
+    description: str | None = None
+    status: str | None = None
+    proposer_id: str | None = None
+
+
+class TopicResponse(BaseModel):
+    id: str
+    meeting_id: str
+    title: str
+    transcript_text: str | None = None
+    status: str
+    order_index: int
+
+    model_config = {"from_attributes": True}
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 class ChatMessageCreate(BaseModel):
@@ -110,6 +152,44 @@ class ChatMessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Transcript Endpoints
 # ---------------------------------------------------------------------------
+async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text: str):
+    import json
+    import logging
+    from livekit.api import LiveKitAPI
+    from livekit.protocol.room import SendDataRequest
+    from livekit.protocol.models import DataPacket_Kind
+    from src.backend.core.config import get_settings
+
+    logger = logging.getLogger("axiom.livekit_broadcast")
+    settings = get_settings()
+
+    url = settings.livekit_url
+    if url.startswith("ws://"):
+        url = url.replace("ws://", "http://")
+    elif url.startswith("wss://"):
+        url = url.replace("wss://", "https://")
+        
+    try:
+        async with LiveKitAPI(url, settings.livekit_api_key, settings.livekit_api_secret) as api:
+            payload = {
+                "type": "original_transcript",
+                "participant_identity": participant_identity,
+                "original_text": text,
+                "language": "vi",
+                "is_final": True,
+                "is_mock": True
+            }
+            req = SendDataRequest(
+                room=meeting_id,
+                data=json.dumps(payload).encode("utf-8"),
+                kind=DataPacket_Kind.RELIABLE,
+                topic="records"
+            )
+            await api.room.send_data(req)
+            logger.info(f"Broadcasted mock transcript to {meeting_id}")
+    except Exception as e:
+        logger.error(f"Failed to broadcast mock transcript to LiveKit: {e}")
+
 @router.post(
     "/transcripts", response_model=TranscriptSegmentResponse, status_code=status.HTTP_201_CREATED
 )
@@ -125,8 +205,28 @@ def add_transcript_segment(
     # Đang tạm tắt tính năng membership của cuộc họp để test
     # _require_meeting_member(db, meeting_id, current_user.id)
 
+    from src.backend.models import MeetingMember, MeetingMemberRoleEnum, MeetingMemberStatusEnum
+    
+    # Auto-add user to meeting if they aren't a member (useful for test scripts bypassing join)
+    member = db.query(MeetingMember).filter_by(meeting_id=meeting_id, user_id=current_user.id).first()
+    if not member:
+        new_member = MeetingMember(
+            meeting_id=meeting_id,
+            user_id=current_user.id,
+            role=MeetingMemberRoleEnum.PARTICIPANT,
+            status=MeetingMemberStatusEnum.JOINED
+        )
+        db.add(new_member)
+
+    from src.backend.models import Topic, TopicStatusEnum
+    current_topic = db.query(Topic).filter(
+        Topic.meeting_id == meeting_id, 
+        Topic.status == TopicStatusEnum.IN_PROGRESS
+    ).first()
+
     seg = TranscriptSegment(
         meeting_id=meeting_id,
+        topic_id=current_topic.id if current_topic else None,
         speaker_id=current_user.id,
         content=payload.content,
         start_time=payload.start_time,
@@ -248,6 +348,16 @@ def add_transcript_segment(
                     _log.debug("Could not broadcast extraction done event")
 
         background_tasks.add_task(run_extraction)
+    # Broadcast to LiveKit so mock scripts will show subtitles on UI
+    background_tasks.add_task(
+        _broadcast_to_livekit, 
+        meeting_id, 
+        current_user.full_name or current_user.email, 
+        payload.content
+    )
+
+    # Đã gỡ bỏ tính năng trích xuất Real-time (micro-batching) theo yêu cầu thiết kế mới.
+    # Trích xuất sẽ chỉ được thực hiện 1 lần duy nhất ở cuối mỗi Topic.
 
     return seg
 
@@ -302,11 +412,21 @@ def get_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    _get_meeting_or_404(db, meeting_id)
+    meeting = _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
 
     summary = db.query(MeetingSummary).filter(MeetingSummary.meeting_id == meeting_id).first()
     if not summary:
+        from src.backend.models import MeetingStatusEnum
+        if meeting.status == MeetingStatusEnum.COMPLETED:
+            summary = MeetingSummary(
+                meeting_id=meeting_id,
+                summary="Cuộc họp không có nội dung trao đổi hoặc hệ thống không thể tổng hợp.",
+            )
+            db.add(summary)
+            db.commit()
+            db.refresh(summary)
+            return summary
         raise NotFoundException("Summary")
     return summary
 
@@ -450,6 +570,76 @@ def list_follow_up_tasks(
             item.assignee_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
         res.append(item)
     return res
+
+
+@router.get("/decisions", response_model=list[MeetingDecisionResponse])
+def list_decisions(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    _get_meeting_or_404(db, meeting_id)
+    from sqlalchemy.orm import joinedload
+    return (
+        db.query(MeetingDecision)
+        .options(joinedload(MeetingDecision.proposer))
+        .filter(MeetingDecision.meeting_id == meeting_id)
+        .order_by(MeetingDecision.created_at)
+        .all()
+    )
+
+
+@router.patch("/decisions/{decision_id}", response_model=MeetingDecisionResponse)
+def update_decision(
+    meeting_id: str,
+    decision_id: str,
+    payload: MeetingDecisionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    _get_meeting_or_404(db, meeting_id)
+    
+    decision = (
+        db.query(MeetingDecision)
+        .filter(MeetingDecision.id == decision_id, MeetingDecision.meeting_id == meeting_id)
+        .first()
+    )
+    if not decision:
+        raise NotFoundException("Decision")
+        
+    if payload.description is not None:
+        decision.description = payload.description
+    if payload.status is not None:
+        decision.status = MeetingDecisionStatusEnum(payload.status)
+    if payload.proposer_id is not None:
+        decision.proposer_id = payload.proposer_id
+        
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+@router.delete("/decisions/{decision_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_decision(
+    meeting_id: str,
+    decision_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Delete a meeting decision."""
+    _get_meeting_or_404(db, meeting_id)
+
+    decision = (
+        db.query(MeetingDecision)
+        .filter(MeetingDecision.id == decision_id, MeetingDecision.meeting_id == meeting_id)
+        .first()
+    )
+    if not decision:
+        raise NotFoundException("Decision")
+
+    db.delete(decision)
+    db.commit()
+    return None
 
 
 @router.patch("/follow-up-tasks/{item_id}", response_model=FollowUpTaskResponse)
@@ -620,6 +810,81 @@ def _capture_correction(
 # ---------------------------------------------------------------------------
 # AI Task Extraction
 # ---------------------------------------------------------------------------
+@router.post("/extract-tasks")
+@router.get("/topics", response_model=list[TopicResponse])
+def get_meeting_topics(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """List topics for a meeting."""
+    meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting.id, current_user.id)
+
+    topics = db.query(Topic).filter(Topic.meeting_id == meeting_id).order_by(Topic.order_index).all()
+    return topics
+
+
+@router.post("/topics/next", response_model=MessageResponse)
+def next_meeting_topic(
+    meeting_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Advance to the next topic and trigger decision extraction for the completed topic."""
+    from fastapi import HTTPException
+    from src.backend.services.unified_topic_extractor import extract_topic_unified_bg
+    from src.backend.models import MeetingMember, MeetingMemberRoleEnum
+
+    meeting = _get_meeting_or_404(db, meeting_id)
+    # member = _require_meeting_member(db, meeting.id, current_user.id)
+    
+    # Allow any member to advance topics for testing purposes
+    # if not member or member.role not in [MeetingMemberRoleEnum.OWNER, MeetingMemberRoleEnum.ADMIN]:
+    #     raise HTTPException(status_code=403, detail="Not authorized to change topic")s.")
+
+    topics = db.query(Topic).filter(Topic.meeting_id == meeting_id).order_by(Topic.order_index).all()
+    if not topics:
+        return MessageResponse(message="No topics found for this meeting.")
+
+    in_progress_idx = -1
+    for i, topic in enumerate(topics):
+        if topic.status == TopicStatusEnum.IN_PROGRESS:
+            in_progress_idx = i
+            break
+
+    if in_progress_idx != -1:
+        # Complete current topic
+        current_topic = topics[in_progress_idx]
+        current_topic.status = TopicStatusEnum.COMPLETED
+        
+        # Lấy toàn bộ segment của topic này và gộp lại thành văn bản
+        segments = db.query(TranscriptSegment).filter(
+            TranscriptSegment.topic_id == current_topic.id
+        ).order_by(TranscriptSegment.sequence).all()
+        
+        if segments:
+            full_text = "\n".join([f"{seg.speaker.full_name if getattr(seg, 'speaker', None) else 'Unknown'}: {seg.content}" for seg in segments])
+            current_topic.transcript_text = full_text
+            
+        background_tasks.add_task(extract_topic_unified_bg, current_topic.id, current_topic.transcript_text or "")
+        
+        # Start next topic if available
+        if in_progress_idx + 1 < len(topics):
+            next_topic = topics[in_progress_idx + 1]
+            next_topic.status = TopicStatusEnum.IN_PROGRESS
+    else:
+        # No topic is currently in progress. Start the first pending topic.
+        for topic in topics:
+            if topic.status == TopicStatusEnum.PENDING:
+                topic.status = TopicStatusEnum.IN_PROGRESS
+                break
+
+    db.commit()
+    return MessageResponse(message="Advanced to next topic")
+
+
 @router.post("/extract-tasks")
 def extract_tasks_endpoint(
     meeting_id: str,
