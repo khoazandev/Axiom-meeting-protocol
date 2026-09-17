@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { meetingsApi } from '@/lib/api';
-import { Video, MicOff, Lock, Sparkles, Users, Clock, Calendar } from 'lucide-react';
+import { Video, MicOff, Lock, Sparkles, Users, Clock, Calendar, Upload, Loader2 } from 'lucide-react';
 import {
   Plus,
   FileCheck2,
@@ -163,6 +163,40 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const [newTitle, setNewTitle] = useState('');
   const [newRoomCode, setNewRoomCode] = useState('');
   const [newAgendaText, setNewAgendaText] = useState('');
+  const [deptUploadedFile, setDeptUploadedFile] = useState<string | null>(null);
+  const [isParsingDeptFile, setIsParsingDeptFile] = useState(false);
+  const deptFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDeptFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsParsingDeptFile(true);
+    try {
+      const fileNameLower = file.name.toLowerCase();
+      let extractedContent = '';
+      if (
+        fileNameLower.endsWith('.txt') ||
+        fileNameLower.endsWith('.md') ||
+        fileNameLower.endsWith('.markdown')
+      ) {
+        extractedContent = (await file.text()).trim();
+      } else {
+        const res = await meetingsApi.parseAgenda(file);
+        if (res.error) throw new Error(res.error);
+        extractedContent = (res.content || '').trim();
+      }
+      if (extractedContent) {
+        setNewAgendaText(extractedContent);
+        setDeptUploadedFile(file.name);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Không thể trích xuất nội dung file.');
+    } finally {
+      setIsParsingDeptFile(false);
+      if (deptFileInputRef.current) deptFileInputRef.current.value = '';
+    }
+  };
+
   const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
   const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{
     id: string;
@@ -631,25 +665,74 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Nội dung Agenda / Các topic (Mỗi dòng 1 topic)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Nội dung Agenda / Kế hoạch họp
+                  </label>
+                  <div>
+                    <input
+                      type="file"
+                      ref={deptFileInputRef}
+                      onChange={handleDeptFileUpload}
+                      accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => deptFileInputRef.current?.click()}
+                      disabled={isParsingDeptFile}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {isParsingDeptFile ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>Đang đọc...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={12} />
+                          <span>Nạp file Agenda</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {deptUploadedFile && (
+                  <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] mb-2">
+                    <span className="truncate">
+                      📎 Đã nạp từ tệp: <strong>{deptUploadedFile}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeptUploadedFile(null);
+                        setNewAgendaText('');
+                      }}
+                      className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
+                      title="Xóa tệp"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 <textarea
                   rows={4}
-                  placeholder="VD:\n1. Review tiến độ dự án\n2. Phân công task mới"
+                  placeholder="Nhập hoặc dán các chủ đề thảo luận, hoặc nhấn 'Nạp file Agenda' ở trên..."
                   value={newAgendaText}
                   onChange={(e) => setNewAgendaText(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Mã phòng tùy chọn (Room Code)
+                  Mã phòng
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: ENG-RETRO-42 (để trống sẽ tạo tự động)"
+                  placeholder="VD: ENG-RETRO-42"
                   value={newRoomCode}
                   onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
                   className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"

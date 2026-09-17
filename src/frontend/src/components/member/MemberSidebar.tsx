@@ -32,8 +32,8 @@ export interface MemberNavItem {
 export const MEMBER_NAV_ITEMS: MemberNavItem[] = [
   {
     id: 'meetings',
-    label: 'Cuộc Họp & Radar',
-    sublabel: 'Live SFU & Vào họp nhanh',
+    label: 'Cuộc Họp',
+    sublabel: 'Vào họp nhanh',
     icon: Video,
     badge: '1 Live',
     badgeColor: 'bg-emerald-500 text-white animate-pulse',
@@ -153,7 +153,7 @@ export function MemberSidebar({ activeSection, onSelectSection, onLogout }: Memb
                     Alex Rivera
                   </div>
                   <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                    THÀNH VIÊN (MEMBER)
+                    MEMBER
                   </div>
                 </div>
               </div>

@@ -31,6 +31,7 @@ class MeetingStatusEnum(str, enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
+    PAUSED = "PAUSED"
 
 
 class OrgMemberStatusEnum(str, enum.Enum):
@@ -111,6 +112,8 @@ class User(database.Base):
     password_hash = Column(String, nullable=True)  # Nullable for OAuth users
     full_name = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    job_title = Column(String, nullable=True)
     provider = Column(String, default="local")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
@@ -308,6 +311,8 @@ class Meeting(database.Base):
         default=MeetingStatusEnum.SCHEDULED,
         nullable=False,
     )
+    approval_status = Column(String, default="APPROVED", nullable=False)
+    meeting_type = Column(String, default="OFFICIAL", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -387,10 +392,14 @@ class OrganizationInvitation(database.Base):
         String, ForeignKey("organizations.id"), nullable=False, index=True
     )
     email = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    job_title = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     role_id = Column(String, ForeignKey("roles.id"), nullable=False)
     department_id = Column(String, ForeignKey("departments.id"), nullable=True)
     invited_by_id = Column(String, ForeignKey("users.id"), nullable=False)
     token = Column(String, unique=True, nullable=False)
+    invite_code = Column(String, index=True, nullable=True)
     status = Column(
         Enum(OrgInvitationStatusEnum),
         default=OrgInvitationStatusEnum.PENDING,
@@ -814,9 +823,10 @@ class Issue(database.Base):
     sprint_position = Column(Integer, default=0, nullable=False)
     board_position = Column(Integer, default=0, nullable=False)
 
-    # People
+    # People & Department
     reporter_id = Column(String, ForeignKey("users.id"), nullable=False)
     assignee_id = Column(String, ForeignKey("users.id"), nullable=True)
+    department_id = Column(String, ForeignKey("departments.id"), nullable=True, index=True)
     due_date = Column(DateTime, nullable=True)
 
     # Meeting provenance
@@ -834,6 +844,7 @@ class Issue(database.Base):
     sprint = relationship("Sprint", back_populates="issues")
     reporter = relationship("User", foreign_keys=[reporter_id])
     assignee = relationship("User", foreign_keys=[assignee_id])
+    department = relationship("Department")
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
     comments = relationship("IssueComment", back_populates="issue", cascade="all, delete-orphan")

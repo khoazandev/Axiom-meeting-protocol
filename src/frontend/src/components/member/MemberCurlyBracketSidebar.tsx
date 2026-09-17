@@ -31,7 +31,7 @@ export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
   {
     id: 'meetings',
     label: 'Phòng Họp & Ghi Âm',
-    sublabel: 'Tham gia, xem lại biên bản AI',
+    sublabel: 'Tham gia cuộc họp',
     icon: Video,
     badge: '1 Live',
     badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
@@ -55,11 +55,11 @@ export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
   },
   {
     id: 'knowledge',
-    label: 'Kho Tri Thức AI (RAG)',
-    sublabel: 'Tra cứu nghị quyết & hỏi đáp AI',
+    label: 'Kho Tài Liệu & AI',
+    sublabel: 'Biên bản phòng ban & Chatbot',
     icon: BookOpen,
-    badge: 'RAG',
-    badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    badge: 'Phòng ban',
+    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
     shortcut: '⌘5',
   },
   {

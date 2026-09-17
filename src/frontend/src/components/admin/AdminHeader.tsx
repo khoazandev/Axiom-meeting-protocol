@@ -41,7 +41,7 @@ export function AdminHeader({ onOpenInviteModal, onExportReport }: AdminHeaderPr
               <MaterialIcon name="auto_awesome" className="w-5 h-5 text-blue-500" />
             </h1>
             <p className="text-[13px] text-slate-500 font-medium max-w-2xl mt-0.5">
-              Điều hành kỷ luật cuộc họp, cơ cấu phòng ban, giám sát radar thời gian thực và kiểm
+              Điều hành kỷ luật cuộc họp, cơ cấu phòng ban, giám sát điều hành thời gian thực và kiểm
               toán an ninh thông tin chuẩn On-Premise.
             </p>
           </div>

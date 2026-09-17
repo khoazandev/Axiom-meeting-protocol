@@ -62,27 +62,30 @@ def _collect_full_transcript(db: Session, meeting_id: str) -> tuple[str, list]:
 
 def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str) -> Optional[MeetingSummary]:
     """
-    Generate meeting summary using qwen model via Ollama.
-
-    Returns:
-        MeetingSummary object or None if generation fails.
+    Generate meeting summary synthesizing BOTH Agenda and Script using AI.
     """
     settings = get_settings()
 
-    if not settings.ollama_base_url or not transcript_text.strip():
-        return None
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    agenda = (meeting.description or meeting.agenda or getattr(meeting, 'agenda_text', None) or "").strip() if meeting else ""
+
+    if not settings.ollama_base_url or (not transcript_text.strip() and not agenda):
+        return _generate_heuristic_meeting_summary(db, meeting_id, transcript_text)
+
+    combined_context = ""
+    if agenda:
+        combined_context += f"CHƯƠNG TRÌNH NGHỊ SỰ / MỤC TIÊU CUỘC HỌP (AGENDA):\n{agenda}\n\n"
+    if transcript_text.strip():
+        combined_context += f"BIÊN BẢN PHÁT BIỂU VÀ TRAO ĐỔI (SCRIPT HỘI THOẠI):\n{transcript_text[:8000]}\n\n"
 
     system_prompt = (
-        "You are a professional meeting secretary. Summarize the following meeting transcript.\n\n"
-        "Provide:\n"
-        "1. A concise summary of the meeting (2-4 paragraphs)\n"
-        "2. Key points discussed (bullet points)\n"
-        "3. Key decisions made (bullet points)\n\n"
-        "Format your response as:\n"
-        "SUMMARY:\n<summary text>\n\n"
-        "KEY POINTS:\n<bullet points>\n\n"
-        "DECISIONS:\n<bullet points>\n\n"
-        "Write in the same language as the transcript. Be concise and accurate."
+        "Bạn là Thư ký điều hành doanh nghiệp chuyên nghiệp. "
+        "Hãy tổng hợp toàn bộ Chương trình nghị sự (Agenda) và Biên bản trao đổi (Script cuộc họp) "
+        "thành một bản Tóm tắt Cuộc họp (Minutes of Meeting - MoM) hoàn chỉnh, súc tích và chuẩn mực bằng Tiếng Việt.\n\n"
+        "Định dạng cấu trúc bắt buộc:\n"
+        "SUMMARY:\n<Tóm tắt tổng quan 2-3 đoạn văn, liên kết mục tiêu trong Agenda và kết quả trao đổi thực tế>\n\n"
+        "KEY POINTS:\n<Các điểm trọng tâm đã thảo luận dưới dạng gạch đầu dòng>\n\n"
+        "DECISIONS:\n<Các quyết định đã chốt, phân công trách nhiệm và giải pháp thực thi>\n"
     )
 
     try:
@@ -93,7 +96,7 @@ def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str
             json={
                 "model": model_name,
                 "system": system_prompt,
-                "prompt": f"Meeting transcript:\n\n{transcript_text[:8000]}",
+                "prompt": f"Dữ liệu cuộc họp cần tổng hợp:\n\n{combined_context}",
                 "stream": False,
                 "options": {
                     "temperature": 0.3,
@@ -361,18 +364,18 @@ def end_meeting(
             )
             follow_up_tasks.extend(created)
 
-    # 4. Generate meeting summary
-    summary = None
-    if transcript_text:
-        summary = _generate_meeting_summary(db, meeting_id, transcript_text)
+    # 4. Generate meeting summary (synthesizing Agenda + Transcripts)
+    summary = _generate_meeting_summary(db, meeting_id, transcript_text)
 
     # 5. Close LiveKit room
     _close_livekit_room(meeting_id)
 
-    # 6. Update meeting status
+    # 6. Update meeting status and record concluded timestamp
+    import datetime
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if meeting:
         meeting.status = MeetingStatusEnum.COMPLETED
+        meeting.ended_at = datetime.datetime.now(datetime.timezone.utc)
         db.commit()
 
     # Gather all follow-up tasks for response

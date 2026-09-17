@@ -177,7 +177,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
           {/* Scheduled At */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Thời Gian Dự Kiến <span className="text-slate-400 font-normal">(tùy chọn)</span>
+              Thời Gian Dự Kiến
             </label>
             <div className="relative">
               <input
@@ -190,7 +190,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
             </div>
           </div>
 
-          {/* Agenda & Kế Hoạch Cuộc Họp (Nhập tay + 1 nút Import File duy nhất) */}
+          {/* Agenda */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
@@ -198,7 +198,6 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
                 <span>Kế Hoạch & Agenda Cuộc Họp</span>
               </label>
 
-              {/* Nút Import File duy nhất */}
               <div>
                 <input
                   type="file"
@@ -221,7 +220,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
                   ) : (
                     <>
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Import File (.txt, .md, .docx, .pdf)</span>
+                      <span>Nạp file Agenda</span>
                     </>
                   )}
                 </button>
@@ -240,25 +239,24 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
                     setAgendaText('');
                   }}
                   className="text-emerald-700 hover:text-rose-600 ml-2 font-bold cursor-pointer"
-                  title="Xóa nội dung file"
+                  title="Xóa tệp"
                 >
                   ✕
                 </button>
               </div>
             )}
 
-            {/* Ô nhập tay / chỉnh sửa Agenda */}
             <textarea
               rows={6}
               value={agendaText}
               onChange={(e) => setAgendaText(e.target.value)}
-              placeholder="Nhập hoặc dán nội dung Agenda cuộc họp tại đây (các mục tiêu, gạch đầu dòng công việc, người phụ trách, thời lượng)... Hoặc nhấn nút 'Import File' ở trên để nạp tệp."
+              placeholder="Nhập hoặc dán nội dung Agenda cuộc họp, hoặc nhấn 'Nạp file Agenda' ở trên..."
               className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 leading-relaxed transition-all resize-y"
             />
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
               <span>
-                💡 Asightant sẽ đọc toàn bộ nội dung này để trả lời và tổng kết trong phòng họp.
+                💡 AI sẽ sử dụng Agenda này để điều phối và tổng hợp biên bản cuộc họp.
               </span>
               <span>{agendaText.length} ký tự</span>
             </div>

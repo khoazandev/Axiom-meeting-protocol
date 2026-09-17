@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { MatIcon } from '@/components/ui/MatIcon';
-import { Pin, PinOff, ChevronRight } from 'lucide-react';
+import { Pin, PinOff, ChevronRight, LogOut } from 'lucide-react';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type AdminSectionKey =
-  'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'webhooks';
+  'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'archives';
 
 export interface NavSectionItem {
   id: AdminSectionKey;
@@ -22,9 +22,9 @@ export interface NavSectionItem {
 export const NAV_SECTIONS: NavSectionItem[] = [
   {
     id: 'overview',
-    label: 'Tổng quan & Radar',
-    sublabel: 'Pulse & Live Meeting Radar SFU',
-    icon: 'radar',
+    label: 'Tổng quan',
+    sublabel: 'Giám sát điều hành',
+    icon: 'speed',
     badge: '3 Trực tiếp',
     badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     shortcut: '⌘1',
@@ -58,20 +58,20 @@ export const NAV_SECTIONS: NavSectionItem[] = [
   },
   {
     id: 'audit',
-    label: 'Kiểm toán An ninh',
-    sublabel: 'Nhật ký truy vết & Xuất CSV',
+    label: 'Kiểm toán & An ninh',
+    sublabel: 'SOC Posture & Tamper-Proof Trail',
     icon: 'security',
-    badge: 'ISO/IEC',
+    badge: '100% OK',
     badgeColor: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
     shortcut: '⌘5',
   },
   {
-    id: 'webhooks',
-    label: 'Tích hợp & Webhook',
-    sublabel: 'API Endpoint & Live Simulator',
-    icon: 'webhook',
-    badge: '3 Endpoints',
-    badgeColor: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
+    id: 'archives',
+    label: 'Kho tài liệu',
+    sublabel: 'Biên bản & Tri thức Cuộc họp',
+    icon: 'inventory_2',
+    badge: 'Toàn công ty',
+    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
     shortcut: '⌘6',
   },
 ];
@@ -83,12 +83,14 @@ interface CurlyBracketSidebarProps {
   onSelectSection: (section: AdminSectionKey) => void;
   onOpenInviteModal?: () => void;
   onOpenProfile?: () => void;
+  onLogout?: () => void;
 }
 
 export function CurlyBracketSidebar({
   activeSection,
   onSelectSection,
   onOpenProfile,
+  onLogout,
 }: CurlyBracketSidebarProps) {
   const { user } = useAuthStore();
   // Visibility & Interaction States
@@ -275,8 +277,8 @@ export function CurlyBracketSidebar({
               title="Xem & Chỉnh sửa hồ sơ cá nhân / avatar"
             >
               <img
-                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Chủ Tịch')}
-                alt={user?.full_name || 'Chủ Tịch'}
+                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'OWNER')}
+                alt={user?.full_name || 'OWNER'}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
               />
               <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-slate-900" />
@@ -284,6 +286,7 @@ export function CurlyBracketSidebar({
 
             {/* Pin Toggle */}
             <button
+              type="button"
               onClick={() => setIsPinned(!isPinned)}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
                 isPinned
@@ -298,6 +301,18 @@ export function CurlyBracketSidebar({
                 <PinOff className="w-3.5 h-3.5" />
               )}
             </button>
+
+            {/* Logout Button */}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                title="Đăng xuất tài khoản"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </aside>

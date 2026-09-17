@@ -12,6 +12,7 @@ import { MemberMeetingsTab } from '@/components/member/MemberMeetingsTab';
 import { MemberJiraWorkspaceTab } from '@/components/member/MemberJiraWorkspaceTab';
 import { MemberCalendarTab } from '@/components/member/MemberCalendarTab';
 import { MemberKnowledgeTab } from '@/components/member/MemberKnowledgeTab';
+import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
 import { MemberSettingsTab } from '@/components/member/MemberSettingsTab';
 import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 import { useAuthStore } from '@/lib/store/useAuthStore';
@@ -100,99 +101,103 @@ function MemberWorkspaceInner() {
       />
 
       {/* ── 2. Top Executive Command Header (Mirrors Owner Sovereign Header) ── */}
-      <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-8 h-16 flex items-center justify-between gap-4 shadow-2xs">
-        {/* Left: Brand Identity identical to Owner Page */}
-        <div className="flex items-center gap-3">
-          <Link href="/member" className="flex items-center gap-2 group">
-            <Logo size={34} showText={true} subtitle="DX-OS" />
-          </Link>
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60 text-[10.5px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
-            THÀNH VIÊN
-          </div>
-        </div>
-
-        {/* Center: Search & Live Chronometer matching Owner Page */}
-        <div className="hidden md:flex items-center gap-3 flex-1 max-w-xl mx-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-[11px] font-mono text-slate-600 dark:text-slate-300 shrink-0">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="font-semibold text-slate-800 dark:text-slate-100">
-              {timeStr || '14:55:00'} ICT
-            </span>
-            <span className="text-slate-300 dark:text-slate-600">|</span>
-            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
-              Sẵn sàng
-            </span>
+      <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand Identity identical to Owner Page */}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link href="/member" className="flex items-center gap-2 group">
+              <Logo size={32} showText={true} subtitle="DX-OS" />
+            </Link>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60 text-[10.5px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+              MEMBER
+            </div>
           </div>
 
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm task, cuộc họp, sprint, tài liệu... (⌘K)"
-              className="w-full pl-9 pr-12 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 rounded shadow-2xs">
-              ⌘K
-            </kbd>
-          </div>
-        </div>
-
-        {/* Right: Actions matching Owner Page */}
-        <div className="flex items-center gap-2.5">
-          {/* Quick Meeting Action */}
-          <button
-            type="button"
-            onClick={() => handleSelectSection('meetings')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
-          >
-            <Video size={14} />
-            <span>+ Vào Họp Nhanh</span>
-          </button>
-
-          {/* Notification Button */}
-          <button
-            type="button"
-            onClick={() => showToast('Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp')}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative"
-            title="Thông báo cá nhân"
-          >
-            <Bell size={16} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
-          </button>
-
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-800" />
-
-          {/* Member Profile Trigger (Click to open UserProfileModal) */}
-          <button
-            type="button"
-            onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center gap-2 pl-1 group cursor-pointer"
-            title="Xem & Chỉnh sửa hồ sơ cá nhân / avatar"
-          >
-            <div className="relative w-8 h-8 rounded-full overflow-hidden border border-emerald-400 ring-2 ring-emerald-100 dark:ring-emerald-950 group-hover:ring-emerald-500 transition-all">
-              <img
-                src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Alex Rivera')}
-                alt={user?.full_name || 'Alex Rivera'}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          {/* Center: Search & Live Chronometer matching Owner Page */}
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-md mx-4">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm task, cuộc họp, sprint, tài liệu... (⌘K)"
+                className="w-full pl-9 pr-12 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
               />
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 rounded shadow-2xs">
+                ⌘K
+              </kbd>
             </div>
-            <div className="hidden sm:block text-left">
-              <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors">
-                {user?.full_name || 'Alex Rivera'}
-              </div>
-              <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase">
-                KỸ SƯ AI
-              </div>
+          </div>
+
+          {/* Right: Actions matching Owner Page */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Live Clock */}
+            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">
+                {timeStr || '14:55:00'} ICT
+              </span>
+              <span className="text-slate-300 dark:text-slate-600">|</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
+                Sẵn sàng
+              </span>
             </div>
-          </button>
+
+            {/* Quick Meeting Action */}
+            <button
+              type="button"
+              onClick={() => handleSelectSection('meetings')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <Video size={14} />
+              <span>+ Vào Họp Nhanh</span>
+            </button>
+
+            {/* Notification Button */}
+            <button
+              type="button"
+              onClick={() => showToast('Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp')}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative"
+              title="Thông báo cá nhân"
+            >
+              <Bell size={16} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
+            </button>
+
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+
+            {/* Member Profile Trigger (Click to open UserProfileModal) */}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-2 pl-1 group cursor-pointer"
+              title="Xem & Chỉnh sửa hồ sơ cá nhân / avatar"
+            >
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-emerald-400 ring-2 ring-emerald-100 dark:ring-emerald-950 group-hover:ring-emerald-500 transition-all">
+                <img
+                  src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Alex Rivera')}
+                  alt={user?.full_name || 'Alex Rivera'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate max-w-[120px]">
+                  {user?.full_name || 'Alex Rivera'}
+                </div>
+                <div className="text-[9.5px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase">
+                  MEMBER
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -258,7 +263,14 @@ function MemberWorkspaceInner() {
 
           {activeSection === 'calendar' && <MemberCalendarTab onNotify={showToast} />}
 
-          {activeSection === 'knowledge' && <MemberKnowledgeTab onNotify={showToast} />}
+          {activeSection === 'knowledge' && (
+            <MeetingArchiveRepository
+              userRole="MEMBER"
+              departmentId={user?.department_id}
+              departmentName={user?.department_name || 'Khối Kỹ Thuật'}
+              onNotify={showToast}
+            />
+          )}
 
           {activeSection === 'settings' && <MemberSettingsTab onNotify={showToast} />}
         </div>

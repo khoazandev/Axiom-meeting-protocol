@@ -80,7 +80,7 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
         deadline: t.deadline,
       }));
       await meetingsApi.pushToJira(meetingId, payload);
-      alert('Đã đẩy thành công lên MiniJira!');
+      alert('Đã đồng bộ nhiệm vụ thành công lên hệ thống quản trị công việc!');
       handleDone();
     } catch (err) {
       console.error(err);

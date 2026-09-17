@@ -20,6 +20,17 @@ export interface Meeting {
   status: string;
   organization_id?: string | null;
   department_id?: string | null;
+  department_name?: string | null;
+  host_name?: string | null;
+  host_avatar?: string | null;
+  participant_count?: number;
+  approval_status?: 'APPROVED' | 'PENDING' | 'REJECTED';
+  meeting_type?: 'OFFICIAL' | 'INTERNAL_TEAM';
+  duration_minutes?: number;
+  summary?: string | null;
+  key_points?: string | null;
+  decisions?: string | null;
+  task_count?: number;
   created_by_id: string;
   created_at: string;
   updated_at: string;
@@ -32,6 +43,9 @@ export interface MeetingCreate {
   scheduled_at?: string | null;
   organization_id?: string | null;
   department_id?: string | null;
+  approval_status?: string | null;
+  meeting_type?: string | null;
+  participant_ids?: string[] | null;
 }
 
 export interface User {
@@ -121,6 +135,25 @@ export interface TranscriptResponse {
   end_time?: string | null;
   sequence?: number;
   confidence?: string | null;
+  created_at?: string;
+}
+
+export interface MeetingSummaryResponse {
+  id: string;
+  meeting_id: string;
+  summary: string;
+  key_points?: string | null;
+  decisions?: string | null;
+}
+
+export interface MeetingDecisionItem {
+  id: string;
+  meeting_id: string;
+  description: string;
+  status: string;
+  rationale?: string | null;
+  evidence_sentence?: string | null;
+  proposer_name?: string | null;
   created_at?: string;
 }
 
@@ -250,10 +283,30 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 // ── Auth API ─────────────────────────────────────────────
 
 export const authApi = {
-  register(email: string, password: string, full_name: string): Promise<User> {
+  register(
+    email: string,
+    password: string,
+    full_name: string,
+    options?: {
+      phone?: string;
+      job_title?: string;
+      department_id?: string;
+      invite_token?: string;
+      organization_name?: string;
+    }
+  ): Promise<User> {
     return apiFetch<User>('/api/v1/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, full_name }),
+      body: JSON.stringify({
+        email,
+        password,
+        full_name,
+        phone: options?.phone,
+        job_title: options?.job_title,
+        department_id: options?.department_id,
+        invite_token: options?.invite_token,
+        organization_name: options?.organization_name,
+      }),
     });
   },
 
@@ -367,6 +420,13 @@ export const meetingsApi = {
   delete(id: number | string): Promise<{ message: string }> {
     return apiFetch<{ message: string }>(`/api/v1/meetings/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  /** Start a scheduled meeting early and notify invited participants. */
+  startEarly(id: number | string): Promise<Meeting> {
+    return apiFetch<Meeting>(`/api/v1/meetings/${id}/start-early`, {
+      method: 'POST',
     });
   },
 
@@ -516,6 +576,17 @@ export const meetingsApi = {
     });
   },
 
+  /** Push confirmed meeting follow-up tasks to Jira / Management Kanban */
+  pushToJira(
+    meetingId: number | string,
+    tasks: Array<{ id: string; title: string; assignee_id?: string | null; deadline?: string | null }>
+  ): Promise<{ status: string; message: string }> {
+    return apiFetch<{ status: string; message: string }>(`/api/v1/meetings/${meetingId}/push-to-jira`, {
+      method: 'POST',
+      body: JSON.stringify({ tasks }),
+    });
+  },
+
   /** On-demand AI task extraction from meeting transcripts. */
   extractTasks(meetingId: number | string): Promise<FollowUpTask[]> {
     return apiFetch<FollowUpTask[]>(`/api/v1/meetings/${meetingId}/extract-tasks`, {
@@ -531,6 +602,16 @@ export const meetingsApi = {
   /** Get transcripts for a meeting. */
   getTranscripts(meetingId: number | string): Promise<TranscriptResponse[]> {
     return apiFetch<TranscriptResponse[]>(`/api/v1/meetings/${meetingId}/transcripts`);
+  },
+
+  /** Get AI-generated summary and executive MoM for a meeting. */
+  getSummary(meetingId: number | string): Promise<MeetingSummaryResponse> {
+    return apiFetch<MeetingSummaryResponse>(`/api/v1/meetings/${meetingId}/summary`);
+  },
+
+  /** Get recorded decisions for a meeting. */
+  getDecisions(meetingId: number | string): Promise<MeetingDecisionItem[]> {
+    return apiFetch<MeetingDecisionItem[]>(`/api/v1/meetings/${meetingId}/decisions`);
   },
 
   /** List members of a meeting. */
@@ -575,7 +656,26 @@ export const meetingsApi = {
       method: 'POST',
     });
   },
+
+  listWithFilters(params?: {
+    status_filter?: string;
+    approval_filter?: string;
+    meeting_type_filter?: string;
+    org_id?: string;
+    all_org_meetings?: boolean;
+  }): Promise<Meeting[]> {
+    const q = new URLSearchParams();
+    if (params?.status_filter) q.append('status_filter', params.status_filter);
+    if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
+    if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
+    if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
+    const qs = q.toString();
+    return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');
+  },
 };
+
+export const meetingApi = meetingsApi;
 
 export interface PendingInvitation {
   member_id: string;
@@ -665,8 +765,13 @@ export interface Department {
 }
 
 export const departmentApi = {
-  list: async (orgId: string): Promise<Department[]> => {
-    return apiFetch<Department[]>(`/api/v1/organizations/${orgId}/departments`);
+  list: async (orgId?: string): Promise<Department[]> => {
+    const resolvedOrgId =
+      orgId ||
+      useAuthStore.getState().activeOrganization?.id ||
+      (useAuthStore.getState().user as any)?.organization_id ||
+      '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    return apiFetch<Department[]>(`/api/v1/organizations/${resolvedOrgId}/departments`);
   },
   create: async (
     orgId: string,
@@ -843,3 +948,304 @@ export const jiraApi = {
     });
   },
 };
+
+// ── Owner & Executive Admin APIs ──────────────────────────
+
+export interface AdminStats {
+  total_members: number;
+  total_meetings: number;
+  total_tasks: number;
+  total_departments: number;
+  total_audit_events: number;
+}
+
+export interface OrgAnalytics {
+  total_meetings_this_month: number;
+  meetings_growth: string;
+  on_time_punctual_rate: number;
+  task_execution_rate: number;
+  hours_saved_by_ai: number;
+  total_members: number;
+  total_departments: number;
+  active_meetings_count: number;
+  pending_approvals_count: number;
+}
+
+export interface EnrichedAuditLog {
+  id: string;
+  organization_id?: string | null;
+  user_id?: string | null;
+  user_name: string;
+  user_email: string;
+  action: string;
+  resource: string;
+  ip_address: string;
+  details: string | null;
+  category: string;
+  severity: 'CRITICAL' | 'WARN' | 'INFO';
+  created_at: string;
+  timestamp?: string;
+}
+
+export interface SecuritySummary {
+  total_events_24h: number;
+  critical_alerts: number;
+  warning_alerts: number;
+  trust_score: number;
+  severity_distribution: Record<string, number>;
+  timeline_7d: { date: string; count: number; critical: number }[];
+}
+
+export interface OrgMemberDetail {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string | null;
+  role: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER';
+  department_id?: string | null;
+  department_name?: string | null;
+  status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
+  joined_at: string;
+  meetings_count: number;
+  tasks_count: number;
+}
+
+export interface DepartmentProgressItem {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string | null;
+  manager_name: string;
+  member_count: number;
+  total_tasks: number;
+  done_tasks: number;
+  in_progress_tasks: number;
+  todo_tasks: number;
+  completion_rate: number;
+  rating: string;
+  rating_color: string;
+  color: string;
+}
+
+export interface TimelineGanttItem {
+  id: string;
+  key: string;
+  title: string;
+  description?: string | null;
+  department_id: string;
+  department_name: string;
+  department_code?: string;
+  department_color: string;
+  assignee_name?: string | null;
+  assignee_avatar?: string | null;
+  start_date: string;
+  due_date: string;
+  status: string;
+  priority: string;
+  progress_percent: number;
+}
+
+export interface DepartmentProgressResponse {
+  departments: DepartmentProgressItem[];
+  timeline_items: TimelineGanttItem[];
+}
+
+export const adminApi = {
+  getStats(orgId?: string): Promise<AdminStats> {
+    const q = orgId ? `?org_id=${encodeURIComponent(orgId)}` : '';
+    return apiFetch<AdminStats>(`/api/v1/admin/stats${q}`);
+  },
+
+  getAuditLogs(
+    orgId?: string,
+    category?: string,
+    severity?: string,
+    limit = 100
+  ): Promise<EnrichedAuditLog[]> {
+    const params = new URLSearchParams();
+    if (orgId) params.append('org_id', orgId);
+    if (category && category !== 'ALL') params.append('category', category);
+    if (severity && severity !== 'ALL') params.append('severity', severity);
+    params.append('limit', String(limit));
+    return apiFetch<EnrichedAuditLog[]>(`/api/v1/admin/audit-logs?${params.toString()}`);
+  },
+
+  getSecuritySummary(orgId?: string): Promise<SecuritySummary> {
+    const q = orgId ? `?org_id=${encodeURIComponent(orgId)}` : '';
+    return apiFetch<SecuritySummary>(`/api/v1/admin/security-summary${q}`);
+  },
+};
+
+// Extend organizationApi with members and analytics
+export const organizationAdminApi = {
+  getMembers(orgId: string): Promise<OrgMemberDetail[]> {
+    return apiFetch<OrgMemberDetail[]>(`/api/v1/organizations/${orgId}/members`);
+  },
+
+  updateMemberRole(orgId: string, userId: string, role: string): Promise<OrgMemberDetail> {
+    return apiFetch<OrgMemberDetail>(`/api/v1/organizations/${orgId}/members/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  updateMemberDepartment(
+    orgId: string,
+    userId: string,
+    departmentId: string | null
+  ): Promise<OrgMemberDetail> {
+    return apiFetch<OrgMemberDetail>(
+      `/api/v1/organizations/${orgId}/members/${userId}/department`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ department_id: departmentId }),
+      }
+    );
+  },
+
+  getAnalytics(orgId: string): Promise<OrgAnalytics> {
+    return apiFetch<OrgAnalytics>(`/api/v1/organizations/${orgId}/analytics`);
+  },
+};
+
+// Extend departmentApi with list, create, update, delete, progress
+export const departmentAdminApi = {
+  list(orgId: string): Promise<any[]> {
+    return apiFetch<any[]>(`/api/v1/organizations/${orgId}/departments`);
+  },
+
+  create(
+    orgId: string,
+    data: { name: string; description?: string; parent_id?: string | null }
+  ): Promise<any> {
+    return apiFetch<any>(`/api/v1/organizations/${orgId}/departments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update(
+    orgId: string,
+    deptId: string,
+    data: { name: string; description?: string; parent_id?: string | null }
+  ): Promise<any> {
+    return apiFetch<any>(`/api/v1/organizations/${orgId}/departments/${deptId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(orgId: string, deptId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/organizations/${orgId}/departments/${deptId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getProgress(orgId: string): Promise<DepartmentProgressResponse> {
+    return apiFetch<DepartmentProgressResponse>(
+      `/api/v1/organizations/${orgId}/departments/progress`
+    );
+  },
+};
+
+// Extend meetingsApi with approval and filter query
+export const meetingsAdminApi = {
+  updateApproval(
+    meetingId: string,
+    data: { approval_status: 'APPROVED' | 'REJECTED'; reason?: string }
+  ): Promise<Meeting> {
+    return apiFetch<Meeting>(`/api/v1/meetings/${meetingId}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  listWithFilters(params?: {
+    status_filter?: string;
+    approval_filter?: string;
+    meeting_type_filter?: string;
+    org_id?: string;
+    all_org_meetings?: boolean;
+  }): Promise<Meeting[]> {
+    const q = new URLSearchParams();
+    if (params?.status_filter) q.append('status_filter', params.status_filter);
+    if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
+    if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
+    if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
+    const qs = q.toString();
+    return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');
+  },
+};
+
+// ── Organization Invitation API ──────────────────────────
+
+export interface OrgInvitationCreateRequest {
+  email: string;
+  full_name?: string;
+  role_id?: string;
+  department_id?: string;
+  job_title?: string;
+  phone?: string;
+}
+
+export interface OrgInvitationResponse {
+  id: string;
+  organization_id: string;
+  email: string;
+  full_name?: string;
+  job_title?: string;
+  phone?: string;
+  role_id: string;
+  department_id?: string;
+  department_name?: string;
+  status: string;
+  token: string;
+  invite_code?: string;
+  register_url?: string;
+  email_status?: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface OrgInvitationVerifyResponse {
+  token: string;
+  invite_code?: string;
+  email: string;
+  full_name?: string;
+  phone?: string;
+  job_title?: string;
+  role: string;
+  organization_id: string;
+  organization_name: string;
+  department_id?: string;
+  department_name?: string;
+  available_departments: Array<{ id: string; name: string; description?: string }>;
+  expires_at: string;
+}
+
+export const invitationApi = {
+  create(orgId: string, data: OrgInvitationCreateRequest): Promise<OrgInvitationResponse> {
+    return apiFetch<OrgInvitationResponse>(`/api/v1/organizations/${orgId}/invitations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  list(orgId: string): Promise<OrgInvitationResponse[]> {
+    return apiFetch<OrgInvitationResponse[]>(`/api/v1/organizations/${orgId}/invitations`);
+  },
+
+  verify(token: string): Promise<OrgInvitationVerifyResponse> {
+    return apiFetch<OrgInvitationVerifyResponse>(`/api/v1/invitations/verify/${token}`);
+  },
+
+  accept(token: string): Promise<{ status: string; organization_id: string }> {
+    return apiFetch<{ status: string; organization_id: string }>(`/api/v1/invitations/${token}/accept`, {
+      method: 'POST',
+    });
+  },
+};
+

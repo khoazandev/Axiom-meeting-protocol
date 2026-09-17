@@ -9,6 +9,8 @@ export interface User {
   role?: string | null;
   provider: string;
   is_active: boolean;
+  department_id?: string | null;
+  department_name?: string | null;
 }
 
 export interface Organization {

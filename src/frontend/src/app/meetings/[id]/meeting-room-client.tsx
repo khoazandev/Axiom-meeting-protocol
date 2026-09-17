@@ -25,8 +25,6 @@ import {
   Pencil,
   Check,
   X,
-  Pin,
-  PinOff,
   PanelRight,
   Languages,
   CheckSquare,
@@ -39,6 +37,8 @@ import {
   Upload,
   Save,
   Trash2,
+  Power,
+  ArrowRight,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -79,6 +79,7 @@ import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useWebSpeech } from '@/hooks/useWebSpeech';
 import { MeetingPreJoinLobby, BackgroundOption } from '@/components/meetings/MeetingPreJoinLobby';
+import { ArchiveTransferModal } from '@/components/meetings/ArchiveTransferModal';
 import Logo from '@/components/Logo';
 
 function SpeechTranslationControl() {
@@ -678,6 +679,8 @@ function LiveKitContent({
   selectedLanguage = 'vi',
   onLanguageChange,
   selectedBackground,
+  isHost = false,
+  onExitClick,
 }: {
   participantName: string;
   onInviteClick: () => void;
@@ -686,6 +689,8 @@ function LiveKitContent({
   selectedLanguage?: string;
   onLanguageChange?: (lang: string) => void;
   selectedBackground?: BackgroundOption | null;
+  isHost?: boolean;
+  onExitClick?: () => void;
 }) {
   const { enabled: subtitlesEnabled } = useTranslationStore();
   const { localParticipant, isMicrophoneEnabled, microphoneTrack } = useLocalParticipant();
@@ -739,11 +744,24 @@ function LiveKitContent({
           </div>
         )}
 
+        {/* Dynamic Video Grid */}
         <LiveKitTileErrorBoundary>
-          <GridLayout tracks={tracks} style={{ height: '100%', width: '100%', gap: '1rem' }}>
-            <ParticipantTile />
-          </GridLayout>
-          <RoomAudioRenderer />
+          <div className="w-full h-full p-2">
+            {tracks.length === 0 ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                <Video className="w-8 h-8 opacity-40 animate-pulse" />
+                <span className="text-xs">Đang đồng bộ luồng truyền video...</span>
+              </div>
+            ) : (
+              <GridLayout
+                tracks={tracks}
+                className="w-full h-full grid gap-2"
+                style={{ height: '100%', width: '100%' }}
+              >
+                <ParticipantTile className="rounded-xl overflow-hidden shadow-sm" />
+              </GridLayout>
+            )}
+          </div>
         </LiveKitTileErrorBoundary>
 
         {/* Floating Live Subtitle Overlay */}
@@ -830,9 +848,20 @@ function LiveKitContent({
             >
               <PanelRight className="w-5 h-5" />
             </button>
-            <DisconnectButton className="lk-button lk-disconnect-button" title="Rời phòng">
-              <PhoneOff className="w-5 h-5" />
-            </DisconnectButton>
+            {onExitClick ? (
+              <button
+                type="button"
+                onClick={onExitClick}
+                className="w-10 h-10 shrink-0 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                title={isHost ? 'Kết thúc hoặc Rời phòng' : 'Rời phòng'}
+              >
+                <PhoneOff className="w-5 h-5" />
+              </button>
+            ) : (
+              <DisconnectButton className="lk-button lk-disconnect-button" title="Rời phòng">
+                <PhoneOff className="w-5 h-5" />
+              </DisconnectButton>
+            )}
 
             {/* Nút Ẩn / Thu Gọn thanh điều khiển (Theo yêu cầu ảnh chụp) */}
             <button
@@ -918,27 +947,22 @@ export function MeetingRoomClient() {
     'records'
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isSidebarPinned, setIsSidebarPinned] = useState(true);
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const sidebarLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSidebarMouseEnter = useCallback(() => {
-    if (sidebarLeaveTimerRef.current) {
-      clearTimeout(sidebarLeaveTimerRef.current);
-      sidebarLeaveTimerRef.current = null;
-    }
-    setIsSidebarHovered(true);
+  const handleCloseSidebar = useCallback(() => {
+    setSidebarOpen(false);
   }, []);
 
-  const handleSidebarMouseLeave = useCallback(() => {
-    if (isSidebarPinned) return;
-    if (sidebarLeaveTimerRef.current) clearTimeout(sidebarLeaveTimerRef.current);
-    sidebarLeaveTimerRef.current = setTimeout(() => {
-      setIsSidebarHovered(false);
-    }, 350);
-  }, [isSidebarPinned]);
-
-  const isSidebarVisible = isSidebarPinned ? sidebarOpen : isSidebarHovered || sidebarOpen;
+  const handleToggleTab = useCallback(
+    (tabId: 'chat' | 'transcript' | 'records' | 'ai') => {
+      if (sidebarOpen && activeRightTab === tabId) {
+        setSidebarOpen(false);
+      } else {
+        setActiveRightTab(tabId);
+        setSidebarOpen(true);
+      }
+    },
+    [sidebarOpen, activeRightTab]
+  );
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -1043,22 +1067,7 @@ export function MeetingRoomClient() {
     }
   };
 
-  const handleDeleteMeeting = async () => {
-    if (!meeting) return;
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn xóa vĩnh viễn cuộc họp "${meeting.title}" không?\nPhòng họp sẽ kết thúc và toàn bộ dữ liệu sẽ được xóa bỏ.`
-      )
-    ) {
-      return;
-    }
-    try {
-      await meetingsApi.delete(meetingId);
-      router.push('/member');
-    } catch (err: any) {
-      alert(`Không thể xóa cuộc họp: ${err?.message || 'Có lỗi xảy ra'}`);
-    }
-  };
+
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const transcriptSequenceRef = useRef(1);
@@ -1124,16 +1133,55 @@ export function MeetingRoomClient() {
     deadline: '',
   });
 
-  // Poll for action items
+  const user = useAuthStore((state) => state.user);
+
+  const handleExitMeeting = useCallback(() => {
+    const isOwner =
+      user?.role === 'OWNER' ||
+      user?.role === 'ADMIN' ||
+      user?.email === 'admin@axiom.com';
+    const isManager =
+      user?.role === 'MANAGER' ||
+      user?.email === 'manager.khoa@axiom.com';
+
+    if (isOwner) {
+      router.push('/admin');
+    } else if (isManager) {
+      router.push('/manager');
+    } else {
+      router.push('/member');
+    }
+  }, [user, router]);
+
+  const isHost = useMemo(() => {
+    if (!user || !meeting) return false;
+    return (
+      user.id === meeting.created_by_id ||
+      user.role === 'OWNER' ||
+      user.role === 'ADMIN' ||
+      user.email === 'admin@axiom.com'
+    );
+  }, [user, meeting]);
+
+  // Poll for meeting status, action items, transcripts, members
   useEffect(() => {
     if (!meetingId) return;
-    const fetchActionItems = async () => {
+    const fetchMeetingData = async () => {
       try {
-        const [items, transcripts, members] = await Promise.all([
+        const [latestMeeting, items, transcripts, members] = await Promise.all([
+          meetingsApi.get(meetingId),
           meetingsApi.getActionItems(meetingId),
           meetingsApi.getTranscripts(meetingId),
           meetingsApi.getMembers(meetingId),
         ]);
+        if (latestMeeting) {
+          setMeeting(latestMeeting);
+          if (latestMeeting.status === 'COMPLETED') {
+            alert('Cuộc họp đã được kết thúc và chuyển về kho lưu trữ.');
+            handleExitMeeting();
+            return;
+          }
+        }
         setActionItems(items);
         setDbTranscripts(transcripts);
         setMeetingMembers(members);
@@ -1146,10 +1194,10 @@ export function MeetingRoomClient() {
       }
     };
 
-    fetchActionItems();
-    const interval = setInterval(fetchActionItems, 5000);
+    fetchMeetingData();
+    const interval = setInterval(fetchMeetingData, 4000);
     return () => clearInterval(interval);
-  }, [meetingId]);
+  }, [meetingId, handleExitMeeting]);
 
   const handleSaveEdit = async (taskId: string) => {
     if (!meetingId) return;
@@ -1213,10 +1261,17 @@ export function MeetingRoomClient() {
       if (actionItems.length > 0) {
         await jiraApi.syncMeetingTasksToJira(meetingId, { target_project_id: project.id });
       }
-      const role = user?.role;
-      if (role === 'OWNER' || role === 'ADMIN') {
+      const isOwner =
+        user?.role === 'OWNER' ||
+        user?.role === 'ADMIN' ||
+        user?.email === 'admin@axiom.com';
+      const isManager =
+        user?.role === 'MANAGER' ||
+        user?.email === 'manager.khoa@axiom.com';
+
+      if (isOwner) {
         router.push('/admin');
-      } else if (role === 'MANAGER') {
+      } else if (isManager) {
         router.push('/manager');
       } else {
         router.push('/member?tab=jira');
@@ -1249,9 +1304,7 @@ export function MeetingRoomClient() {
   // AI loading state
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const user = useAuthStore((state) => state.user);
   const [participantName, setParticipantName] = useState(() => user?.full_name || '');
-
 
   useEffect(() => {
     if (user?.full_name) {
@@ -1262,7 +1315,14 @@ export function MeetingRoomClient() {
         .then((u) => {
           if (u?.full_name) {
             setParticipantName(u.full_name);
-            useAuthStore.setState({ user: u });
+            const role =
+              u.role ||
+              (u.email === 'admin@axiom.com'
+                ? 'OWNER'
+                : u.email === 'manager.khoa@axiom.com'
+                  ? 'MANAGER'
+                  : 'MEMBER');
+            useAuthStore.setState({ user: { ...u, role } });
           } else {
             setParticipantName(`User-${Math.floor(Math.random() * 1000)}`);
           }
@@ -1273,16 +1333,144 @@ export function MeetingRoomClient() {
     }
   }, [user]);
 
-  const handleExitMeeting = useCallback(() => {
-    const role = user?.role;
-    if (role === 'OWNER' || role === 'ADMIN') {
-      router.push('/admin');
-    } else if (role === 'MANAGER') {
-      router.push('/manager');
-    } else {
-      router.push('/member?tab=meetings');
+  // Meeting Paused state (When host temporarily leaves)
+  const [isMeetingPaused, setIsMeetingPaused] = useState(false);
+  const [pauseRemainingSeconds, setPauseRemainingSeconds] = useState(300); // 5 minutes
+  const [hostLeaveConfirmOpen, setHostLeaveConfirmOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isArchivingMeeting, setIsArchivingMeeting] = useState(false);
+
+  // Sync initial paused state from meeting
+  useEffect(() => {
+    if (meeting?.status === 'PAUSED') {
+      setIsMeetingPaused(true);
+    } else if (meeting?.status === 'IN_PROGRESS' || meeting?.status === 'STARTED') {
+      setIsMeetingPaused(false);
+      setPauseRemainingSeconds(300);
     }
-  }, [user, router]);
+  }, [meeting?.status]);
+
+  // Host returns: if local user is host and room was paused, auto-resume
+  useEffect(() => {
+    if (isHost && isMeetingPaused && meetingId) {
+      meetingsApi.update(meetingId, { status: 'IN_PROGRESS' }).catch(console.error);
+      setIsMeetingPaused(false);
+      setPauseRemainingSeconds(300);
+    }
+  }, [isHost, isMeetingPaused, meetingId]);
+
+  // 5-minute pause timer countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isMeetingPaused) {
+      timer = setInterval(() => {
+        setPauseRemainingSeconds((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer!);
+            handleAutoEndMeeting();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setPauseRemainingSeconds(300);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isMeetingPaused]);
+
+  const handleAutoEndMeeting = useCallback(async () => {
+    if (!meetingId) return;
+    try {
+      await meetingsApi.update(meetingId, { status: 'COMPLETED' });
+      alert('Đã quá 5 phút chủ phòng không quay lại. Cuộc họp đã tự động kết thúc và chuyển biên bản về kho lưu trữ.');
+      handleExitMeeting();
+    } catch (err) {
+      console.error('Failed to auto-end meeting:', err);
+      handleExitMeeting();
+    }
+  }, [meetingId, handleExitMeeting]);
+
+  const handleHostClickExit = useCallback(() => {
+    if (isHost) {
+      setHostLeaveConfirmOpen(true);
+    } else {
+      handleExitMeeting();
+    }
+  }, [isHost, handleExitMeeting]);
+
+  const handleHostTempLeave = useCallback(async () => {
+    if (meetingId) {
+      try {
+        await meetingsApi.update(meetingId, { status: 'PAUSED' });
+      } catch (err) {
+        console.error('Failed to set meeting to paused:', err);
+      }
+    }
+    setHostLeaveConfirmOpen(false);
+    handleExitMeeting();
+  }, [meetingId, handleExitMeeting]);
+
+  const handleHostEndFromDialog = useCallback(() => {
+    setHostLeaveConfirmOpen(false);
+    setIsArchiveModalOpen(true);
+  }, []);
+
+  const handleConfirmArchive = useCallback(
+    async (data: {
+      meetingId: string;
+      tasks: any[];
+      meetingType: 'EXECUTIVE' | 'DEPARTMENT' | 'MEMBER';
+    }) => {
+      setIsArchivingMeeting(true);
+      try {
+        // 1. Trigger full end meeting (AI summary from Agenda + Script, task extraction, status COMPLETED)
+        try {
+          await meetingsApi.endMeeting(data.meetingId);
+        } catch (endErr) {
+          console.warn('endMeeting endpoint warning, fallback to update:', endErr);
+          await meetingsApi.update(data.meetingId, { status: 'COMPLETED' });
+        }
+
+        // 2. Push confirmed action items to Jira / Management board
+        if (data.tasks && data.tasks.length > 0) {
+          try {
+            const taskPayload = data.tasks.map((t, idx) => ({
+              id: t.id || `task-${Date.now()}-${idx}`,
+              title: t.title,
+              assignee_id: t.assignee_id || null,
+              deadline: t.deadline || null,
+            }));
+            await meetingsApi.pushToJira(data.meetingId, taskPayload);
+          } catch (pushErr) {
+            console.warn('Failed to push tasks to Jira:', pushErr);
+          }
+        }
+
+        setIsArchiveModalOpen(false);
+
+        // Redirect to management page based on role
+        const isOwner = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
+        const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
+
+        if (isOwner) {
+          router.push('/admin');
+        } else if (isManager) {
+          router.push('/manager');
+        } else {
+          router.push('/member');
+        }
+      } catch (err: any) {
+        console.error('Failed to archive meeting:', err);
+        alert(`Không thể hoàn tất lưu trữ: ${err?.message || 'Có lỗi xảy ra'}`);
+      } finally {
+        setIsArchivingMeeting(false);
+      }
+    },
+    [user, router]
+  );
 
   const getSpeakerDisplayName = useCallback(
     (identity?: string, name?: string) => {
@@ -1619,12 +1807,6 @@ export function MeetingRoomClient() {
         isJoining={isJoining}
         onJoin={handleJoinMeeting}
         onExit={handleExitMeeting}
-        onDeleteMeeting={
-          user &&
-          (user.id === meeting.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN')
-            ? handleDeleteMeeting
-            : undefined
-        }
       />
     );
   }
@@ -1637,7 +1819,7 @@ export function MeetingRoomClient() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleExitMeeting}
+            onClick={handleHostClickExit}
             className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-all cursor-pointer"
             title="Rời phòng họp & Về bàn làm việc"
           >
@@ -1662,7 +1844,7 @@ export function MeetingRoomClient() {
 
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10.5px] font-semibold text-emerald-700">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live SFU
+            Đang diễn ra
           </div>
         </div>
 
@@ -1694,7 +1876,20 @@ export function MeetingRoomClient() {
             )}
           </button>
 
-
+          {/* Toggle Sidebar Button */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              sidebarOpen
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200'
+            }`}
+            title="Đóng/Mở thanh công cụ bên phải (⌘B)"
+          >
+            <PanelRight className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">{sidebarOpen ? 'Ẩn thanh bên' : 'Hiện thanh bên'}</span>
+          </button>
 
           {/* Invite Members Modal Trigger */}
           <button
@@ -1707,21 +1902,18 @@ export function MeetingRoomClient() {
             <span>Mời người</span>
           </button>
 
-          {/* Delete Meeting for Creator / Host */}
-          {user &&
-            (user.id === meeting.created_by_id ||
-              user.role === 'OWNER' ||
-              user.role === 'ADMIN') && (
-              <button
-                type="button"
-                onClick={handleDeleteMeeting}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
-                title="Xóa vĩnh viễn cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span className="hidden sm:inline">Xóa phòng</span>
-              </button>
-            )}
+          {/* End Meeting for Creator / Host */}
+          {isHost && (
+            <button
+              type="button"
+              onClick={() => setIsArchiveModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs"
+              title="Kết thúc cuộc họp và chuyển thông tin về kho lưu trữ"
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Kết thúc cuộc họp</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -1842,17 +2034,44 @@ export function MeetingRoomClient() {
                   selectedLanguage={selectedLanguage}
                   onLanguageChange={(newLang) => setSelectedLanguage(newLang)}
                   selectedBackground={selectedBackground}
+                  isHost={isHost}
+                  onExitClick={handleHostClickExit}
                   onSidebarToggle={() => {
-                    if (!sidebarOpen) {
-                      setSidebarOpen(true);
-                      setActiveRightTab('chat');
-                    } else if (activeRightTab !== 'chat') {
-                      setActiveRightTab('chat');
-                    } else {
-                      setSidebarOpen(false);
-                    }
+                    setSidebarOpen((prev) => !prev);
                   }}
                 />
+
+                {/* Meeting Paused Overlay for Participants when Host Temporarily Leaves */}
+                {isMeetingPaused && !isHost && (
+                  <div className="absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-300">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-lg animate-pulse">
+                      <Clock className="w-8 h-8" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold uppercase tracking-wider mb-2">
+                      Cuộc họp đang tạm dừng
+                    </span>
+                    <h2 className="text-xl font-bold text-white mb-2">Chủ phòng đã tạm rời cuộc họp</h2>
+                    <p className="text-slate-400 text-sm max-w-md mb-6">
+                      Phòng họp đang được giữ chỗ. Cuộc họp sẽ tiếp tục ngay khi chủ phòng quay lại.
+                    </p>
+                    <div className="flex flex-col items-center justify-center px-6 py-3 rounded-2xl bg-slate-900/80 border border-white/10 shadow-inner">
+                      <span className="text-xs text-slate-400 mb-1">Thời gian chờ tự động kết thúc:</span>
+                      <span className="font-mono text-2xl font-bold text-amber-400">
+                        {Math.floor(pauseRemainingSeconds / 60)}:
+                        {String(pauseRemainingSeconds % 60).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="mt-8 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleExitMeeting}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        Rời phòng họp
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* LiveKit Offline Warning */}
@@ -1863,195 +2082,164 @@ export function MeetingRoomClient() {
                   Mời bạn chat ở khung bên phải nhé! 🚀
                 </div>
               )}
+
+              {/* Expand Sidebar Edge Trigger Button when collapsed */}
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-7 h-14 rounded-l-xl bg-white/95 hover:bg-white text-slate-600 hover:text-blue-600 border-y border-l border-slate-300 shadow-md backdrop-blur-md transition-all cursor-pointer group"
+                  title="Mở thanh công cụ (Bản ghi, Task, Chat, AI) - ⌘B"
+                >
+                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5 text-blue-600" />
+                </button>
+              )}
             </div>
 
-            {/* ── 1. Invisible Right Edge Trigger Zone (Full height along far-right edge) ── */}
-            <div
-              className="fixed right-0 top-0 bottom-0 w-8 z-40"
-              onMouseEnter={handleSidebarMouseEnter}
-              onMouseMove={handleSidebarMouseEnter}
-            />
-
-            {/* ── 2. Sleek Capsule Peek Indicator (When sidebar is collapsed/unpinned) ── */}
-            {!isSidebarVisible && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSidebarOpen(true);
-                  setIsSidebarHovered(true);
-                }}
-                onMouseEnter={handleSidebarMouseEnter}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-40 group flex items-center justify-end p-0 cursor-pointer transition-all duration-300"
-                title="Rê chuột vào mép phải hoặc nhấp để mở Sidebar (Chat, Asightant, Ghi chép)"
-              >
-                <div className="w-2.5 h-24 rounded-l-2xl bg-gradient-to-b from-blue-500 via-indigo-600 to-violet-600 group-hover:w-6 group-hover:h-28 shadow-lg transition-all duration-300 flex items-center justify-center pl-1 border-y border-l border-blue-400/40">
-                  <ChevronLeft className="w-4 h-4 text-white opacity-80 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all duration-200" />
-                </div>
-              </button>
-            )}
-
-            {/* ── 3. Right Side: 4-Tab Multifunctional Sidebar with Auto-Hover & Pin Dock Toggle ── */}
+            {/* ── Fixed In-Meeting Integrated Sidebar (Split-Screen) ── */}
             <aside
-              onMouseEnter={handleSidebarMouseEnter}
-              onMouseLeave={handleSidebarMouseLeave}
-              className={`${
-                isSidebarPinned
-                  ? isSidebarVisible
-                    ? 'relative w-80 md:w-96 xl:w-[420px] shrink-0'
-                    : 'hidden'
-                  : `fixed right-0 top-0 bottom-0 w-80 md:w-96 xl:w-[420px] z-50 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                      isSidebarVisible
-                        ? 'translate-x-0 opacity-100 pointer-events-auto'
-                        : 'translate-x-full opacity-0 pointer-events-none'
-                    }`
-              } bg-white text-slate-900 flex flex-col h-full border-l border-slate-200 min-h-0 overflow-hidden select-none shadow-sm`}
+              className={`h-full flex flex-col min-h-0 bg-white border-l border-slate-200 transition-[width,opacity] duration-200 ease-out z-30 shrink-0 select-none ${
+                sidebarOpen
+                  ? 'w-[360px] sm:w-[380px] lg:w-[400px] opacity-100'
+                  : 'w-0 opacity-0 overflow-hidden border-l-0 pointer-events-none'
+              }`}
             >
-              {/* 1. Sidebar Header with Active Tab Title, Pin Toggle & Close Button */}
-              <div className="h-12 px-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50">
-                <div className="flex items-center gap-2 min-w-0">
-                  <PanelRight className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="text-xs font-bold text-slate-800 tracking-wide uppercase truncate">
-                    {activeRightTab === 'records' && 'Bản Ghi & Dịch Song Ngữ'}
-                    {activeRightTab === 'transcript' && 'Agenda & Ghi Chú'}
-                    {activeRightTab === 'chat' && 'Trò Chuyện Cuộc Họp'}
-                    {activeRightTab === 'ai' && 'ASIGHTANT (TRỢ LÝ AI)'}
-                  </span>
+              {/* Sidebar Header & Tab Switcher Bar */}
+              <div className="shrink-0 bg-slate-50/80 border-b border-slate-200">
+                {/* Top Row: Active Tab Title + Window Controls */}
+                <div className="h-12 px-3.5 flex items-center justify-between border-b border-slate-200/60">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {activeRightTab === 'records' && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <Languages className="w-3.5 h-3.5 text-emerald-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Bản Ghi STT & Dịch Song Ngữ">
+                            Bản Ghi & Dịch
+                          </h3>
+                        </div>
+                      </div>
+                    )}
+                    {activeRightTab === 'transcript' && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                          <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Agenda Cuộc Họp & Nhiệm Vụ (Jira)">
+                            Agenda & Task
+                          </h3>
+                        </div>
+                      </div>
+                    )}
+                    {activeRightTab === 'chat' && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center shrink-0">
+                          <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Kênh Chat Cuộc Họp">
+                            Trò Chuyện
+                          </h3>
+                        </div>
+                      </div>
+                    )}
+                    {activeRightTab === 'ai' && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide truncate" title="Trợ Lý AI Asightant">
+                            Asightant AI
+                          </h3>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleCloseSidebar}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
+                      title="Thu gọn thanh bên (⌘B)"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
-                  {/* Pin / Dock Toggle Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isSidebarPinned) {
-                        setIsSidebarPinned(false);
-                      } else {
-                        setIsSidebarPinned(true);
-                        setSidebarOpen(true);
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                      isSidebarPinned
-                        ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-2xs'
-                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
-                    title={
-                      isSidebarPinned
-                        ? 'Bỏ ghim (Chuyển sang chế độ tự ẩn khi rời chuột)'
-                        : 'Ghim cố định (Chia đôi khung nhìn song song với video)'
-                    }
-                  >
-                    {isSidebarPinned ? (
-                      <Pin className="w-3.5 h-3.5 fill-current text-blue-600" />
-                    ) : (
-                      <PinOff className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </button>
-
-                  {/* Close Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSidebarOpen(false);
-                      setIsSidebarHovered(false);
-                    }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Thu gọn sidebar (⌘B)"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. 4-Tab Segmented Switcher */}
-              <div className="p-2 border-b border-slate-200 bg-slate-50 shrink-0">
-                <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
-                  {/* Tab 1: Records */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveRightTab('records')}
-                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      activeRightTab === 'records'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                    }`}
-                    title="Bản ghi âm và dịch song ngữ thời gian thực"
-                  >
-                    <Languages className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] truncate">Bản Ghi</span>
-                    {displayedRecords.length > 0 && (
-                      <span
-                        className={`text-[9px] px-1 rounded-full font-mono font-bold ${
-                          activeRightTab === 'records'
-                            ? 'bg-white/20 text-white'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {displayedRecords.length}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Tab 2: Task & Agenda */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveRightTab('transcript')}
-                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      activeRightTab === 'transcript'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                    }`}
-                    title="Danh sách Task và Agenda cuộc họp"
-                  >
-                    <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] truncate font-bold">Task</span>
-                    {actionItems.length > 0 && (
-                      <span
-                        className={`text-[9px] px-1 rounded-full font-mono font-bold ${
-                          activeRightTab === 'transcript'
-                            ? 'bg-white/20 text-white'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {actionItems.length}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Tab 3: Chat */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveRightTab('chat')}
-                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      activeRightTab === 'chat'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                    }`}
-                    title="Hộp trò chuyện tin nhắn phòng họp"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] truncate">Chat</span>
-                  </button>
-
-                  {/* Tab 4: Asightant */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveRightTab('ai')}
-                    className={`relative py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                      activeRightTab === 'ai'
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                    }`}
-                    title="Trợ lý Asightant AI giải đáp mọi thông tin và diễn biến cuộc họp"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                    <span className="text-[11px] truncate">Asightant</span>
-                  </button>
+                {/* Bottom Row: 4-Tab Segmented Switcher */}
+                <div className="p-2">
+                  <div className="grid grid-cols-4 gap-1 p-1 bg-slate-200/70 rounded-xl border border-slate-200">
+                    {[
+                      {
+                        id: 'records' as const,
+                        label: 'Bản ghi',
+                        icon: Languages,
+                        badge: displayedRecords.length,
+                        title: 'Bản Ghi STT & Dịch Song Ngữ',
+                      },
+                      {
+                        id: 'transcript' as const,
+                        label: 'Task',
+                        icon: CheckSquare,
+                        badge: actionItems.length,
+                        title: 'Agenda & Nhiệm Vụ (Jira)',
+                      },
+                      {
+                        id: 'chat' as const,
+                        label: 'Chat',
+                        icon: MessageSquare,
+                        badge: 0,
+                        title: 'Trò Chuyện Cuộc Họp',
+                      },
+                      {
+                        id: 'ai' as const,
+                        label: 'AI',
+                        icon: Sparkles,
+                        badge: 0,
+                        title: 'Asightant Trợ Lý AI',
+                      },
+                    ].map((tab) => {
+                      const isActive = activeRightTab === tab.id;
+                      const IconComp = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveRightTab(tab.id)}
+                          className={`flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer select-none ${
+                            isActive
+                              ? 'bg-white text-blue-600 shadow-2xs font-bold border border-slate-200'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                          }`}
+                          title={tab.title}
+                        >
+                          <IconComp className={`w-3.5 h-3.5 shrink-0 ${isActive && tab.id === 'ai' ? 'text-amber-500' : ''}`} />
+                          <span className="truncate">{tab.label}</span>
+                          {tab.badge > 0 && (
+                            <span
+                              className={`text-[9px] px-1 py-0.2 rounded-full font-mono font-bold leading-tight shrink-0 ${
+                                isActive
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-slate-300 text-slate-700'
+                              }`}
+                            >
+                              {tab.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* 3. Tab Content Panels with Smooth Vertical Scrolling */}
-              <div className="flex-1 flex flex-col overflow-hidden relative min-h-0">
+              {/* Dedicated Content for the Active Page */}
+              <div className="flex-1 flex flex-col overflow-hidden relative min-h-0 bg-white">
                 {/* ─────────────────────────────────────────────────────────────
                       TAB 1: RECORDS & REALTIME BILINGUAL TRANSLATION
                   ───────────────────────────────────────────────────────────── */}
@@ -2589,7 +2777,83 @@ export function MeetingRoomClient() {
         onClose={() => setInviteModalOpen(false)}
       />
 
+      {/* Host Leave Confirm Dialog Modal */}
+      {hostLeaveConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4">
+              <Clock className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              Bạn là chủ phòng cuộc họp này
+            </h3>
+            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+              Vui lòng chọn cách rời phòng bên dưới. Nếu bạn tạm rời, phòng họp sẽ tạm dừng và đếm ngược 5 phút chờ bạn quay lại.
+            </p>
 
+            <div className="space-y-2.5 mb-6">
+              <button
+                type="button"
+                onClick={handleHostTempLeave}
+                className="w-full p-3 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+              >
+                <div className="p-2 rounded-lg bg-amber-500 text-white shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-amber-900 group-hover:text-amber-950">
+                    Tạm rời phòng (Tạm dừng tối đa 5 phút)
+                  </div>
+                  <div className="text-[11px] text-amber-700 mt-0.5">
+                    Phòng họp sẽ tạm dừng cho các thành viên. Nếu sau 5 phút bạn không quay lại, cuộc họp sẽ tự động kết thúc.
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleHostEndFromDialog}
+                className="w-full p-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+              >
+                <div className="p-2 rounded-lg bg-rose-600 text-white shrink-0 mt-0.5">
+                  <Power className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-rose-900 group-hover:text-rose-950">
+                    Kết thúc cuộc họp & Lưu trữ
+                  </div>
+                  <div className="text-[11px] text-rose-700 mt-0.5">
+                    Đóng phòng họp, trích xuất action item và chuyển toàn bộ dữ liệu cuộc họp về kho lưu trữ.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setHostLeaveConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Ở lại phòng họp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive & Transfer Modal */}
+      {meeting && (
+        <ArchiveTransferModal
+          isOpen={isArchiveModalOpen}
+          onClose={() => setIsArchiveModalOpen(false)}
+          meeting={meeting}
+          initialTasks={actionItems}
+          meetingMembers={meetingMembers}
+          onConfirmArchive={handleConfirmArchive}
+          isSubmitting={isArchivingMeeting}
+        />
+      )}
     </div>
   );
 }

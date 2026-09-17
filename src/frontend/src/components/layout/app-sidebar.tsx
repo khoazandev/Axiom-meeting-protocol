@@ -93,7 +93,7 @@ export function AppSidebar() {
 
   const userName = user?.full_name || 'Alex Rivera (Kỹ sư AI / Thành viên)';
   const userEmail = user?.email || 'alex@axiom.com';
-  const roleLabel = isOwner ? 'CHỦ TỊCH / CEO' : isManager ? 'TRƯỞNG PHÒNG' : 'THÀNH VIÊN (MEMBER)';
+  const roleLabel = isOwner ? 'OWNER' : isManager ? 'MANAGER' : 'MEMBER';
   const userInitials = (
     userName
       .split(' ')

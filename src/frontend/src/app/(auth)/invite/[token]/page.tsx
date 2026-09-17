@@ -1,37 +1,43 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Loader2, MailCheck } from 'lucide-react';
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
   const token = resolvedParams.token;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (token) {
+      router.replace(`/register?invite_token=${encodeURIComponent(token)}`);
+    }
+  }, [token, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-primary p-4">
-      <div className="w-full max-w-md bg-bg-card border border-border rounded-xl p-8 text-center shadow-lg">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-emerald-500/20 text-emerald-400 font-bold text-2xl mb-4">
-          📩
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F8FC] text-slate-900 p-4">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-xl space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
+          <MailCheck className="w-7 h-7" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight mb-2">Workspace Invitation</h1>
-        <p className="text-text-secondary text-sm mb-6">
-          You&apos;ve been invited to join a Workspace on Axiom.
+        <h1 className="text-xl font-bold tracking-tight">Đang xác thực Thư mời...</h1>
+        <p className="text-slate-500 text-xs leading-relaxed">
+          Đang chuyển hướng bạn tới biểu mẫu kích hoạt tài khoản doanh nghiệp.
         </p>
-
-        <div className="p-3 bg-bg-base border border-border rounded-xl font-mono text-xs text-accent break-all mb-6">
-          Token: {token}
+        <div className="flex items-center justify-center gap-2 text-xs text-blue-600 font-medium">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Vui lòng chờ trong giây lát...</span>
         </div>
-
-        <Link
-          href={`/register?invite=${token}`}
-          className="block w-full py-3.5 px-4 rounded-xl bg-accent hover:bg-accent/90 text-text-primary font-medium shadow-lg shadow-blue-600/25 transition-all mb-3"
-        >
-          Accept Invitation & Join
-        </Link>
-
-        <Link href="/login" className="block text-xs text-text-secondary hover:text-text-secondary">
-          Already have an account? Sign in
-        </Link>
+        <div className="pt-2">
+          <Link
+            href={`/register?invite_token=${encodeURIComponent(token)}`}
+            className="text-xs font-bold text-slate-500 hover:text-blue-600 hover:underline"
+          >
+            Nhấn vào đây nếu không tự động chuyển hướng
+          </Link>
+        </div>
       </div>
     </div>
   );

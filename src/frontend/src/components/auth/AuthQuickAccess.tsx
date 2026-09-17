@@ -19,7 +19,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {/* Slot 1: Chủ Tịch (OWNER) */}
+        {/* Slot 1: OWNER */}
         <button
           type="button"
           onClick={() => onSelect('admin@axiom.com', 'password123')}
@@ -27,7 +27,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
         >
           <div>
             <div className="text-[11.5px] font-bold text-slate-800 group-hover:text-amber-700">
-              👑 Chủ Tịch (OWNER)
+              👑 OWNER
             </div>
             <div className="text-[10px] text-slate-500 font-mono truncate">admin@axiom.com</div>
           </div>
@@ -37,7 +37,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
           />
         </button>
 
-        {/* Slot 2: Trưởng Phòng (MANAGER) */}
+        {/* Slot 2: MANAGER */}
         <button
           type="button"
           onClick={() => onSelect('manager.khoa@axiom.com', 'password123')}
@@ -45,7 +45,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
         >
           <div>
             <div className="text-[11.5px] font-bold text-slate-800 group-hover:text-blue-700">
-              👔 Trưởng Phòng (MANAGER)
+              👔 MANAGER
             </div>
             <div className="text-[10px] text-slate-500 font-mono truncate">
               manager.khoa@axiom.com
@@ -57,7 +57,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
           />
         </button>
 
-        {/* Slot 3: Thành Viên (MEMBER) */}
+        {/* Slot 3: MEMBER */}
         <button
           type="button"
           onClick={() => onSelect('alex@axiom.com', 'password123')}
@@ -65,7 +65,7 @@ export default function AuthQuickAccess({ onSelect }: AuthQuickAccessProps) {
         >
           <div>
             <div className="text-[11.5px] font-bold text-slate-800 group-hover:text-emerald-700">
-              👤 Thành Viên (MEMBER)
+              👤 MEMBER
             </div>
             <div className="text-[10px] text-slate-500 font-mono truncate">alex@axiom.com</div>
           </div>
