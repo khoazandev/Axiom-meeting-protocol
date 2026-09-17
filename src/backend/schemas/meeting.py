@@ -12,6 +12,7 @@ class MeetingCreate(BaseModel):
     organization_id: str | None = None
     department_id: str | None = None
     scheduled_at: datetime | None = None
+    scheduled_start_time: datetime | None = None
     agenda_text: str | None = None
     approval_status: str | None = "APPROVED"
     meeting_type: str | None = "OFFICIAL"
@@ -51,6 +52,10 @@ class MeetingResponse(BaseModel):
     started_at: datetime | None = None
     ended_at: datetime | None = None
     participant_count: int = 0
+    summary: str | None = None
+    key_points: str | None = None
+    decisions: str | None = None
+    task_count: int = 0
     created_at: datetime
     updated_at: datetime
 

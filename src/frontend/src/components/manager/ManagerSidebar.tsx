@@ -125,7 +125,7 @@ export function ManagerSidebar({
                     Trần Minh Khoa
                   </div>
                   <div className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                    TRƯỞNG PHÒNG
+                    MANAGER
                   </div>
                 </div>
               </div>

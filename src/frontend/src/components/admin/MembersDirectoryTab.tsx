@@ -203,11 +203,11 @@ export function MembersDirectoryTab({
                 value={selectedRoleFilter}
                 onChange={setSelectedRoleFilter}
                 options={[
-                  { value: 'ALL', label: 'Tất cả vai trò' },
-                  { value: 'OWNER', label: 'Chủ tịch' },
-                  { value: 'ADMIN', label: 'Quản trị viên' },
-                  { value: 'MANAGER', label: 'Trưởng phòng' },
-                  { value: 'MEMBER', label: 'Thành viên' },
+                  { value: 'ALL', label: 'All Roles' },
+                  { value: 'OWNER', label: 'OWNER' },
+                  { value: 'ADMIN', label: 'ADMIN' },
+                  { value: 'MANAGER', label: 'MANAGER' },
+                  { value: 'MEMBER', label: 'MEMBER' },
                 ]}
                 width="150px"
               />
@@ -316,10 +316,10 @@ export function MembersDirectoryTab({
                 value={newRoleVal}
                 onChange={(val) => setNewRoleVal(val as any)}
                 options={[
-                  { value: 'MEMBER', label: 'THÀNH VIÊN' },
-                  { value: 'MANAGER', label: 'TRƯỞNG PHÒNG' },
-                  { value: 'ADMIN', label: 'QUẢN TRỊ VIÊN' },
-                  { value: 'OWNER', label: 'CHỦ TỊCH' },
+                  { value: 'MEMBER', label: 'MEMBER' },
+                  { value: 'MANAGER', label: 'MANAGER' },
+                  { value: 'ADMIN', label: 'ADMIN' },
+                  { value: 'OWNER', label: 'OWNER' },
                 ]}
                 width="100%"
               />
@@ -454,9 +454,9 @@ export function MembersDirectoryTab({
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { val: 'MEMBER', label: 'Thành viên' },
-                    { val: 'MANAGER', label: 'Trưởng phòng' },
-                    { val: 'ADMIN', label: 'Quản trị viên' },
+                    { val: 'MEMBER', label: 'MEMBER' },
+                    { val: 'MANAGER', label: 'MANAGER' },
+                    { val: 'ADMIN', label: 'ADMIN' },
                   ].map((item) => (
                     <button
                       key={item.val}

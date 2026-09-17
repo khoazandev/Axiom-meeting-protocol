@@ -155,79 +155,29 @@ export function AuditSecurityTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* ── TOP EXECUTIVE SOC BANNER ── */}
-      <div className="bg-linear-to-r from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-slate-800">
-        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-1/4 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+      {/* ── SOC POSTURE & COMPLIANCE TELEMETRY BAR ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <span
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black border ${threatLevel.color}`}
+          >
+            <span className={`w-2 h-2 rounded-full ${threatLevel.dot} animate-pulse`} />
+            <span>{threatLevel.level}</span>
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+            • {threatLevel.text}
+          </span>
+        </div>
 
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/10">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold mb-2.5">
-                <MatIcon name="shield" className="text-[16px] text-rose-400" />
-                <span>EXECUTIVE PROTOCOL • TRUNG TÂM TÁC CHIẾN AN NINH SOC</span>
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
-                <span>Giám Sát An Ninh & Kiểm Toán Hệ Thống</span>
-              </h1>
-              <p className="text-xs text-slate-300 max-w-2xl mt-1.5 leading-relaxed">
-                Trực quan hóa hoạt động kiểm toán, phân tích bất thường phân quyền RBAC và ghi nhận
-                dấu vết truy cập theo tiêu chuẩn bảo mật ISO/IEC 27001 và SOC-2 Type II.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              {onRefresh && (
-                <button
-                  type="button"
-                  onClick={onRefresh}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all cursor-pointer border border-white/20 active:scale-95"
-                  title="Đồng bộ lại nhật ký kiểm toán mới nhất"
-                >
-                  <MatIcon
-                    name="refresh"
-                    className={`text-[18px] ${loading ? 'animate-spin' : ''}`}
-                  />
-                  <span>Làm mới SOC</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer active:scale-95 border border-blue-400/40"
-              >
-                <MatIcon name="download" className="text-[18px]" />
-                <span>Xuất Báo Cáo CSV Kiểm Toán</span>
-              </button>
-            </div>
-          </div>
-
-          {/* SOC Status Indicator Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 text-xs">
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400 font-semibold">Tình Trạng SOC:</span>
-              <span
-                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black border ${threatLevel.color}`}
-              >
-                <span className={`w-2 h-2 rounded-full ${threatLevel.dot} animate-ping`} />
-                <span>{threatLevel.level}</span>
-              </span>
-              <span className="text-slate-400 hidden sm:inline">• {threatLevel.text}</span>
-            </div>
-
-            <div className="flex items-center gap-3 font-mono text-[11px] text-slate-400">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10">
-                <MatIcon name="lock" className="text-emerald-400 text-[14px]" />
-                <span>SHA-256 Tamper-Proof Active</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10">
-                <MatIcon name="verified_user" className="text-blue-400 text-[14px]" />
-                <span>Zero-Trust Enforced</span>
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+            <MatIcon name="lock" className="text-emerald-500 text-[14px]" />
+            <span>SHA-256 Tamper-Proof</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+            <MatIcon name="verified_user" className="text-blue-500 text-[14px]" />
+            <span>Zero-Trust Enforced</span>
+          </span>
         </div>
       </div>
 
@@ -580,6 +530,31 @@ export function AuditSecurityTab({
             variant="connected"
             size="md"
           />
+
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+              title="Đồng bộ lại nhật ký kiểm toán"
+            >
+              <MatIcon
+                name="refresh"
+                className={`text-[16px] ${loading ? 'animate-spin text-blue-500' : ''}`}
+              />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+            title="Xuất toàn bộ nhật ký kiểm toán thành file CSV"
+          >
+            <MatIcon name="download" className="text-[16px]" />
+            <span>Xuất file CSV</span>
+          </button>
         </div>
       </div>
 

@@ -206,7 +206,11 @@ def get_security_summary(
         sev, _ = _infer_severity_and_category(l.action)
         sev_dist[sev] = sev_dist.get(sev, 0) + 1
 
-        if l.created_at and l.created_at >= one_day_ago:
+        l_created = l.created_at
+        if l_created and l_created.tzinfo is None:
+            l_created = l_created.replace(tzinfo=timezone.utc)
+
+        if l_created and l_created >= one_day_ago:
             events_24h += 1
             if sev == "CRITICAL":
                 crit_count += 1
@@ -225,7 +229,12 @@ def get_security_summary(
         day_start = datetime.datetime.combine(day_date, datetime.time.min, tzinfo=timezone.utc)
         day_end = datetime.datetime.combine(day_date, datetime.time.max, tzinfo=timezone.utc)
 
-        day_logs = [l for l in all_logs if l.created_at and day_start <= l.created_at <= day_end]
+        day_logs = []
+        for l in all_logs:
+            if l.created_at:
+                c = l.created_at if l.created_at.tzinfo is not None else l.created_at.replace(tzinfo=timezone.utc)
+                if day_start <= c <= day_end:
+                    day_logs.append(l)
         cnt = len(day_logs)
         crit = sum(1 for l in day_logs if _infer_severity_and_category(l.action)[0] == "CRITICAL")
         

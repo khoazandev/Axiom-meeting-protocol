@@ -19,9 +19,9 @@ interface TabItem {
 const TABS: TabItem[] = [
   {
     id: 'overview',
-    label: 'Tổng quan & Radar',
-    sublabel: 'Pulse, Radar & Giám sát',
-    icon: 'radar',
+    label: 'Tổng quan',
+    sublabel: 'Giám sát điều hành',
+    icon: 'speed',
     badge: '3 Đang họp',
     badgeColor:
       'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300/50',

@@ -36,13 +36,15 @@ class Settings(BaseSettings):
     # OpenRouter / LLM
     openrouter_api_key: str = ""
     llm_fallback_models: list[str] = [
-        "openai/gpt-4o-mini",
-        "google/gemini-flash-1.5",
-        "qwen2.5:7b"
+        "qwen2.5:3b",
+        "qwen2.5:1.5b",
+        "qwen2.5:0.5b"
     ]
+    default_model: str = "qwen2.5:3b"
     task_extractor_model: str = "task-extractor"
     decision_extractor_model: str = "decision-extractor"
     ollama_base_url: str = "http://host.docker.internal:11434"
+    ollama_timeout: int = 30
 
     # STT Models
     stt_whisper_model: str = "large-v3"
@@ -84,6 +86,15 @@ class Settings(BaseSettings):
     # Application
     app_title: str = "Axiom — Enterprise Meeting Protocol API"
     debug: bool = False
+
+    # Email / SMTP
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@axiom-enterprise.com"
+    smtp_from_name: str = "Axiom Enterprise Protocol"
+    frontend_base_url: str = "http://localhost:3001"
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -5,6 +5,11 @@ class UserRegister(BaseModel):
     email: str
     password: str = Field(..., min_length=6)
     full_name: str = Field(..., min_length=1)
+    phone: str | None = None
+    job_title: str | None = None
+    department_id: str | None = None
+    invite_token: str | None = None
+    organization_name: str | None = None
 
 
 class UserLogin(BaseModel):
@@ -23,6 +28,9 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     avatar_url: str | None = None
+    role: str | None = None
+    phone: str | None = None
+    job_title: str | None = None
     provider: str
     is_active: bool
 

@@ -29,7 +29,7 @@ export function AdminNavTabs({ activeTab, onChangeTab, badgeCounts }: AdminNavTa
   const tabs: TabDef[] = [
     {
       key: 'pulse',
-      label: 'Tổng Quan & Radar',
+      label: 'Tổng Quan',
       icon: 'speed',
       badge: badgeCounts?.liveMeetings ? `${badgeCounts.liveMeetings} Đang họp` : undefined,
       badgeColor: 'bg-emerald-100 text-emerald-700 animate-pulse',

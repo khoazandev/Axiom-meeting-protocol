@@ -96,7 +96,6 @@ interface MeetingPreJoinLobbyProps {
     background: BackgroundOption;
   }) => void;
   onExit: () => void;
-  onDeleteMeeting?: () => void;
 }
 
 export function MeetingPreJoinLobby({
@@ -109,7 +108,6 @@ export function MeetingPreJoinLobby({
   isJoining,
   onJoin,
   onExit,
-  onDeleteMeeting,
 }: MeetingPreJoinLobbyProps) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
@@ -750,8 +748,8 @@ export function MeetingPreJoinLobby({
                 </button>
               </div>
 
-              {/* Exit and Delete Actions */}
-              <div className="flex items-center justify-between pt-1 text-xs">
+              {/* Exit Action */}
+              <div className="flex items-center justify-center pt-1 text-xs">
                 <button
                   type="button"
                   onClick={onExit}
@@ -759,18 +757,6 @@ export function MeetingPreJoinLobby({
                 >
                   Quay lại bàn làm việc
                 </button>
-
-                {onDeleteMeeting && (
-                  <button
-                    type="button"
-                    onClick={onDeleteMeeting}
-                    className="flex items-center gap-1 py-1 px-2.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/70 font-semibold transition-colors cursor-pointer"
-                    title="Xóa vĩnh viễn cuộc họp này"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Xóa cuộc họp</span>
-                  </button>
-                )}
               </div>
             </div>
           </div>

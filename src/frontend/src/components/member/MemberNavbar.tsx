@@ -121,7 +121,7 @@ export function MemberNavbar({
                 Alex Rivera
               </p>
               <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase leading-tight">
-                THÀNH VIÊN (MEMBER)
+                MEMBER
               </p>
             </div>
             <ChevronDown size={14} className="text-slate-400" />
@@ -136,7 +136,7 @@ export function MemberNavbar({
                   <p className="font-bold text-slate-900 dark:text-white">Alex Rivera</p>
                   <p className="text-slate-400 text-[11px] truncate">alex@axiom.com</p>
                   <span className="mt-1.5 inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    Vai trò: THÀNH VIÊN (MEMBER)
+                    Role: MEMBER
                   </span>
                 </div>
 

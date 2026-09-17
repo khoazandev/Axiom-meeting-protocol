@@ -10,6 +10,8 @@ import {
   getDepartmentIcon,
   getCleanDeptDescription,
   formatDeptDescriptionWithIcon,
+  getUsedDepartmentIcons,
+  getFirstAvailableIcon,
 } from '@/lib/departmentIcons';
 
 interface CompanyOrgTreeProps {
@@ -66,10 +68,11 @@ export function CompanyOrgTree({
     );
   };
 
-  // Exactly ONE Chairman at the root level
+  // Exactly ONE Chairman at the root level (User's System Admin account)
   const chairman = useMemo(() => {
     return (
-      members.find((m) => m.email === 'alex@axiom.com') ||
+      members.find((m) => m.email === 'admin@axiom.com') ||
+      members.find((m) => m.full_name.toLowerCase().includes('admin')) ||
       members.find((m) => m.role === 'OWNER') ||
       members[0]
     );
@@ -233,7 +236,7 @@ export function CompanyOrgTree({
             onClick={() => {
               setDeptNameInput('');
               setDeptDescInput('');
-              setDeptIconInput('code');
+              setDeptIconInput(getFirstAvailableIcon(departments));
               setIsAddDeptModalOpen(true);
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
@@ -252,7 +255,7 @@ export function CompanyOrgTree({
             <div className="flex flex-col items-center relative z-20">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300/80 text-amber-800 dark:text-amber-300 text-[11px] font-extrabold uppercase tracking-wider mb-3 shadow-2xs">
                 <MatIcon name="workspace_premium" className="text-[16px] text-amber-500" />
-                <span>Chủ tịch</span>
+                <span>OWNER</span>
               </div>
 
               {/* Chairman Card wrapped with UserHoverCard */}
@@ -283,7 +286,7 @@ export function CompanyOrgTree({
                         {chairman.full_name}
                       </h4>
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/80 shrink-0">
-                        CHỦ TỊCH
+                        OWNER
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{chairman.email}</p>
@@ -343,41 +346,39 @@ export function CompanyOrgTree({
                     {/* Top branch vertical connector pin linking to Chairman beam */}
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-0.5 h-6 bg-slate-300 dark:bg-slate-700" />
 
-                    {/* Department Header with Custom Icon */}
+                    {/* Department Header with Single Distinct Icon */}
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        {/* Switcher button */}
-                        <button
-                          type="button"
-                          onClick={() => toggleCollapse(dept.id)}
-                          className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-transform cursor-pointer"
-                          title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                        >
-                          <MatIcon
-                            name="chevron_right"
-                            className={`text-[18px] transition-transform duration-200 ${
-                              !isCollapsed ? 'rotate-90' : ''
-                            }`}
-                          />
-                        </button>
-
-                        {/* Distinct Department Icon */}
-                        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                          <MatIcon name={deptIcon} className="text-[18px]" />
+                        {/* Distinct Department Icon (Only 1 representative icon per department) */}
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs border border-blue-100 dark:border-blue-900/50">
+                          <MatIcon name={deptIcon} className="text-[20px]" />
                         </div>
 
                         <div className="min-w-0">
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                             {dept.name}
                           </h4>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          <span className="text-[10.5px] text-slate-500 dark:text-slate-400">
                             {deptMembers.length} thành viên
                           </span>
                         </div>
                       </div>
 
-                      {/* Action buttons: Sửa, Xóa */}
+                      {/* Action buttons: Thu gọn/Mở rộng, Sửa, Xóa */}
                       <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapse(dept.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                          title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+                        >
+                          <MatIcon
+                            name="chevron_right"
+                            className={`text-[16px] transition-transform duration-200 ${
+                              !isCollapsed ? 'rotate-90' : ''
+                            }`}
+                          />
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -386,7 +387,7 @@ export function CompanyOrgTree({
                             setDeptDescInput(getCleanDeptDescription(dept.description));
                             setDeptIconInput(getDepartmentIcon(dept));
                           }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                           title="Sửa phòng ban"
                         >
                           <MatIcon name="edit" className="text-[16px]" />
@@ -394,7 +395,7 @@ export function CompanyOrgTree({
                         <button
                           type="button"
                           onClick={() => handleDeleteDeptClick(dept)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                           title="Xóa phòng ban"
                         >
                           <MatIcon name="delete" className="text-[16px]" />
@@ -408,9 +409,9 @@ export function CompanyOrgTree({
                         {/* Manager Lead Card wrapped with UserHoverCard */}
                         <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/50">
                           <div className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                            <span>Trưởng phòng</span>
+                            <span>MANAGER</span>
                             <span className="text-[9.5px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full font-bold">
-                              MANAGER
+                              LEAD
                             </span>
                           </div>
 
@@ -435,7 +436,6 @@ export function CompanyOrgTree({
                                   </p>
                                   <p className="text-[11px] text-slate-500 truncate">{manager.email}</p>
                                 </div>
-                                <MatIcon name="drag_indicator" className="text-[16px] text-slate-400" />
                               </div>
                             </UserHoverCard>
                           ) : (
@@ -449,7 +449,7 @@ export function CompanyOrgTree({
                         {/* Members inside Department wrapped with UserHoverCard */}
                         <div className="space-y-2 flex-1">
                           <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                            <span>Thành viên • {regularMembers.length}</span>
+                            <span>MEMBERS • {regularMembers.length}</span>
                             <span className="text-[10px] text-slate-400">Kéo để chuyển</span>
                           </div>
 
@@ -480,12 +480,9 @@ export function CompanyOrgTree({
                                       </span>
                                     </div>
 
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <span className="text-[9.5px] px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium">
-                                        {member.role}
-                                      </span>
-                                      <MatIcon name="drag_indicator" className="text-[14px] text-slate-400" />
-                                    </div>
+                                    <span className="text-[9.5px] px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium shrink-0">
+                                      {member.role}
+                                    </span>
                                   </div>
                                 </UserHoverCard>
                               ))
@@ -591,10 +588,10 @@ export function CompanyOrgTree({
                   value={newRoleVal}
                   onChange={(val) => setNewRoleVal(val as any)}
                   options={[
-                    { value: 'MEMBER', label: 'THÀNH VIÊN' },
-                    { value: 'MANAGER', label: 'TRƯỞNG PHÒNG' },
-                    { value: 'ADMIN', label: 'QUẢN TRỊ VIÊN' },
-                    { value: 'OWNER', label: 'CHỦ TỊCH' },
+                    { value: 'MEMBER', label: 'MEMBER' },
+                    { value: 'MANAGER', label: 'MANAGER' },
+                    { value: 'ADMIN', label: 'ADMIN' },
+                    { value: 'OWNER', label: 'OWNER' },
                   ]}
                   width="100%"
                 />
@@ -683,27 +680,56 @@ export function CompanyOrgTree({
                 />
               </div>
 
-              {/* Department Icon Library Selection */}
+              {/* Department Icon Library Selection with Exclusivity Rule */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Chọn biểu tượng nhận diện
-                </label>
-                <div className="grid grid-cols-6 gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                  {DEPARTMENT_ICONS.map((item) => (
-                    <button
-                      key={item.icon}
-                      type="button"
-                      onClick={() => setDeptIconInput(item.icon)}
-                      title={item.label}
-                      className={`p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                        deptIconInput === item.icon
-                          ? 'bg-blue-600 text-white shadow-xs scale-105'
-                          : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <MatIcon name={item.icon} className="text-[20px]" />
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Biểu tượng nhận diện
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Mỗi phòng ban sử dụng một biểu tượng duy nhất
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  {DEPARTMENT_ICONS.map((item) => {
+                    const usedBy = getUsedDepartmentIcons(departments)[item.icon];
+                    const isUsed = Boolean(usedBy);
+                    const isSelected = deptIconInput === item.icon;
+
+                    return (
+                      <button
+                        key={item.icon}
+                        type="button"
+                        disabled={isUsed}
+                        onClick={() => setDeptIconInput(item.icon)}
+                        title={
+                          isUsed
+                            ? `${item.label} (Đã dùng: ${usedBy})`
+                            : `${item.label} - ${item.domain}`
+                        }
+                        className={`relative p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${
+                          isUsed
+                            ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
+                            : isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                        }`}
+                      >
+                        <MatIcon name={item.icon} className="text-[20px]" />
+                        <span className="text-[9.5px] truncate max-w-full font-medium">
+                          {item.label}
+                        </span>
+                        {isUsed && (
+                          <span
+                            className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 text-[8px] font-bold border border-slate-300 dark:border-slate-600"
+                            title={`Đã gán cho ${usedBy}`}
+                          >
+                            Đã dùng
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -769,27 +795,56 @@ export function CompanyOrgTree({
                 />
               </div>
 
-              {/* Department Icon Library Selection */}
+              {/* Department Icon Library Selection with Exclusivity Rule */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Biểu tượng nhận diện
-                </label>
-                <div className="grid grid-cols-6 gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                  {DEPARTMENT_ICONS.map((item) => (
-                    <button
-                      key={item.icon}
-                      type="button"
-                      onClick={() => setDeptIconInput(item.icon)}
-                      title={item.label}
-                      className={`p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                        deptIconInput === item.icon
-                          ? 'bg-blue-600 text-white shadow-xs scale-105'
-                          : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <MatIcon name={item.icon} className="text-[20px]" />
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Biểu tượng nhận diện
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Mỗi phòng ban sử dụng một biểu tượng duy nhất
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  {DEPARTMENT_ICONS.map((item) => {
+                    const usedBy = getUsedDepartmentIcons(departments, editingDept.id)[item.icon];
+                    const isUsed = Boolean(usedBy);
+                    const isSelected = deptIconInput === item.icon;
+
+                    return (
+                      <button
+                        key={item.icon}
+                        type="button"
+                        disabled={isUsed}
+                        onClick={() => setDeptIconInput(item.icon)}
+                        title={
+                          isUsed
+                            ? `${item.label} (Đã dùng: ${usedBy})`
+                            : `${item.label} - ${item.domain}`
+                        }
+                        className={`relative p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${
+                          isUsed
+                            ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
+                            : isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                        }`}
+                      >
+                        <MatIcon name={item.icon} className="text-[20px]" />
+                        <span className="text-[9.5px] truncate max-w-full font-medium">
+                          {item.label}
+                        </span>
+                        {isUsed && (
+                          <span
+                            className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 text-[8px] font-bold border border-slate-300 dark:border-slate-600"
+                            title={`Đã gán cho ${usedBy}`}
+                          >
+                            Đã dùng
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

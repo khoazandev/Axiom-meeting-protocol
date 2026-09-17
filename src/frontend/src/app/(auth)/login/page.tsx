@@ -32,8 +32,12 @@ export default function LoginPage() {
       const tokens = await authApi.login(email, password);
       useAuthStore.setState({ token: tokens.access_token });
       const user = await authApi.me();
+      const enrichedUser = {
+        ...user,
+        role: user.role || (email === 'admin@axiom.com' ? 'OWNER' : email === 'manager.khoa@axiom.com' ? 'MANAGER' : 'MEMBER'),
+      };
       const organizations = await organizationApi.list();
-      setAuth(user, tokens.access_token, organizations, organizations[0]);
+      setAuth(enrichedUser, tokens.access_token, organizations, organizations[0]);
       if (email === 'admin@axiom.com') {
         router.push('/admin');
       } else if (email === 'manager.khoa@axiom.com') {

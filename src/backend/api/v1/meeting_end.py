@@ -79,8 +79,13 @@ async def end_meeting_endpoint(
 
     # Execute end meeting flow
     from src.backend.services.meeting_end_service import end_meeting
+    import inspect
 
-    result = await end_meeting(db, meeting_id, current_user.id)
+    res = end_meeting(db, meeting_id, current_user.id)
+    if inspect.isawaitable(res):
+        result = await res
+    else:
+        result = res
     return result
 
 from src.backend.schemas.meeting import PushToJiraRequest
@@ -92,12 +97,21 @@ def push_to_jira_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    from src.backend.models import FollowUpTask, JiraProject, Issue, IssueTypeEnum, IssueStatusEnum, IssuePriorityEnum, generate_uuid
+    from src.backend.models import (
+        FollowUpTask,
+        FollowUpTaskSourceEnum,
+        JiraProject,
+        Issue,
+        IssueTypeEnum,
+        IssueStatusEnum,
+        IssuePriorityEnum,
+        generate_uuid,
+    )
 
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
         raise NotFoundException("Meeting")
-    _require_host(db, meeting_id, current_user.id)
+    _require_host(db, meeting, current_user)
 
     # 1. Ensure a default JiraProject exists for this org
     org_id = meeting.organization_id
@@ -106,7 +120,6 @@ def push_to_jira_endpoint(
         project = db.query(JiraProject).filter(JiraProject.organization_id == org_id).first()
     
     if not project:
-        # Fallback to a default project if none exists
         project = db.query(JiraProject).filter(JiraProject.key == "DX").first()
         if not project:
             project = JiraProject(
@@ -123,19 +136,32 @@ def push_to_jira_endpoint(
 
     # 2. Process tasks
     for task_data in payload.tasks:
+        assignee_id = task_data.assignee_id if task_data.assignee_id and str(task_data.assignee_id).strip() else None
+
         db_task = db.query(FollowUpTask).filter(
             FollowUpTask.id == task_data.id,
             FollowUpTask.meeting_id == meeting_id
         ).first()
-        if not db_task:
-            continue
-        
-        # Update FollowUpTask with edits
-        db_task.title = task_data.title
-        db_task.assignee_id = task_data.assignee_id
-        db_task.deadline = task_data.deadline
 
-        # Create Issue if not already pushed
+        if not db_task:
+            db_task = FollowUpTask(
+                id=generate_uuid(),
+                meeting_id=meeting_id,
+                title=task_data.title or "Nhiệm vụ mới",
+                assignee_id=assignee_id,
+                deadline=task_data.deadline,
+                status="CONFIRMED",
+                source=FollowUpTaskSourceEnum.MANUAL,
+            )
+            db.add(db_task)
+            db.flush()
+        else:
+            db_task.title = task_data.title
+            db_task.assignee_id = assignee_id
+            db_task.deadline = task_data.deadline
+            db_task.status = "CONFIRMED"
+
+        # Create Issue if not already pushed to Jira
         if not db_task.issue_id:
             project.issue_counter += 1
             issue_key = f"{project.key}-{project.issue_counter}"
@@ -144,12 +170,16 @@ def push_to_jira_endpoint(
                 project_id=project.id,
                 key=issue_key,
                 summary=db_task.title,
-                description=db_task.description or "",
+                description=db_task.description or f"Nhiệm vụ từ cuộc họp: {meeting.title}",
                 type=IssueTypeEnum.TASK,
                 status=IssueStatusEnum.TODO,
                 priority=IssuePriorityEnum.MEDIUM,
                 reporter_id=current_user.id,
-                assignee_id=db_task.assignee_id,
+                assignee_id=assignee_id,
+                department_id=meeting.department_id,
+                due_date=db_task.deadline,
+                meeting_id=meeting.id,
+                transcript_segment_id=db_task.transcript_segment_id,
             )
             db.add(new_issue)
             db.flush()

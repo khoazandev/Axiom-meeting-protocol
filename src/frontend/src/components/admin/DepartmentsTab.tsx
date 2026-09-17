@@ -13,7 +13,13 @@ import {
 } from '@/lib/workloadProtocolData';
 import { DepartmentProgressItem, TimelineGanttItem } from '@/lib/api';
 import { DepartmentGanttTimeline } from './DepartmentGanttTimeline';
-import { DepartmentCalendarView } from './DepartmentCalendarView';
+import {
+  DEPARTMENT_ICONS,
+  getDepartmentIcon,
+  getUsedDepartmentIcons,
+  getFirstAvailableIcon,
+  formatDeptDescriptionWithIcon,
+} from '@/lib/departmentIcons';
 
 interface DepartmentsTabProps {
   departments: DepartmentNode[];
@@ -36,8 +42,8 @@ export function DepartmentsTab({
   loadingProgress = false,
   onRefreshProgress,
 }: DepartmentsTabProps) {
-  // Tab view mode: 'TIMELINE' (Gantt) vs 'CALENDAR' (cellRender) vs 'CAPACITY' (Bento cards)
-  const [activeSubTab, setActiveSubTab] = useState<'TIMELINE' | 'CALENDAR' | 'CAPACITY'>('CALENDAR');
+  // Tab view mode: 'TIMELINE' (Gantt) vs 'CAPACITY' (Tổng quan phòng ban)
+  const [activeSubTab, setActiveSubTab] = useState<'TIMELINE' | 'CAPACITY'>('TIMELINE');
 
   // Capacity States
   const [deptList, setDeptList] = useState<DepartmentCapacityMetric[]>(MOCK_DEPARTMENTS_CAPACITY);
@@ -60,6 +66,7 @@ export function DepartmentsTab({
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState('code');
   const [managerName, setManagerName] = useState('');
   const [managerEmail, setManagerEmail] = useState('');
 
@@ -127,10 +134,12 @@ export function DepartmentsTab({
     e.preventDefault();
     if (!name.trim() || !code.trim()) return;
 
+    const formattedDesc = formatDeptDescriptionWithIcon(icon, description);
+
     onAddDepartment({
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      description: description.trim() || 'Phòng ban chức năng thuộc tổ chức Axiom Enterprise.',
+      description: formattedDesc,
       managerName: managerName.trim() || 'Chưa bổ nhiệm',
       managerEmail: managerEmail.trim() || 'unassigned@axiom.internal',
       color: '#4F7BF7',
@@ -162,6 +171,7 @@ export function DepartmentsTab({
     setName('');
     setCode('');
     setDescription('');
+    setIcon(getFirstAvailableIcon(departments));
     setManagerName('');
     setManagerEmail('');
     setIsAddModalOpen(false);
@@ -312,22 +322,9 @@ export function DepartmentsTab({
         </div>
       </div>
 
-      {/* ── SUB-TAB SELECTOR: CALENDAR vs GANTT vs CAPACITY MATRIX ── */}
+      {/* ── SUB-TAB SELECTOR: GANTT vs OVERVIEW ── */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('CALENDAR')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'CALENDAR'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <MatIcon name="calendar_month" className="text-[16px]" />
-            <span>Lịch công việc</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setActiveSubTab('TIMELINE')}
@@ -350,8 +347,8 @@ export function DepartmentsTab({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <MatIcon name="grid_view" className="text-[16px]" />
-            <span>Tải năng lực</span>
+            <MatIcon name="domain" className="text-[16px]" />
+            <span>Tổng quan phòng ban</span>
           </button>
         </div>
 
@@ -361,16 +358,7 @@ export function DepartmentsTab({
         </div>
       </div>
 
-      {/* ── SUB-VIEW 1: ANT DESIGN cellRender CALENDAR ── */}
-      {activeSubTab === 'CALENDAR' && (
-        <DepartmentCalendarView
-          departments={mergedDeptProgress}
-          tasks={timelineItems}
-          onRefresh={onRefreshProgress}
-        />
-      )}
-
-      {/* ── SUB-VIEW 2: GANTT TIMELINE ── */}
+      {/* ── SUB-VIEW 1: GANTT TIMELINE ── */}
       {activeSubTab === 'TIMELINE' && (
         <DepartmentGanttTimeline
           departments={mergedDeptProgress}
@@ -378,7 +366,7 @@ export function DepartmentsTab({
         />
       )}
 
-      {/* ── SUB-VIEW 3: CAPACITY & MANDATE MATRIX ── */}
+      {/* ── SUB-VIEW 2: TỔNG QUAN PHÒNG BAN ── */}
       {activeSubTab === 'CAPACITY' && (
         <div className="space-y-6">
           {/* SECTION: NGHỊ QUYẾT CẤP CAO TRÍCH XUẤT TỪ CUỘC HỌP BAN LÃNH ĐẠO */}
@@ -503,10 +491,10 @@ export function DepartmentsTab({
                     name="grid_view"
                     className="text-indigo-600 dark:text-indigo-400 text-[20px]"
                   />
-                  <span>Ma Trận Tải Năng Lực Theo Khối Chức Năng</span>
+                  <span>Năng Lực Vận Hành Các Khối</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Khóa cứng kích thước lọc chống giật layout theo quy chuẩn hệ thống.
+                  Theo dõi tải công việc và phân bổ nhân sự theo từng phòng ban.
                 </p>
               </div>
 
@@ -570,18 +558,30 @@ export function DepartmentsTab({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {filteredDepts.map((dept) => {
                 const badge = getCapacityStatusBadge(dept.status);
+                // Find matching department from props to get icon
+                const matchedDept = departments.find(
+                  (d) => d.code === dept.code || d.name === dept.name
+                );
+                const deptIcon = matchedDept
+                  ? getDepartmentIcon(matchedDept)
+                  : 'domain';
 
                 return (
                   <div
                     key={dept.code}
-                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs hover:border-blue-400/80 hover:shadow-md transition-all flex flex-col justify-between"
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs hover:border-blue-400/80 hover:shadow-md transition-all flex flex-col justify-between group"
                   >
                     <div>
-                      {/* Top Bar: Code & Capacity Badge */}
+                      {/* Top Bar: Icon + Code & Capacity Badge */}
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold">
-                          {dept.code}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <MatIcon name={deptIcon} className="text-[18px]" />
+                          </div>
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold">
+                            {dept.code}
+                          </span>
+                        </div>
 
                         <span
                           className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${badge.bg}`}
@@ -621,7 +621,7 @@ export function DepartmentsTab({
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
                             <MatIcon name="speed" className="text-blue-500 text-[15px]" />
-                            <span>Tỷ lệ tải công việc (Utilization)</span>
+                            <span>Tải công việc</span>
                           </span>
                           <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
                             {dept.utilizationRate}%
@@ -646,10 +646,10 @@ export function DepartmentsTab({
 
                         {/* Hours Breakdown */}
                         <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
-                          <span>{dept.meetingHoursTotal}h họp tuần</span>
-                          <span>+</span>
+                          <span>{dept.meetingHoursTotal}h họp</span>
+                          <span className="text-slate-300 dark:text-slate-600">+</span>
                           <span>{dept.taskHoursCommitted}h tasks</span>
-                          <span>=</span>
+                          <span className="text-slate-300 dark:text-slate-600">=</span>
                           <span className="font-bold text-slate-700 dark:text-slate-300">
                             {dept.totalCommittedHours}h / {dept.totalWeeklyHours}h
                           </span>
@@ -660,21 +660,21 @@ export function DepartmentsTab({
                       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
                         <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
                           <div className="font-mono text-xs text-slate-800 dark:text-slate-200">
-                            {dept.zeroTaskCount} người
+                            {dept.zeroTaskCount}
                           </div>
-                          <div>⚪ 0 task (rảnh)</div>
+                          <div>Rảnh</div>
                         </div>
                         <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
                           <div className="font-mono text-xs font-black">
-                            {dept.optimalTaskCount} người
+                            {dept.optimalTaskCount}
                           </div>
-                          <div>🟢 1-2 task (tối ưu)</div>
+                          <div>Tối ưu</div>
                         </div>
                         <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
                           <div className="font-mono text-xs font-black">
-                            {dept.overloadedCount} người
+                            {dept.overloadedCount}
                           </div>
-                          <div>🔴 Quá tải (&gt;100%)</div>
+                          <div>Quá tải</div>
                         </div>
                       </div>
 
@@ -702,7 +702,7 @@ export function DepartmentsTab({
                         onClick={() => setSelectedDeptForDetail(dept)}
                         className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
                       >
-                        <span>Xem Phân Bổ Tải Chi Tiết</span>
+                        <span>Chi tiết</span>
                         <MatIcon name="arrow_forward" className="text-[14px]" />
                       </button>
                     </div>
@@ -737,17 +737,18 @@ export function DepartmentsTab({
                 </h3>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Trưởng phòng phụ trách: <strong>{selectedDeptForDetail.managerName}</strong> (
-                {selectedDeptForDetail.managerEmail})
+                Trưởng phòng: <strong>{selectedDeptForDetail.managerName}</strong>
+                <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                <span className="font-mono">{selectedDeptForDetail.managerEmail}</span>
               </p>
             </div>
 
             {/* Content Body: Scrollable list of members in this department */}
             <div className="overflow-y-auto py-4 space-y-4 pr-1">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Danh sách nhân sự & Tải công suất từng thành viên:</span>
+                <span>Danh sách nhân sự</span>
                 <span className="text-[11px] font-normal text-slate-400">
-                  (Tiêu chuẩn 40h/tuần = 100%)
+                  40h/tuần = 100%
                 </span>
               </div>
 
@@ -788,8 +789,7 @@ export function DepartmentsTab({
                               {mem.title}
                             </p>
                             <p className="text-[10px] text-slate-400">
-                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task (
-                              {mem.activeTasksCount} active tasks)
+                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task · {mem.activeTasksCount} nhiệm vụ
                             </p>
                           </div>
                         </div>
@@ -855,16 +855,16 @@ export function DepartmentsTab({
               <MatIcon name="close" className="text-[20px]" />
             </button>
 
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                <MatIcon name="account_tree" filled className="text-[20px]" />
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <MatIcon name="domain_add" filled className="text-[20px]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Thêm Khối Phòng Ban Mới
+                  Thêm phòng ban
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Mở rộng cơ cấu tổ chức và phân bổ công suất vận hành.
+                  Khai báo phòng ban mới vào cơ cấu tổ chức.
                 </p>
               </div>
             </div>
@@ -873,7 +873,7 @@ export function DepartmentsTab({
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên phòng ban
+                    Tên phòng ban <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -886,7 +886,7 @@ export function DepartmentsTab({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mã code
+                    Mã code <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -899,9 +899,62 @@ export function DepartmentsTab({
                 </div>
               </div>
 
+              {/* Icon Picker - Exclusive */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Biểu tượng nhận diện
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Mỗi phòng ban một biểu tượng riêng
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  {DEPARTMENT_ICONS.map((item) => {
+                    const usedBy = getUsedDepartmentIcons(departments)[item.icon];
+                    const isUsed = Boolean(usedBy);
+                    const isSelected = icon === item.icon;
+
+                    return (
+                      <button
+                        key={item.icon}
+                        type="button"
+                        disabled={isUsed}
+                        onClick={() => setIcon(item.icon)}
+                        title={
+                          isUsed
+                            ? `${item.label} (Đã dùng: ${usedBy})`
+                            : `${item.label} - ${item.domain}`
+                        }
+                        className={`relative p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${
+                          isUsed
+                            ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
+                            : isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                        }`}
+                      >
+                        <MatIcon name={item.icon} className="text-[20px]" />
+                        <span className="text-[9.5px] truncate max-w-full font-medium">
+                          {item.label}
+                        </span>
+                        {isUsed && (
+                          <span
+                            className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 text-[8px] font-bold border border-slate-300 dark:border-slate-600"
+                            title={`Đã gán cho ${usedBy}`}
+                          >
+                            Đã dùng
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Mô tả chức năng nhiệm vụ
+                  Mô tả chức năng
                 </label>
                 <textarea
                   rows={2}
@@ -912,38 +965,48 @@ export function DepartmentsTab({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Trưởng phòng dự kiến (Họ tên)
-                </label>
-                <input
-                  type="text"
-                  value={managerName}
-                  onChange={(e) => setManagerName(e.target.value)}
-                  placeholder="Ví dụ: Nguyễn Văn An"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Trưởng phòng
+                  </label>
+                  <input
+                    type="text"
+                    value={managerName}
+                    onChange={(e) => setManagerName(e.target.value)}
+                    placeholder="Nguyễn Văn An"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Email trưởng phòng
+                  </label>
+                  <input
+                    type="email"
+                    value={managerEmail}
+                    onChange={(e) => setManagerEmail(e.target.value)}
+                    placeholder="an.nguyen@axiom.vn"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Email trưởng phòng
-                </label>
-                <input
-                  type="email"
-                  value={managerEmail}
-                  onChange={(e) => setManagerEmail(e.target.value)}
-                  placeholder="an.nguyen@axiom.internal"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
-                />
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  Tạo phòng ban
+                </button>
               </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer mt-2 active:scale-95"
-              >
-                Khai Báo Phòng Ban
-              </button>
             </form>
           </div>
         </div>

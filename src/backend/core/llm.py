@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from openai import AsyncOpenAI, APIError, RateLimitError, APITimeoutError
+from openai import AsyncOpenAI, APIError, RateLimitError, APITimeoutError, APIConnectionError
 from src.backend.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -10,21 +10,33 @@ logger = logging.getLogger(__name__)
 # Initialize centralized AsyncOpenAI clients
 settings = get_settings()
 
+def _is_valid_key(key: Optional[str]) -> bool:
+    if not key:
+        return False
+    k = key.strip()
+    return bool(k and not k.startswith("sk-or-v1-placeholder") and len(k) > 10)
+
 openrouter_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=settings.openrouter_api_key or "sk-or-v1-placeholder",
-    max_retries=1,
+    max_retries=0,
+    timeout=5.0,
 )
 
 ollama_base_url = (getattr(settings, "ollama_base_url", None) or "http://host.docker.internal:11434").rstrip("/")
 ollama_client = AsyncOpenAI(
     base_url=f"{ollama_base_url}/v1",
     api_key="ollama",
-    max_retries=1,
+    max_retries=0,
+    timeout=15.0,
 )
 
-def _get_client(model: str) -> AsyncOpenAI:
-    return openrouter_client if "/" in model else ollama_client
+def _get_client(model: str) -> Optional[AsyncOpenAI]:
+    if "/" in model:
+        if not _is_valid_key(settings.openrouter_api_key):
+            return None
+        return openrouter_client
+    return ollama_client
 
 
 async def generate_json(model_or_models: str | list[str], prompt: str, max_tokens: int = 1500) -> Optional[list | dict]:
@@ -36,6 +48,8 @@ async def generate_json(model_or_models: str | list[str], prompt: str, max_token
     for model in models:
         try:
             client = _get_client(model)
+            if client is None:
+                continue
             response = await client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
@@ -94,6 +108,8 @@ async def generate_text(model_or_models: str | list[str], prompt: str, max_token
     for model in models:
         try:
             client = _get_client(model)
+            if client is None:
+                continue
             response = await client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
@@ -102,10 +118,12 @@ async def generate_text(model_or_models: str | list[str], prompt: str, max_token
             )
             return response.choices[0].message.content
             
-        except (APIError, RateLimitError, APITimeoutError) as e:
-            logger.warning(f"OpenRouter API error ({model}): {e}. Trying next model...")
+        except (APIConnectionError, APITimeoutError) as e:
+            logger.debug(f"LLM connection unavailable ({model}): {e}. Trying next model...")
+        except (APIError, RateLimitError) as e:
+            logger.warning(f"LLM API error ({model}): {e}. Trying next model...")
         except Exception as e:
-            logger.error(f"Unexpected error in LLM generation ({model}): {e}. Trying next model...")
+            logger.debug(f"LLM generation exception ({model}): {e}. Trying next model...")
             
-    logger.error("All fallback models failed for generate_text.")
+    logger.debug("All fallback models exhausted for generate_text.")
     return None

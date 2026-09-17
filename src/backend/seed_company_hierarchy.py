@@ -52,14 +52,14 @@ def seed():
         # 3. Ensure Owner accounts (Executive Chair & Root Admin)
         owner_users_data = [
             {
-                "email": "alex@axiom.com",
-                "full_name": "Lâm Phát",
-                "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces",
-            },
-            {
                 "email": "admin@axiom.com",
                 "full_name": "System Admin",
                 "avatar_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=faces",
+            },
+            {
+                "email": "alex@axiom.com",
+                "full_name": "Lâm Phát",
+                "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces",
             },
         ]
 
@@ -97,12 +97,12 @@ def seed():
                 om.role_id = owner_role.id
             db.commit()
 
-        # 4. Define 5 Corporate Departments with 1 Manager + 4 Members each
+        # 4. Define 5 Corporate Departments with 1 Manager + 4 Members each (with Unique Work-Related Icons)
         departments_spec = [
             {
                 "code": "ENG",
                 "name": "Khối Kỹ Thuật & Công Nghệ",
-                "description": "Nghiên cứu phát triển AI Protocol, WebRTC realtime và tối ưu hóa hạ tầng On-Premise",
+                "description": "[icon:code] Nghiên cứu phát triển AI Protocol, WebRTC realtime và tối ưu hóa hạ tầng On-Premise",
                 "color": "#3B82F6",
                 "manager": {
                     "email": "long.le@axiom.internal",
@@ -142,7 +142,7 @@ def seed():
             {
                 "code": "PROD",
                 "name": "Khối Sản Phẩm & Thiết Kế",
-                "description": "Định hình chiến lược sản phẩm, trải nghiệm người dùng UI/UX và chuẩn hóa quy trình",
+                "description": "[icon:palette] Định hình chiến lược sản phẩm, trải nghiệm người dùng UI/UX và chuẩn hóa quy trình",
                 "color": "#8B5CF6",
                 "manager": {
                     "email": "phuong.nguyen@axiom.internal",
@@ -182,7 +182,7 @@ def seed():
             {
                 "code": "BIZ",
                 "name": "Khối Kinh Doanh & Tiếp Thị",
-                "description": "Mở rộng quan hệ đối tác chiến lược, tư vấn chuyển đổi số doanh nghiệp và phát triển thương hiệu",
+                "description": "[icon:trending_up] Mở rộng quan hệ đối tác chiến lược, tư vấn chuyển đổi số doanh nghiệp và phát triển thương hiệu",
                 "color": "#EC4899",
                 "manager": {
                     "email": "hung.do@axiom.internal",
@@ -222,7 +222,7 @@ def seed():
             {
                 "code": "OPS",
                 "name": "Khối Vận Hành & Nhân Sự",
-                "description": "Tuyển dụng nhân tài, xây dựng văn hóa doanh nghiệp và giám sát quy chế kỷ luật cuộc họp",
+                "description": "[icon:precision_manufacturing] Tuyển dụng nhân tài, xây dựng văn hóa doanh nghiệp và giám sát quy chế kỷ luật cuộc họp",
                 "color": "#10B981",
                 "manager": {
                     "email": "trang.vu@axiom.internal",
@@ -241,8 +241,8 @@ def seed():
                         "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=faces",
                     },
                     {
-                        "email": "duc.pham@axiom.internal",
-                        "full_name": "Phạm Minh Đức",
+                        "email": "son.phan@axiom.internal",
+                        "full_name": "Phan Hoàng Sơn",
                         "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces",
                     },
                     {
@@ -262,7 +262,7 @@ def seed():
             {
                 "code": "FIN",
                 "name": "Khối Tài Chính & Pháp Chế",
-                "description": "Quản trị dòng tiền, thẩm định ngân sách dự án và rà soát pháp lý hợp đồng bảo mật",
+                "description": "[icon:account_balance] Quản trị dòng tiền, thẩm định ngân sách dự án và rà soát pháp lý hợp đồng bảo mật",
                 "color": "#F59E0B",
                 "manager": {
                     "email": "khoa.pham@axiom.internal",

@@ -146,7 +146,7 @@ export function SovereignNavbar({
                   {user?.full_name || 'Nguyễn Thế Khang'}
                 </p>
                 <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-tight">
-                  CHỦ TỊCH / CEO
+                  OWNER
                 </p>
               </div>
               <MatIcon name="expand_more" className="text-slate-400 text-[18px]" />
@@ -165,7 +165,7 @@ export function SovereignNavbar({
                       {user?.email || 'admin@axiom.com'}
                     </p>
                     <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
-                      Vai trò: CHỦ TỊCH HĐQT
+                      Role: OWNER
                     </span>
                   </div>
 

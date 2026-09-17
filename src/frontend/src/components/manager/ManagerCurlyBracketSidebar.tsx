@@ -7,6 +7,7 @@ import {
   Calendar,
   Users,
   BarChart3,
+  FolderArchive,
   Pin,
   PinOff,
   ChevronRight,
@@ -16,7 +17,7 @@ import {
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'analytics';
+export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'analytics' | 'archives';
 
 export interface ManagerNavSectionItem {
   id: ManagerNavKey;
@@ -32,7 +33,7 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
   {
     id: 'meetings',
     label: 'Cuộc Họp Phòng Ban',
-    sublabel: 'Live SFU & Điều hành phòng họp',
+    sublabel: 'Điều hành phòng họp',
     icon: Video,
     badge: '1 Live',
     badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
@@ -69,6 +70,15 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
     sublabel: 'Tải công việc & Agenda Gate',
     icon: BarChart3,
     shortcut: '⌘5',
+  },
+  {
+    id: 'archives',
+    label: 'Kho Tài Liệu',
+    sublabel: 'Biên bản & Tri thức phòng ban',
+    icon: FolderArchive,
+    badge: 'Phòng ban',
+    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+    shortcut: '⌘6',
   },
 ];
 

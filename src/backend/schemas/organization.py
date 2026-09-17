@@ -113,19 +113,45 @@ class DepartmentMemberResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class OrgInvitationCreate(BaseModel):
     email: EmailStr
+    full_name: str | None = None
     role_id: str | None = None  # defaults to MEMBER role
     department_id: str | None = None
+    job_title: str | None = None
+    phone: str | None = None
 
 
 class OrgInvitationResponse(BaseModel):
     id: str
     organization_id: str
     email: str
+    full_name: str | None = None
+    job_title: str | None = None
+    phone: str | None = None
     role_id: str
     department_id: str | None = None
+    department_name: str | None = None
     status: str
     token: str
+    invite_code: str | None = None
+    register_url: str | None = None
+    email_status: str | None = None
     expires_at: datetime
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class OrgInvitationVerifyResponse(BaseModel):
+    token: str
+    invite_code: str | None = None
+    email: str
+    full_name: str | None = None
+    phone: str | None = None
+    job_title: str | None = None
+    role: str
+    organization_id: str
+    organization_name: str
+    department_id: str | None = None
+    department_name: str | None = None
+    available_departments: list[dict] = []
+    expires_at: datetime

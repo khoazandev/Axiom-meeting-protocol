@@ -28,6 +28,7 @@ export function UserNav() {
 
   const name = user?.full_name || 'Axiom User';
   const email = user?.email || 'user@axiom.ai';
+  const role = user?.role;
   const isOwner = email === 'admin@axiom.com' || email === 'alex@axiom.com' || role === 'OWNER';
   const isManager = email === 'manager.khoa@axiom.com' || role === 'ADMIN';
   const isMember = !isOwner && !isManager;
@@ -61,10 +62,10 @@ export function UserNav() {
               <p className="text-xs leading-none text-muted-foreground">{email}</p>
               <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
                 {isOwner
-                  ? 'CHỦ TỊCH / OWNER'
+                  ? 'OWNER'
                   : isManager
-                    ? 'TRƯỞNG PHÒNG / MANAGER'
-                    : 'THÀNH VIÊN / MEMBER'}
+                    ? 'MANAGER'
+                    : 'MEMBER'}
               </span>
             </div>
           </DropdownMenuLabel>
@@ -83,7 +84,7 @@ export function UserNav() {
               <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer">
                 <Shield className="mr-2 h-4 w-4 text-amber-500" />
                 <span className="font-medium text-amber-600 dark:text-amber-400">
-                  Admin Center (Chủ tịch)
+                  Admin Center (Owner)
                 </span>
               </DropdownMenuItem>
             )}
