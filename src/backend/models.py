@@ -308,6 +308,8 @@ class Meeting(database.Base):
         default=MeetingStatusEnum.SCHEDULED,
         nullable=False,
     )
+    approval_status = Column(String, default="APPROVED", nullable=False)
+    meeting_type = Column(String, default="OFFICIAL", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -814,9 +816,10 @@ class Issue(database.Base):
     sprint_position = Column(Integer, default=0, nullable=False)
     board_position = Column(Integer, default=0, nullable=False)
 
-    # People
+    # People & Department
     reporter_id = Column(String, ForeignKey("users.id"), nullable=False)
     assignee_id = Column(String, ForeignKey("users.id"), nullable=True)
+    department_id = Column(String, ForeignKey("departments.id"), nullable=True, index=True)
     due_date = Column(DateTime, nullable=True)
 
     # Meeting provenance
@@ -834,6 +837,7 @@ class Issue(database.Base):
     sprint = relationship("Sprint", back_populates="issues")
     reporter = relationship("User", foreign_keys=[reporter_id])
     assignee = relationship("User", foreign_keys=[assignee_id])
+    department = relationship("Department")
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
     comments = relationship("IssueComment", back_populates="issue", cascade="all, delete-orphan")

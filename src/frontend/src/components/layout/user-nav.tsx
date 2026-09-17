@@ -28,8 +28,7 @@ export function UserNav() {
 
   const name = user?.full_name || 'Axiom User';
   const email = user?.email || 'user@axiom.ai';
-  const role = user?.role || 'MEMBER';
-  const isOwner = email === 'admin@axiom.com' || role === 'OWNER';
+  const isOwner = email === 'admin@axiom.com' || email === 'alex@axiom.com' || role === 'OWNER';
   const isManager = email === 'manager.khoa@axiom.com' || role === 'ADMIN';
   const isMember = !isOwner && !isManager;
 

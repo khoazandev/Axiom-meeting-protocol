@@ -22,13 +22,16 @@ from src.backend.models import (
     KnowledgeChunk,
     User,
 )
+from src.backend.models import Department, AuditLog
 from src.backend.schemas.meeting import (
+    MeetingApprovalRequest,
     MeetingCreate,
     MeetingMemberAdd,
     MeetingMemberResponse,
     MeetingResponse,
     MeetingUpdate,
 )
+
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -57,6 +60,42 @@ def _require_meeting_member(db: Session, meeting_id: str, user_id: str) -> Meeti
     return member
 
 
+def _enrich_meeting(m: Meeting, db: Session) -> dict:
+    host_member = (
+        db.query(MeetingMember)
+        .filter(MeetingMember.meeting_id == m.id, MeetingMember.role == MeetingMemberRoleEnum.HOST)
+        .first()
+    )
+    host_user = (
+        db.query(User)
+        .filter(User.id == (host_member.user_id if host_member else m.created_by_id))
+        .first()
+    )
+    dept = db.query(Department).filter(Department.id == m.department_id).first() if m.department_id else None
+    count = db.query(MeetingMember).filter(MeetingMember.meeting_id == m.id).count()
+    return {
+        "id": m.id,
+        "title": m.title,
+        "description": m.description,
+        "agenda": m.description,
+        "organization_id": m.organization_id,
+        "department_id": m.department_id,
+        "department_name": dept.name if dept else "Khối Doanh Nghiệp",
+        "created_by_id": m.created_by_id,
+        "host_name": host_user.full_name if host_user else "Ban Tổ Chức",
+        "host_avatar": host_user.avatar_url if host_user else None,
+        "status": m.status.value if hasattr(m.status, "value") else str(m.status),
+        "approval_status": getattr(m, "approval_status", "APPROVED") or "APPROVED",
+        "meeting_type": getattr(m, "meeting_type", "OFFICIAL") or "OFFICIAL",
+        "scheduled_at": m.scheduled_at,
+        "started_at": m.started_at,
+        "ended_at": m.ended_at,
+        "participant_count": max(count, 1),
+        "created_at": m.created_at,
+        "updated_at": m.updated_at,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Meeting CRUD
 # ---------------------------------------------------------------------------
@@ -68,6 +107,9 @@ def create_meeting(
     current_user: User = Depends(deps.get_current_user),
 ):
     """Create a new meeting. Creator is auto-added as HOST."""
+    approval_st = payload.approval_status or "APPROVED"
+    m_type = payload.meeting_type or "OFFICIAL"
+
     meeting = Meeting(
         title=payload.title,
         description=payload.description or payload.agenda,
@@ -76,6 +118,8 @@ def create_meeting(
         created_by_id=current_user.id,
         scheduled_at=payload.scheduled_at,
         status=MeetingStatusEnum.SCHEDULED,
+        approval_status=approval_st,
+        meeting_type=m_type,
     )
     db.add(meeting)
     db.flush()
@@ -88,27 +132,96 @@ def create_meeting(
         status=MeetingMemberStatusEnum.ACCEPTED,
     )
     db.add(host)
+
+    # Add optional participants
+    if payload.participant_ids:
+        for pid in payload.participant_ids:
+            if pid != current_user.id:
+                member = MeetingMember(
+                    meeting_id=meeting.id,
+                    user_id=pid,
+                    role=MeetingMemberRoleEnum.PARTICIPANT,
+                    status=MeetingMemberStatusEnum.INVITED,
+                )
+                db.add(member)
+
+    # Audit log
+    audit = AuditLog(
+        organization_id=payload.organization_id,
+        user_id=current_user.id,
+        action="CREATE_MEETING",
+        resource=f"meeting:{meeting.id}",
+        details=f"Tạo cuộc họp '{meeting.title}' (loại: {m_type}, duyệt: {approval_st})",
+    )
+    db.add(audit)
+
     db.commit()
     db.refresh(meeting)
-    return meeting
+    return _enrich_meeting(meeting, db)
 
 
 @router.get("/", response_model=list[MeetingResponse])
 @router.get("", response_model=list[MeetingResponse])
 def list_my_meetings(
+    status_filter: str | None = None,
+    approval_filter: str | None = None,
+    meeting_type_filter: str | None = None,
+    org_id: str | None = None,
+    all_org_meetings: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """List all meetings the current user is a member of."""
-    memberships = (
-        db.query(MeetingMember)
-        .filter(MeetingMember.user_id == current_user.id)
-        .all()
+    """List meetings with rich filters for Owner/Admin radar & approval oversight."""
+    query = db.query(Meeting)
+
+    if org_id:
+        query = query.filter(Meeting.organization_id == org_id)
+
+    if not all_org_meetings:
+        memberships = (
+            db.query(MeetingMember)
+            .filter(MeetingMember.user_id == current_user.id)
+            .all()
+        )
+        meeting_ids = [m.meeting_id for m in memberships]
+        # Include meetings created by user as well
+        query = query.filter((Meeting.id.in_(meeting_ids)) | (Meeting.created_by_id == current_user.id))
+
+    if status_filter:
+        query = query.filter(Meeting.status == status_filter)
+    if approval_filter:
+        query = query.filter(Meeting.approval_status == approval_filter)
+    if meeting_type_filter:
+        query = query.filter(Meeting.meeting_type == meeting_type_filter)
+
+    meetings = query.order_by(Meeting.created_at.desc()).all()
+    return [_enrich_meeting(m, db) for m in meetings]
+
+
+@router.patch("/{meeting_id}/approval", response_model=MeetingResponse)
+def update_meeting_approval(
+    meeting_id: str,
+    payload: MeetingApprovalRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Owner or Admin approves or rejects a meeting proposal."""
+    meeting = _get_meeting_or_404(db, meeting_id)
+    old_approval = getattr(meeting, "approval_status", "PENDING")
+    meeting.approval_status = payload.approval_status
+
+    # Audit log
+    audit = AuditLog(
+        organization_id=meeting.organization_id,
+        user_id=current_user.id,
+        action=f"MEETING_APPROVAL_{payload.approval_status}",
+        resource=f"meeting:{meeting.id}",
+        details=f"Phê duyệt cuộc họp '{meeting.title}' sang '{payload.approval_status}'. Lý do: {payload.reason or 'Không có'}",
     )
-    meeting_ids = [m.meeting_id for m in memberships]
-    if not meeting_ids:
-        return []
-    return db.query(Meeting).filter(Meeting.id.in_(meeting_ids)).all()
+    db.add(audit)
+    db.commit()
+    db.refresh(meeting)
+    return _enrich_meeting(meeting, db)
 
 
 @router.get("/{meeting_id}", response_model=MeetingResponse)

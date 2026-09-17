@@ -13,6 +13,9 @@ class MeetingCreate(BaseModel):
     department_id: str | None = None
     scheduled_at: datetime | None = None
     agenda_text: str | None = None
+    approval_status: str | None = "APPROVED"
+    meeting_type: str | None = "OFFICIAL"
+    participant_ids: list[str] | None = None
 
 
 class MeetingUpdate(BaseModel):
@@ -21,6 +24,13 @@ class MeetingUpdate(BaseModel):
     agenda: str | None = None
     scheduled_at: datetime | None = None
     status: str | None = None
+    approval_status: str | None = None
+    meeting_type: str | None = None
+
+
+class MeetingApprovalRequest(BaseModel):
+    approval_status: str = Field(..., pattern="^(APPROVED|REJECTED|PENDING)$")
+    reason: str | None = None
 
 
 class MeetingResponse(BaseModel):
@@ -30,11 +40,17 @@ class MeetingResponse(BaseModel):
     agenda: str | None = None
     organization_id: str | None = None
     department_id: str | None = None
+    department_name: str | None = None
     created_by_id: str
+    host_name: str | None = None
+    host_avatar: str | None = None
     status: str
+    approval_status: str = "APPROVED"
+    meeting_type: str = "OFFICIAL"
     scheduled_at: datetime | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    participant_count: int = 0
     created_at: datetime
     updated_at: datetime
 

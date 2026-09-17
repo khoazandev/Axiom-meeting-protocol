@@ -165,7 +165,7 @@ export function SovereignNavbar({
                       {user?.email || 'admin@axiom.com'}
                     </p>
                     <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
-                      Vai trò: CHỦ TỊCH HĐQT (Tối cao)
+                      Vai trò: CHỦ TỊCH HĐQT
                     </span>
                   </div>
 
@@ -176,7 +176,7 @@ export function SovereignNavbar({
                       onClick={() => setUserDropdownOpen(false)}
                     >
                       <MatIcon name="dashboard_customize" className="text-[18px] text-blue-500" />
-                      <span>Bàn Làm Việc Trưởng Phòng (Manager)</span>
+                      <span>Bàn Làm Việc Trưởng Phòng</span>
                     </Link>
                     <Link
                       href="/member"
@@ -184,7 +184,7 @@ export function SovereignNavbar({
                       onClick={() => setUserDropdownOpen(false)}
                     >
                       <MatIcon name="person" className="text-[18px] text-slate-400" />
-                      <span>Bàn Làm Việc Thành Viên (Member)</span>
+                      <span>Bàn Làm Việc Thành Viên</span>
                     </Link>
                     <Link
                       href="/docs"

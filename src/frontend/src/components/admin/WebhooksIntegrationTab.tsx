@@ -214,7 +214,7 @@ export function WebhooksIntegrationTab({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                Trình Giả Lập Kiểm Thử Webhook (Live Webhook Simulator)
+                Trình Giả Lập Kiểm Thử Webhook
               </h3>
               <p className="text-xs text-slate-400">
                 Thử nghiệm gửi payload mẫu trực tiếp tới các hệ sinh thái bên ngoài để kiểm tra kết
@@ -326,7 +326,7 @@ export function WebhooksIntegrationTab({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  URL Đích (Webhook URL)
+                  URL Đích
                 </label>
                 <input
                   type="url"
@@ -355,7 +355,7 @@ export function WebhooksIntegrationTab({
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>{ev.label}</span>
-                      <span className="font-mono text-[11px] text-slate-400">({ev.code})</span>
+                      <span className="font-mono text-[11px] text-slate-400">{ev.code}</span>
                     </label>
                   ))}
                 </div>

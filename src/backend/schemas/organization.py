@@ -33,6 +33,45 @@ class OrganizationMemberResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MemberDetailResponse(BaseModel):
+    id: str
+    user_id: str
+    organization_id: str
+    email: str
+    full_name: str
+    avatar_url: str | None = None
+    role: str
+    department_id: str | None = None
+    department_name: str | None = None
+    status: str
+    joined_at: datetime
+    meetings_count: int = 0
+    tasks_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class UpdateMemberRoleRequest(BaseModel):
+    role: str = Field(..., pattern="^(OWNER|ADMIN|MANAGER|MEMBER)$")
+
+
+class UpdateMemberDepartmentRequest(BaseModel):
+    department_id: str | None = None
+
+
+class OrgAnalyticsResponse(BaseModel):
+    total_meetings_this_month: int
+    meetings_growth: str
+    on_time_punctual_rate: float
+    task_execution_rate: float
+    hours_saved_by_ai: float
+    total_members: int
+    total_departments: int
+    active_meetings_count: int
+    pending_approvals_count: int
+
+
+
 # ---------------------------------------------------------------------------
 # Department
 # ---------------------------------------------------------------------------
