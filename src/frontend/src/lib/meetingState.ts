@@ -39,13 +39,15 @@ export function getMeetingStateBadge(state: MeetingState) {
     case 'UPCOMING':
       return {
         label: 'SẮP DIỄN RA',
-        color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
+        color:
+          'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
         pulse: false,
       };
     case 'ENDED':
       return {
         label: 'ĐÃ KẾT THÚC',
-        color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
+        color:
+          'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
         pulse: false,
       };
   }

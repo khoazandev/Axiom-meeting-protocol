@@ -10,7 +10,10 @@ import { UserHoverCard } from './UserHoverCard';
 interface MembersDirectoryTabProps {
   members: OrgMemberDetail[];
   departments: Department[];
-  onUpdateRole: (userId: string, newRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER') => Promise<void>;
+  onUpdateRole: (
+    userId: string,
+    newRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER'
+  ) => Promise<void>;
   onUpdateDepartment: (userId: string, departmentId: string | null) => Promise<void>;
   onAddDepartment: (name: string, description?: string) => Promise<void>;
   onEditDepartment: (deptId: string, name: string, description?: string) => Promise<void>;
@@ -185,7 +188,10 @@ export function MembersDirectoryTab({
                 placeholder="Tìm nhân sự theo tên, email..."
                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
-              <MatIcon name="search" className="absolute left-2.5 top-2.5 text-[16px] text-slate-400" />
+              <MatIcon
+                name="search"
+                className="absolute left-2.5 top-2.5 text-[16px] text-slate-400"
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -238,13 +244,20 @@ export function MembersDirectoryTab({
                     </tr>
                   ) : (
                     filteredMembers.map((m) => (
-                      <tr key={m.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                      <tr
+                        key={m.id}
+                        className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                      >
                         <td className="p-3.5">
                           <UserHoverCard member={m} align="top">
                             <div className="flex items-center gap-3 cursor-pointer">
                               <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-slate-200 dark:ring-slate-700">
                                 {m.avatar_url ? (
-                                  <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                                  <img
+                                    src={m.avatar_url}
+                                    alt=""
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
                                 ) : (
                                   m.full_name.slice(0, 2).toUpperCase()
                                 )}
@@ -264,7 +277,9 @@ export function MembersDirectoryTab({
                           </span>
                         </td>
                         <td className="p-3.5">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getRoleBadge(m.role)}`}>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getRoleBadge(m.role)}`}
+                          >
                             {m.role}
                           </span>
                         </td>

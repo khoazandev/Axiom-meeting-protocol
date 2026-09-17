@@ -37,11 +37,7 @@ import {
   Department,
 } from '@/lib/api';
 
-import {
-  MOCK_POLICIES,
-  DepartmentNode,
-  ProtocolPolicySettings,
-} from '@/lib/mockAdminData';
+import { MOCK_POLICIES, DepartmentNode, ProtocolPolicySettings } from '@/lib/mockAdminData';
 import { resolveMeetingState } from '@/lib/meetingState';
 
 // Fallback initial metrics if database is fresh
@@ -134,7 +130,8 @@ export default function StandaloneAdminCenterPage() {
       try {
         const orgList = await organizationApi.list();
         if (orgList && orgList.length > 0) {
-          const axiomOrg = orgList.find((o) => o.name.toLowerCase().includes('axiom')) || orgList[0];
+          const axiomOrg =
+            orgList.find((o) => o.name.toLowerCase().includes('axiom')) || orgList[0];
           resolvedOrgId = axiomOrg.id;
         }
       } catch (err) {
@@ -175,12 +172,8 @@ export default function StandaloneAdminCenterPage() {
       if (meetingsRes.status === 'fulfilled' && Array.isArray(meetingsRes.value)) {
         const all = meetingsRes.value;
         setAllMeetings(all);
-        const pending = all.filter(
-          (m) => (m as any).approval_status === 'PENDING'
-        );
-        const approvedOrOfficial = all.filter(
-          (m) => (m as any).approval_status !== 'PENDING'
-        );
+        const pending = all.filter((m) => (m as any).approval_status === 'PENDING');
+        const approvedOrOfficial = all.filter((m) => (m as any).approval_status !== 'PENDING');
 
         const live = approvedOrOfficial.filter((m) => resolveMeetingState(m) === 'LIVE');
         const upcoming = approvedOrOfficial.filter((m) => resolveMeetingState(m) === 'UPCOMING');
@@ -338,9 +331,7 @@ export default function StandaloneAdminCenterPage() {
   ) => {
     try {
       await organizationAdminApi.updateMemberRole(activeOrgId, userId, newRole);
-      setMembers((prev) =>
-        prev.map((m) => (m.user_id === userId ? { ...m, role: newRole } : m))
-      );
+      setMembers((prev) => prev.map((m) => (m.user_id === userId ? { ...m, role: newRole } : m)));
       showToast(`Đã điều chỉnh chức danh nhân sự thành công sang ${newRole}!`);
       fetchAllData();
     } catch (err: any) {
@@ -348,10 +339,7 @@ export default function StandaloneAdminCenterPage() {
     }
   };
 
-  const handleUpdateMemberDepartment = async (
-    userId: string,
-    departmentId: string | null
-  ) => {
+  const handleUpdateMemberDepartment = async (userId: string, departmentId: string | null) => {
     try {
       await organizationAdminApi.updateMemberDepartment(activeOrgId, userId, departmentId);
       const targetDept = departments.find((d) => d.id === departmentId);
@@ -401,11 +389,7 @@ export default function StandaloneAdminCenterPage() {
     }
   };
 
-  const handleEditDepartment = async (
-    deptId: string,
-    name: string,
-    description?: string
-  ) => {
+  const handleEditDepartment = async (deptId: string, name: string, description?: string) => {
     try {
       await departmentAdminApi.update(activeOrgId, deptId, { name, description });
       showToast(`Đã cập nhật thông tin phòng ban: ${name}`);
@@ -623,7 +607,6 @@ export default function StandaloneAdminCenterPage() {
 
       {/* ── 3. Tab Page Content Stage ── */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
         {/* Tab View Container: Only the Active Tab is rendered */}
         <div key={activeSection} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* TAB 1: OVERVIEW PULSE (Zero Mock Data, Real Metrics, Join, Approvals, Executive Meeting) */}

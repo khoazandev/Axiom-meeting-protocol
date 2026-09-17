@@ -446,7 +446,9 @@ export function DepartmentGanttTimeline({
                                   <div className="flex items-center gap-1.5">
                                     <span
                                       className="px-1 py-0.2 rounded text-[8.5px] font-black text-white font-mono uppercase shrink-0"
-                                      style={{ backgroundColor: item.department_color || '#3B82F6' }}
+                                      style={{
+                                        backgroundColor: item.department_color || '#3B82F6',
+                                      }}
                                     >
                                       {taskDeptCode}
                                     </span>
@@ -476,7 +478,9 @@ export function DepartmentGanttTimeline({
                                 {/* Vertical Day Guide Lines */}
                                 <div
                                   className="absolute inset-0 grid"
-                                  style={{ gridTemplateColumns: `repeat(${totalDays}, minmax(0, 1fr))` }}
+                                  style={{
+                                    gridTemplateColumns: `repeat(${totalDays}, minmax(0, 1fr))`,
+                                  }}
                                 >
                                   {days.map((day, idx) => (
                                     <div
@@ -507,7 +511,9 @@ export function DepartmentGanttTimeline({
                                       }}
                                       className="h-full flex items-center px-2 text-white font-bold text-[10px] truncate shrink-0 transition-all gap-1"
                                     >
-                                      <span className="font-mono text-[9px] opacity-90">{item.key}</span>
+                                      <span className="font-mono text-[9px] opacity-90">
+                                        {item.key}
+                                      </span>
                                       {item.progress_percent > 30 && (
                                         <span className="truncate">{item.progress_percent}%</span>
                                       )}
@@ -521,7 +527,9 @@ export function DepartmentGanttTimeline({
                                       className="h-full bg-slate-200 dark:bg-slate-700 flex items-center px-2 text-slate-600 dark:text-slate-300 text-[10px] font-medium truncate"
                                     >
                                       {item.progress_percent <= 30 && (
-                                        <span className="truncate font-mono">{item.progress_percent}%</span>
+                                        <span className="truncate font-mono">
+                                          {item.progress_percent}%
+                                        </span>
                                       )}
                                     </div>
                                   </div>
@@ -611,7 +619,9 @@ export function DepartmentGanttTimeline({
                       }}
                     />
                   </div>
-                  <span className="font-mono font-bold">{selectedTaskForModal.progress_percent}%</span>
+                  <span className="font-mono font-bold">
+                    {selectedTaskForModal.progress_percent}%
+                  </span>
                 </div>
               </div>
 

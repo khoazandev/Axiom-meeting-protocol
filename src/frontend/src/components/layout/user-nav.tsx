@@ -61,11 +61,7 @@ export function UserNav() {
               <p className="text-sm font-semibold leading-none">{name}</p>
               <p className="text-xs leading-none text-muted-foreground">{email}</p>
               <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
-                {isOwner
-                  ? 'OWNER'
-                  : isManager
-                    ? 'MANAGER'
-                    : 'MEMBER'}
+                {isOwner ? 'OWNER' : isManager ? 'MANAGER' : 'MEMBER'}
               </span>
             </div>
           </DropdownMenuLabel>

@@ -1067,8 +1067,6 @@ export function MeetingRoomClient() {
     }
   };
 
-
-
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const transcriptSequenceRef = useRef(1);
 
@@ -1137,12 +1135,8 @@ export function MeetingRoomClient() {
 
   const handleExitMeeting = useCallback(() => {
     const isOwner =
-      user?.role === 'OWNER' ||
-      user?.role === 'ADMIN' ||
-      user?.email === 'admin@axiom.com';
-    const isManager =
-      user?.role === 'MANAGER' ||
-      user?.email === 'manager.khoa@axiom.com';
+      user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
+    const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
 
     if (isOwner) {
       router.push('/admin');
@@ -1262,12 +1256,8 @@ export function MeetingRoomClient() {
         await jiraApi.syncMeetingTasksToJira(meetingId, { target_project_id: project.id });
       }
       const isOwner =
-        user?.role === 'OWNER' ||
-        user?.role === 'ADMIN' ||
-        user?.email === 'admin@axiom.com';
-      const isManager =
-        user?.role === 'MANAGER' ||
-        user?.email === 'manager.khoa@axiom.com';
+        user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
+      const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
 
       if (isOwner) {
         router.push('/admin');
@@ -1385,7 +1375,9 @@ export function MeetingRoomClient() {
     if (!meetingId) return;
     try {
       await meetingsApi.update(meetingId, { status: 'COMPLETED' });
-      alert('Đã quá 5 phút chủ phòng không quay lại. Cuộc họp đã tự động kết thúc và chuyển biên bản về kho lưu trữ.');
+      alert(
+        'Đã quá 5 phút chủ phòng không quay lại. Cuộc họp đã tự động kết thúc và chuyển biên bản về kho lưu trữ.'
+      );
       handleExitMeeting();
     } catch (err) {
       console.error('Failed to auto-end meeting:', err);
@@ -1452,7 +1444,8 @@ export function MeetingRoomClient() {
         setIsArchiveModalOpen(false);
 
         // Redirect to management page based on role
-        const isOwner = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
+        const isOwner =
+          user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
         const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
 
         if (isOwner) {
@@ -1888,7 +1881,9 @@ export function MeetingRoomClient() {
             title="Đóng/Mở thanh công cụ bên phải (⌘B)"
           >
             <PanelRight className="w-3.5 h-3.5 text-blue-600" />
-            <span className="hidden sm:inline">{sidebarOpen ? 'Ẩn thanh bên' : 'Hiện thanh bên'}</span>
+            <span className="hidden sm:inline">
+              {sidebarOpen ? 'Ẩn thanh bên' : 'Hiện thanh bên'}
+            </span>
           </button>
 
           {/* Invite Members Modal Trigger */}
@@ -2050,12 +2045,16 @@ export function MeetingRoomClient() {
                     <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold uppercase tracking-wider mb-2">
                       Cuộc họp đang tạm dừng
                     </span>
-                    <h2 className="text-xl font-bold text-white mb-2">Chủ phòng đã tạm rời cuộc họp</h2>
+                    <h2 className="text-xl font-bold text-white mb-2">
+                      Chủ phòng đã tạm rời cuộc họp
+                    </h2>
                     <p className="text-slate-400 text-sm max-w-md mb-6">
                       Phòng họp đang được giữ chỗ. Cuộc họp sẽ tiếp tục ngay khi chủ phòng quay lại.
                     </p>
                     <div className="flex flex-col items-center justify-center px-6 py-3 rounded-2xl bg-slate-900/80 border border-white/10 shadow-inner">
-                      <span className="text-xs text-slate-400 mb-1">Thời gian chờ tự động kết thúc:</span>
+                      <span className="text-xs text-slate-400 mb-1">
+                        Thời gian chờ tự động kết thúc:
+                      </span>
                       <span className="font-mono text-2xl font-bold text-amber-400">
                         {Math.floor(pauseRemainingSeconds / 60)}:
                         {String(pauseRemainingSeconds % 60).padStart(2, '0')}
@@ -2115,7 +2114,10 @@ export function MeetingRoomClient() {
                           <Languages className="w-3.5 h-3.5 text-emerald-600" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Bản Ghi STT & Dịch Song Ngữ">
+                          <h3
+                            className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate"
+                            title="Bản Ghi STT & Dịch Song Ngữ"
+                          >
                             Bản Ghi & Dịch
                           </h3>
                         </div>
@@ -2127,7 +2129,10 @@ export function MeetingRoomClient() {
                           <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Agenda Cuộc Họp & Nhiệm Vụ (Jira)">
+                          <h3
+                            className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate"
+                            title="Agenda Cuộc Họp & Nhiệm Vụ (Jira)"
+                          >
                             Agenda & Task
                           </h3>
                         </div>
@@ -2139,7 +2144,10 @@ export function MeetingRoomClient() {
                           <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate" title="Kênh Chat Cuộc Họp">
+                          <h3
+                            className="text-xs font-bold text-slate-900 uppercase tracking-wide truncate"
+                            title="Kênh Chat Cuộc Họp"
+                          >
                             Trò Chuyện
                           </h3>
                         </div>
@@ -2151,7 +2159,10 @@ export function MeetingRoomClient() {
                           <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide truncate" title="Trợ Lý AI Asightant">
+                          <h3
+                            className="text-xs font-bold text-amber-900 uppercase tracking-wide truncate"
+                            title="Trợ Lý AI Asightant"
+                          >
                             Asightant AI
                           </h3>
                         </div>
@@ -2218,7 +2229,9 @@ export function MeetingRoomClient() {
                           }`}
                           title={tab.title}
                         >
-                          <IconComp className={`w-3.5 h-3.5 shrink-0 ${isActive && tab.id === 'ai' ? 'text-amber-500' : ''}`} />
+                          <IconComp
+                            className={`w-3.5 h-3.5 shrink-0 ${isActive && tab.id === 'ai' ? 'text-amber-500' : ''}`}
+                          />
                           <span className="truncate">{tab.label}</span>
                           {tab.badge > 0 && (
                             <span
@@ -2788,7 +2801,8 @@ export function MeetingRoomClient() {
               Bạn là chủ phòng cuộc họp này
             </h3>
             <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-              Vui lòng chọn cách rời phòng bên dưới. Nếu bạn tạm rời, phòng họp sẽ tạm dừng và đếm ngược 5 phút chờ bạn quay lại.
+              Vui lòng chọn cách rời phòng bên dưới. Nếu bạn tạm rời, phòng họp sẽ tạm dừng và đếm
+              ngược 5 phút chờ bạn quay lại.
             </p>
 
             <div className="space-y-2.5 mb-6">
@@ -2805,7 +2819,8 @@ export function MeetingRoomClient() {
                     Tạm rời phòng (Tạm dừng tối đa 5 phút)
                   </div>
                   <div className="text-[11px] text-amber-700 mt-0.5">
-                    Phòng họp sẽ tạm dừng cho các thành viên. Nếu sau 5 phút bạn không quay lại, cuộc họp sẽ tự động kết thúc.
+                    Phòng họp sẽ tạm dừng cho các thành viên. Nếu sau 5 phút bạn không quay lại,
+                    cuộc họp sẽ tự động kết thúc.
                   </div>
                 </div>
               </button>
@@ -2823,7 +2838,8 @@ export function MeetingRoomClient() {
                     Kết thúc cuộc họp & Lưu trữ
                   </div>
                   <div className="text-[11px] text-rose-700 mt-0.5">
-                    Đóng phòng họp, trích xuất action item và chuyển toàn bộ dữ liệu cuộc họp về kho lưu trữ.
+                    Đóng phòng họp, trích xuất action item và chuyển toàn bộ dữ liệu cuộc họp về kho
+                    lưu trữ.
                   </div>
                 </div>
               </button>

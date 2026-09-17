@@ -263,7 +263,9 @@ export function DepartmentsTab({
                 <span>Tiến Độ Tổng Thể</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black font-mono text-white">{overallRealProgress}%</span>
+                <span className="text-2xl font-black font-mono text-white">
+                  {overallRealProgress}%
+                </span>
                 <span className="text-[11px] text-emerald-400 font-bold">● Vận hành ổn định</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
@@ -360,10 +362,7 @@ export function DepartmentsTab({
 
       {/* ── SUB-VIEW 1: GANTT TIMELINE ── */}
       {activeSubTab === 'TIMELINE' && (
-        <DepartmentGanttTimeline
-          departments={mergedDeptProgress}
-          timelineItems={timelineItems}
-        />
+        <DepartmentGanttTimeline departments={mergedDeptProgress} timelineItems={timelineItems} />
       )}
 
       {/* ── SUB-VIEW 2: TỔNG QUAN PHÒNG BAN ── */}
@@ -374,7 +373,10 @@ export function DepartmentsTab({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <div className="flex items-center gap-2">
-                  <MatIcon name="assignment" className="text-blue-600 dark:text-blue-400 text-[20px]" />
+                  <MatIcon
+                    name="assignment"
+                    className="text-blue-600 dark:text-blue-400 text-[20px]"
+                  />
                   <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
                     Nghị Quyết Ban Lãnh Đạo Đang Phân Rã Xuống Các Khối (Executive Mandates)
                   </h2>
@@ -434,7 +436,10 @@ export function DepartmentsTab({
                         </div>
                         <div className="flex items-center justify-between">
                           <span>Nguồn gốc chỉ đạo:</span>
-                          <span className="italic truncate max-w-[200px]" title={m.sourceMeetingTitle}>
+                          <span
+                            className="italic truncate max-w-[200px]"
+                            title={m.sourceMeetingTitle}
+                          >
                             {m.sourceMeetingTitle}
                           </span>
                         </div>
@@ -562,9 +567,7 @@ export function DepartmentsTab({
                 const matchedDept = departments.find(
                   (d) => d.code === dept.code || d.name === dept.name
                 );
-                const deptIcon = matchedDept
-                  ? getDepartmentIcon(matchedDept)
-                  : 'domain';
+                const deptIcon = matchedDept ? getDepartmentIcon(matchedDept) : 'domain';
 
                 return (
                   <div
@@ -671,9 +674,7 @@ export function DepartmentsTab({
                           <div>Tối ưu</div>
                         </div>
                         <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
-                          <div className="font-mono text-xs font-black">
-                            {dept.overloadedCount}
-                          </div>
+                          <div className="font-mono text-xs font-black">{dept.overloadedCount}</div>
                           <div>Quá tải</div>
                         </div>
                       </div>
@@ -747,9 +748,7 @@ export function DepartmentsTab({
             <div className="overflow-y-auto py-4 space-y-4 pr-1">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                 <span>Danh sách nhân sự</span>
-                <span className="text-[11px] font-normal text-slate-400">
-                  40h/tuần = 100%
-                </span>
+                <span className="text-[11px] font-normal text-slate-400">40h/tuần = 100%</span>
               </div>
 
               {selectedDeptForDetail.code === 'ENG' ? (
@@ -789,7 +788,8 @@ export function DepartmentsTab({
                               {mem.title}
                             </p>
                             <p className="text-[10px] text-slate-400">
-                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task · {mem.activeTasksCount} nhiệm vụ
+                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task ·{' '}
+                              {mem.activeTasksCount} nhiệm vụ
                             </p>
                           </div>
                         </div>
@@ -930,8 +930,8 @@ export function DepartmentsTab({
                           isUsed
                             ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
                             : isSelected
-                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                              ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
                         }`}
                       >
                         <MatIcon name={item.icon} className="text-[20px]" />

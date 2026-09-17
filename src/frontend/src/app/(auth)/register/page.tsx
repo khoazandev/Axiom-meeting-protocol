@@ -37,7 +37,12 @@ import Logo from '@/components/Logo';
 import AuthLivelyStage from '@/components/auth/AuthLivelyStage';
 
 // Password Strength Evaluation Helper
-function getPasswordStrength(pass: string): { score: number; label: string; color: string; feedback: string } {
+function getPasswordStrength(pass: string): {
+  score: number;
+  label: string;
+  color: string;
+  feedback: string;
+} {
   if (!pass) return { score: 0, label: '', color: '', feedback: '' };
   let score = 0;
   if (pass.length >= 8) score += 1;
@@ -47,14 +52,34 @@ function getPasswordStrength(pass: string): { score: number; label: string; colo
 
   switch (score) {
     case 1:
-      return { score: 1, label: 'Mật khẩu yếu', color: 'bg-rose-500 text-rose-600', feedback: 'Cần tối thiểu 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt' };
+      return {
+        score: 1,
+        label: 'Mật khẩu yếu',
+        color: 'bg-rose-500 text-rose-600',
+        feedback: 'Cần tối thiểu 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt',
+      };
     case 2:
-      return { score: 2, label: 'Trung bình', color: 'bg-amber-500 text-amber-600', feedback: 'Thêm chữ hoa và ký tự đặc biệt (!@#$)' };
+      return {
+        score: 2,
+        label: 'Trung bình',
+        color: 'bg-amber-500 text-amber-600',
+        feedback: 'Thêm chữ hoa và ký tự đặc biệt (!@#$)',
+      };
     case 3:
-      return { score: 3, label: 'Khá an toàn', color: 'bg-blue-500 text-blue-600', feedback: 'Đạt tiêu chuẩn bảo mật doanh nghiệp' };
+      return {
+        score: 3,
+        label: 'Khá an toàn',
+        color: 'bg-blue-500 text-blue-600',
+        feedback: 'Đạt tiêu chuẩn bảo mật doanh nghiệp',
+      };
     case 4:
     default:
-      return { score: 4, label: 'Rất mạnh', color: 'bg-emerald-500 text-emerald-600', feedback: 'Mật khẩu đạt cấp độ an ninh tối đa' };
+      return {
+        score: 4,
+        label: 'Rất mạnh',
+        color: 'bg-emerald-500 text-emerald-600',
+        feedback: 'Mật khẩu đạt cấp độ an ninh tối đa',
+      };
   }
 }
 
@@ -90,7 +115,9 @@ function RegisterFormContent() {
   };
 
   // Mode: if user navigated with an invite token, default to invitation flow. Otherwise, allow creating a new org or joining.
-  const [activeMode, setActiveMode] = useState<RegisterMode>(inviteTokenFromUrl ? 'invitation' : 'new_org');
+  const [activeMode, setActiveMode] = useState<RegisterMode>(
+    inviteTokenFromUrl ? 'invitation' : 'new_org'
+  );
 
   // Token verification states
   const [activeToken, setActiveToken] = useState(extractCodeOrToken(inviteTokenFromUrl));
@@ -151,7 +178,8 @@ function RegisterFormContent() {
         if (!isMounted) return;
         console.warn('Invitation verification warning:', err);
         setTokenError(
-          err?.message || 'Thư mời không tồn tại, đã hết hạn hiệu lực (quá 7 ngày) hoặc đã được sử dụng.'
+          err?.message ||
+            'Thư mời không tồn tại, đã hết hạn hiệu lực (quá 7 ngày) hoặc đã được sử dụng.'
         );
         setInvitationData(null);
       })
@@ -300,7 +328,6 @@ function RegisterFormContent() {
         <div className="w-full max-w-[500px] shrink-0">
           <div className="relative rounded-3xl p-2 bg-white/85 backdrop-blur-2xl border border-slate-200/90 shadow-xl">
             <div className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-100 shadow-2xs">
-
               {/* ─────────────────────────────────────────────────────────────
                   TOP SEGMENTED MODE SELECTOR
                   Allows switching between New Company vs Invitation
@@ -318,7 +345,9 @@ function RegisterFormContent() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Building2 className={`w-3.5 h-3.5 ${activeMode === 'new_org' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Building2
+                    className={`w-3.5 h-3.5 ${activeMode === 'new_org' ? 'text-blue-600' : 'text-slate-400'}`}
+                  />
                   <span>Tạo Công ty mới</span>
                 </button>
 
@@ -334,7 +363,9 @@ function RegisterFormContent() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Mail className={`w-3.5 h-3.5 ${activeMode === 'invitation' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Mail
+                    className={`w-3.5 h-3.5 ${activeMode === 'invitation' ? 'text-blue-600' : 'text-slate-400'}`}
+                  />
                   <span>Gia nhập qua Thư mời</span>
                   {invitationData && (
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -359,7 +390,8 @@ function RegisterFormContent() {
                       Khởi Tạo Không Gian Doanh Nghiệp
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Thành lập Workspace quản trị cuộc họp cấp cao. Bạn sẽ tự động nắm giữ vai trò <strong>OWNER</strong> cao nhất.
+                      Thành lập Workspace quản trị cuộc họp cấp cao. Bạn sẽ tự động nắm giữ vai trò{' '}
+                      <strong>OWNER</strong> cao nhất.
                     </p>
                   </div>
 
@@ -576,7 +608,8 @@ function RegisterFormContent() {
                       <Loader2 className="w-9 h-9 text-blue-600 animate-spin" />
                       <h3 className="text-sm font-bold text-slate-900">Đang xác thực Thư mời...</h3>
                       <p className="text-xs text-slate-500 max-w-xs">
-                        Hệ thống đang kiểm tra mã token và giải mã thông tin bổ nhiệm của bạn từ máy chủ Axiom.
+                        Hệ thống đang kiểm tra mã token và giải mã thông tin bổ nhiệm của bạn từ máy
+                        chủ Axiom.
                       </p>
                     </div>
                   )}
@@ -596,7 +629,8 @@ function RegisterFormContent() {
                           Gia Nhập Qua Thư Mời
                         </h2>
                         <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                          Để gia nhập một công ty đã có sẵn trên hệ thống Axiom, bạn cần có Thư mời chính thức được Quản trị viên gửi qua Gmail.
+                          Để gia nhập một công ty đã có sẵn trên hệ thống Axiom, bạn cần có Thư mời
+                          chính thức được Quản trị viên gửi qua Gmail.
                         </p>
                       </div>
 
@@ -614,7 +648,9 @@ function RegisterFormContent() {
                             Nhập Mã Mời Gia Nhập (Mã 6 số từ Email):
                           </label>
                           <p className="text-[11px] text-slate-500 leading-relaxed mb-2">
-                            Kiểm tra hộp thư Gmail (bao gồm cả mục <em>Thư rác / Spam</em> hoặc <em>Quảng cáo</em>) để lấy mã mời 6 chữ số hoặc nhấp vào liên kết trong email.
+                            Kiểm tra hộp thư Gmail (bao gồm cả mục <em>Thư rác / Spam</em> hoặc{' '}
+                            <em>Quảng cáo</em>) để lấy mã mời 6 chữ số hoặc nhấp vào liên kết trong
+                            email.
                           </p>
                         </div>
                         <div className="relative">
@@ -674,7 +710,8 @@ function RegisterFormContent() {
                           Gia Nhập {invitationData.organization_name}
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          Vui lòng hoàn thiện thông tin tài khoản để kích hoạt quyền truy cập doanh nghiệp.
+                          Vui lòng hoàn thiện thông tin tài khoản để kích hoạt quyền truy cập doanh
+                          nghiệp.
                         </p>
                       </div>
 
@@ -682,7 +719,9 @@ function RegisterFormContent() {
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500">Công ty / Tổ chức:</span>
-                          <span className="font-bold text-slate-900">{invitationData.organization_name}</span>
+                          <span className="font-bold text-slate-900">
+                            {invitationData.organization_name}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500">Cấp bậc bổ nhiệm:</span>

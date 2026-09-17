@@ -152,7 +152,10 @@ export function MeetingArchiveRepository({
       setMeetingToDelete(null);
     } catch (err: any) {
       console.error('Failed to delete archived meeting:', err);
-      alert(err?.message || 'Không thể xóa cuộc họp khỏi kho lưu trữ. Vui lòng kiểm tra quyền hạn của bạn.');
+      alert(
+        err?.message ||
+          'Không thể xóa cuộc họp khỏi kho lưu trữ. Vui lòng kiểm tra quyền hạn của bạn.'
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -209,7 +212,10 @@ export function MeetingArchiveRepository({
             id: 'welcome-1',
             sender: 'ai',
             text: `Xin chào! Tôi là Trợ lý AI của cuộc họp **"${selectedMeeting.title}"**.\n\nTôi đã đồng bộ toàn bộ dữ liệu biên bản ghi âm, danh mục quyết định và nhiệm vụ đã giao. Bạn có thể hỏi tôi bất kỳ câu hỏi nào về nội dung cuộc thảo luận này.`,
-            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: new Date().toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
           },
         ]);
       } catch (err) {
@@ -271,7 +277,9 @@ export function MeetingArchiveRepository({
       const aiMsg: ChatMessageItem = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: res.answer || 'Tôi đã tra cứu nhưng không tìm thấy thông tin phù hợp trong dữ liệu cuộc họp này.',
+        text:
+          res.answer ||
+          'Tôi đã tra cứu nhưng không tìm thấy thông tin phù hợp trong dữ liệu cuộc họp này.',
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       };
 
@@ -321,8 +329,12 @@ export function MeetingArchiveRepository({
     });
 
     return list.sort((a, b) => {
-      const timeA = new Date(a.ended_at || a.started_at || a.scheduled_at || a.created_at || 0).getTime();
-      const timeB = new Date(b.ended_at || b.started_at || b.scheduled_at || b.created_at || 0).getTime();
+      const timeA = new Date(
+        a.ended_at || a.started_at || a.scheduled_at || a.created_at || 0
+      ).getTime();
+      const timeB = new Date(
+        b.ended_at || b.started_at || b.scheduled_at || b.created_at || 0
+      ).getTime();
       return sortOrder === 'NEWEST' ? timeB - timeA : timeA - timeB;
     });
   }, [meetings, selectedDeptFilter, searchQuery, userRole, sortOrder]);
@@ -427,22 +439,34 @@ export function MeetingArchiveRepository({
                     <Clock size={11} /> {getMeetingDuration(selectedMeeting)}
                   </span>
                 </div>
-                <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate" title={selectedMeeting.title}>
+                <h1
+                  className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate"
+                  title={selectedMeeting.title}
+                >
                   {selectedMeeting.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   <span className="flex items-center gap-1">
                     <Calendar size={12} className="text-slate-400" />
-                    {formatDateTime(selectedMeeting.scheduled_at || selectedMeeting.started_at || selectedMeeting.created_at)}
+                    {formatDateTime(
+                      selectedMeeting.scheduled_at ||
+                        selectedMeeting.started_at ||
+                        selectedMeeting.created_at
+                    )}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <img
-                      src={selectedMeeting.host_avatar || generateInitialsAvatar(selectedMeeting.host_name || 'Chủ trì')}
+                      src={
+                        selectedMeeting.host_avatar ||
+                        generateInitialsAvatar(selectedMeeting.host_name || 'Chủ trì')
+                      }
                       alt="Host"
                       className="w-3.5 h-3.5 rounded-full border border-slate-200 dark:border-slate-700 object-cover"
                     />
-                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{selectedMeeting.host_name || 'Ban Điều Hành'}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                      {selectedMeeting.host_name || 'Ban Điều Hành'}
+                    </span>
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
@@ -502,7 +526,9 @@ export function MeetingArchiveRepository({
         {isLoadingDetails && (
           <div className="w-full py-16 flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             <RefreshCw className="w-7 h-7 text-blue-500 animate-spin mb-3" />
-            <p className="text-xs font-semibold text-slate-500">Đang tải biên bản hội thoại và dữ liệu AI...</p>
+            <p className="text-xs font-semibold text-slate-500">
+              Đang tải biên bản hội thoại và dữ liệu AI...
+            </p>
           </div>
         )}
 
@@ -528,7 +554,10 @@ export function MeetingArchiveRepository({
 
                 {/* Filter / Search within transcript */}
                 <div className="relative w-full sm:w-48 shrink-0">
-                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search
+                    size={12}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
                   <input
                     type="text"
                     value={transcriptSearchQuery}
@@ -544,9 +573,12 @@ export function MeetingArchiveRepository({
                 {filteredTranscripts.length === 0 ? (
                   <div className="py-12 text-center text-slate-400 dark:text-slate-500">
                     <FileText size={30} className="mx-auto mb-2 opacity-40" />
-                    <p className="text-xs font-semibold">Chưa có lượt phát biểu nào được ghi nhận</p>
+                    <p className="text-xs font-semibold">
+                      Chưa có lượt phát biểu nào được ghi nhận
+                    </p>
                     <p className="text-[11px] mt-1 text-slate-400">
-                      Biên bản hội thoại sẽ được hiển thị tại đây khi hệ thống hoàn tất xử lý âm thanh.
+                      Biên bản hội thoại sẽ được hiển thị tại đây khi hệ thống hoàn tất xử lý âm
+                      thanh.
                     </p>
                   </div>
                 ) : (
@@ -631,7 +663,9 @@ export function MeetingArchiveRepository({
                       </div>
 
                       {/* Decisions */}
-                      {(summaryData?.decisions || selectedMeeting.decisions || decisions.length > 0) && (
+                      {(summaryData?.decisions ||
+                        selectedMeeting.decisions ||
+                        decisions.length > 0) && (
                         <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/50">
                           <h3 className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                             <CheckSquare size={11} className="text-emerald-600" />
@@ -640,7 +674,10 @@ export function MeetingArchiveRepository({
                           {decisions.length > 0 ? (
                             <ul className="space-y-1.5">
                               {decisions.map((d, i) => (
-                                <li key={d.id || i} className="text-xs text-emerald-950 dark:text-emerald-200 flex items-start gap-2">
+                                <li
+                                  key={d.id || i}
+                                  className="text-xs text-emerald-950 dark:text-emerald-200 flex items-start gap-2"
+                                >
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
                                   <span>{d.description}</span>
                                 </li>
@@ -678,11 +715,15 @@ export function MeetingArchiveRepository({
                       {tasks.length === 0 ? (
                         <div className="py-8 text-center text-slate-400 dark:text-slate-500">
                           <ListTodo size={26} className="mx-auto mb-2 opacity-40" />
-                          <p className="text-xs font-semibold">Chưa có nhiệm vụ cụ thể nào được giao</p>
+                          <p className="text-xs font-semibold">
+                            Chưa có nhiệm vụ cụ thể nào được giao
+                          </p>
                         </div>
                       ) : (
                         tasks.map((task, idx) => {
-                          const isDone = (task.status || '').toUpperCase() === 'DONE' || task.status === 'CONFIRMED';
+                          const isDone =
+                            (task.status || '').toUpperCase() === 'DONE' ||
+                            task.status === 'CONFIRMED';
                           return (
                             <div
                               key={task.id || idx}
@@ -719,7 +760,9 @@ export function MeetingArchiveRepository({
                                 {task.deadline && (
                                   <div className="flex items-center gap-1 shrink-0 font-mono text-[10px]">
                                     <Clock size={10} />
-                                    <span>{new Date(task.deadline).toLocaleDateString('vi-VN')}</span>
+                                    <span>
+                                      {new Date(task.deadline).toLocaleDateString('vi-VN')}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -760,7 +803,10 @@ export function MeetingArchiveRepository({
                             id: 'welcome-reset',
                             sender: 'ai',
                             text: `Tôi đã sẵn sàng. Bạn có thể hỏi bất kỳ thông tin nào về cuộc họp **"${selectedMeeting.title}"**.`,
-                            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                            timestamp: new Date().toLocaleTimeString('vi-VN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }),
                           },
                         ])
                       }
@@ -820,10 +866,16 @@ export function MeetingArchiveRepository({
                                 remarkPlugins={[remarkGfm]}
                                 components={{
                                   ol: ({ node, ...props }) => (
-                                    <ol className="list-decimal list-outside ml-4 space-y-2 my-2" {...props} />
+                                    <ol
+                                      className="list-decimal list-outside ml-4 space-y-2 my-2"
+                                      {...props}
+                                    />
                                   ),
                                   ul: ({ node, ...props }) => (
-                                    <ul className="list-disc list-outside ml-4 space-y-1.5 my-1.5" {...props} />
+                                    <ul
+                                      className="list-disc list-outside ml-4 space-y-1.5 my-1.5"
+                                      {...props}
+                                    />
                                   ),
                                   li: ({ node, ...props }) => (
                                     <li className="leading-relaxed pl-1" {...props} />
@@ -832,16 +884,28 @@ export function MeetingArchiveRepository({
                                     <p className="mb-2 last:mb-0 leading-relaxed" {...props} />
                                   ),
                                   strong: ({ node, ...props }) => (
-                                    <strong className="font-bold text-slate-900 dark:text-white" {...props} />
+                                    <strong
+                                      className="font-bold text-slate-900 dark:text-white"
+                                      {...props}
+                                    />
                                   ),
                                   em: ({ node, ...props }) => (
-                                    <em className="italic text-indigo-600 dark:text-indigo-400 font-medium" {...props} />
+                                    <em
+                                      className="italic text-indigo-600 dark:text-indigo-400 font-medium"
+                                      {...props}
+                                    />
                                   ),
                                   blockquote: ({ node, ...props }) => (
-                                    <blockquote className="border-l-2 border-indigo-500 pl-3 italic my-2 text-slate-600 dark:text-slate-300" {...props} />
+                                    <blockquote
+                                      className="border-l-2 border-indigo-500 pl-3 italic my-2 text-slate-600 dark:text-slate-300"
+                                      {...props}
+                                    />
                                   ),
                                   code: ({ node, ...props }) => (
-                                    <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 font-mono text-[10.5px]" {...props} />
+                                    <code
+                                      className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 font-mono text-[10.5px]"
+                                      {...props}
+                                    />
                                   ),
                                 }}
                               >
@@ -935,7 +999,8 @@ export function MeetingArchiveRepository({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Lưu trữ biên bản hội thoại verbatim, tóm tắt điều hành MoM, danh mục nhiệm vụ và Trợ lý AI tra cứu chuyên sâu.
+                Lưu trữ biên bản hội thoại verbatim, tóm tắt điều hành MoM, danh mục nhiệm vụ và Trợ
+                lý AI tra cứu chuyên sâu.
               </p>
             </div>
           </div>
@@ -988,7 +1053,10 @@ export function MeetingArchiveRepository({
               </select>
             </div>
           ) : (
-            <div className="shrink-0 w-44 px-3 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 truncate" title={departmentName || 'Phòng ban của bạn'}>
+            <div
+              className="shrink-0 w-44 px-3 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 truncate"
+              title={departmentName || 'Phòng ban của bạn'}
+            >
               {departmentName || 'Phòng ban của bạn'}
             </div>
           )}
@@ -1025,12 +1093,16 @@ export function MeetingArchiveRepository({
       {isLoadingMeetings ? (
         <div className="py-20 text-center flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-          <p className="text-xs font-semibold text-slate-500">Đang đồng bộ dữ liệu kho cuộc họp...</p>
+          <p className="text-xs font-semibold text-slate-500">
+            Đang đồng bộ dữ liệu kho cuộc họp...
+          </p>
         </div>
       ) : filteredMeetings.length === 0 ? (
         <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
           <FolderArchive size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Không tìm thấy cuộc họp phù hợp</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Không tìm thấy cuộc họp phù hợp
+          </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             Không có biên bản nào khớp với điều kiện tìm kiếm hoặc bộ lọc hiện tại trong kho.
           </p>
@@ -1053,7 +1125,10 @@ export function MeetingArchiveRepository({
                 <div>
                   {/* Top Badges */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60 truncate max-w-[170px]" title={meeting.department_name || 'Khối Doanh Nghiệp'}>
+                    <span
+                      className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60 truncate max-w-[170px]"
+                      title={meeting.department_name || 'Khối Doanh Nghiệp'}
+                    >
                       {meeting.department_name || 'Khối Doanh Nghiệp'}
                     </span>
                     {renderStatusBadge(meeting.status)}
@@ -1072,7 +1147,9 @@ export function MeetingArchiveRepository({
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3.5">
                     <span className="flex items-center gap-1">
                       <Calendar size={12} className="text-slate-400" />
-                      {formatDateTime(meeting.scheduled_at || meeting.started_at || meeting.created_at)}
+                      {formatDateTime(
+                        meeting.scheduled_at || meeting.started_at || meeting.created_at
+                      )}
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
@@ -1085,11 +1162,16 @@ export function MeetingArchiveRepository({
                   <div className="flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/80 mb-3.5">
                     <div className="flex items-center gap-2 truncate">
                       <img
-                        src={meeting.host_avatar || generateInitialsAvatar(meeting.host_name || 'Host')}
+                        src={
+                          meeting.host_avatar || generateInitialsAvatar(meeting.host_name || 'Host')
+                        }
                         alt="Host"
                         className="w-5 h-5 rounded-full border border-slate-200 dark:border-slate-700 object-cover shrink-0"
                       />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate" title={meeting.host_name || 'Chủ trì'}>
+                      <span
+                        className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate"
+                        title={meeting.host_name || 'Chủ trì'}
+                      >
                         {meeting.host_name || 'Ban Tổ Chức'}
                       </span>
                     </div>
@@ -1170,7 +1252,8 @@ export function MeetingArchiveRepository({
                 {meetingToDelete.title}
               </p>
               <p className="text-slate-500 dark:text-slate-400">
-                Cuộc họp cùng toàn bộ biên bản hội thoại, tóm tắt và hành động liên quan sẽ bị xóa vĩnh viễn khỏi kho lưu trữ và cơ sở dữ liệu.
+                Cuộc họp cùng toàn bộ biên bản hội thoại, tóm tắt và hành động liên quan sẽ bị xóa
+                vĩnh viễn khỏi kho lưu trữ và cơ sở dữ liệu.
               </p>
             </div>
 

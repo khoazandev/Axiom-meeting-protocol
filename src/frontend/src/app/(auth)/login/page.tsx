@@ -34,7 +34,13 @@ export default function LoginPage() {
       const user = await authApi.me();
       const enrichedUser = {
         ...user,
-        role: user.role || (email === 'admin@axiom.com' ? 'OWNER' : email === 'manager.khoa@axiom.com' ? 'MANAGER' : 'MEMBER'),
+        role:
+          user.role ||
+          (email === 'admin@axiom.com'
+            ? 'OWNER'
+            : email === 'manager.khoa@axiom.com'
+              ? 'MANAGER'
+              : 'MEMBER'),
       };
       const organizations = await organizationApi.list();
       setAuth(enrichedUser, tokens.access_token, organizations, organizations[0]);

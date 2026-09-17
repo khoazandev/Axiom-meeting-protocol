@@ -579,12 +579,20 @@ export const meetingsApi = {
   /** Push confirmed meeting follow-up tasks to Jira / Management Kanban */
   pushToJira(
     meetingId: number | string,
-    tasks: Array<{ id: string; title: string; assignee_id?: string | null; deadline?: string | null }>
+    tasks: Array<{
+      id: string;
+      title: string;
+      assignee_id?: string | null;
+      deadline?: string | null;
+    }>
   ): Promise<{ status: string; message: string }> {
-    return apiFetch<{ status: string; message: string }>(`/api/v1/meetings/${meetingId}/push-to-jira`, {
-      method: 'POST',
-      body: JSON.stringify({ tasks }),
-    });
+    return apiFetch<{ status: string; message: string }>(
+      `/api/v1/meetings/${meetingId}/push-to-jira`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ tasks }),
+      }
+    );
   },
 
   /** On-demand AI task extraction from meeting transcripts. */
@@ -1243,9 +1251,11 @@ export const invitationApi = {
   },
 
   accept(token: string): Promise<{ status: string; organization_id: string }> {
-    return apiFetch<{ status: string; organization_id: string }>(`/api/v1/invitations/${token}/accept`, {
-      method: 'POST',
-    });
+    return apiFetch<{ status: string; organization_id: string }>(
+      `/api/v1/invitations/${token}/accept`,
+      {
+        method: 'POST',
+      }
+    );
   },
 };
-

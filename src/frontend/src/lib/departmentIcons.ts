@@ -25,13 +25,29 @@ export function getDepartmentIcon(dept: { name?: string; description?: string | 
     if (match && match[1]) return match[1];
   }
   const name = (dept.name || '').toLowerCase();
-  if (name.includes('kỹ thuật') || name.includes('eng') || name.includes('tech') || name.includes('công nghệ')) {
+  if (
+    name.includes('kỹ thuật') ||
+    name.includes('eng') ||
+    name.includes('tech') ||
+    name.includes('công nghệ')
+  ) {
     return 'code';
   }
-  if (name.includes('sản phẩm') || name.includes('prod') || name.includes('thiết kế') || name.includes('design')) {
+  if (
+    name.includes('sản phẩm') ||
+    name.includes('prod') ||
+    name.includes('thiết kế') ||
+    name.includes('design')
+  ) {
     return 'palette';
   }
-  if (name.includes('kinh doanh') || name.includes('biz') || name.includes('tiếp thị') || name.includes('marketing') || name.includes('sales')) {
+  if (
+    name.includes('kinh doanh') ||
+    name.includes('biz') ||
+    name.includes('tiếp thị') ||
+    name.includes('marketing') ||
+    name.includes('sales')
+  ) {
     return 'trending_up';
   }
   if (name.includes('vận hành') || name.includes('ops') || name.includes('khách hàng')) {

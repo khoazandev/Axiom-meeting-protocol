@@ -213,9 +213,7 @@ export function WebhooksIntegrationTab({
               <MatIcon name="terminal" className="text-[18px]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">
-                Trình Giả Lập Kiểm Thử Webhook
-              </h3>
+              <h3 className="text-sm font-bold text-white">Trình Giả Lập Kiểm Thử Webhook</h3>
               <p className="text-xs text-slate-400">
                 Thử nghiệm gửi payload mẫu trực tiếp tới các hệ sinh thái bên ngoài để kiểm tra kết
                 nối.

@@ -113,7 +113,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   };
 
   const liveMeetingsCount = meetings.filter((m) => resolveMeetingState(m) === 'LIVE').length;
-  const upcomingMeetingsCount = meetings.filter((m) => resolveMeetingState(m) === 'UPCOMING').length;
+  const upcomingMeetingsCount = meetings.filter(
+    (m) => resolveMeetingState(m) === 'UPCOMING'
+  ).length;
   const endedMeetingsCount = meetings.filter((m) => resolveMeetingState(m) === 'ENDED').length;
 
   const filteredMeetings = meetings
@@ -260,11 +262,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
               const isEnded = state === 'ENDED';
               const canControl =
                 user &&
-                (user.id === mtg.created_by_id ||
-                  user.role === 'OWNER' ||
-                  user.role === 'ADMIN');
+                (user.id === mtg.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN');
               const canDelete = isEnded
-                ? (user?.role === 'OWNER' || user?.role === 'ADMIN')
+                ? user?.role === 'OWNER' || user?.role === 'ADMIN'
                 : canControl;
 
               return (
@@ -276,7 +276,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     }
                   }}
                   className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-                    isEnded ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600' : ''
+                    isEnded
+                      ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600'
+                      : ''
                   } ${
                     isLive
                       ? 'bg-gradient-to-br from-white via-white to-emerald-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20 border-emerald-300 dark:border-emerald-800/80 shadow-md shadow-emerald-500/5'
@@ -292,8 +294,12 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                       </span>
 
                       {/* Dynamic Badge */}
-                      <span className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full ${badge.color}`}>
-                        {badge.pulse && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
+                      <span
+                        className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full ${badge.color}`}
+                      >
+                        {badge.pulse && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        )}
                         <span>{badge.label}</span>
                       </span>
                     </div>
@@ -305,21 +311,18 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4 flex-wrap">
                       <span className="flex items-center gap-1 font-mono">
                         <Clock size={12} />
-                        {isLive && (
-                          mtg.started_at
+                        {isLive &&
+                          (mtg.started_at
                             ? `Bắt đầu: ${new Date(mtg.started_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
-                            : 'Đang diễn ra'
-                        )}
-                        {isUpcoming && (
-                          mtg.scheduled_at
+                            : 'Đang diễn ra')}
+                        {isUpcoming &&
+                          (mtg.scheduled_at
                             ? `Dự kiến: ${new Date(mtg.scheduled_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
-                            : 'Chưa bắt đầu'
-                        )}
-                        {isEnded && (
-                          mtg.ended_at
+                            : 'Chưa bắt đầu')}
+                        {isEnded &&
+                          (mtg.ended_at
                             ? `Đã kết thúc: ${new Date(mtg.ended_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
-                            : 'Đã kết thúc'
-                        )}
+                            : 'Đã kết thúc')}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
@@ -341,8 +344,8 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                       </a>
                     )}
 
-                    {isUpcoming && (
-                      canControl ? (
+                    {isUpcoming &&
+                      (canControl ? (
                         <button
                           type="button"
                           disabled={startingEarlyId === String(mtg.id)}
@@ -351,7 +354,11 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                           title="Bắt đầu cuộc họp sớm và tự động gửi thông báo triệu tập tới thành viên"
                         >
                           <Play size={13} className="fill-current" />
-                          <span>{startingEarlyId === String(mtg.id) ? 'Đang mở phòng...' : 'Bắt đầu sớm'}</span>
+                          <span>
+                            {startingEarlyId === String(mtg.id)
+                              ? 'Đang mở phòng...'
+                              : 'Bắt đầu sớm'}
+                          </span>
                         </button>
                       ) : (
                         <a
@@ -361,13 +368,14 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                           <Clock size={13} />
                           <span>Vào Phòng Chờ</span>
                         </a>
-                      )
-                    )}
+                      ))}
 
                     {isEnded && (
                       <button
                         type="button"
-                        onClick={() => setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })}
+                        onClick={() =>
+                          setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })
+                        }
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
                         title="Xem lại Biên bản AI, nghị quyết và bản ghi âm lưu trữ"
                       >
@@ -379,7 +387,9 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })}
+                        onClick={() =>
+                          setSelectedMeetingForDetails({ id: String(mtg.id), title: mtg.title })
+                        }
                         className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer"
                         title="Xem chi tiết biên bản / tài liệu"
                       >
