@@ -121,9 +121,10 @@ export function MeetingArchiveRepository({
   const loadMeetings = async () => {
     setIsLoadingMeetings(true);
     try {
-      // Owner sees all org meetings; Manager and Member are scoped by backend RBAC
+      // Owner sees all org meetings; Manager is strictly scoped to their department
       const data = await meetingApi.listWithFilters({
         all_org_meetings: userRole === 'OWNER',
+        department_id: userRole === 'MANAGER' && departmentId ? departmentId : undefined,
       });
       // In Kho Tài Liệu: only concluded meetings
       const concluded = (data || []).filter((m) => {
@@ -309,9 +310,11 @@ export function MeetingArchiveRepository({
       const s = (m.status || '').toUpperCase();
       if (s !== 'ENDED' && s !== 'COMPLETED') return false;
 
-      // Department Filter (for OWNER)
+      // Department Filter: OWNER can filter by dropdown; MANAGER is strictly scoped to their department
       if (userRole === 'OWNER' && selectedDeptFilter !== 'ALL') {
         if (m.department_id !== selectedDeptFilter) return false;
+      } else if (userRole === 'MANAGER' && departmentId) {
+        if (m.department_id && m.department_id !== departmentId) return false;
       }
 
       // Search Query

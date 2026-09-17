@@ -267,6 +267,7 @@ def list_my_meetings(
     approval_filter: str | None = None,
     meeting_type_filter: str | None = None,
     org_id: str | None = None,
+    department_id: str | None = None,
     all_org_meetings: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -276,6 +277,8 @@ def list_my_meetings(
 
     if org_id:
         query = query.filter(Meeting.organization_id == org_id)
+    if department_id:
+        query = query.filter(Meeting.department_id == department_id)
 
     # Check if current_user is OWNER or ADMIN
     user_org_member = (

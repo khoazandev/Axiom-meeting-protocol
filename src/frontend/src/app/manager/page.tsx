@@ -11,7 +11,6 @@ import {
 import { ManagerMeetingsTab } from '@/components/manager/ManagerMeetingsTab';
 import { ManagerKanbanTaskTab } from '@/components/manager/ManagerKanbanTaskTab';
 import { ManagerTeamTab } from '@/components/manager/ManagerTeamTab';
-import { ManagerAnalyticsTab } from '@/components/manager/ManagerAnalyticsTab';
 import { ManagerCalendarTab } from '@/components/manager/ManagerCalendarTab';
 import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
 import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
@@ -237,8 +236,6 @@ export default function ManagerWorkspacePage() {
           {activeTab === 'calendar' && <ManagerCalendarTab onNotify={showToast} />}
 
           {activeTab === 'team' && <ManagerTeamTab onNotify={showToast} />}
-
-          {activeTab === 'analytics' && <ManagerAnalyticsTab onNotify={showToast} />}
 
           {activeTab === 'archives' && (
             <MeetingArchiveRepository

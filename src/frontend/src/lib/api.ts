@@ -670,6 +670,7 @@ export const meetingsApi = {
     approval_filter?: string;
     meeting_type_filter?: string;
     org_id?: string;
+    department_id?: string;
     all_org_meetings?: boolean;
   }): Promise<Meeting[]> {
     const q = new URLSearchParams();
@@ -677,6 +678,7 @@ export const meetingsApi = {
     if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
     if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
     if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.department_id) q.append('department_id', params.department_id);
     if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
     const qs = q.toString();
     return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');
@@ -1175,6 +1177,7 @@ export const meetingsAdminApi = {
     approval_filter?: string;
     meeting_type_filter?: string;
     org_id?: string;
+    department_id?: string;
     all_org_meetings?: boolean;
   }): Promise<Meeting[]> {
     const q = new URLSearchParams();
@@ -1182,6 +1185,7 @@ export const meetingsAdminApi = {
     if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
     if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
     if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.department_id) q.append('department_id', params.department_id);
     if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
     const qs = q.toString();
     return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');

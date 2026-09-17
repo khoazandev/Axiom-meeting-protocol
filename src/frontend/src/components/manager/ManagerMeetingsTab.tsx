@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { meetingsApi } from '@/lib/api';
+import { meetingsApi, meetingApi, organizationAdminApi, Meeting, OrgMemberDetail } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import {
   Video,
   MicOff,
@@ -13,152 +14,19 @@ import {
   Calendar,
   Upload,
   Loader2,
-} from 'lucide-react';
-import {
   Plus,
-  FileCheck2,
-  AlertTriangle,
   Play,
-  ExternalLink,
   Search,
   CheckCircle2,
   FileText,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
+  Check,
 } from 'lucide-react';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
-import { MOCK_EXECUTIVE_MANDATES, ExecutiveMandate } from '@/lib/workloadProtocolData';
-
-export interface DepartmentMeeting {
-  id: string;
-  title: string;
-  roomCode: string;
-  status: 'LIVE' | 'UPCOMING' | 'ENDED';
-  host: {
-    name: string;
-    avatar: string;
-  };
-  startTime: string;
-  duration: string;
-  attendeesCount: number;
-  maxAttendees: number;
-  agendaApproved: boolean;
-  aiTranscriptionActive: boolean;
-  attendees: Array<{
-    id: string;
-    name: string;
-    avatar: string;
-    role: string;
-  }>;
-}
-
-const INITIAL_MEETINGS: DepartmentMeeting[] = [
-  {
-    id: 'mtg-eng-01',
-    title: 'Sprint 42 Architecture & Protocol Review',
-    roomCode: 'ENG-SPRINT-42',
-    status: 'LIVE',
-    host: {
-      name: 'Trần Minh Khoa',
-      avatar:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    },
-    startTime: '14:00 - 15:30',
-    duration: '45 phút đã trôi qua',
-    attendeesCount: 8,
-    maxAttendees: 12,
-    agendaApproved: true,
-    aiTranscriptionActive: true,
-    attendees: [
-      {
-        id: 'att-1',
-        name: 'Alex Rivera',
-        avatar:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-        role: 'Senior AI Engineer',
-      },
-      {
-        id: 'att-2',
-        name: 'Lê Thị Hồng',
-        avatar:
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-        role: 'Frontend Lead',
-      },
-      {
-        id: 'att-3',
-        name: 'Phạm Quốc Bảo',
-        avatar:
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-        role: 'DevOps Engineer',
-      },
-      {
-        id: 'att-4',
-        name: 'Đặng Thùy Dung',
-        avatar:
-          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-        role: 'QA Automation',
-      },
-    ],
-  },
-  {
-    id: 'mtg-eng-02',
-    title: 'Daily Engineering Sync & Blocker Clearing',
-    roomCode: 'ENG-DAILY-SYNC',
-    status: 'UPCOMING',
-    host: {
-      name: 'Trần Minh Khoa',
-      avatar:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    },
-    startTime: '16:30 - 17:00',
-    duration: '30 phút',
-    attendeesCount: 6,
-    maxAttendees: 10,
-    agendaApproved: true,
-    aiTranscriptionActive: false,
-    attendees: [
-      {
-        id: 'att-1',
-        name: 'Alex Rivera',
-        avatar:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-        role: 'Senior AI Engineer',
-      },
-      {
-        id: 'att-5',
-        name: 'Vũ Hải Đăng',
-        avatar:
-          'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
-        role: 'Backend Specialist',
-      },
-    ],
-  },
-  {
-    id: 'mtg-eng-03',
-    title: '1-on-1 Mentorship & Career Path: Alex Rivera',
-    roomCode: 'ENG-1ON1-ALEX',
-    status: 'UPCOMING',
-    host: {
-      name: 'Trần Minh Khoa',
-      avatar:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    },
-    startTime: 'Ngày mai, 09:30',
-    duration: '45 phút',
-    attendeesCount: 2,
-    maxAttendees: 2,
-    agendaApproved: false,
-    aiTranscriptionActive: false,
-    attendees: [
-      {
-        id: 'att-1',
-        name: 'Alex Rivera',
-        avatar:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-        role: 'Senior AI Engineer',
-      },
-    ],
-  },
-];
+import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 interface ManagerMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -166,17 +34,95 @@ interface ManagerMeetingsTabProps {
 
 export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const router = useRouter();
-  const [meetings, setMeetings] = useState<DepartmentMeeting[]>(INITIAL_MEETINGS);
+  const { user, activeOrganization } = useAuthStore();
+  const resolvedOrgId =
+    activeOrganization?.id ||
+    (user as any)?.organization_id ||
+    '2846981f-7028-4ef4-9cad-d2c3719703c4';
+
+  // Meeting Data State
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [executiveMeetings, setExecutiveMeetings] = useState<Meeting[]>([]);
+  const [deptMembers, setDeptMembers] = useState<OrgMemberDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
-  const [selectedMeeting, setSelectedMeeting] = useState<DepartmentMeeting | null>(null);
+
+  // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createMode, setCreateMode] = useState<'blank' | 'inherit'>('blank');
+
+  // Form State - Blank
   const [newTitle, setNewTitle] = useState('');
-  const [newRoomCode, setNewRoomCode] = useState('');
+  const [newScheduledAt, setNewScheduledAt] = useState('');
   const [newAgendaText, setNewAgendaText] = useState('');
   const [deptUploadedFile, setDeptUploadedFile] = useState<string | null>(null);
   const [isParsingDeptFile, setIsParsingDeptFile] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const deptFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Form State - Inherit Mode
+  const [selectedExecutiveMeetingId, setSelectedExecutiveMeetingId] = useState<string>('');
+  const [isLoadingInheritDetails, setIsLoadingInheritDetails] = useState(false);
+  const [inheritDecisions, setInheritDecisions] = useState<string[]>([]);
+  const [inheritActionItems, setInheritActionItems] = useState<string[]>([]);
+
+  // Host Controls & Action States
+  const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
+  const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
+  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  // Load Initial Real Data
+  useEffect(() => {
+    loadRealData();
+  }, [user?.department_id, resolvedOrgId]);
+
+  const loadRealData = async () => {
+    setIsLoading(true);
+    try {
+      const [deptMeetingsRes, allMeetingsRes, membersRes] = await Promise.allSettled([
+        meetingApi.listWithFilters({
+          department_id: user?.department_id || undefined,
+        }),
+        meetingApi.listWithFilters({ all_org_meetings: true }),
+        organizationAdminApi.getMembers(resolvedOrgId),
+      ]);
+
+      // 1. Department Meetings
+      if (deptMeetingsRes.status === 'fulfilled' && Array.isArray(deptMeetingsRes.value)) {
+        setMeetings(deptMeetingsRes.value);
+      } else {
+        // Fallback to basic list
+        const fallback = await meetingsApi.list(0, 50);
+        setMeetings(fallback);
+      }
+
+      // 2. Executive / Concluded Meetings (for inheritance)
+      if (allMeetingsRes.status === 'fulfilled' && Array.isArray(allMeetingsRes.value)) {
+        const executiveList = allMeetingsRes.value.filter((m) => {
+          const s = (m.status || '').toUpperCase();
+          return s === 'ENDED' || s === 'COMPLETED';
+        });
+        setExecutiveMeetings(executiveList);
+      }
+
+      // 3. Department Members
+      if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
+        const filtered = user?.department_id
+          ? membersRes.value.filter((m) => m.department_id === user.department_id)
+          : membersRes.value;
+        setDeptMembers(filtered.length > 0 ? filtered : membersRes.value);
+      }
+    } catch (err) {
+      console.error('Failed to load manager meetings data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // File Upload for Agenda
   const handleDeptFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -207,169 +153,176 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     }
   };
 
-  const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
-  const [selectedMeetingForDetails, setSelectedMeetingForDetails] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
-  const [engMandates, setEngMandates] = useState<ExecutiveMandate[]>(
-    MOCK_EXECUTIVE_MANDATES.filter((m) => m.targetDepartment === 'ENG')
-  );
+  // When an executive meeting is selected in Inherit Mode
+  const handleSelectExecutiveMeeting = async (mtgId: string) => {
+    setSelectedExecutiveMeetingId(mtgId);
+    if (!mtgId) {
+      setInheritDecisions([]);
+      setInheritActionItems([]);
+      return;
+    }
 
-  const handleInheritMandate = (mandate: ExecutiveMandate) => {
-    onNotify(
-      `Đã liên kết quyết sách "${mandate.title}" vào Chương trình Nghị sự của Sprint 42! AI sẽ tự động phân rã Action Items khi bắt đầu họp.`
+    const execMtg = executiveMeetings.find((m) => m.id === mtgId);
+    if (!execMtg) return;
+
+    setIsLoadingInheritDetails(true);
+    try {
+      const [decisionsRes, tasksRes, summaryRes] = await Promise.allSettled([
+        meetingApi.getDecisions(mtgId),
+        meetingApi.getFollowUpTasks(mtgId),
+        meetingApi.getSummary(mtgId),
+      ]);
+
+      const decisions: string[] = [];
+      if (decisionsRes.status === 'fulfilled' && Array.isArray(decisionsRes.value)) {
+        decisions.push(...decisionsRes.value.map((d: any) => d.decision_text || d.topic || ''));
+      }
+
+      const tasks: string[] = [];
+      if (tasksRes.status === 'fulfilled' && Array.isArray(tasksRes.value)) {
+        tasks.push(...tasksRes.value.map((t: any) => t.title || t.description || ''));
+      }
+
+      setInheritDecisions(decisions.filter(Boolean));
+      setInheritActionItems(tasks.filter(Boolean));
+
+      // Auto fill title
+      setNewTitle(`Triển khai nhiệm vụ: ${execMtg.title}`);
+
+      // Build structured Agenda from inherited data
+      let compiledAgenda = `## KẾ HOẠCH TRIỂN KHAI NGHỊ QUYẾT TỪ CUỘC HỌP CẤP CAO\n`;
+      compiledAgenda += `Nguồn gốc: ${execMtg.title} (Chủ trì: ${execMtg.host_name || 'Ban Lãnh Đạo'})\n\n`;
+
+      if (decisions.length > 0) {
+        compiledAgenda += `### 1. CÁC QUYẾT SÁCH CHIẾN LƯỢC ĐÃ BAN HÀNH:\n`;
+        decisions.forEach((d, idx) => {
+          compiledAgenda += `- ${d}\n`;
+        });
+        compiledAgenda += `\n`;
+      }
+
+      if (tasks.length > 0) {
+        compiledAgenda += `### 2. CÁC ĐẦU VIỆC GIAO CHO KHỐI THỰC THI:\n`;
+        tasks.forEach((t, idx) => {
+          compiledAgenda += `${idx + 1}. ${t}\n`;
+        });
+        compiledAgenda += `\n`;
+      } else if (execMtg.summary) {
+        compiledAgenda += `### 2. TÓM TẮT CHỈ ĐẠO:\n${execMtg.summary.slice(0, 500)}...\n\n`;
+      }
+
+      compiledAgenda += `### 3. MỤC TIÊU CUỘC HỌP NỘI BỘ:\n- Phân công trách nhiệm cụ thể cho từng thành viên trong phòng ban\n- Thiết lập deadline và đồng bộ tiến độ lên hệ thống Mini Jira`;
+
+      setNewAgendaText(compiledAgenda);
+
+      // Auto-select all department members to invite
+      setSelectedMemberIds(deptMembers.map((m) => m.user_id));
+    } catch (err) {
+      console.error('Failed to load executive meeting details:', err);
+    } finally {
+      setIsLoadingInheritDetails(false);
+    }
+  };
+
+  // Toggle member selection checkbox
+  const toggleMemberSelect = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
 
-  const filteredMeetings = meetings.filter(
-    (m) =>
-      m.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      m.roomCode.toLowerCase().includes(searchFilter.toLowerCase())
-  );
+  // Create Meeting Action
+  const handleCreateMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) {
+      alert('Vui lòng nhập chủ đề cuộc họp');
+      return;
+    }
 
-  // Host Controls Handlers
-  const handleToggleTranscription = (id: string) => {
-    setMeetings((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, aiTranscriptionActive: !m.aiTranscriptionActive } : m))
-    );
-    const target = meetings.find((m) => m.id === id);
-    onNotify(
-      target?.aiTranscriptionActive
-        ? `Đã tạm dừng AI Ghi Âm & Trích xuất cho ${target.roomCode}`
-        : `Đã kích hoạt AI Ghi Âm & Trích xuất biên bản cho ${target?.roomCode}`
-    );
+    setIsSubmittingCreate(true);
+    try {
+      const payload = {
+        title: newTitle.trim(),
+        agenda: newAgendaText.trim() || undefined,
+        description: newAgendaText.trim() || undefined,
+        scheduled_at: newScheduledAt ? new Date(newScheduledAt).toISOString() : undefined,
+        department_id: user?.department_id || undefined,
+        organization_id: resolvedOrgId,
+        participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
+      };
+
+      const created = await meetingsApi.create(payload);
+
+      setMeetings((prev) => [created, ...prev]);
+      setIsCreateModalOpen(false);
+      setNewTitle('');
+      setNewAgendaText('');
+      setNewScheduledAt('');
+      setSelectedMemberIds([]);
+      setSelectedExecutiveMeetingId('');
+
+      onNotify(`Đã khởi tạo phòng họp: ${created.title}`);
+      router.push(`/meetings/${created.id}`);
+    } catch (err: any) {
+      console.error('Failed to create department meeting:', err);
+      alert(err?.message || 'Không thể tạo cuộc họp. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingCreate(false);
+    }
   };
 
-  const handleMuteAll = (meetingTitle: string) => {
-    onNotify(`Đã gửi lệnh Tắt Tiếng Toàn Bộ Thành Viên trong phòng: ${meetingTitle}`);
-  };
-
-  const handleLockRoom = (meetingTitle: string) => {
-    onNotify(`Đã KHÓA PHÒNG HỌP: ${meetingTitle}. Không cho phép người ngoài vào.`);
-  };
-
-  const handleApproveAgenda = (id: string) => {
-    setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, agendaApproved: true } : m)));
-    onNotify('Đã phê duyệt Agenda cuộc họp! Phòng họp đủ điều kiện bắt đầu.');
-  };
-
-  const handleJoinRoom = async (mtg: DepartmentMeeting) => {
+  // Join Room Action
+  const handleJoinRoom = async (mtg: Meeting) => {
     setIsJoiningRoom(mtg.id);
     try {
-      // Create or join real meeting in backend database
-      const created = await meetingsApi.create({
-        title: mtg.title,
-        agenda:
-          'Kế hoạch chi tiết và phân công nhiệm vụ khối Kỹ thuật (Sprint Review & AI Protocol).',
-      });
-      onNotify(`Đang kết nối vào phòng họp: ${created.title}`);
-      router.push(`/meetings/${created.id}`);
-    } catch (err) {
-      console.warn('Could not create backend meeting, routing to room code:', err);
       router.push(`/meetings/${mtg.id}`);
     } finally {
       setIsJoiningRoom(null);
     }
   };
 
-  const handleCreateMeeting = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    try {
-      const created = await meetingsApi.create({
-        title: newTitle.trim(),
-        agenda: newAgendaText.trim() || undefined,
-      });
-
-      const newMtg: DepartmentMeeting = {
-        id: created.id,
-        title: created.title,
-        roomCode: `ENG-${created.id.slice(0, 6).toUpperCase()}`,
-        status: 'UPCOMING',
-        host: {
-          name: 'Trần Minh Khoa',
-          avatar:
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        },
-        startTime: 'Hôm nay, 17:30',
-        duration: '45 phút',
-        attendeesCount: 1,
-        maxAttendees: 8,
-        agendaApproved: true,
-        aiTranscriptionActive: true,
-        attendees: [
-          {
-            id: 'att-host',
-            name: 'Trần Minh Khoa',
-            avatar:
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-            role: 'Trưởng Khối Kỹ Thuật',
-          },
-        ],
-      };
-
-      setMeetings([newMtg, ...meetings]);
-      setIsCreateModalOpen(false);
-      setNewTitle('');
-      setNewRoomCode('');
-      onNotify(`Đã khởi tạo phòng họp: ${created.title}`);
-      router.push(`/meetings/${created.id}`);
-    } catch (err) {
-      console.error('Failed to create meeting on server:', err);
-      // Fallback local
-      const newMtg: DepartmentMeeting = {
-        id: `mtg-eng-${Date.now()}`,
-        title: newTitle,
-        roomCode: newRoomCode || `ENG-${Math.floor(1000 + Math.random() * 9000)}`,
-        status: 'UPCOMING',
-        host: {
-          name: 'Trần Minh Khoa',
-          avatar:
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        },
-        startTime: 'Hôm nay, 17:30',
-        duration: '45 phút',
-        attendeesCount: 4,
-        maxAttendees: 8,
-        agendaApproved: true,
-        aiTranscriptionActive: true,
-        attendees: [
-          {
-            id: 'att-1',
-            name: 'Alex Rivera',
-            avatar:
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-            role: 'Senior AI Engineer',
-          },
-        ],
-      };
-
-      setMeetings([newMtg, ...meetings]);
-      setIsCreateModalOpen(false);
-      setNewTitle('');
-      setNewRoomCode('');
-      onNotify(`Đã lên lịch cuộc họp phòng ban: ${newMtg.title}`);
-    }
+  // Host Controls Handlers
+  const handleMuteAll = (meetingTitle: string) => {
+    onNotify(`Đã gửi lệnh Tắt Micro toàn bộ thành viên trong phòng: ${meetingTitle}`);
   };
 
+  const handleLockRoom = (meetingTitle: string) => {
+    onNotify(`Đã Khóa Phòng Họp: ${meetingTitle}. Không cho phép người ngoài vào.`);
+  };
+
+  // Filtered Meetings
+  const filteredMeetings = meetings.filter((m) => {
+    const query = searchFilter.toLowerCase();
+    const inTitle = (m.title || '').toLowerCase().includes(query);
+    const inHost = (m.host_name || '').toLowerCase().includes(query);
+    return inTitle || inHost;
+  });
+
+  const liveMeetingsCount = meetings.filter(
+    (m) => (m.status || '').toUpperCase() === 'LIVE'
+  ).length;
+  const upcomingCount = meetings.filter(
+    (m) =>
+      (m.status || '').toUpperCase() === 'SCHEDULED' ||
+      (m.status || '').toUpperCase() === 'UPCOMING'
+  ).length;
+
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Action Header */}
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* ── Top Action Header Banner ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
-              Điều Hành Cuộc Họp Khối Kỹ Thuật
+              Điều Hành Cuộc Họp Phòng Ban
             </h2>
             <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-              GOOGLE MEET PROTOCOL
+              {user?.department_name || 'Khối Kỹ Thuật'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Chủ trì phòng ban có quyền kiểm duyệt Agenda, quản lý mic/cam và kích hoạt AI trích xuất
-            nghị quyết.
+            Quản trị các buổi họp triển khai, kết nối tự động nghị quyết từ ban lãnh đạo và giám sát
+            phân công nhiệm vụ.
           </p>
         </div>
 
@@ -380,262 +333,220 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Tìm theo tên hoặc mã phòng..."
-              className="pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 w-52 focus:w-64 transition-all focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+              placeholder="Tìm cuộc họp, chủ trì..."
+              className="pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 w-48 sm:w-60 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs cursor-pointer shrink-0"
+            onClick={() => {
+              setCreateMode('blank');
+              setIsCreateModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
           >
             <Plus size={15} />
-            <span>Tạo Cuộc Họp Khối</span>
+            <span>Tạo Cuộc Họp</span>
           </button>
         </div>
       </div>
 
-      {/* ── BANNER KẾ THỪA NGHỊ QUYẾT TỪ CUỘC HỌP BAN LÃNH ĐẠO ── */}
-      <div className="bg-gradient-to-r from-blue-900/10 via-indigo-900/10 to-purple-900/10 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-slate-900 border border-blue-200/80 dark:border-blue-900/50 rounded-2xl p-4 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-              <MatIcon name="account_tree" className="text-[18px]" />
+      {/* ── Quick Inherit Banner ── */}
+      {executiveMeetings.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-purple-50/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-900/50 rounded-2xl p-4 shadow-2xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <MatIcon name="account_tree" className="text-[18px]" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wide">
+                  Kế Thừa Quyết Sách Từ Ban Lãnh Đạo
+                </h3>
+                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-0.5">
+                  Có <strong>{executiveMeetings.length} cuộc họp cấp cao</strong> đã kết thúc. Bạn
+                  có thể kế thừa các Action Items & Quyết sách để mở cuộc họp triển khai cho nhân
+                  sự.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                Nghị Quyết Ban Lãnh Đạo Cần Kế Thừa Vào Cuộc Họp Khối (Cascade Directives)
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                AI phát hiện <strong>{engMandates.length} Quyết Sách Chiến Lược</strong> từ Cuộc họp
-                Cấp cao của Chủ Tịch giao cho Khối Kỹ Thuật.
-              </p>
-            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCreateMode('inherit');
+                setIsCreateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+            >
+              <Sparkles size={14} />
+              <span>Kế Thừa & Tạo Họp Ngay</span>
+            </button>
           </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {engMandates.map((m) => (
-            <div
-              key={m.id}
-              className="bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3"
-            >
-              <div className="truncate">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-mono text-[9px] font-bold">
-                    {m.code}
-                  </span>
-                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
-                    {m.allocatedHours}h ({m.storyPoints} SP)
-                  </span>
-                </div>
-                <div
-                  className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate"
-                  title={m.title}
-                >
-                  {m.title}
-                </div>
-                <div className="text-[10px] text-slate-400 truncate">
-                  Tiến độ: Đã phân rã {m.decomposedTasksCount}/{m.totalTasksTarget} tasks
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleInheritMandate(m)}
-                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
-              >
-                Kế Thừa Vào Agenda
-              </button>
-            </div>
-          ))}
+      {/* ── Meetings Grid ── */}
+      {isLoading ? (
+        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
+          <p className="text-xs text-slate-500">Đang tải danh sách cuộc họp phòng ban...</p>
         </div>
-      </div>
+      ) : filteredMeetings.length === 0 ? (
+        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <Video className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+            Chưa có cuộc họp nào
+          </h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            Nhấn "Tạo Cuộc Họp" để lên lịch hoặc kế thừa nghị quyết từ ban lãnh đạo.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {filteredMeetings.map((mtg) => {
+            const isLive = (mtg.status || '').toUpperCase() === 'LIVE';
+            const isEnded =
+              (mtg.status || '').toUpperCase() === 'ENDED' ||
+              (mtg.status || '').toUpperCase() === 'COMPLETED';
 
-      {/* Meeting Cards Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {filteredMeetings.map((mtg) => {
-          const isLive = mtg.status === 'LIVE';
+            return (
+              <div
+                key={mtg.id}
+                className={`rounded-2xl border transition-all p-5 flex flex-col justify-between ${
+                  isLive
+                    ? 'bg-gradient-to-br from-white via-white to-blue-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20 border-blue-300/80 dark:border-blue-800/80 shadow-md shadow-blue-500/5'
+                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs'
+                }`}
+              >
+                <div>
+                  {/* Status Badges */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      {isLive ? (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-xs animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                          ĐANG LIVE
+                        </span>
+                      ) : isEnded ? (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          <CheckCircle2 size={12} className="text-emerald-500" />
+                          ĐÃ KẾT THÚC
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          <Clock size={12} className="text-blue-500" />
+                          SẮP DIỄN RA
+                        </span>
+                      )}
 
-          return (
-            <div
-              key={mtg.id}
-              className={`rounded-2xl border transition-all p-5 flex flex-col justify-between ${
-                isLive
-                  ? 'bg-gradient-to-br from-white via-white to-blue-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/20 border-blue-300/80 dark:border-blue-800/80 shadow-md shadow-blue-500/5'
-                  : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-              }`}
-            >
-              {/* Meeting Header */}
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    {isLive ? (
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-xs animate-pulse">
-                        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                        ĐANG LIVE
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        {mtg.id.slice(0, 8).toUpperCase()}
                       </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                        <Clock size={12} />
-                        SẮP TỚI
-                      </span>
-                    )}
+                    </div>
 
-                    <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                      {mtg.roomCode}
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <Users size={12} />
+                      <span>{mtg.participant_count || 1} tham dự</span>
                     </span>
                   </div>
 
-                  {/* Agenda Gatekeeper Badge */}
-                  {mtg.agendaApproved ? (
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                      <FileCheck2 size={13} />
-                      <span>Agenda Hợp Lệ</span>
+                  {/* Title & Agenda */}
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug mb-1">
+                    {mtg.title}
+                  </h3>
+
+                  {mtg.agenda && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
+                      {mtg.agenda}
+                    </p>
+                  )}
+
+                  {/* Host Info */}
+                  <div className="flex items-center gap-3 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4">
+                    <img
+                      src={mtg.host_avatar || generateInitialsAvatar(mtg.host_name || 'Host')}
+                      alt={mtg.host_name || 'Host'}
+                      className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-slate-800 dark:text-slate-200">
+                        {mtg.host_name || user?.full_name || 'Trưởng Phòng'}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {mtg.scheduled_at
+                          ? new Date(mtg.scheduled_at).toLocaleString('vi-VN', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })
+                          : 'Bắt đầu theo yêu cầu'}
+                      </div>
                     </div>
-                  ) : (
+                  </div>
+                </div>
+
+                {/* Host Control Actions Bar */}
+                <div className="pt-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleApproveAgenda(mtg.id)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 hover:bg-amber-100 cursor-pointer transition-colors"
-                      title="Bấm để phê duyệt Agenda"
-                    >
-                      <AlertTriangle size={13} />
-                      <span>Chưa Duyệt Agenda</span>
-                    </button>
-                  )}
-                </div>
-
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white line-clamp-1 mb-1.5">
-                  {mtg.title}
-                </h3>
-
-                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={13} />
-                    {mtg.startTime}
-                  </span>
-                  <span>•</span>
-                  <span>{mtg.duration}</span>
-                </div>
-
-                {/* Attendees Avatar Stack */}
-                <div className="flex items-center justify-between py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2 overflow-hidden">
-                      {mtg.attendees.map((att) => (
-                        <img
-                          key={att.id}
-                          src={att.avatar}
-                          alt={att.name}
-                          title={`${att.name} (${att.role})`}
-                          className="inline-block h-7 w-7 rounded-full ring-2 ring-white dark:ring-slate-900 object-cover"
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 ml-1">
-                      {mtg.attendeesCount}/{mtg.maxAttendees} thành viên
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                        mtg.aiTranscriptionActive
-                          ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                      onClick={() => handleJoinRoom(mtg)}
+                      disabled={isJoiningRoom === mtg.id}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-xs cursor-pointer ${
+                        isLive
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
+                          : 'bg-blue-600 hover:bg-blue-700'
                       }`}
                     >
-                      <Sparkles
-                        size={11}
-                        className={mtg.aiTranscriptionActive ? 'animate-spin text-purple-600' : ''}
-                      />
-                      {mtg.aiTranscriptionActive ? 'AI Live Rec' : 'AI Sẵn Sàng'}
-                    </span>
+                      {isJoiningRoom === mtg.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : isLive ? (
+                        <Video size={14} />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                      <span>
+                        {isLive ? 'Vào Phòng Chủ Trì' : isEnded ? 'Vào Lại Phòng' : 'Bắt Đầu Phòng'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMuteAll(mtg.title)}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                      title="Tắt micro tất cả thành viên"
+                    >
+                      <MicOff size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleLockRoom(mtg.title)}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                      title="Khóa phòng họp"
+                    >
+                      <Lock size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMeetingForDetails({ id: mtg.id, title: mtg.title })}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5 px-3"
+                      title="Xem Biên Bản AI"
+                    >
+                      <FileText size={15} />
+                      <span className="text-xs font-bold">Biên Bản AI</span>
+                    </button>
                   </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Host Control Actions Bar */}
-              <div className="pt-2">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Quyền Host Của Trưởng Phòng:
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleJoinRoom(mtg)}
-                    disabled={isJoiningRoom === mtg.id}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-colors shadow-xs cursor-pointer ${
-                      isLive
-                        ? 'bg-emerald-600 hover:bg-emerald-700'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {isJoiningRoom === mtg.id ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : isLive ? (
-                      <Video size={14} />
-                    ) : (
-                      <Play size={14} />
-                    )}
-                    <span>{isLive ? 'Vào Phòng Chủ Trì' : 'Bắt Đầu Phòng'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleMuteAll(mtg.title)}
-                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                    title="Tắt micro tất cả thành viên"
-                  >
-                    <MicOff size={15} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleLockRoom(mtg.title)}
-                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                    title="Khóa phòng họp (không cho người ngoài vào)"
-                  >
-                    <Lock size={15} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleTranscription(mtg.id)}
-                    className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                      mtg.aiTranscriptionActive
-                        ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 text-purple-600 dark:text-purple-300'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
-                    }`}
-                    title={
-                      mtg.aiTranscriptionActive
-                        ? 'Tắt AI Ghi Âm & Nghị Quyết'
-                        : 'Bật AI Ghi Âm & Nghị Quyết'
-                    }
-                  >
-                    <Sparkles size={15} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMeetingForDetails({ id: mtg.id, title: mtg.title })}
-                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5 px-3"
-                    title="Xem Biên Bản AI"
-                  >
-                    <FileText size={15} />
-                    <span className="text-xs font-bold">Biên Bản AI</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Modal Tạo Cuộc Họp Khối */}
+      {/* ── Modal Chi Tiết Biên Bản AI ── */}
       {selectedMeetingForDetails && (
         <MeetingDetailsModal
           meetingId={selectedMeetingForDetails.id}
@@ -643,23 +554,103 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
           onClose={() => setSelectedMeetingForDetails(null)}
         />
       )}
+
+      {/* ── MODAL KHỞI TẠO CUỘC HỌP (2 CHẾ ĐỘ: TỰ TẠO MỚI & KẾ THỪA CẤP CAO) ── */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl p-6 shadow-2xl space-y-5 my-8">
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
-                Lên Lịch Cuộc Họp Khối Kỹ Thuật
-              </h3>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  Tạo Cuộc Họp Phòng Ban
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {createMode === 'inherit'
+                    ? 'Kế thừa quyết sách & nhiệm vụ từ cuộc họp cấp cao'
+                    : 'Tự khởi tạo cuộc họp mới cho phòng ban'}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {/* 2 Mode Tabs Switcher */}
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateMode('blank');
+                  setSelectedExecutiveMeetingId('');
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  createMode === 'blank'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Tự Tạo Mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateMode('inherit')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  createMode === 'inherit'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles size={13} />
+                <span>Kế Thừa Cấp Cao</span>
+              </button>
+            </div>
+
+            {/* Form */}
             <form onSubmit={handleCreateMeeting} className="space-y-4">
+              {/* Inherit Mode Meeting Picker */}
+              {createMode === 'inherit' && (
+                <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 space-y-2.5">
+                  <label className="block text-xs font-bold text-blue-900 dark:text-blue-200">
+                    Chọn Cuộc Họp Cấp Cao Cần Kế Thừa:
+                  </label>
+                  <select
+                    value={selectedExecutiveMeetingId}
+                    onChange={(e) => handleSelectExecutiveMeeting(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Chọn cuộc họp của Ban Lãnh Đạo --</option>
+                    {executiveMeetings.map((exec) => (
+                      <option key={exec.id} value={exec.id}>
+                        {exec.title} (Chủ trì: {exec.host_name || 'Ban Lãnh Đạo'})
+                      </option>
+                    ))}
+                  </select>
+
+                  {isLoadingInheritDetails && (
+                    <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Đang trích xuất quyết sách & Action Items cho phòng ban...</span>
+                    </div>
+                  )}
+
+                  {selectedExecutiveMeetingId && !isLoadingInheritDetails && (
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 pt-1">
+                      <div>
+                        ✓ Đã tự động tải <strong>{inheritDecisions.length} Quyết sách</strong> &{' '}
+                        <strong>{inheritActionItems.length} Nhiệm vụ</strong> vào Agenda.
+                      </div>
+                      <div>✓ Đã tự động chọn nhân sự trong phòng ban vào danh sách mời.</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Title */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Chủ đề cuộc họp *
@@ -667,31 +658,48 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                 <input
                   type="text"
                   required
-                  placeholder="VD: Sprint Retrospective & Code Review"
+                  placeholder="VD: Triển khai kiến trúc hệ thống Sprint 42"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Scheduled Time */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Thời gian diễn ra
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newScheduledAt}
+                  onChange={(e) => setNewScheduledAt(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Để trống nếu muốn khởi động cuộc họp ngay lập tức.
+                </span>
+              </div>
+
+              {/* Agenda Text & File Upload */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Nội dung Agenda / Kế hoạch họp
+                    Nội dung Agenda / Nghị quyết triển khai
                   </label>
                   <div>
                     <input
                       type="file"
                       ref={deptFileInputRef}
                       onChange={handleDeptFileUpload}
-                      accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv"
+                      accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv,.xlsx"
                       className="hidden"
                     />
                     <button
                       type="button"
                       onClick={() => deptFileInputRef.current?.click()}
                       disabled={isParsingDeptFile}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {isParsingDeptFile ? (
                         <>
@@ -720,7 +728,6 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                         setNewAgendaText('');
                       }}
                       className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
-                      title="Xóa tệp"
                     >
                       ✕
                     </button>
@@ -729,50 +736,78 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
 
                 <textarea
                   rows={4}
-                  placeholder="Nhập hoặc dán các chủ đề thảo luận, hoặc nhấn 'Nạp file Agenda' ở trên..."
+                  placeholder="Nhập hoặc dán các chủ đề thảo luận, quyết sách cần phân rã..."
                   value={newAgendaText}
                   onChange={(e) => setNewAgendaText(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
                 />
               </div>
 
+              {/* Department Personnel to Invite */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Mã phòng
+                  Mời nhân sự phòng ban ({selectedMemberIds.length}/{deptMembers.length} người được
+                  chọn)
                 </label>
-                <input
-                  type="text"
-                  placeholder="VD: ENG-RETRO-42"
-                  value={newRoomCode}
-                  onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-blue-600" />
-                  Kỷ luật phòng ban tự động
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 p-2 space-y-1 bg-slate-50/50 dark:bg-slate-950/50">
+                  {deptMembers.map((mem) => {
+                    const isSelected = selectedMemberIds.includes(mem.user_id);
+                    return (
+                      <div
+                        key={mem.id}
+                        onClick={() => toggleMemberSelect(mem.user_id)}
+                        className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs ${
+                          isSelected
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200'
+                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <img
+                            src={mem.avatar_url || generateInitialsAvatar(mem.full_name)}
+                            alt={mem.full_name}
+                            className="w-6 h-6 rounded-full object-cover shrink-0"
+                          />
+                          <span className="font-bold truncate">{mem.full_name}</span>
+                          <span className="text-[10px] text-slate-400 truncate">({mem.email})</span>
+                        </div>
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'border-slate-300 dark:border-slate-600'
+                          }`}
+                        >
+                          {isSelected && <Check size={11} strokeWidth={3} />}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="text-[11px] text-blue-600/80 dark:text-blue-400">
-                  Cuộc họp sẽ tự động kích hoạt Agenda Gatekeeper và AI Assistant tổng hợp Action
-                  Items gửi về Bảng Kanban.
-                </p>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Hủy bỏ
+                  Hủy Bỏ
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
+                  disabled={isSubmittingCreate}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Xác Nhận Tạo Phòng
+                  {isSubmittingCreate ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Đang khởi tạo...</span>
+                    </>
+                  ) : (
+                    <span>Khởi Tạo & Bắt Đầu</span>
+                  )}
                 </button>
               </div>
             </form>
