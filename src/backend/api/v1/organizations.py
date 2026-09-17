@@ -116,6 +116,7 @@ def get_organization(
 @router.get("/{org_id}/members", response_model=list[MemberDetailResponse])
 def list_organization_members(
     org_id: str,
+    department_id: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
@@ -159,6 +160,10 @@ def list_organization_members(
         if dept_id:
             dept_obj = db.query(Department).filter(Department.id == dept_id).first()
             dept_name = dept_obj.name if dept_obj else None
+
+        # Filter by department_id if requested
+        if department_id and dept_id != department_id:
+            continue
 
         # Meetings count
         m_count = (

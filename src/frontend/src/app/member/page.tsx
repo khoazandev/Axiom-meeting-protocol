@@ -30,10 +30,12 @@ import {
   Layers,
 } from 'lucide-react';
 
+import { authApi } from '@/lib/api';
+
 function MemberWorkspaceInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { logout, user } = useAuthStore();
+  const { logout, user, updateUser } = useAuthStore();
 
   const tabParam = searchParams.get('tab') as MemberSectionKey | null;
   const initialTab: MemberSectionKey =
@@ -79,6 +81,18 @@ function MemberWorkspaceInner() {
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Ensure member session has up-to-date department_id and department_name
+  useEffect(() => {
+    authApi
+      .me()
+      .then((freshUser) => {
+        if (freshUser) {
+          updateUser(freshUser);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSelectSection = (section: MemberSectionKey) => {

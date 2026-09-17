@@ -13,12 +13,15 @@ import {
   Sliders,
   User,
 } from 'lucide-react';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 interface MemberSettingsTabProps {
   onNotify: (msg: string) => void;
 }
 
 export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
+  const { user } = useAuthStore();
   const [noiseSuppression, setNoiseSuppression] = useState(true);
   const [echoCancellation, setEchoCancellation] = useState(true);
   const [isTestingMic, setIsTestingMic] = useState(false);
@@ -180,19 +183,24 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
         </h3>
 
         <div className="flex items-center gap-4">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-400 shadow-xs">
+          <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-blue-500 shadow-xs">
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
-              alt="Alex Rivera"
+              src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Thành Viên')}
+              alt={user?.full_name || 'Member'}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">Alex Rivera</h4>
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+              {user?.full_name || 'Thành Viên Doanh Nghiệp'}
+            </h4>
             <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-              Kỹ sư AI & Xử lý Âm thanh (Senior AI Engineer)
+              {user?.job_title ||
+                `Chuyên viên • ${user?.department_name || 'Khối Kỹ Thuật & Công Nghệ'}`}
             </p>
-            <p className="text-[11px] text-slate-400 font-mono">alex@axiom.com</p>
+            <p className="text-[11px] text-slate-400 font-mono">
+              {user?.email || 'member@axiom.com'}
+            </p>
           </div>
         </div>
       </div>

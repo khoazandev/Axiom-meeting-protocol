@@ -54,8 +54,12 @@ export interface User {
   full_name: string;
   avatar_url?: string | null;
   role?: string | null;
+  phone?: string | null;
+  job_title?: string | null;
   provider: string;
   is_active: boolean;
+  department_id?: string | null;
+  department_name?: string | null;
 }
 
 export interface Organization {
@@ -1090,8 +1094,9 @@ export const adminApi = {
 
 // Extend organizationApi with members and analytics
 export const organizationAdminApi = {
-  getMembers(orgId: string): Promise<OrgMemberDetail[]> {
-    return apiFetch<OrgMemberDetail[]>(`/api/v1/organizations/${orgId}/members`);
+  getMembers(orgId: string, departmentId?: string): Promise<OrgMemberDetail[]> {
+    const query = departmentId ? `?department_id=${encodeURIComponent(departmentId)}` : '';
+    return apiFetch<OrgMemberDetail[]>(`/api/v1/organizations/${orgId}/members${query}`);
   },
 
   updateMemberRole(orgId: string, userId: string, role: string): Promise<OrgMemberDetail> {

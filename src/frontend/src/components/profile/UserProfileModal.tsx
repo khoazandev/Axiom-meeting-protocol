@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   RotateCcw,
   Briefcase,
+  Lock,
 } from 'lucide-react';
 
 /**
@@ -77,13 +78,29 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   const { user, updateUser } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form States - All editable in a single unified page
+  // Form States - Name, Phone, Bio, and Avatar can be updated by the user
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('0912 345 678 (Ext: 104)');
-  const [department, setDepartment] = useState('Khối Kỹ Thuật (Engineering)');
-  const [title, setTitle] = useState('Senior AI Engineer');
-  const [bio, setBio] = useState('Chuyên gia xử lý âm thanh thời gian thực & WebRTC SFU');
+  const [bio, setBio] = useState('Chuyên trách nhiệm vụ chuyên môn & phối hợp cuộc họp.');
+
+  // Official Enterprise Role & Department - Managed exclusively by OWNER
+  const resolvedRole = (user?.role || 'MEMBER').toUpperCase();
+  const officialDepartment =
+    user?.department_name ||
+    (resolvedRole === 'OWNER'
+      ? 'Hội Đồng Quản Trị & Ban Lãnh Đạo Toàn Quyền'
+      : user?.department_id
+        ? 'Khối Phòng Ban Được Chỉ Định'
+        : 'Khối Kỹ Thuật & Công Nghệ');
+
+  const officialTitle =
+    user?.job_title ||
+    (resolvedRole === 'OWNER'
+      ? 'Chủ Tịch & Tổng Giám Đốc Điều Hành (OWNER)'
+      : resolvedRole === 'MANAGER'
+        ? `Trưởng Khối Quản Lý Phòng Ban (${officialDepartment})`
+        : `Chuyên Viên / Kỹ Sư Thành Viên (${officialDepartment})`);
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -100,32 +117,24 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
       setFullName(currentName);
       setEmail(user.email || '');
 
-      // Check existing custom local storage or infer from role
+      // Check existing custom local storage
       const stored = localStorage.getItem(`axiom_profile_${user.id || user.email}`);
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
           if (parsed.phone) setPhone(parsed.phone);
-          if (parsed.department) setDepartment(parsed.department);
-          if (parsed.title) setTitle(parsed.title);
           if (parsed.bio) setBio(parsed.bio);
         } catch {
           // ignore error
         }
       } else {
         if (user.email === 'admin@axiom.com') {
-          setDepartment('Ban Giám Đốc / Hội Đồng Quản Trị');
-          setTitle('Chủ Tịch & Tổng Giám Đốc Điều Hành (CEO)');
           setBio('Toàn quyền kiểm soát và điều hành hệ thống Axiom DX-OS.');
           setPhone('0908 888 999 (Ext: 001)');
         } else if (user.email === 'manager.khoa@axiom.com') {
-          setDepartment('Khối Kỹ Thuật (Engineering)');
-          setTitle('Trưởng Khối Kỹ Thuật');
           setBio('Quản trị phòng ban, phân bổ task & điều phối sprint dự án.');
           setPhone('0918 234 567 (Ext: 102)');
         } else {
-          setDepartment('Khối Kỹ Thuật (Engineering)');
-          setTitle('Kỹ Sư Trí Tuệ Nhân Tạo (AI Engineer)');
           setBio('Chuyên trách Whisper STT & LLM Meeting Protocol Pipeline.');
           setPhone('0912 345 678 (Ext: 104)');
         }
@@ -238,8 +247,6 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
           `axiom_profile_${user.id || user.email}`,
           JSON.stringify({
             phone: phone.trim(),
-            department: department.trim(),
-            title: title.trim(),
             bio: bio.trim(),
           })
         );
@@ -405,19 +412,31 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                 </span>
               </div>
 
-              {/* Email */}
+              {/* Email - Fixed Identity */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Mail size={13} className="text-slate-400" />
-                  <span>Email Định Danh</span>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Mail size={13} className="text-slate-400" />
+                    <span>Email Định Danh</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-500">
+                    <Lock size={9} />
+                    <span>Cố định</span>
+                  </span>
                 </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@axiom.com"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    readOnly
+                    className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/80 font-medium text-slate-600 dark:text-slate-300 font-mono cursor-not-allowed select-none"
+                  />
+                  <Lock
+                    size={12}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
               </div>
             </div>
 
@@ -437,35 +456,65 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                 />
               </div>
 
-              {/* Department */}
+              {/* Department - Strictly Locked by OWNER */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-purple-500" />
-                  <span>Khối Phòng Ban</span>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 size={13} className="text-purple-500" />
+                    <span>Khối Phòng Ban</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-[10px] font-bold text-purple-700 dark:text-purple-300">
+                    <Lock size={9} />
+                    <span>Chỉ định bởi OWNER</span>
+                  </span>
                 </label>
-                <input
-                  type="text"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="Ví dụ: Khối Kỹ Thuật (Engineering)"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={officialDepartment}
+                    disabled
+                    readOnly
+                    className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/80 font-bold text-slate-700 dark:text-slate-200 cursor-not-allowed select-none"
+                  />
+                  <Lock
+                    size={12}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Phòng ban do Chủ sở hữu chỉ định, không thể tự sửa.
+                </span>
               </div>
             </div>
 
-            {/* Position / Title */}
+            {/* Position / Title - Strictly Locked by OWNER */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <Briefcase size={13} className="text-amber-500" />
-                <span>Chức Danh / Vị Trí Công Tác</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Briefcase size={13} className="text-amber-500" />
+                  <span>Chức Danh / Vị Trí Công Tác</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                  <Lock size={9} />
+                  <span>Phân quyền bởi OWNER</span>
+                </span>
               </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ví dụ: Senior AI Engineer • Trưởng Nhóm Xử Lý Dữ Liệu"
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={officialTitle}
+                  disabled
+                  readOnly
+                  className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/80 font-bold text-slate-700 dark:text-slate-200 cursor-not-allowed select-none"
+                />
+                <Lock
+                  size={12}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Chức vụ và quyền hạn do Ban lãnh đạo điều hành phê duyệt tập trung.
+              </span>
             </div>
 
             {/* Bio */}

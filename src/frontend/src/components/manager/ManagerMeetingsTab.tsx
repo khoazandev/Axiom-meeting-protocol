@@ -110,11 +110,21 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         setExecutiveMeetings(executiveList);
       }
 
-      // 3. Department Members
+      // 3. Department Members - Strictly isolate to this manager's department only
       if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
-        const filtered = user?.department_id
-          ? membersRes.value.filter((m) => m.department_id === user.department_id)
-          : membersRes.value;
+        const rawMembers = membersRes.value;
+        const myDeptId =
+          user?.department_id ||
+          rawMembers.find(
+            (m) =>
+              (m.user_id === user?.id || m.email === user?.email) &&
+              (m.role || '').toUpperCase() === 'MANAGER'
+          )?.department_id ||
+          rawMembers.find((m) => m.user_id === user?.id || m.email === user?.email)
+            ?.department_id ||
+          null;
+
+        const filtered = myDeptId ? rawMembers.filter((m) => m.department_id === myDeptId) : [];
         setDeptMembers(filtered);
       }
     } catch (err) {

@@ -44,9 +44,10 @@ export default function LoginPage() {
       };
       const organizations = await organizationApi.list();
       setAuth(enrichedUser, tokens.access_token, organizations, organizations[0]);
-      if (email === 'admin@axiom.com') {
+      const targetRole = (enrichedUser.role || '').toUpperCase();
+      if (targetRole === 'OWNER' || email === 'admin@axiom.com') {
         router.push('/admin');
-      } else if (email === 'manager.khoa@axiom.com') {
+      } else if (targetRole === 'MANAGER' || email.startsWith('manager.')) {
         router.push('/manager');
       } else {
         router.push('/member');

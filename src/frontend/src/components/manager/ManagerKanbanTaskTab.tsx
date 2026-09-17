@@ -306,16 +306,28 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       // Load department members
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
       const members = Array.isArray(membersRes) ? membersRes : [];
+
+      // 1. Resolve manager's exact department ID
+      const myDeptId =
+        user?.department_id ||
+        members.find(
+          (m) =>
+            (m.user_id === user?.id || m.email === user?.email) &&
+            (m.role || '').toUpperCase() === 'MANAGER'
+        )?.department_id ||
+        members.find((m) => m.user_id === user?.id || m.email === user?.email)?.department_id ||
+        null;
+
       // Strictly isolate members for manager's department only:
-      // Exclude OWNER, ADMIN, other MANAGER, and self
+      // Exclude OWNER, ADMIN, other MANAGER, and self. Zero leakage across departments!
       const effectiveMembers = members.filter((m) => {
         const role = (m.role || '').toUpperCase();
         if (role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER') return false;
-        if (m.user_id === user?.id) return false;
-        if (user?.department_id) {
-          return m.department_id === user.department_id;
+        if (m.user_id === user?.id || m.email === user?.email) return false;
+        if (myDeptId) {
+          return m.department_id === myDeptId;
         }
-        return true;
+        return false;
       });
       setDeptMembers(effectiveMembers);
 
