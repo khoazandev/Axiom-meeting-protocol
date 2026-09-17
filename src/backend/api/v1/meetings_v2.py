@@ -76,16 +76,7 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if is_meeting_member:
         return True
 
-    # 3. Check Department RBAC
-    from src.backend.models import DepartmentMember
-    dept_member = (
-        db.query(DepartmentMember)
-        .filter(DepartmentMember.user_id == user.id)
-        .first()
-    )
-    if dept_member and meeting.department_id and str(dept_member.department_id) == str(meeting.department_id):
-        return True
-
+    # User is not an invited member, creator, or Owner/Admin
     return False
 
 
@@ -292,7 +283,7 @@ def list_my_meetings(
         or (hasattr(current_user, "role") and getattr(current_user, "role") in ("OWNER", "ADMIN"))
     )
 
-    if not is_owner_or_admin and not all_org_meetings:
+    if not is_owner_or_admin:
         from src.backend.models import DepartmentMember
         dept_member = (
             db.query(DepartmentMember)
@@ -308,18 +299,11 @@ def list_my_meetings(
         )
         meeting_ids = [m.meeting_id for m in memberships]
 
-        # Department RBAC: Owner sees all; Manager/Member see only their department or invited meetings
-        if user_dept_id:
-            query = query.filter(
-                (Meeting.department_id == user_dept_id)
-                | (Meeting.id.in_(meeting_ids))
-                | (Meeting.created_by_id == current_user.id)
-            )
-        else:
-            query = query.filter(
-                (Meeting.id.in_(meeting_ids))
-                | (Meeting.created_by_id == current_user.id)
-            )
+        # Non-owners (Manager, Member): strictly only meetings they were invited to or created
+        query = query.filter(
+            (Meeting.id.in_(meeting_ids))
+            | (Meeting.created_by_id == current_user.id)
+        )
 
     if status_filter:
         query = query.filter(Meeting.status == status_filter)
@@ -367,7 +351,7 @@ def get_meeting(
     """Get meeting details. User must be a member."""
     meeting = _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
-    return meeting
+    return _enrich_meeting(meeting, db)
 
 
 @router.patch("/{meeting_id}", response_model=MeetingResponse)

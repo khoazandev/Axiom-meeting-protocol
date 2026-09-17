@@ -27,6 +27,7 @@ import {
 import { MatIcon } from '@/components/ui/MatIcon';
 import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { resolveMeetingState, getMeetingStateBadge, MeetingState } from '@/lib/meetingState';
 
 interface ManagerMeetingsTabProps {
   onNotify: (msg: string) => void;
@@ -46,6 +47,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const [deptMembers, setDeptMembers] = useState<OrgMemberDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | MeetingState>('ALL');
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -113,7 +115,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         const filtered = user?.department_id
           ? membersRes.value.filter((m) => m.department_id === user.department_id)
           : membersRes.value;
-        setDeptMembers(filtered.length > 0 ? filtered : membersRes.value);
+        setDeptMembers(filtered);
       }
     } catch (err) {
       console.error('Failed to load manager meetings data:', err);
@@ -290,22 +292,22 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     onNotify(`Đã Khóa Phòng Họp: ${meetingTitle}. Không cho phép người ngoài vào.`);
   };
 
-  // Filtered Meetings
+  // Meeting State Counts
+  const allCount = meetings.length;
+  const liveCount = meetings.filter((m) => resolveMeetingState(m) === 'LIVE').length;
+  const upcomingCount = meetings.filter((m) => resolveMeetingState(m) === 'UPCOMING').length;
+  const endedCount = meetings.filter((m) => resolveMeetingState(m) === 'ENDED').length;
+
+  // Filtered Meetings by search & 3 states
   const filteredMeetings = meetings.filter((m) => {
     const query = searchFilter.toLowerCase();
     const inTitle = (m.title || '').toLowerCase().includes(query);
     const inHost = (m.host_name || '').toLowerCase().includes(query);
-    return inTitle || inHost;
+    const matchesSearch = inTitle || inHost;
+    if (!matchesSearch) return false;
+    if (statusFilter === 'ALL') return true;
+    return resolveMeetingState(m) === statusFilter;
   });
-
-  const liveMeetingsCount = meetings.filter(
-    (m) => (m.status || '').toUpperCase() === 'LIVE'
-  ).length;
-  const upcomingCount = meetings.filter(
-    (m) =>
-      (m.status || '').toUpperCase() === 'SCHEDULED' ||
-      (m.status || '').toUpperCase() === 'UPCOMING'
-  ).length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -387,6 +389,72 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         </div>
       )}
 
+      {/* ── 3 Lifecycle State Filter Tabs (Đồng bộ với Owner) ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        <button
+          type="button"
+          onClick={() => setStatusFilter('ALL')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            statusFilter === 'ALL'
+              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-slate-200 dark:border-slate-700 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <span>TẤT CẢ</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10.5px] font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            {allCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter('LIVE')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            statusFilter === 'LIVE'
+              ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border-slate-200 dark:border-slate-700 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          <span>ĐANG DIỄN RA</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10.5px] font-mono bg-emerald-500 text-white font-bold">
+            {liveCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter('UPCOMING')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            statusFilter === 'UPCOMING'
+              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-slate-200 dark:border-slate-700 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <Clock size={13} className="text-blue-500" />
+          <span>SẮP DIỄN RA</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10.5px] font-mono bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+            {upcomingCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter('ENDED')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            statusFilter === 'ENDED'
+              ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <CheckCircle2 size={13} className="text-slate-500" />
+          <span>ĐÃ KẾT THÚC</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10.5px] font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            {endedCount}
+          </span>
+        </button>
+      </div>
+
       {/* ── Meetings Grid ── */}
       {isLoading ? (
         <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -406,10 +474,11 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {filteredMeetings.map((mtg) => {
-            const isLive = (mtg.status || '').toUpperCase() === 'LIVE';
-            const isEnded =
-              (mtg.status || '').toUpperCase() === 'ENDED' ||
-              (mtg.status || '').toUpperCase() === 'COMPLETED';
+            const state = resolveMeetingState(mtg);
+            const badge = getMeetingStateBadge(state);
+            const isLive = state === 'LIVE';
+            const isEnded = state === 'ENDED';
+            const isUpcoming = state === 'UPCOMING';
 
             return (
               <div
@@ -424,22 +493,14 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                   {/* Status Badges */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
-                      {isLive ? (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-xs animate-pulse">
-                          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                          ĐANG LIVE
-                        </span>
-                      ) : isEnded ? (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          <CheckCircle2 size={12} className="text-emerald-500" />
-                          ĐÃ KẾT THÚC
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                          <Clock size={12} className="text-blue-500" />
-                          SẮP DIỄN RA
-                        </span>
-                      )}
+                      <span
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${badge.color}`}
+                      >
+                        {isLive && <span className="w-2 h-2 rounded-full bg-white animate-ping" />}
+                        {isUpcoming && <Clock size={12} />}
+                        {isEnded && <CheckCircle2 size={12} />}
+                        <span>{badge.label}</span>
+                      </span>
 
                       <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                         {mtg.id.slice(0, 8).toUpperCase()}
@@ -495,19 +556,23 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
                       disabled={isJoiningRoom === mtg.id}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-xs cursor-pointer ${
                         isLive
-                          ? 'bg-emerald-600 hover:bg-emerald-700'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 shadow-md'
+                          : isEnded
+                            ? 'bg-slate-700 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700'
+                            : 'bg-blue-600 hover:bg-blue-700'
                       }`}
                     >
                       {isJoiningRoom === mtg.id ? (
                         <Loader2 size={14} className="animate-spin" />
                       ) : isLive ? (
                         <Video size={14} />
+                      ) : isEnded ? (
+                        <Play size={14} />
                       ) : (
                         <Play size={14} />
                       )}
                       <span>
-                        {isLive ? 'Vào Phòng Chủ Trì' : isEnded ? 'Vào Lại Phòng' : 'Bắt Đầu Phòng'}
+                        {isLive ? 'Vào Họp Trực Tiếp' : isEnded ? 'Vào Lại Phòng' : 'Bắt Đầu Phòng'}
                       </span>
                     </button>
 

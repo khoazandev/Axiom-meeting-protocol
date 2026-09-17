@@ -85,12 +85,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
           ? membersRes.value
           : [];
 
-      // Filter members for manager's department
-      const deptFiltered = user?.department_id
+      // Strictly isolate members for manager's department only
+      const effectiveMembers = user?.department_id
         ? rawMembers.filter((m) => m.department_id === user.department_id)
         : rawMembers;
-
-      const effectiveMembers = deptFiltered.length > 0 ? deptFiltered : rawMembers;
 
       // Fetch issues to calculate member capacity
       let issues: Issue[] = [];

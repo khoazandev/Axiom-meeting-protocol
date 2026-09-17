@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
   ExternalLink,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   jiraApi,
   meetingApi,
@@ -115,6 +116,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
   // Drag State
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [draggedOverCol, setDraggedOverCol] = useState<TaskStatusKey | null>(null);
 
   // Task Details Modal State
   const [selectedTask, setSelectedTask] = useState<EnrichedKanbanTask | null>(null);
@@ -188,10 +190,10 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       // Load department members
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
       const members = Array.isArray(membersRes) ? membersRes : [];
-      const filteredMembers = user?.department_id
+      // Strictly isolate members for manager's department only
+      const effectiveMembers = user?.department_id
         ? members.filter((m) => m.department_id === user.department_id)
         : members;
-      const effectiveMembers = filteredMembers.length > 0 ? filteredMembers : members;
       setDeptMembers(effectiveMembers);
 
       // Load Jira Projects
@@ -379,12 +381,20 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     e.dataTransfer.setData('text/plain', taskId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, colKey: TaskStatusKey) => {
     e.preventDefault();
+    if (draggedOverCol !== colKey) {
+      setDraggedOverCol(colKey);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverCol(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetColumn: TaskStatusKey) => {
     e.preventDefault();
+    setDraggedOverCol(null);
     const taskId = draggedTaskId || e.dataTransfer.getData('text/plain');
     setDraggedTaskId(null);
     if (!taskId) return;
@@ -585,13 +595,19 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
           {KANBAN_COLUMNS.map((col) => {
             const colTasks = filteredTasks.filter((t) => t.status === col.key);
+            const isColTargeted = draggedOverCol === col.key;
 
             return (
               <div
                 key={col.key}
-                onDragOver={handleDragOver}
+                onDragOver={(e) => handleDragOver(e, col.key)}
+                onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, col.key)}
-                className="bg-slate-50/70 dark:bg-slate-900/50 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3 flex flex-col min-h-[520px] transition-colors hover:border-blue-300/40"
+                className={`rounded-2xl border p-3 flex flex-col min-h-[520px] transition-all duration-200 ${
+                  isColTargeted
+                    ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
+                    : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
               >
                 {/* Column Header */}
                 <div
@@ -611,102 +627,138 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                 {/* Column Cards List */}
                 <div className="space-y-3 flex-1">
                   {colTasks.length === 0 ? (
-                    <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center text-slate-400 text-xs italic">
+                    <div
+                      className={`h-32 border-2 border-dashed rounded-xl flex items-center justify-center text-xs italic transition-all ${
+                        isColTargeted
+                          ? 'border-blue-500 text-blue-500 bg-blue-50/50 dark:bg-blue-950/40 scale-102'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-400'
+                      }`}
+                    >
                       Kéo thả task vào đây
                     </div>
                   ) : (
-                    colTasks.map((task) => {
-                      const isDone = task.status === 'DONE';
-                      const completedSubtasks = task.subtasks.filter((st) => st.isCompleted).length;
-                      const totalSubtasks = task.subtasks.length;
-                      const progressPct =
-                        totalSubtasks > 0
-                          ? Math.round((completedSubtasks / totalSubtasks) * 100)
-                          : isDone
-                            ? 100
-                            : 0;
+                    <AnimatePresence mode="popLayout">
+                      {colTasks.map((task) => {
+                        const isDone = task.status === 'DONE';
+                        const isBeingDragged = draggedTaskId === task.id;
+                        const completedSubtasks = task.subtasks.filter(
+                          (st) => st.isCompleted
+                        ).length;
+                        const totalSubtasks = task.subtasks.length;
+                        const progressPct =
+                          totalSubtasks > 0
+                            ? Math.round((completedSubtasks / totalSubtasks) * 100)
+                            : isDone
+                              ? 100
+                              : 0;
 
-                      return (
-                        <div
-                          key={task.id}
-                          draggable={!isDone}
-                          onDragStart={(e) => handleDragStart(e, task.id)}
-                          onClick={() => setSelectedTask(task)}
-                          className={`bg-white dark:bg-slate-900 rounded-xl border p-3.5 shadow-2xs transition-all space-y-2.5 select-none ${
-                            isDone
-                              ? 'border-emerald-200/80 dark:border-emerald-900/40 opacity-90 cursor-pointer'
-                              : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md cursor-grab active:cursor-grabbing'
-                          }`}
-                        >
-                          {/* Task Top: Key & Priority */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10.5px] font-mono font-black text-slate-500 dark:text-slate-400">
-                              {task.key}
-                            </span>
-                            <span
-                              className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase ${getPriorityBadge(
-                                task.priority
-                              )}`}
-                            >
-                              {task.priority}
-                            </span>
-                          </div>
+                        return (
+                          <motion.div
+                            layout
+                            layoutId={task.id}
+                            key={task.id}
+                            initial={{ opacity: 0, scale: 0.96 }}
+                            animate={{
+                              opacity: isBeingDragged ? 0.35 : 1,
+                              scale: isBeingDragged ? 0.96 : 1,
+                            }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            whileHover={
+                              !isDone
+                                ? {
+                                    y: -2,
+                                    boxShadow:
+                                      '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                                  }
+                                : {}
+                            }
+                            whileTap={!isDone ? { scale: 0.98 } : {}}
+                            draggable={!isDone}
+                            onDragStart={(e) => handleDragStart(e as any, task.id)}
+                            onDragEnd={() => {
+                              setDraggedTaskId(null);
+                              setDraggedOverCol(null);
+                            }}
+                            onClick={() => setSelectedTask(task)}
+                            className={`bg-white dark:bg-slate-900 rounded-xl border p-3.5 shadow-2xs space-y-2.5 select-none transition-colors ${
+                              isDone
+                                ? 'border-emerald-200/80 dark:border-emerald-900/40 opacity-90 cursor-pointer'
+                                : isBeingDragged
+                                  ? 'border-blue-500 border-dashed ring-2 ring-blue-400/40 cursor-grabbing'
+                                  : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 cursor-grab active:cursor-grabbing'
+                            }`}
+                          >
+                            {/* Task Top: Key & Priority */}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10.5px] font-mono font-black text-slate-500 dark:text-slate-400">
+                                {task.key}
+                              </span>
+                              <span
+                                className={`text-[9.5px] font-bold px-2 py-0.5 rounded border uppercase ${getPriorityBadge(
+                                  task.priority
+                                )}`}
+                              >
+                                {task.priority}
+                              </span>
+                            </div>
 
-                          {/* Task Title */}
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
-                            {task.title}
-                          </h4>
+                            {/* Task Title */}
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
+                              {task.title}
+                            </h4>
 
-                          {/* Subtasks Progress Bar */}
-                          {totalSubtasks > 0 && (
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                                <span className="flex items-center gap-1">
-                                  <CheckSquare size={11} className="text-blue-500" />
-                                  <span>Tiến độ subtask</span>
-                                </span>
-                                <span>
-                                  {completedSubtasks}/{totalSubtasks} ({progressPct}%)
-                                </span>
+                            {/* Subtasks Progress Bar */}
+                            {totalSubtasks > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                                  <span className="flex items-center gap-1">
+                                    <CheckSquare size={11} className="text-blue-500" />
+                                    <span>Tiến độ subtask</span>
+                                  </span>
+                                  <span>
+                                    {completedSubtasks}/{totalSubtasks} ({progressPct}%)
+                                  </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full transition-all duration-300 ${
+                                      progressPct === 100 ? 'bg-emerald-500' : 'bg-blue-600'
+                                    }`}
+                                    style={{ width: `${progressPct}%` }}
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full transition-all duration-300 ${
-                                    progressPct === 100 ? 'bg-emerald-500' : 'bg-blue-600'
-                                  }`}
-                                  style={{ width: `${progressPct}%` }}
+                            )}
+
+                            {/* Footer: Assignee Avatar & Done Lock Indicator */}
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px]">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <img
+                                  src={task.assigneeAvatar}
+                                  alt={task.assigneeName}
+                                  className="w-5 h-5 rounded-full object-cover shrink-0"
                                 />
+                                <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[110px]">
+                                  {task.assigneeName}
+                                </span>
                               </div>
-                            </div>
-                          )}
 
-                          {/* Footer: Assignee Avatar & Done Lock Indicator */}
-                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px]">
-                            <div className="flex items-center gap-1.5 truncate">
-                              <img
-                                src={task.assigneeAvatar}
-                                alt={task.assigneeName}
-                                className="w-5 h-5 rounded-full object-cover shrink-0"
-                              />
-                              <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[110px]">
-                                {task.assigneeName}
-                              </span>
+                              {isDone ? (
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                  <CheckCircle2 size={12} />
+                                  <span>Khóa DONE</span>
+                                </span>
+                              ) : task.status === 'IN_PREVIEW' ? (
+                                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                  Chờ duyệt
+                                </span>
+                              ) : null}
                             </div>
-
-                            {isDone ? (
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                                <CheckCircle2 size={12} />
-                                <span>Khóa DONE</span>
-                              </span>
-                            ) : task.status === 'IN_PREVIEW' ? (
-                              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                Chờ duyệt
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      );
-                    })
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   )}
                 </div>
               </div>

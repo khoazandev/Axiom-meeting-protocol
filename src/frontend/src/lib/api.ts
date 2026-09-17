@@ -24,8 +24,8 @@ export interface Meeting {
   host_name?: string | null;
   host_avatar?: string | null;
   participant_count?: number;
-  approval_status?: 'APPROVED' | 'PENDING' | 'REJECTED';
-  meeting_type?: 'OFFICIAL' | 'INTERNAL_TEAM';
+  approval_status?: 'APPROVED' | 'PENDING' | 'REJECTED' | string;
+  meeting_type?: 'OFFICIAL' | 'INTERNAL_TEAM' | 'EXECUTIVE' | string;
   duration_minutes?: number;
   summary?: string | null;
   key_points?: string | null;
