@@ -481,49 +481,103 @@ def delete_meeting(
         if not (is_creator or is_host or is_owner):
             raise ForbiddenException("Bạn không có quyền xóa cuộc họp này. Chỉ người tạo, chủ tọa hoặc Owner mới có quyền xóa.")
 
-    # Delete dependent child rows to prevent foreign key errors
+    # Delete dependent child rows in strict FK dependency order
+    from sqlalchemy import text
     try:
-        from sqlalchemy import text
-        # 1. Jira projects & issues
-        jp_ids = [r[0] for r in db.execute(text('SELECT id FROM jira_projects WHERE meeting_id = :mid'), {'mid': meeting_id}).fetchall()]
-        if jp_ids:
-            jp_tuple = tuple(jp_ids)
-            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE project_id IN :jpids OR meeting_id = :mid)'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('DELETE FROM issues WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('DELETE FROM sprints WHERE project_id IN :jpids'), {'jpids': jp_tuple})
-            db.execute(text('DELETE FROM jira_projects WHERE id IN :jpids'), {'jpids': jp_tuple})
-        else:
-            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE meeting_id = :mid)'), {'mid': meeting_id})
-            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE meeting_id = :mid'), {'mid': meeting_id})
-            db.execute(text('DELETE FROM issues WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 1. Update issue self-references (parent_id, epic_id)
+        db.execute(
+            text(
+                'UPDATE issues SET parent_id = NULL, epic_id = NULL '
+                'WHERE meeting_id = :mid OR project_id IN (SELECT id FROM jira_projects WHERE meeting_id = :mid)'
+            ),
+            {'mid': meeting_id},
+        )
 
-        # 1.5 meeting decisions
-        db.execute(text('DELETE FROM meeting_decisions WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 2. follow up tasks FIRST (has FK to transcript_segments and topics)
-        db.execute(text('DELETE FROM follow_up_tasks WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 3. extraction corrections
+        # 2. Delete extraction corrections (references transcript_segments)
         db.execute(text('DELETE FROM extraction_corrections WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 4. meeting chat messages
-        db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 5. knowledge chunks & documents
+
+        # 3. Delete follow-up tasks (references issues, transcript_segments, topics)
+        db.execute(
+            text(
+                'DELETE FROM follow_up_tasks '
+                'WHERE meeting_id = :mid OR issue_id IN ('
+                '  SELECT id FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '    SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                '  )'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 4. Delete issue comments (references issues)
+        db.execute(
+            text(
+                'DELETE FROM issue_comments WHERE issue_id IN ('
+                '  SELECT id FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '    SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                '  )'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 5. Delete issues (references jira_projects, sprints, meetings)
+        db.execute(
+            text(
+                'DELETE FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '  SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 6. Delete sprints (references jira_projects)
+        db.execute(
+            text('DELETE FROM sprints WHERE project_id IN (SELECT id FROM jira_projects WHERE meeting_id = :mid)'),
+            {'mid': meeting_id},
+        )
+
+        # 7. Delete jira projects
+        db.execute(text('DELETE FROM jira_projects WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 8. Delete topics (references meetings)
+        db.execute(text('DELETE FROM topics WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 9. Delete knowledge chunks & documents
         db.execute(text('DELETE FROM knowledge_chunks WHERE meeting_id = :mid'), {'mid': meeting_id})
         db.execute(text('DELETE FROM knowledge_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 6. meeting summaries
-        db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 7. transcript segments
-        db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 7.5 topics (must be deleted after transcript segments and tasks)
-        db.execute(text('DELETE FROM topics WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 8. meeting documents
-        db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 9. meeting members
-        db.execute(text('DELETE FROM meeting_members WHERE meeting_id = :mid'), {'mid': meeting_id})
-    except Exception as e:
-        logger.warning(f"Note when cleaning child records for meeting {meeting_id}: {e}")
 
-    db.delete(meeting)
-    db.commit()
+        # 10. Delete meeting summaries
+        db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 11. Delete meeting decisions
+        db.execute(text('DELETE FROM meeting_decisions WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 12. Delete meeting chat messages
+        db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 13. Delete transcript segments
+        db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 14. Delete meeting documents
+        db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 15. Delete meeting members
+        db.execute(text('DELETE FROM meeting_members WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 16. Delete meeting itself via SQL
+        db.execute(text('DELETE FROM meetings WHERE id = :mid'), {'mid': meeting_id})
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to delete meeting {meeting_id}: {e}", exc_info=True)
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Không thể xóa cuộc họp: {str(e)}",
+        )
+
     return {"message": "Đã xóa cuộc họp thành công", "deleted_id": meeting_id}
 
 
