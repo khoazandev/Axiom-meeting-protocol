@@ -97,9 +97,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
   const loadCalendarMeetings = async () => {
     setIsLoading(true);
     try {
-      const data = await meetingApi.listWithFilters({
-        department_id: user?.department_id || undefined,
-      });
+      const data = await meetingApi.listWithFilters();
       if (data && Array.isArray(data)) {
         setMeetings(data);
       } else {
@@ -200,11 +198,21 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
     onNotify(`Đã tải xuống Agenda cuộc họp: "${mtg.title}"`);
   };
 
+  // Priority order: LIVE (1) -> UPCOMING (2) -> ENDED (3)
+  const STATE_ORDER: Record<MeetingState, number> = {
+    LIVE: 1,
+    UPCOMING: 2,
+    ENDED: 3,
+  };
+
   // Sorted meetings for list view
   const sortedMeetings = useMemo(() => {
     return [...meetings].sort((a, b) => {
-      const timeA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-      const timeB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+      const orderA = STATE_ORDER[resolveMeetingState(a)] || 99;
+      const orderB = STATE_ORDER[resolveMeetingState(b)] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = new Date(a.scheduled_at || a.started_at || a.created_at || 0).getTime();
+      const timeB = new Date(b.scheduled_at || b.started_at || b.created_at || 0).getTime();
       return timeB - timeA;
     });
   }, [meetings]);
@@ -579,22 +587,29 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                       <span className="hidden sm:inline">Tải Agenda</span>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/meetings/${mtg.id}`)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-xs cursor-pointer ${
-                        isLive
-                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 shadow-md'
-                          : isEnded
-                            ? 'bg-slate-700 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700'
+                    {isEnded ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMeeting(mtg)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shrink-0"
+                      >
+                        <FileText size={13} />
+                        <span>Xem Biên Bản AI</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/meetings/${mtg.id}`)}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-xs cursor-pointer shrink-0 ${
+                          isLive
+                            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 shadow-md'
                             : 'bg-blue-600 hover:bg-blue-700'
-                      }`}
-                    >
-                      {isLive ? <Video size={13} /> : <Play size={13} />}
-                      <span>
-                        {isLive ? 'Vào Họp Trực Tiếp' : isEnded ? 'Vào Lại Phòng' : 'Vào Phòng'}
-                      </span>
-                    </button>
+                        }`}
+                      >
+                        {isLive ? <Video size={13} /> : <Play size={13} />}
+                        <span>{isLive ? 'Vào Họp Trực Tiếp' : 'Vào Phòng'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

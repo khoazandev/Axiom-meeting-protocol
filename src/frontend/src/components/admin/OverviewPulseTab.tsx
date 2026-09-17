@@ -536,11 +536,30 @@ export function OverviewPulseTab({
                     ? allMeetings.filter((m) => (m as any).approval_status !== 'PENDING')
                     : [...liveMeetings, ...(upcomingMeetings || []), ...(endedMeetings || [])];
 
-                const displayed = effectiveAll.filter((m) => {
-                  const s = resolveMeetingState(m);
-                  if (meetingFilter === 'ALL') return true;
-                  return s === meetingFilter;
-                });
+                const STATE_ORDER: Record<MeetingState, number> = {
+                  LIVE: 1,
+                  UPCOMING: 2,
+                  ENDED: 3,
+                };
+
+                const displayed = effectiveAll
+                  .filter((m) => {
+                    const s = resolveMeetingState(m);
+                    if (meetingFilter === 'ALL') return true;
+                    return s === meetingFilter;
+                  })
+                  .sort((a, b) => {
+                    const orderA = STATE_ORDER[resolveMeetingState(a)] || 99;
+                    const orderB = STATE_ORDER[resolveMeetingState(b)] || 99;
+                    if (orderA !== orderB) return orderA - orderB;
+                    const timeA = new Date(
+                      a.scheduled_at || a.started_at || a.created_at || 0
+                    ).getTime();
+                    const timeB = new Date(
+                      b.scheduled_at || b.started_at || b.created_at || 0
+                    ).getTime();
+                    return timeB - timeA;
+                  });
 
                 if (displayed.length === 0) {
                   return (

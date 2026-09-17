@@ -390,16 +390,252 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const upcomingCount = meetings.filter((m) => resolveMeetingState(m) === 'UPCOMING').length;
   const endedCount = meetings.filter((m) => resolveMeetingState(m) === 'ENDED').length;
 
-  // Filtered Meetings by search & 3 states
-  const filteredMeetings = meetings.filter((m) => {
-    const query = searchFilter.toLowerCase();
-    const inTitle = (m.title || '').toLowerCase().includes(query);
-    const inHost = (m.host_name || '').toLowerCase().includes(query);
-    const matchesSearch = inTitle || inHost;
-    if (!matchesSearch) return false;
-    if (statusFilter === 'ALL') return true;
-    return resolveMeetingState(m) === statusFilter;
-  });
+  // Strict sorting priority: LIVE (1) -> UPCOMING (2) -> ENDED (3)
+  const STATE_ORDER: Record<MeetingState, number> = {
+    LIVE: 1,
+    UPCOMING: 2,
+    ENDED: 3,
+  };
+
+  // Filtered & Sorted Meetings by search & 3 states
+  const filteredMeetings = meetings
+    .filter((m) => {
+      const query = searchFilter.toLowerCase();
+      const inTitle = (m.title || '').toLowerCase().includes(query);
+      const inHost = (m.host_name || '').toLowerCase().includes(query);
+      const matchesSearch = inTitle || inHost;
+      if (!matchesSearch) return false;
+      if (statusFilter === 'ALL') return true;
+      return resolveMeetingState(m) === statusFilter;
+    })
+    .sort((a, b) => {
+      const orderA = STATE_ORDER[resolveMeetingState(a)] || 99;
+      const orderB = STATE_ORDER[resolveMeetingState(b)] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = new Date(a.scheduled_at || a.started_at || a.created_at || 0).getTime();
+      const timeB = new Date(b.scheduled_at || b.started_at || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
+
+  const liveFilteredMeetings = filteredMeetings.filter((m) => resolveMeetingState(m) === 'LIVE');
+  const upcomingFilteredMeetings = filteredMeetings.filter(
+    (m) => resolveMeetingState(m) === 'UPCOMING'
+  );
+  const endedFilteredMeetings = filteredMeetings.filter((m) => resolveMeetingState(m) === 'ENDED');
+
+  const renderMeetingCard = (meeting: Meeting) => {
+    const state = resolveMeetingState(meeting);
+    const badge = getMeetingStateBadge(state);
+    const isLive = state === 'LIVE';
+    const isUpcoming = state === 'UPCOMING';
+    const isEnded = state === 'ENDED';
+
+    return (
+      <div
+        key={meeting.id}
+        onClick={() => {
+          if (isEnded) {
+            setSelectedMeetingForDetails({
+              id: String(meeting.id),
+              title: meeting.title,
+            });
+          }
+        }}
+        className={`p-4 rounded-xl border transition-all flex flex-col gap-3 shadow-2xs group ${
+          isEnded ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600' : ''
+        } ${
+          isLive
+            ? 'border-emerald-300 dark:border-emerald-800/80 bg-gradient-to-r from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 hover:border-emerald-400'
+            : isUpcoming
+              ? 'border-blue-200 dark:border-blue-800/70 bg-white dark:bg-slate-800/30 hover:border-blue-300'
+              : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/20 hover:bg-white dark:hover:bg-slate-800/50 opacity-95'
+        }`}
+      >
+        <div className="space-y-1.5 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
+              {meeting.department_name || user?.department_name || 'Khối Kỹ Thuật'}
+            </span>
+
+            {/* Dynamic State Badge (SẮP, ĐANG, KẾT THÚC) */}
+            <div
+              className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full ${badge.color}`}
+            >
+              {badge.pulse && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
+              <span>{badge.label}</span>
+            </div>
+          </div>
+
+          <h4
+            className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1"
+            title={meeting.title}
+          >
+            {meeting.title}
+          </h4>
+
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-0.5 flex-wrap gap-2">
+            <span
+              className={`flex items-center gap-1 font-mono font-semibold ${
+                isLive
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : isUpcoming
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-slate-500'
+              }`}
+            >
+              <Clock size={13} />
+              <span>
+                {isLive &&
+                  (meeting.started_at
+                    ? `Bắt đầu lúc: ${new Date(meeting.started_at).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'Đang diễn ra trực tiếp')}
+                {isUpcoming &&
+                  (meeting.scheduled_at
+                    ? `Dự kiến: ${new Date(meeting.scheduled_at).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} (${new Date(meeting.scheduled_at).toLocaleDateString('vi-VN')})`
+                    : 'Chưa tới giờ bắt đầu')}
+                {isEnded &&
+                  (meeting.ended_at
+                    ? `Kết thúc: ${new Date(meeting.ended_at).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit',
+                      })}`
+                    : 'Cuộc họp đã kết thúc')}
+              </span>
+            </span>
+
+            <span>
+              Chủ trì:{' '}
+              <strong className="text-slate-700 dark:text-slate-200">
+                {meeting.host_name || user?.full_name || 'Trưởng Phòng'}
+              </strong>
+            </span>
+
+            <span className="flex items-center gap-1 font-mono">
+              <Users size={13} />
+              <span>{meeting.participant_count || 1} người</span>
+            </span>
+          </div>
+
+          {/* State-Specific Status Banner */}
+          {isLive && (
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-0.5 h-4 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60">
+                <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="w-0.5 h-1.5 bg-emerald-500 rounded-full animate-pulse delay-75" />
+                <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-pulse delay-150" />
+                <span className="w-0.5 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[9.5px] text-emerald-700 dark:text-emerald-400 font-mono ml-1 font-bold">
+                  STT & AI MOM ENGINE ACTIVE
+                </span>
+              </div>
+            </div>
+          )}
+
+          {isUpcoming && (
+            <div className="flex items-center gap-2 pt-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+              <Clock size={13} />
+              <span>
+                Phòng họp đã lên lịch. Trưởng phòng có thể bấm "Bắt đầu sớm" để triệu tập họp ngay.
+              </span>
+            </div>
+          )}
+
+          {isEnded && (
+            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium">
+              <FileText size={13} className="text-slate-400" />
+              <span>
+                Cuộc họp đã kết thúc. Nhấp vào đây để xem Biên bản AI tóm tắt & Kho tri thức lưu
+                trữ.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* State-Specific Action Buttons */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            {isLive && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMuteAll(meeting.title);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                  title="Tắt tiếng phòng họp"
+                >
+                  <MicOff size={13} />
+                  <span>Tắt mic</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLockRoom(meeting.title);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                  title="Khóa phòng họp"
+                >
+                  <Lock size={13} />
+                  <span>Khóa phòng</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isEnded ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMeetingForDetails({
+                    id: String(meeting.id),
+                    title: meeting.title,
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                <FileText size={13} />
+                <span>Xem Biên Bản AI</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleJoinRoom(meeting);
+                }}
+                disabled={isJoiningRoom === meeting.id}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-xs cursor-pointer active:scale-95 ${
+                  isLive ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isJoiningRoom === meeting.id ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : isLive ? (
+                  <Video size={13} />
+                ) : (
+                  <Play size={13} />
+                )}
+                <span>{isLive ? 'Tham gia họp ngay' : 'Bắt đầu sớm'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -563,224 +799,49 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
             Nhấn "Tạo Cuộc Họp" để lên lịch hoặc kế thừa nghị quyết từ ban lãnh đạo.
           </p>
         </div>
-      ) : (
-        <div className="space-y-3.5">
-          {filteredMeetings.map((meeting) => {
-            const state = resolveMeetingState(meeting);
-            const badge = getMeetingStateBadge(state);
-            const isLive = state === 'LIVE';
-            const isUpcoming = state === 'UPCOMING';
-            const isEnded = state === 'ENDED';
-
-            return (
-              <div
-                key={meeting.id}
-                onClick={() => {
-                  if (isEnded) {
-                    setSelectedMeetingForDetails({
-                      id: String(meeting.id),
-                      title: meeting.title,
-                    });
-                  }
-                }}
-                className={`p-4 rounded-xl border transition-all flex flex-col gap-3 shadow-2xs group ${
-                  isEnded ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600' : ''
-                } ${
-                  isLive
-                    ? 'border-emerald-300 dark:border-emerald-800/80 bg-gradient-to-r from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 hover:border-emerald-400'
-                    : isUpcoming
-                      ? 'border-blue-200 dark:border-blue-800/70 bg-white dark:bg-slate-800/30 hover:border-blue-300'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/20 hover:bg-white dark:hover:bg-slate-800/50 opacity-95'
-                }`}
-              >
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
-                      {meeting.department_name || user?.department_name || 'Khối Kỹ Thuật'}
-                    </span>
-
-                    {/* Dynamic State Badge (SẮP, ĐANG, KẾT THÚC) */}
-                    <div
-                      className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full ${badge.color}`}
-                    >
-                      {badge.pulse && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                      )}
-                      <span>{badge.label}</span>
-                    </div>
-                  </div>
-
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
-                    {meeting.title}
-                  </h4>
-
-                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-0.5 flex-wrap gap-2">
-                    <span
-                      className={`flex items-center gap-1 font-mono font-semibold ${
-                        isLive
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : isUpcoming
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-slate-500'
-                      }`}
-                    >
-                      <Clock size={13} />
-                      <span>
-                        {isLive &&
-                          (meeting.started_at
-                            ? `Bắt đầu lúc: ${new Date(meeting.started_at).toLocaleTimeString(
-                                'vi-VN',
-                                { hour: '2-digit', minute: '2-digit' }
-                              )}`
-                            : 'Đang diễn ra trực tiếp')}
-                        {isUpcoming &&
-                          (meeting.scheduled_at
-                            ? `Dự kiến: ${new Date(meeting.scheduled_at).toLocaleTimeString(
-                                'vi-VN',
-                                { hour: '2-digit', minute: '2-digit' }
-                              )} (${new Date(meeting.scheduled_at).toLocaleDateString('vi-VN')})`
-                            : 'Chưa tới giờ bắt đầu')}
-                        {isEnded &&
-                          (meeting.ended_at
-                            ? `Kết thúc: ${new Date(meeting.ended_at).toLocaleTimeString('vi-VN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                day: '2-digit',
-                                month: '2-digit',
-                              })}`
-                            : 'Cuộc họp đã kết thúc')}
-                      </span>
-                    </span>
-
-                    <span>
-                      Chủ trì:{' '}
-                      <strong className="text-slate-700 dark:text-slate-200">
-                        {meeting.host_name || user?.full_name || 'Trưởng Phòng'}
-                      </strong>
-                    </span>
-
-                    <span className="flex items-center gap-1 font-mono">
-                      <Users size={13} />
-                      <span>{meeting.participant_count || 1} người</span>
-                    </span>
-                  </div>
-
-                  {/* State-Specific Status Banner */}
-                  {isLive && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="flex items-center gap-0.5 h-4 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60">
-                        <span className="w-0.5 h-3 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="w-0.5 h-1.5 bg-emerald-500 rounded-full animate-pulse delay-75" />
-                        <span className="w-0.5 h-2.5 bg-emerald-500 rounded-full animate-pulse delay-150" />
-                        <span className="w-0.5 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-[9.5px] text-emerald-700 dark:text-emerald-400 font-mono ml-1 font-bold">
-                          STT & AI MOM ENGINE ACTIVE
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {isUpcoming && (
-                    <div className="flex items-center gap-2 pt-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                      <Clock size={13} />
-                      <span>
-                        Phòng họp đã lên lịch. Trưởng phòng có thể bấm "Bắt đầu sớm" để triệu tập
-                        họp ngay.
-                      </span>
-                    </div>
-                  )}
-
-                  {isEnded && (
-                    <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium">
-                      <FileText size={13} className="text-slate-400" />
-                      <span>
-                        Cuộc họp đã kết thúc. Nhấp vào đây để xem Biên bản AI tóm tắt & Kho tri thức
-                        lưu trữ.
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* State-Specific Action Buttons */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    {isLive && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMuteAll(meeting.title);
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                          title="Tắt tiếng phòng họp"
-                        >
-                          <MicOff size={13} />
-                          <span>Tắt mic</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLockRoom(meeting.title);
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                          title="Khóa phòng họp"
-                        >
-                          <Lock size={13} />
-                          <span>Khóa phòng</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isEnded ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedMeetingForDetails({
-                            id: String(meeting.id),
-                            title: meeting.title,
-                          });
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                      >
-                        <FileText size={13} />
-                        <span>Xem Biên Bản AI</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleJoinRoom(meeting);
-                        }}
-                        disabled={isJoiningRoom === meeting.id}
-                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-xs cursor-pointer active:scale-95 ${
-                          isLive
-                            ? 'bg-emerald-600 hover:bg-emerald-700'
-                            : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
-                      >
-                        {isJoiningRoom === meeting.id ? (
-                          <Loader2 size={13} className="animate-spin" />
-                        ) : isLive ? (
-                          <Video size={13} />
-                        ) : (
-                          <Play size={13} />
-                        )}
-                        <span>{isLive ? 'Tham gia họp ngay' : 'Bắt đầu sớm'}</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
+      ) : statusFilter === 'ALL' ? (
+        <div className="space-y-6">
+          {/* Section 1: LIVE Meetings */}
+          {liveFilteredMeetings.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span>Cuộc Họp Đang Diễn Ra ({liveFilteredMeetings.length})</span>
               </div>
-            );
-          })}
+              <div className="space-y-3.5">
+                {liveFilteredMeetings.map((m) => renderMeetingCard(m))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: UPCOMING Meetings */}
+          {upcomingFilteredMeetings.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1 text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                <Clock size={14} className="text-blue-500" />
+                <span>Cuộc Họp Sắp Diễn Ra ({upcomingFilteredMeetings.length})</span>
+              </div>
+              <div className="space-y-3.5">
+                {upcomingFilteredMeetings.map((m) => renderMeetingCard(m))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: ENDED Meetings */}
+          {endedFilteredMeetings.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <CheckCircle2 size={14} className="text-slate-400" />
+                <span>Cuộc Họp Đã Kết Thúc ({endedFilteredMeetings.length})</span>
+              </div>
+              <div className="space-y-3.5">
+                {endedFilteredMeetings.map((m) => renderMeetingCard(m))}
+              </div>
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="space-y-3.5">{filteredMeetings.map((m) => renderMeetingCard(m))}</div>
       )}
 
       {/* ── Modal Chi Tiết Biên Bản AI ── */}
