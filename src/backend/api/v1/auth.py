@@ -262,6 +262,16 @@ def update_me(
             current_user.full_name = trimmed
     if payload.avatar_url is not None:
         current_user.avatar_url = payload.avatar_url
+    if payload.email is not None:
+        trimmed_email = payload.email.strip().lower()
+        if trimmed_email and trimmed_email != current_user.email:
+            existing = db.query(User).filter(User.email == trimmed_email, User.id != current_user.id).first()
+            if existing:
+                from src.backend.core.exceptions import ValidationException
+                raise ValidationException("Email này đã được sử dụng bởi tài khoản khác trong hệ thống")
+            current_user.email = trimmed_email
+    if payload.phone is not None:
+        current_user.phone = payload.phone.strip()
     db.commit()
     db.refresh(current_user)
     role_name = _resolve_user_role(current_user, db)

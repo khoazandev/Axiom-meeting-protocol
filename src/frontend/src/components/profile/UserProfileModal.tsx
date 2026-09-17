@@ -230,15 +230,19 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
 
     try {
       // 1. Persist in Backend Database
-      await authApi.updateMe({
+      const updated = await authApi.updateMe({
         full_name: fullName.trim(),
         avatar_url: finalAvatar,
+        email: email.trim(),
+        phone: phone.trim(),
       });
 
       // 2. Persist in Frontend Global Auth Store
       updateUser({
         full_name: fullName.trim(),
         avatar_url: finalAvatar,
+        email: updated?.email || email.trim(),
+        phone: phone.trim(),
       });
 
       // 3. Save extended profile details locally
@@ -412,31 +416,26 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                 </span>
               </div>
 
-              {/* Email - Fixed Identity */}
+              {/* Email - Editable by user */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Mail size={13} className="text-slate-400" />
-                    <span>Email Định Danh</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-500">
-                    <Lock size={9} />
-                    <span>Cố định</span>
+                    <Mail size={13} className="text-blue-500" />
+                    <span>Email Liên Hệ / Định Danh</span>
+                    <span className="text-rose-500 font-bold">*</span>
                   </span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    readOnly
-                    className="w-full pl-3.5 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/80 font-medium text-slate-600 dark:text-slate-300 font-mono cursor-not-allowed select-none"
-                  />
-                  <Lock
-                    size={12}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                </div>
+                <input
+                  type="email"
+                  value={email}
+                  required
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="user@axiom.com"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Có thể thay đổi email nhận thông báo và tham gia họp.
+                </span>
               </div>
             </div>
 

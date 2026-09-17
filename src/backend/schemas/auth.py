@@ -42,4 +42,6 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     full_name: str | None = None
     avatar_url: str | None = None
+    email: str | None = None
+    phone: str | None = None
 

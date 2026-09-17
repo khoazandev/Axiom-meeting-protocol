@@ -23,6 +23,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Check,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
@@ -67,6 +69,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const [isLoadingInheritDetails, setIsLoadingInheritDetails] = useState(false);
   const [inheritDecisions, setInheritDecisions] = useState<string[]>([]);
   const [inheritActionItems, setInheritActionItems] = useState<string[]>([]);
+  const [inheritSummary, setInheritSummary] = useState<string>('');
 
   // Host Controls & Action States
   const [isJoiningRoom, setIsJoiningRoom] = useState<string | null>(null);
@@ -84,30 +87,41 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const loadRealData = async () => {
     setIsLoading(true);
     try {
-      const [deptMeetingsRes, allMeetingsRes, membersRes] = await Promise.allSettled([
-        meetingApi.listWithFilters({
-          department_id: user?.department_id || undefined,
-        }),
-        meetingApi.listWithFilters({ all_org_meetings: true }),
+      const [meetingsRes, membersRes] = await Promise.allSettled([
+        meetingApi.listWithFilters(),
         organizationAdminApi.getMembers(resolvedOrgId),
       ]);
 
-      // 1. Department Meetings
-      if (deptMeetingsRes.status === 'fulfilled' && Array.isArray(deptMeetingsRes.value)) {
-        setMeetings(deptMeetingsRes.value);
+      // 1. All Meetings Accessible to this Manager (department meetings + invited executive meetings)
+      if (meetingsRes.status === 'fulfilled' && Array.isArray(meetingsRes.value)) {
+        const accessible = meetingsRes.value;
+        setMeetings(accessible);
+
+        // 2. Executive / Concluded Meetings (for inheritance)
+        const executiveList = accessible
+          .filter((m) => {
+            const s = (m.status || '').toUpperCase();
+            return s === 'ENDED' || s === 'COMPLETED' || !m.department_id;
+          })
+          .sort((a, b) => {
+            const isAEnded =
+              (a.status || '').toUpperCase() === 'ENDED' ||
+              (a.status || '').toUpperCase() === 'COMPLETED';
+            const isBEnded =
+              (b.status || '').toUpperCase() === 'ENDED' ||
+              (b.status || '').toUpperCase() === 'COMPLETED';
+            if (isAEnded && !isBEnded) return -1;
+            if (!isAEnded && isBEnded) return 1;
+            return (
+              new Date(b.created_at || b.scheduled_at || 0).getTime() -
+              new Date(a.created_at || a.scheduled_at || 0).getTime()
+            );
+          });
+        setExecutiveMeetings(executiveList);
       } else {
         // Fallback to basic list
         const fallback = await meetingsApi.list(0, 50);
         setMeetings(fallback);
-      }
-
-      // 2. Executive / Concluded Meetings (for inheritance)
-      if (allMeetingsRes.status === 'fulfilled' && Array.isArray(allMeetingsRes.value)) {
-        const executiveList = allMeetingsRes.value.filter((m) => {
-          const s = (m.status || '').toUpperCase();
-          return s === 'ENDED' || s === 'COMPLETED';
-        });
-        setExecutiveMeetings(executiveList);
       }
 
       // 3. Department Members - Strictly isolate to this manager's department only
@@ -165,12 +179,53 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     }
   };
 
+  // Helper to compile agenda markdown from inherited data
+  const reapplyInheritedAgenda = (
+    customExecMtg?: Meeting,
+    decisions = inheritDecisions,
+    tasks = inheritActionItems,
+    summary = inheritSummary
+  ) => {
+    const target =
+      customExecMtg || executiveMeetings.find((m) => m.id === selectedExecutiveMeetingId);
+    if (!target) return;
+
+    let compiled = `## KẾ HOẠCH TRIỂN KHAI NGHỊ QUYẾT TỪ BAN LÃNH ĐẠO\n`;
+    compiled += `Nguồn gốc: ${target.title}\n`;
+    compiled += `Chủ trì cấp cao: ${target.host_name || 'Ban Lãnh Đạo'}\n\n`;
+
+    if (decisions.length > 0) {
+      compiled += `### 1. CÁC QUYẾT SÁCH CHIẾN LƯỢC BAN HÀNH:\n`;
+      decisions.forEach((d) => {
+        compiled += `- ${d}\n`;
+      });
+      compiled += `\n`;
+    }
+
+    if (tasks.length > 0) {
+      compiled += `### 2. ĐẦU VIỆC GIAO CHO KHỐI THỰC THI:\n`;
+      tasks.forEach((t, idx) => {
+        compiled += `${idx + 1}. ${t}\n`;
+      });
+      compiled += `\n`;
+    } else if (summary) {
+      compiled += `### 2. TÓM TẮT CHỈ ĐẠO CHÍNH:\n${summary.slice(0, 400)}...\n\n`;
+    }
+
+    compiled += `### 3. MỤC TIÊU PHIÊN HỌP NỘI BỘ PHÒNG BAN:\n`;
+    compiled += `- Phân công trách nhiệm cụ thể cho từng thành viên trong phòng ban\n`;
+    compiled += `- Thiết lập deadline và đồng bộ tiến độ lên hệ thống Mini Jira`;
+
+    setNewAgendaText(compiled);
+  };
+
   // When an executive meeting is selected in Inherit Mode
   const handleSelectExecutiveMeeting = async (mtgId: string) => {
     setSelectedExecutiveMeetingId(mtgId);
     if (!mtgId) {
       setInheritDecisions([]);
       setInheritActionItems([]);
+      setInheritSummary('');
       return;
     }
 
@@ -190,42 +245,69 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         decisions.push(...decisionsRes.value.map((d: any) => d.decision_text || d.topic || ''));
       }
 
+      let summaryText = '';
+      if (summaryRes.status === 'fulfilled' && summaryRes.value) {
+        const sData = summaryRes.value;
+        summaryText = sData.summary || '';
+        setInheritSummary(summaryText);
+
+        // If decisions is empty, extract from sData.decisions (string or list)
+        if (decisions.length === 0 && sData.decisions) {
+          const rawDec = (sData as any).decisions;
+          if (typeof rawDec === 'string') {
+            const lines = rawDec
+              .split('\n')
+              .map((l: string) =>
+                l
+                  .replace(/^[0-9]+[.)\s]+/, '')
+                  .replace(/^[-*•]\s+/, '')
+                  .trim()
+              )
+              .filter(Boolean);
+            decisions.push(...lines);
+          } else if (Array.isArray(rawDec)) {
+            decisions.push(
+              ...rawDec.map((d: any) =>
+                typeof d === 'string' ? d : d.decision_text || d.topic || d.description || ''
+              )
+            );
+          }
+        }
+      }
+
       const tasks: string[] = [];
       if (tasksRes.status === 'fulfilled' && Array.isArray(tasksRes.value)) {
         tasks.push(...tasksRes.value.map((t: any) => t.title || t.description || ''));
       }
 
-      setInheritDecisions(decisions.filter(Boolean));
-      setInheritActionItems(tasks.filter(Boolean));
+      // If tasks is empty, check key_points from summary
+      if (tasks.length === 0 && summaryRes.status === 'fulfilled' && summaryRes.value?.key_points) {
+        const kp = summaryRes.value.key_points;
+        if (typeof kp === 'string') {
+          const lines = kp
+            .split('\n')
+            .map((l) =>
+              l
+                .replace(/^[0-9]+[.)\s]+/, '')
+                .replace(/^[-*•]\s+/, '')
+                .trim()
+            )
+            .filter(Boolean);
+          tasks.push(...lines.slice(0, 5));
+        }
+      }
+
+      const cleanDecisions = decisions.filter(Boolean);
+      const cleanTasks = tasks.filter(Boolean);
+
+      setInheritDecisions(cleanDecisions);
+      setInheritActionItems(cleanTasks);
 
       // Auto fill title
       setNewTitle(`Triển khai nhiệm vụ: ${execMtg.title}`);
 
-      // Build structured Agenda from inherited data
-      let compiledAgenda = `## KẾ HOẠCH TRIỂN KHAI NGHỊ QUYẾT TỪ CUỘC HỌP CẤP CAO\n`;
-      compiledAgenda += `Nguồn gốc: ${execMtg.title} (Chủ trì: ${execMtg.host_name || 'Ban Lãnh Đạo'})\n\n`;
-
-      if (decisions.length > 0) {
-        compiledAgenda += `### 1. CÁC QUYẾT SÁCH CHIẾN LƯỢC ĐÃ BAN HÀNH:\n`;
-        decisions.forEach((d, idx) => {
-          compiledAgenda += `- ${d}\n`;
-        });
-        compiledAgenda += `\n`;
-      }
-
-      if (tasks.length > 0) {
-        compiledAgenda += `### 2. CÁC ĐẦU VIỆC GIAO CHO KHỐI THỰC THI:\n`;
-        tasks.forEach((t, idx) => {
-          compiledAgenda += `${idx + 1}. ${t}\n`;
-        });
-        compiledAgenda += `\n`;
-      } else if (execMtg.summary) {
-        compiledAgenda += `### 2. TÓM TẮT CHỈ ĐẠO:\n${execMtg.summary.slice(0, 500)}...\n\n`;
-      }
-
-      compiledAgenda += `### 3. MỤC TIÊU CUỘC HỌP NỘI BỘ:\n- Phân công trách nhiệm cụ thể cho từng thành viên trong phòng ban\n- Thiết lập deadline và đồng bộ tiến độ lên hệ thống Mini Jira`;
-
-      setNewAgendaText(compiledAgenda);
+      // Reapply compiled agenda
+      reapplyInheritedAgenda(execMtg, cleanDecisions, cleanTasks, summaryText);
 
       // Auto-select all department members to invite
       setSelectedMemberIds(deptMembers.map((m) => m.user_id));
@@ -712,258 +794,541 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
 
       {/* ── MODAL KHỞI TẠO CUỘC HỌP (2 CHẾ ĐỘ: TỰ TẠO MỚI & KẾ THỪA CẤP CAO) ── */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl p-6 shadow-2xl space-y-5 my-8">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  Tạo Cuộc Họp Phòng Ban
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {createMode === 'inherit'
-                    ? 'Kế thừa quyết sách & nhiệm vụ từ cuộc họp cấp cao'
-                    : 'Tự khởi tạo cuộc họp mới cho phòng ban'}
-                </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 md:p-6 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-150">
+            {/* Sticky Header */}
+            <div className="shrink-0 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50/80 dark:bg-slate-900/90">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-xs">
+                  {createMode === 'inherit' ? <Sparkles size={20} /> : <Plus size={20} />}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                    Tạo Cuộc Họp Phòng Ban
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {createMode === 'inherit'
+                      ? 'Kế thừa quyết sách, nhiệm vụ cấp cao và phân rã cho nhân sự'
+                      : 'Tự khởi tạo cuộc họp mới và gửi lời mời đến nhân sự phòng ban'}
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
 
-            {/* 2 Mode Tabs Switcher */}
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateMode('blank');
-                  setSelectedExecutiveMeetingId('');
-                }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  createMode === 'blank'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Tự Tạo Mới
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateMode('inherit')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  createMode === 'inherit'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                <Sparkles size={13} />
-                <span>Kế Thừa Cấp Cao</span>
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleCreateMeeting} className="space-y-4">
-              {/* Inherit Mode Meeting Picker */}
-              {createMode === 'inherit' && (
-                <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 space-y-2.5">
-                  <label className="block text-xs font-bold text-blue-900 dark:text-blue-200">
-                    Chọn Cuộc Họp Cấp Cao Cần Kế Thừa:
-                  </label>
-                  <select
-                    value={selectedExecutiveMeetingId}
-                    onChange={(e) => handleSelectExecutiveMeeting(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              {/* 2 Mode Tabs Switcher & Close */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl border border-slate-300/60 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMode('blank');
+                      setSelectedExecutiveMeetingId('');
+                    }}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      createMode === 'blank'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
-                    <option value="">-- Chọn cuộc họp của Ban Lãnh Đạo --</option>
-                    {executiveMeetings.map((exec) => (
-                      <option key={exec.id} value={exec.id}>
-                        {exec.title} (Chủ trì: {exec.host_name || 'Ban Lãnh Đạo'})
-                      </option>
-                    ))}
-                  </select>
-
-                  {isLoadingInheritDetails && (
-                    <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Đang trích xuất quyết sách & Action Items cho phòng ban...</span>
-                    </div>
-                  )}
-
-                  {selectedExecutiveMeetingId && !isLoadingInheritDetails && (
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 pt-1">
-                      <div>
-                        ✓ Đã tự động tải <strong>{inheritDecisions.length} Quyết sách</strong> &{' '}
-                        <strong>{inheritActionItems.length} Nhiệm vụ</strong> vào Agenda.
-                      </div>
-                      <div>✓ Đã tự động chọn nhân sự trong phòng ban vào danh sách mời.</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Chủ đề cuộc họp *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="VD: Triển khai kiến trúc hệ thống Sprint 42"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Scheduled Time */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Thời gian diễn ra
-                </label>
-                <input
-                  type="datetime-local"
-                  value={newScheduledAt}
-                  onChange={(e) => setNewScheduledAt(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Để trống nếu muốn khởi động cuộc họp ngay lập tức.
-                </span>
-              </div>
-
-              {/* Agenda Text & File Upload */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Nội dung Agenda / Nghị quyết triển khai
-                  </label>
-                  <div>
-                    <input
-                      type="file"
-                      ref={deptFileInputRef}
-                      onChange={handleDeptFileUpload}
-                      accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv,.xlsx"
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => deptFileInputRef.current?.click()}
-                      disabled={isParsingDeptFile}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {isParsingDeptFile ? (
-                        <>
-                          <Loader2 size={12} className="animate-spin" />
-                          <span>Đang đọc...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload size={12} />
-                          <span>Nạp file Agenda</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                    Tự Tạo Mới
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode('inherit')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      createMode === 'inherit'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Sparkles size={13} />
+                    <span>Kế Thừa Cấp Cao</span>
+                    {executiveMeetings.length > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-extrabold ml-0.5">
+                        {executiveMeetings.length}
+                      </span>
+                    )}
+                  </button>
                 </div>
 
-                {deptUploadedFile && (
-                  <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] mb-2">
-                    <span className="truncate">
-                      📎 Đã nạp từ tệp: <strong>{deptUploadedFile}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeptUploadedFile(null);
-                        setNewAgendaText('');
-                      }}
-                      className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
-
-                <textarea
-                  rows={4}
-                  placeholder="Nhập hoặc dán các chủ đề thảo luận, quyết sách cần phân rã..."
-                  value={newAgendaText}
-                  onChange={(e) => setNewAgendaText(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
-                />
-              </div>
-
-              {/* Department Personnel to Invite */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Mời nhân sự phòng ban ({selectedMemberIds.length}/{deptMembers.length} người được
-                  chọn)
-                </label>
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 p-2 space-y-1 bg-slate-50/50 dark:bg-slate-950/50">
-                  {deptMembers.map((mem) => {
-                    const isSelected = selectedMemberIds.includes(mem.user_id);
-                    return (
-                      <div
-                        key={mem.id}
-                        onClick={() => toggleMemberSelect(mem.user_id)}
-                        className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs ${
-                          isSelected
-                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <img
-                            src={mem.avatar_url || generateInitialsAvatar(mem.full_name)}
-                            alt={mem.full_name}
-                            className="w-6 h-6 rounded-full object-cover shrink-0"
-                          />
-                          <span className="font-bold truncate">{mem.full_name}</span>
-                          <span className="text-[10px] text-slate-400 truncate">({mem.email})</span>
-                        </div>
-                        <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'bg-blue-600 border-blue-600 text-white'
-                              : 'border-slate-300 dark:border-slate-600'
-                          }`}
-                        >
-                          {isSelected && <Check size={11} strokeWidth={3} />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Đóng"
                 >
-                  Hủy Bỏ
+                  <X size={18} />
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingCreate}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {isSubmittingCreate ? (
-                    <>
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Đang khởi tạo...</span>
-                    </>
-                  ) : (
-                    <span>Khởi Tạo & Bắt Đầu</span>
-                  )}
-                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form
+              onSubmit={handleCreateMeeting}
+              className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col justify-between"
+            >
+              {createMode === 'inherit' ? (
+                /* INHERIT MODE: 2-COLUMN RESPONSIVE GRID */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* LEFT COLUMN: SOURCE SELECTION & EXTRACTED DATA */}
+                  <div className="lg:col-span-5 flex flex-col gap-4">
+                    <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                          <Sparkles size={13} />
+                          <span>Bước 1: Nguồn Kế Thừa Cấp Cao</span>
+                        </span>
+                        {isLoadingInheritDetails && (
+                          <span className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                            <Loader2 size={12} className="animate-spin" />
+                            <span>Đang trích xuất...</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Chọn Cuộc Họp Ban Lãnh Đạo *
+                        </label>
+                        <select
+                          value={selectedExecutiveMeetingId}
+                          onChange={(e) => handleSelectExecutiveMeeting(e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- Chọn cuộc họp cấp cao đã kết thúc --</option>
+                          {executiveMeetings.map((exec) => (
+                            <option key={exec.id} value={exec.id}>
+                              {exec.title} (Chủ trì: {exec.host_name || 'Ban Lãnh Đạo'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Selected Executive Meeting Info Card */}
+                      {selectedExecutiveMeetingId && !isLoadingInheritDetails && (
+                        <div className="space-y-3 pt-1">
+                          {/* Badges summary */}
+                          <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                            <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold">
+                              ✓ {inheritDecisions.length} Quyết sách chiến lược
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 font-bold">
+                              ✓ {inheritActionItems.length} Nhiệm vụ bàn giao
+                            </span>
+                          </div>
+
+                          {/* Extracted Decisions & Tasks Scrollable Preview */}
+                          <div className="max-h-56 overflow-y-auto space-y-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 text-xs shadow-inner custom-scrollbar">
+                            {inheritDecisions.length > 0 && (
+                              <div className="space-y-1.5">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 text-[11px] uppercase tracking-wide">
+                                  <ShieldCheck size={13} className="text-blue-600" />
+                                  <span>Quyết Sách Từ Ban Lãnh Đạo:</span>
+                                </span>
+                                <ul className="space-y-1 pl-4 text-slate-600 dark:text-slate-300 list-disc text-[11.5px] leading-relaxed">
+                                  {inheritDecisions.map((d, idx) => (
+                                    <li key={idx}>{d}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {inheritActionItems.length > 0 && (
+                              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 text-[11px] uppercase tracking-wide">
+                                  <CheckCircle2 size={13} className="text-indigo-600" />
+                                  <span>Nhiệm Vụ Cần Triển Khai:</span>
+                                </span>
+                                <ul className="space-y-1 pl-4 text-slate-600 dark:text-slate-300 list-decimal text-[11.5px] leading-relaxed">
+                                  {inheritActionItems.map((t, idx) => (
+                                    <li key={idx}>{t}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {inheritDecisions.length === 0 && inheritActionItems.length === 0 && (
+                              <p className="text-[11px] text-slate-400 italic">
+                                Cuộc họp chưa lưu quyết sách chi tiết; thông tin tóm tắt đã được AI
+                                đưa vào Agenda.
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                            <span>💡 Đã tự động điền Agenda và chọn nhân sự phòng ban</span>
+                            <button
+                              type="button"
+                              onClick={() => reapplyInheritedAgenda()}
+                              className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                            >
+                              ↺ Tải lại mẫu Agenda
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT COLUMN: NEW MEETING SETUP & DEPT MEMBERS SELECTION */}
+                  <div className="lg:col-span-7 flex flex-col gap-4">
+                    {/* Meeting Title */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Chủ đề cuộc họp phòng ban *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="VD: Triển khai quyết sách Sprint 42"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                      />
+                    </div>
+
+                    {/* Scheduled Time */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Thời gian tổ chức
+                        </label>
+                        <span className="text-[11px] text-slate-400">
+                          Để trống nếu muốn bắt đầu ngay
+                        </span>
+                      </div>
+                      <input
+                        type="datetime-local"
+                        value={newScheduledAt}
+                        onChange={(e) => setNewScheduledAt(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Agenda & Upload */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Nội dung Agenda / Nghị quyết triển khai
+                        </label>
+                        <div>
+                          <input
+                            type="file"
+                            ref={deptFileInputRef}
+                            onChange={handleDeptFileUpload}
+                            accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv,.xlsx"
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => deptFileInputRef.current?.click()}
+                            disabled={isParsingDeptFile}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {isParsingDeptFile ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" />
+                                <span>Đang đọc...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload size={12} />
+                                <span>Nạp file Agenda</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {deptUploadedFile && (
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] mb-2">
+                          <span className="truncate">
+                            📎 Đã nạp từ tệp: <strong>{deptUploadedFile}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeptUploadedFile(null);
+                              setNewAgendaText('');
+                            }}
+                            className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      <textarea
+                        rows={4}
+                        placeholder="Nhập hoặc dán các chủ đề thảo luận, quyết sách cần phân rã..."
+                        value={newAgendaText}
+                        onChange={(e) => setNewAgendaText(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
+                      />
+                    </div>
+
+                    {/* Department Members Selection */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Mời nhân sự phòng ban ({selectedMemberIds.length}/{deptMembers.length}{' '}
+                          người)
+                        </label>
+                        <div className="flex items-center gap-3 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMemberIds(deptMembers.map((m) => m.user_id))}
+                            className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                          >
+                            Chọn tất cả
+                          </button>
+                          <span className="text-slate-300 dark:text-slate-700">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMemberIds([])}
+                            className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:underline cursor-pointer"
+                          >
+                            Bỏ chọn
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 p-2 space-y-1 bg-slate-50/50 dark:bg-slate-950/50 custom-scrollbar">
+                        {deptMembers.map((mem) => {
+                          const isSelected = selectedMemberIds.includes(mem.user_id);
+                          return (
+                            <div
+                              key={mem.id}
+                              onClick={() => toggleMemberSelect(mem.user_id)}
+                              className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs ${
+                                isSelected
+                                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200'
+                                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <img
+                                  src={mem.avatar_url || generateInitialsAvatar(mem.full_name)}
+                                  alt={mem.full_name}
+                                  className="w-6 h-6 rounded-full object-cover shrink-0"
+                                />
+                                <span className="font-bold truncate">{mem.full_name}</span>
+                                <span className="text-[10px] text-slate-400 truncate">
+                                  ({mem.email})
+                                </span>
+                              </div>
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                  isSelected
+                                    ? 'bg-blue-600 border-blue-600 text-white'
+                                    : 'border-slate-300 dark:border-slate-600'
+                                }`}
+                              >
+                                {isSelected && <Check size={11} strokeWidth={3} />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* BLANK MODE: STRUCTURED RESPONSIVE VIEW */
+                <div className="space-y-4 max-w-2xl mx-auto w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div className="md:col-span-8">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Chủ đề cuộc họp phòng ban *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="VD: Triển khai kiến trúc hệ thống Sprint 42"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                      />
+                    </div>
+                    <div className="md:col-span-4">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Thời gian diễn ra
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={newScheduledAt}
+                        onChange={(e) => setNewScheduledAt(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        Để trống nếu muốn họp ngay.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Nội dung Agenda / Nghị quyết cuộc họp
+                      </label>
+                      <div>
+                        <input
+                          type="file"
+                          ref={deptFileInputRef}
+                          onChange={handleDeptFileUpload}
+                          accept=".txt,.md,.markdown,.json,.docx,.pdf,.csv,.xlsx"
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deptFileInputRef.current?.click()}
+                          disabled={isParsingDeptFile}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {isParsingDeptFile ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              <span>Đang đọc...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={12} />
+                              <span>Nạp file Agenda</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {deptUploadedFile && (
+                      <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] mb-2">
+                        <span className="truncate">
+                          📎 Đã nạp từ tệp: <strong>{deptUploadedFile}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeptUploadedFile(null);
+                            setNewAgendaText('');
+                          }}
+                          className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    <textarea
+                      rows={5}
+                      placeholder="Nhập hoặc dán các chủ đề thảo luận, phân công công việc..."
+                      value={newAgendaText}
+                      onChange={(e) => setNewAgendaText(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Mời nhân sự phòng ban ({selectedMemberIds.length}/{deptMembers.length}{' '}
+                        người)
+                      </label>
+                      <div className="flex items-center gap-3 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMemberIds(deptMembers.map((m) => m.user_id))}
+                          className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                        >
+                          Chọn tất cả
+                        </button>
+                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMemberIds([])}
+                          className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:underline cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 p-2 space-y-1 bg-slate-50/50 dark:bg-slate-950/50 custom-scrollbar">
+                      {deptMembers.map((mem) => {
+                        const isSelected = selectedMemberIds.includes(mem.user_id);
+                        return (
+                          <div
+                            key={mem.id}
+                            onClick={() => toggleMemberSelect(mem.user_id)}
+                            className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors text-xs ${
+                              isSelected
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <img
+                                src={mem.avatar_url || generateInitialsAvatar(mem.full_name)}
+                                alt={mem.full_name}
+                                className="w-6 h-6 rounded-full object-cover shrink-0"
+                              />
+                              <span className="font-bold truncate">{mem.full_name}</span>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                ({mem.email})
+                              </span>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
+                            >
+                              {isSelected && <Check size={11} strokeWidth={3} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sticky Footer Action Bar */}
+              <div className="shrink-0 mt-6 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-white dark:bg-slate-900">
+                <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5">
+                  <Users size={13} className="text-blue-500 shrink-0" />
+                  <span className="truncate font-medium">
+                    {selectedMemberIds.length > 0
+                      ? `Đã chọn ${selectedMemberIds.length} nhân sự tham gia`
+                      : 'Chưa chọn nhân sự nào'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="w-24 shrink-0 h-9 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-center"
+                  >
+                    Hủy Bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingCreate || !newTitle.trim()}
+                    className="w-48 shrink-0 min-w-[180px] h-9 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingCreate ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Đang khởi tạo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Khởi Tạo & Bắt Đầu</span>
+                        <ArrowRight size={13} />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

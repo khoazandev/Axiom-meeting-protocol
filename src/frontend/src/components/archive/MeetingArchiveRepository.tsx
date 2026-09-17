@@ -124,7 +124,6 @@ export function MeetingArchiveRepository({
       // Owner sees all org meetings; Manager & Member strictly get own department / invited meetings
       const data = await meetingApi.listWithFilters({
         all_org_meetings: userRole === 'OWNER',
-        department_id: userRole !== 'OWNER' ? departmentId || undefined : undefined,
       });
       // In Kho Tài Liệu: only concluded meetings
       const concluded = (data || []).filter((m) => {

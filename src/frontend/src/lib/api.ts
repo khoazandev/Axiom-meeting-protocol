@@ -325,7 +325,12 @@ export const authApi = {
     return apiFetch<User>('/api/v1/auth/me');
   },
 
-  updateMe(data: { full_name?: string; avatar_url?: string }): Promise<User> {
+  updateMe(data: {
+    full_name?: string;
+    avatar_url?: string;
+    email?: string;
+    phone?: string;
+  }): Promise<User> {
     return apiFetch<User>('/api/v1/auth/me', {
       method: 'PATCH',
       body: JSON.stringify(data),

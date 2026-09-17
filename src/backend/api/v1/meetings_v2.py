@@ -268,8 +268,6 @@ def list_my_meetings(
 
     if org_id:
         query = query.filter(Meeting.organization_id == org_id)
-    if department_id:
-        query = query.filter(Meeting.department_id == department_id)
 
     # Check if current_user is OWNER or ADMIN
     user_org_member = (
@@ -282,6 +280,14 @@ def list_my_meetings(
         or (user_org_member and user_org_member.role in ("OWNER", "ADMIN"))
         or (hasattr(current_user, "role") and getattr(current_user, "role") in ("OWNER", "ADMIN"))
     )
+
+    if department_id:
+        if is_owner_or_admin:
+            query = query.filter(Meeting.department_id == department_id)
+        else:
+            query = query.filter(
+                (Meeting.department_id == department_id) | (Meeting.department_id.is_(None))
+            )
 
     if not is_owner_or_admin:
         from src.backend.models import DepartmentMember
@@ -299,11 +305,15 @@ def list_my_meetings(
         )
         meeting_ids = [m.meeting_id for m in memberships]
 
-        # Non-owners (Manager, Member): strictly only meetings they were invited to or created
-        query = query.filter(
-            (Meeting.id.in_(meeting_ids))
-            | (Meeting.created_by_id == current_user.id)
-        )
+        from sqlalchemy import or_
+        access_conditions = [
+            Meeting.id.in_(meeting_ids),
+            Meeting.created_by_id == current_user.id,
+        ]
+        if user_dept_id:
+            access_conditions.append(Meeting.department_id == user_dept_id)
+
+        query = query.filter(or_(*access_conditions))
 
     if status_filter:
         query = query.filter(Meeting.status == status_filter)
