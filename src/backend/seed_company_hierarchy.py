@@ -56,11 +56,6 @@ def seed():
                 "full_name": "System Admin",
                 "avatar_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=faces",
             },
-            {
-                "email": "alex@axiom.com",
-                "full_name": "Lâm Phát",
-                "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces",
-            },
         ]
 
         for o_data in owner_users_data:
@@ -105,11 +100,16 @@ def seed():
                 "description": "[icon:code] Nghiên cứu phát triển AI Protocol, WebRTC realtime và tối ưu hóa hạ tầng On-Premise",
                 "color": "#3B82F6",
                 "manager": {
-                    "email": "long.le@axiom.internal",
-                    "full_name": "Lê Hoàng Long",
+                    "email": "manager.khoa@axiom.com",
+                    "full_name": "Trần Đăng Khoa",
                     "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces",
                 },
                 "members": [
+                    {
+                        "email": "long.le@axiom.internal",
+                        "full_name": "Lê Hoàng Long",
+                        "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces",
+                    },
                     {
                         "email": "khoa.tran@axiom.internal",
                         "full_name": "Trần Minh Khoa",
