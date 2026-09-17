@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Kanban,
   Plus,
@@ -20,6 +20,10 @@ import {
   RefreshCw,
   SlidersHorizontal,
   ExternalLink,
+  Paperclip,
+  Download,
+  FileText,
+  Upload,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,6 +39,16 @@ import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type TaskStatusKey = 'TODO' | 'IN_PROGRESS' | 'IN_PREVIEW' | 'DONE';
 export type TaskPriorityKey = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface TaskAttachmentItem {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+  uploaderName: string;
+  dataUrl?: string;
+}
 
 export interface SubtaskItem {
   id: string;
@@ -122,6 +136,108 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const [selectedTask, setSelectedTask] = useState<EnrichedKanbanTask | null>(null);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
 
+  // Task Attachments State
+  const [taskAttachments, setTaskAttachments] = useState<TaskAttachmentItem[]>([]);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const attachmentFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedTask) {
+      try {
+        const stored = localStorage.getItem(`axiom_task_att_${selectedTask.id}`);
+        if (stored) {
+          setTaskAttachments(JSON.parse(stored));
+        } else {
+          setTaskAttachments([]);
+        }
+      } catch {
+        setTaskAttachments([]);
+      }
+    } else {
+      setTaskAttachments([]);
+    }
+  }, [selectedTask?.id]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTask) return;
+    setIsUploadingAttachment(true);
+    try {
+      let dataUrl: string | undefined = undefined;
+      if (file.size < 4 * 1024 * 1024) {
+        dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(undefined);
+          reader.readAsDataURL(file);
+        });
+      }
+      const newAtt: TaskAttachmentItem = {
+        id: `att-${Date.now()}`,
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        uploadedAt: new Date().toLocaleString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+        }),
+        uploaderName: user?.full_name || 'Thành viên',
+        dataUrl,
+      };
+      const updated = [newAtt, ...taskAttachments];
+      setTaskAttachments(updated);
+      try {
+        localStorage.setItem(`axiom_task_att_${selectedTask.id}`, JSON.stringify(updated));
+      } catch (err) {
+        console.warn('LocalStorage limit for attachment:', err);
+      }
+      onNotify(`Đã tải lên tệp "${file.name}" cho nhiệm vụ.`);
+    } catch (err) {
+      console.error('File upload error:', err);
+      onNotify('Không thể tải tệp lên.');
+    } finally {
+      setIsUploadingAttachment(false);
+      if (attachmentFileInputRef.current) attachmentFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = (attId: string) => {
+    if (!selectedTask) return;
+    const updated = taskAttachments.filter((a) => a.id !== attId);
+    setTaskAttachments(updated);
+    try {
+      localStorage.setItem(`axiom_task_att_${selectedTask.id}`, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    onNotify('Đã gỡ tệp đính kèm.');
+  };
+
+  const handleDownloadAttachment = (att: TaskAttachmentItem) => {
+    if (att.dataUrl) {
+      const a = document.createElement('a');
+      a.href = att.dataUrl;
+      a.download = att.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const blob = new Blob([`Tệp đính kèm: ${att.name}\nNgười tải: ${att.uploaderName}`], {
+        type: 'text/plain;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = att.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   // Add Task Modal State
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -190,10 +306,17 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       // Load department members
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
       const members = Array.isArray(membersRes) ? membersRes : [];
-      // Strictly isolate members for manager's department only
-      const effectiveMembers = user?.department_id
-        ? members.filter((m) => m.department_id === user.department_id)
-        : members;
+      // Strictly isolate members for manager's department only:
+      // Exclude OWNER, ADMIN, other MANAGER, and self
+      const effectiveMembers = members.filter((m) => {
+        const role = (m.role || '').toUpperCase();
+        if (role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER') return false;
+        if (m.user_id === user?.id) return false;
+        if (user?.department_id) {
+          return m.department_id === user.department_id;
+        }
+        return true;
+      });
       setDeptMembers(effectiveMembers);
 
       // Load Jira Projects
@@ -238,8 +361,15 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     try {
       const rawIssues = await jiraApi.getIssues(projectId);
 
+      // Strictly isolate tasks for this department's members
+      const memberIds = new Set(membersList.map((m) => m.user_id));
+      const relevantIssues = (rawIssues || []).filter((issue: any) => {
+        if (!issue.assignee_id) return true;
+        return memberIds.has(issue.assignee_id);
+      });
+
       // Map raw issues to EnrichedKanbanTask
-      const enriched: EnrichedKanbanTask[] = (rawIssues || []).map((issue: any) => {
+      const enriched: EnrichedKanbanTask[] = relevantIssues.map((issue: any) => {
         let mappedStatus: TaskStatusKey = 'TODO';
         const st = (issue.status || '').toUpperCase();
         if (st === 'IN_PROGRESS') mappedStatus = 'IN_PROGRESS';
@@ -561,26 +691,14 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
             </select>
           </div>
 
-          {/* Sync Button */}
-          <button
-            type="button"
-            onClick={handleSyncMeetingTasks}
-            disabled={isSyncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer disabled:opacity-50"
-            title="Đồng bộ nhiệm vụ từ các cuộc họp gần nhất"
-          >
-            <RefreshCw size={13} className={isSyncing ? 'animate-spin text-blue-600' : ''} />
-            <span>Đồng Bộ Họp</span>
-          </button>
-
-          {/* Add Task Button */}
+          {/* Add Task Button (Thêm Task) */}
           <button
             type="button"
             onClick={() => setIsAddTaskOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
           >
             <Plus size={14} />
-            <span>Tạo Task</span>
+            <span>Thêm Task</span>
           </button>
         </div>
       </div>
@@ -704,7 +822,13 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                             </div>
 
                             {/* Task Title */}
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
+                            <h4
+                              className={`text-xs font-bold line-clamp-2 leading-relaxed ${
+                                isDone
+                                  ? 'line-through text-slate-400 dark:text-slate-500'
+                                  : 'text-slate-900 dark:text-slate-100'
+                              }`}
+                            >
                               {task.title}
                             </h4>
 
@@ -747,7 +871,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                               {isDone ? (
                                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
                                   <CheckCircle2 size={12} />
-                                  <span>Khóa DONE</span>
+                                  <span>DONE</span>
                                 </span>
                               ) : task.status === 'IN_PREVIEW' ? (
                                 <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
@@ -922,6 +1046,91 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                   Thêm
                 </button>
               </div>
+            </div>
+
+            {/* File Attachments Section (Import tệp báo cáo / tài liệu nghiệm thu) */}
+            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Paperclip size={14} className="text-blue-600" />
+                  <span>Tài Liệu & Báo Cáo Đính Kèm ({taskAttachments.length})</span>
+                </h4>
+
+                {/* Upload Trigger Button */}
+                <div>
+                  <input
+                    type="file"
+                    ref={attachmentFileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => attachmentFileInputRef.current?.click()}
+                    disabled={isUploadingAttachment}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploadingAttachment ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Upload size={12} />
+                    )}
+                    <span>{isUploadingAttachment ? 'Đang tải...' : 'Tải lên tệp'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Attachments List */}
+              {taskAttachments.length === 0 ? (
+                <div className="py-4 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
+                  Chưa có tệp đính kèm nào. Nhân sự có thể tải lên tài liệu kết quả hoặc báo cáo để
+                  quản lý xem.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {taskAttachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs gap-2"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText size={16} className="text-blue-500 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="font-bold text-slate-800 dark:text-slate-200 truncate"
+                            title={att.name}
+                          >
+                            {att.name}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {(att.size / 1024).toFixed(1)} KB • {att.uploaderName} •{' '}
+                            {att.uploadedAt}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAttachment(att)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
+                          title="Tải xuống tệp"
+                        >
+                          <Download size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors cursor-pointer"
+                          title="Gỡ tệp"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Quick Status Action for Manager */}

@@ -45,9 +45,9 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Smooth Scroll Refs & Interval for Grid Navigation Arrows
+  // Smooth Scroll Refs & Loop for Grid Navigation Arrows
   const gridScrollRef = useRef<HTMLDivElement>(null);
-  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   // Selected Meeting Modal State
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -56,27 +56,28 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
   // Auto-scroll loop when hovering on left/right end arrows
   const startAutoScroll = (direction: 'left' | 'right') => {
     stopAutoScroll();
-    scrollIntervalRef.current = setInterval(() => {
+    const speed = direction === 'left' ? -8 : 8;
+    const scrollStep = () => {
       if (gridScrollRef.current) {
-        gridScrollRef.current.scrollBy({
-          left: direction === 'left' ? -18 : 18,
-          behavior: 'auto',
-        });
+        gridScrollRef.current.scrollLeft += speed;
       }
-    }, 16);
+      animFrameRef.current = requestAnimationFrame(scrollStep);
+    };
+    animFrameRef.current = requestAnimationFrame(scrollStep);
   };
 
   const stopAutoScroll = () => {
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
     }
   };
 
   const stepScroll = (direction: 'left' | 'right') => {
+    stopAutoScroll();
     if (gridScrollRef.current) {
       gridScrollRef.current.scrollBy({
-        left: direction === 'left' ? -350 : 350,
+        left: direction === 'left' ? -380 : 380,
         behavior: 'smooth',
       });
     }
@@ -84,7 +85,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
 
   useEffect(() => {
     return () => {
-      if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
+      if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);
 
@@ -208,12 +209,34 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
     });
   }, [meetings]);
 
-  const renderMeetingStateBadge = (mtg: Meeting) => {
+  const renderMeetingStateBadge = (mtg: Meeting, isCompact = false) => {
     const state = resolveMeetingState(mtg);
+    if (isCompact) {
+      if (state === 'LIVE') {
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider bg-emerald-500 text-white uppercase shrink-0 flex items-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-white animate-ping" />
+            <span>LIVE</span>
+          </span>
+        );
+      }
+      if (state === 'UPCOMING') {
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shrink-0">
+            SẮP TỚI
+          </span>
+        );
+      }
+      return (
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+          KẾT THÚC
+        </span>
+      );
+    }
     const badge = getMeetingStateBadge(state);
     return (
       <span
-        className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${badge.color}`}
+        className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 ${badge.color}`}
       >
         {state === 'LIVE' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
         {state === 'UPCOMING' && <Clock size={10} />}
@@ -320,7 +343,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             onMouseEnter={() => startAutoScroll('left')}
             onMouseLeave={stopAutoScroll}
             onClick={() => stepScroll('left')}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-xs absolute -left-4 top-1/2 -translate-y-1/2 z-20"
+            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -left-4 top-1/2 -translate-y-1/2 z-20"
             title="Rê chuột hoặc nhấp để lướt lùi sang trái"
           >
             <ChevronLeft size={20} strokeWidth={2.5} />
@@ -332,7 +355,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             onMouseEnter={() => startAutoScroll('right')}
             onMouseLeave={stopAutoScroll}
             onClick={() => stepScroll('right')}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-xs absolute -right-4 top-1/2 -translate-y-1/2 z-20"
+            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -right-4 top-1/2 -translate-y-1/2 z-20"
             title="Rê chuột hoặc nhấp để lướt tới sang phải"
           >
             <ChevronRight size={20} strokeWidth={2.5} />
@@ -343,7 +366,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             ref={gridScrollRef}
             className="overflow-x-auto custom-scrollbar pb-3 scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800"
           >
-            <div className="grid grid-cols-7 gap-3 min-w-[1100px]">
+            <div className="grid grid-cols-7 gap-3 min-w-[1260px]">
               {weekDays.map((day) => {
                 const dayMeetings = meetingsByDay[day.dateStr] || [];
 
@@ -405,11 +428,11 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                               }`}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0">
                                   <Clock size={10} />
                                   <span>{timeStr}</span>
                                 </span>
-                                {renderMeetingStateBadge(mtg)}
+                                {renderMeetingStateBadge(mtg, true)}
                               </div>
 
                               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">

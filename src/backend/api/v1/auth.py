@@ -229,6 +229,11 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     role_name = _resolve_user_role(current_user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    dept_id = dept_mem.department_id if dept_mem else None
+    dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
+    dept_name = dept.name if dept else None
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
@@ -239,6 +244,8 @@ def get_me(
         job_title=current_user.job_title,
         provider=current_user.provider,
         is_active=current_user.is_active,
+        department_id=dept_id,
+        department_name=dept_name,
     )
 
 
@@ -258,6 +265,11 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     role_name = _resolve_user_role(current_user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    dept_id = dept_mem.department_id if dept_mem else None
+    dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
+    dept_name = dept.name if dept else None
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
@@ -268,5 +280,7 @@ def update_me(
         job_title=current_user.job_title,
         provider=current_user.provider,
         is_active=current_user.is_active,
+        department_id=dept_id,
+        department_name=dept_name,
     )
 

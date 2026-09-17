@@ -33,6 +33,8 @@ class UserResponse(BaseModel):
     job_title: str | None = None
     provider: str
     is_active: bool
+    department_id: str | None = None
+    department_name: str | None = None
 
     model_config = {"from_attributes": True}
 

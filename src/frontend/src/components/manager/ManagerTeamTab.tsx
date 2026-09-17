@@ -85,10 +85,17 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
           ? membersRes.value
           : [];
 
-      // Strictly isolate members for manager's department only
-      const effectiveMembers = user?.department_id
-        ? rawMembers.filter((m) => m.department_id === user.department_id)
-        : rawMembers;
+      // Strictly isolate subordinate members for manager's department only:
+      // Exclude OWNER, ADMIN, other MANAGER, and self
+      const effectiveMembers = rawMembers.filter((m) => {
+        const role = (m.role || '').toUpperCase();
+        if (role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER') return false;
+        if (m.user_id === user?.id) return false;
+        if (user?.department_id) {
+          return m.department_id === user.department_id;
+        }
+        return true;
+      });
 
       // Fetch issues to calculate member capacity
       let issues: Issue[] = [];
