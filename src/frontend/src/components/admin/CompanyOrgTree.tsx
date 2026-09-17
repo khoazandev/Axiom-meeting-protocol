@@ -17,7 +17,10 @@ import {
 interface CompanyOrgTreeProps {
   members: OrgMemberDetail[];
   departments: Department[];
-  onUpdateRole: (userId: string, newRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER') => Promise<void>;
+  onUpdateRole: (
+    userId: string,
+    newRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER'
+  ) => Promise<void>;
   onUpdateDepartment: (userId: string, departmentId: string | null) => Promise<void>;
   onAddDepartment: (name: string, description?: string) => Promise<void>;
   onEditDepartment: (deptId: string, name: string, description?: string) => Promise<void>;
@@ -83,9 +86,7 @@ export function CompanyOrgTree({
   };
 
   const unassignedMembers = useMemo(() => {
-    return members.filter(
-      (m) => !m.department_id && m.id !== chairman?.id && m.role !== 'OWNER'
-    );
+    return members.filter((m) => !m.department_id && m.id !== chairman?.id && m.role !== 'OWNER');
   }, [members, chairman]);
 
   // Handlers for Drawer
@@ -263,13 +264,19 @@ export function CompanyOrgTree({
                 <div
                   onClick={() => openMemberDetail(chairman)}
                   className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border-2 border-amber-400 dark:border-amber-500 shadow-md hover:shadow-xl transition-all cursor-pointer flex items-center gap-3.5 w-80 group ${
-                    isMatched(chairman.full_name) || isMatched(chairman.email) ? 'ring-2 ring-blue-500' : ''
+                    isMatched(chairman.full_name) || isMatched(chairman.email)
+                      ? 'ring-2 ring-blue-500'
+                      : ''
                   }`}
                 >
                   <div className="relative shrink-0">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-bold text-base shadow-sm ring-2 ring-amber-300 dark:ring-amber-500">
                       {chairman.avatar_url ? (
-                        <img src={chairman.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={chairman.avatar_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         chairman.full_name.slice(0, 2).toUpperCase()
                       )}
@@ -289,7 +296,9 @@ export function CompanyOrgTree({
                         OWNER
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{chairman.email}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {chairman.email}
+                    </p>
                     <div className="flex items-center justify-between mt-1 text-[11px]">
                       <span className="text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
                         <MatIcon name="verified_user" className="text-[13px]" />
@@ -339,8 +348,8 @@ export function CompanyOrgTree({
                       isDropTarget
                         ? 'border-blue-500 ring-4 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-950/40 scale-102'
                         : hasSearchMatch
-                        ? 'border-blue-400/80 dark:border-blue-700 shadow-md'
-                        : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700'
+                          ? 'border-blue-400/80 dark:border-blue-700 shadow-md'
+                          : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700'
                     }`}
                   >
                     {/* Top branch vertical connector pin linking to Chairman beam */}
@@ -425,7 +434,11 @@ export function CompanyOrgTree({
                               >
                                 <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0 ring-1 ring-blue-300">
                                   {manager.avatar_url ? (
-                                    <img src={manager.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    <img
+                                      src={manager.avatar_url}
+                                      alt=""
+                                      className="w-full h-full object-cover"
+                                    />
                                   ) : (
                                     manager.full_name.slice(0, 2).toUpperCase()
                                   )}
@@ -434,7 +447,9 @@ export function CompanyOrgTree({
                                   <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                                     {manager.full_name}
                                   </p>
-                                  <p className="text-[11px] text-slate-500 truncate">{manager.email}</p>
+                                  <p className="text-[11px] text-slate-500 truncate">
+                                    {manager.email}
+                                  </p>
                                 </div>
                               </div>
                             </UserHoverCard>
@@ -460,7 +475,12 @@ export function CompanyOrgTree({
                               </p>
                             ) : (
                               regularMembers.map((member) => (
-                                <UserHoverCard key={member.id} member={member} align="top" className="w-full">
+                                <UserHoverCard
+                                  key={member.id}
+                                  member={member}
+                                  align="top"
+                                  className="w-full"
+                                >
                                   <div
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, member.user_id)}
@@ -470,7 +490,11 @@ export function CompanyOrgTree({
                                     <div className="flex items-center gap-2 min-w-0">
                                       <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold shrink-0">
                                         {member.avatar_url ? (
-                                          <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                          <img
+                                            src={member.avatar_url}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                          />
                                         ) : (
                                           member.full_name.slice(0, 2).toUpperCase()
                                         )}
@@ -512,7 +536,9 @@ export function CompanyOrgTree({
                     Nhân sự chưa phân bổ • {unassignedMembers.length}
                   </h4>
                 </div>
-                <span className="text-xs text-slate-500">Kéo nhân viên thả vào phòng ban ở trên</span>
+                <span className="text-xs text-slate-500">
+                  Kéo nhân viên thả vào phòng ban ở trên
+                </span>
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
@@ -532,7 +558,9 @@ export function CompanyOrgTree({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{m.full_name}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {m.full_name}
+                        </p>
                         <p className="text-[10.5px] text-slate-500 truncate">{m.email}</p>
                       </div>
                     </div>
@@ -558,7 +586,11 @@ export function CompanyOrgTree({
             <div className="flex items-center gap-3.5 mb-5 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="w-14 h-14 rounded-full overflow-hidden bg-blue-600 text-white flex items-center justify-center text-lg font-bold shadow-md ring-2 ring-blue-300 dark:ring-blue-800">
                 {selectedMember.avatar_url ? (
-                  <img src={selectedMember.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={selectedMember.avatar_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   selectedMember.full_name.slice(0, 2).toUpperCase()
                 )}
@@ -711,8 +743,8 @@ export function CompanyOrgTree({
                           isUsed
                             ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
                             : isSelected
-                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                              ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
                         }`}
                       >
                         <MatIcon name={item.icon} className="text-[20px]" />
@@ -826,8 +858,8 @@ export function CompanyOrgTree({
                           isUsed
                             ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
                             : isSelected
-                            ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
+                              ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
                         }`}
                       >
                         <MatIcon name={item.icon} className="text-[20px]" />

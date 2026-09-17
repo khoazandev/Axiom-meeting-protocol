@@ -3,7 +3,17 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { meetingsApi } from '@/lib/api';
-import { Video, MicOff, Lock, Sparkles, Users, Clock, Calendar, Upload, Loader2 } from 'lucide-react';
+import {
+  Video,
+  MicOff,
+  Lock,
+  Sparkles,
+  Users,
+  Clock,
+  Calendar,
+  Upload,
+  Loader2,
+} from 'lucide-react';
 import {
   Plus,
   FileCheck2,

@@ -255,9 +255,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
             />
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-              <span>
-                💡 AI sẽ sử dụng Agenda này để điều phối và tổng hợp biên bản cuộc họp.
-              </span>
+              <span>💡 AI sẽ sử dụng Agenda này để điều phối và tổng hợp biên bản cuộc họp.</span>
               <span>{agendaText.length} ký tự</span>
             </div>
           </div>

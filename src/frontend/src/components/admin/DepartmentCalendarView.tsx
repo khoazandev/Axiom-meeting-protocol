@@ -23,7 +23,7 @@ interface CalendarDayInfo {
 interface WeekTaskSpan {
   task: TimelineGanttItem;
   colStart: number; // 0 to 6
-  colSpan: number;  // 1 to 7
+  colSpan: number; // 1 to 7
   isStartOfTask: boolean;
   isEndOfTask: boolean;
   progress: number;
@@ -227,7 +227,9 @@ export function DepartmentCalendarView({
           const isEndOfTask = taskDue <= weekEndStr;
 
           // Progress percentage
-          let prog = task.progress_percent ?? (task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0);
+          let prog =
+            task.progress_percent ??
+            (task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0);
           if (task.status === 'DONE') prog = 100;
 
           spansInWeek.push({
@@ -251,9 +253,18 @@ export function DepartmentCalendarView({
   }, [weeks, filteredTasks]);
 
   const monthNames = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4',
-    'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8',
-    'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+    'Tháng 1',
+    'Tháng 2',
+    'Tháng 3',
+    'Tháng 4',
+    'Tháng 5',
+    'Tháng 6',
+    'Tháng 7',
+    'Tháng 8',
+    'Tháng 9',
+    'Tháng 10',
+    'Tháng 11',
+    'Tháng 12',
   ];
 
   const weekDayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -438,7 +449,10 @@ export function DepartmentCalendarView({
             const spans = weekSpans[weekIdx];
 
             return (
-              <div key={weekIdx} className="relative min-h-[115px] flex flex-col border-b border-slate-100 dark:border-slate-800/80 last:border-b-0">
+              <div
+                key={weekIdx}
+                className="relative min-h-[115px] flex flex-col border-b border-slate-100 dark:border-slate-800/80 last:border-b-0"
+              >
                 {/* Dedicated Top Row: Date Numbers for each day */}
                 <div className="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-800/80 border-b border-slate-100/70 dark:border-slate-800/70 bg-slate-50/20 dark:bg-slate-900/20">
                   {weekDays.map((dayInfo) => {
@@ -451,8 +465,8 @@ export function DepartmentCalendarView({
                           dayInfo.isToday
                             ? 'bg-blue-50/80 dark:bg-blue-950/40'
                             : dayInfo.isCurrentMonth
-                            ? 'bg-transparent'
-                            : 'bg-slate-50/40 dark:bg-slate-950/30'
+                              ? 'bg-transparent'
+                              : 'bg-slate-50/40 dark:bg-slate-950/30'
                         }`}
                       >
                         <span
@@ -460,8 +474,8 @@ export function DepartmentCalendarView({
                             dayInfo.isToday
                               ? 'text-blue-600 dark:text-blue-400 font-extrabold'
                               : dayInfo.isCurrentMonth
-                              ? 'text-slate-700 dark:text-slate-200 font-medium'
-                              : 'text-slate-300 dark:text-slate-600'
+                                ? 'text-slate-700 dark:text-slate-200 font-medium'
+                                : 'text-slate-300 dark:text-slate-600'
                           }`}
                         >
                           {dayFormatted}
@@ -486,17 +500,23 @@ export function DepartmentCalendarView({
                 {/* Foreground Task Tracks: Spans across days as continuous rounded pills */}
                 <div className="relative z-10 py-2 px-1 space-y-1.5 flex-1 min-h-[75px]">
                   {spans.map((span, spanIdx) => {
-                    const { task, colStart, colSpan, isStartOfTask, isEndOfTask, progress, deptColor, deptCode } = span;
+                    const {
+                      task,
+                      colStart,
+                      colSpan,
+                      isStartOfTask,
+                      isEndOfTask,
+                      progress,
+                      deptColor,
+                      deptCode,
+                    } = span;
 
                     const isDone = progress === 100;
                     const isTodo = progress === 0;
                     const isPartial = progress > 0 && progress < 100;
 
                     return (
-                      <div
-                        key={`${task.id}-${spanIdx}`}
-                        className="grid grid-cols-7 gap-0"
-                      >
+                      <div key={`${task.id}-${spanIdx}`} className="grid grid-cols-7 gap-0">
                         <div
                           style={{
                             gridColumnStart: colStart + 1,
@@ -607,9 +627,7 @@ export function DepartmentCalendarView({
                     {selectedTaskForModal.key}
                   </span>
                 </div>
-                <h3 className="text-base font-bold leading-snug">
-                  {selectedTaskForModal.title}
-                </h3>
+                <h3 className="text-base font-bold leading-snug">{selectedTaskForModal.title}</h3>
               </div>
               <button
                 type="button"
@@ -623,9 +641,17 @@ export function DepartmentCalendarView({
             {/* Progress Bar with Colored Finished Portion & Gray Remaining Portion */}
             <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 dark:text-slate-300">Tiến độ công việc</span>
+                <span className="font-bold text-slate-700 dark:text-slate-300">
+                  Tiến độ công việc
+                </span>
                 <span className="font-mono font-black text-blue-600 dark:text-blue-400">
-                  {selectedTaskForModal.progress_percent ?? (selectedTaskForModal.status === 'DONE' ? 100 : selectedTaskForModal.status === 'IN_PROGRESS' ? 50 : 0)}%
+                  {selectedTaskForModal.progress_percent ??
+                    (selectedTaskForModal.status === 'DONE'
+                      ? 100
+                      : selectedTaskForModal.status === 'IN_PROGRESS'
+                        ? 50
+                        : 0)}
+                  %
                 </span>
               </div>
               <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex">
@@ -646,14 +672,18 @@ export function DepartmentCalendarView({
             {/* Task Info Grid */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Khối phòng ban</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                  Khối phòng ban
+                </span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   {selectedTaskForModal.department_name}
                 </span>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Người phụ trách</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                  Người phụ trách
+                </span>
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
                   {selectedTaskForModal.assignee_avatar && (
                     <img
@@ -667,14 +697,18 @@ export function DepartmentCalendarView({
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Thời gian bắt đầu</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                  Thời gian bắt đầu
+                </span>
                 <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
                   {selectedTaskForModal.start_date.slice(0, 10)}
                 </span>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Hạn chót (Due Date)</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                  Hạn chót (Due Date)
+                </span>
                 <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
                   {selectedTaskForModal.due_date.slice(0, 10)}
                 </span>
@@ -683,7 +717,9 @@ export function DepartmentCalendarView({
 
             {selectedTaskForModal.description && (
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Ghi chú nhiệm vụ</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                  Ghi chú nhiệm vụ
+                </span>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
                   {selectedTaskForModal.description}
                 </p>

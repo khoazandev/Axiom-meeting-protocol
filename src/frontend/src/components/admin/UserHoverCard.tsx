@@ -20,7 +20,9 @@ export function UserHoverCard({
 }: UserHoverCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; placeAbove: boolean } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; placeAbove: boolean } | null>(
+    null
+  );
   const triggerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -93,23 +95,26 @@ export function UserHoverCard({
   const roleBadgeConfig = isOwner
     ? {
         label: 'OWNER',
-        badgeClass: 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80',
+        badgeClass:
+          'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/80',
         ringClass: 'ring-amber-400 dark:ring-amber-500',
         note: 'Điều hành chiến lược toàn công ty',
       }
     : isManager
-    ? {
-        label: 'MANAGER',
-        badgeClass: 'bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/80',
-        ringClass: 'ring-blue-500',
-        note: `Quản lý điều phối ${member.department_name || 'khối chuyên môn'}`,
-      }
-    : {
-        label: 'MEMBER',
-        badgeClass: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-        ringClass: 'ring-emerald-500',
-        note: `Chuyên viên trực thuộc ${member.department_name || 'khối chuyên môn'}`,
-      };
+      ? {
+          label: 'MANAGER',
+          badgeClass:
+            'bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/80',
+          ringClass: 'ring-blue-500',
+          note: `Quản lý điều phối ${member.department_name || 'khối chuyên môn'}`,
+        }
+      : {
+          label: 'MEMBER',
+          badgeClass:
+            'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+          ringClass: 'ring-emerald-500',
+          note: `Chuyên viên trực thuộc ${member.department_name || 'khối chuyên môn'}`,
+        };
 
   const phoneFormatted = '+84 908 888 999';
 

@@ -34,32 +34,34 @@ export function AuditSecurityTab({
       (securitySummary as any)?.warn_events ??
       logs.filter((l) => l.severity === 'WARN').length;
     const totalEvents =
-      securitySummary?.total_events_24h ??
-      (securitySummary as any)?.total_events ??
-      logs.length;
+      securitySummary?.total_events_24h ?? (securitySummary as any)?.total_events ?? logs.length;
     const infoCount =
-      (securitySummary as any)?.info_events ??
-      Math.max(totalEvents - critCount - warnCount, 0);
+      (securitySummary as any)?.info_events ?? Math.max(totalEvents - critCount - warnCount, 0);
     const uniqueUsers =
       (securitySummary as any)?.unique_users ??
       Math.max(new Set(logs.map((l) => l.user_email)).size, 1);
 
-    const timeline =
-      securitySummary?.timeline_7d?.map((t: any) => ({
-        date: t.date,
-        CRITICAL: t.critical || 0,
-        WARN: Math.round(t.count * 0.2),
-        INFO: Math.max(t.count - (t.critical || 0) - Math.round(t.count * 0.2), 0),
-        total: t.count,
-      })) || [
-        { date: 'T-6', CRITICAL: 0, WARN: 1, INFO: 5, total: 6 },
-        { date: 'T-5', CRITICAL: 1, WARN: 0, INFO: 8, total: 9 },
-        { date: 'T-4', CRITICAL: 0, WARN: 2, INFO: 4, total: 6 },
-        { date: 'T-3', CRITICAL: 0, WARN: 1, INFO: 7, total: 8 },
-        { date: 'T-2', CRITICAL: 1, WARN: 1, INFO: 6, total: 8 },
-        { date: 'T-1', CRITICAL: 0, WARN: 1, INFO: 9, total: 10 },
-        { date: 'Hôm nay', CRITICAL: critCount, WARN: warnCount, INFO: infoCount, total: totalEvents || 12 },
-      ];
+    const timeline = securitySummary?.timeline_7d?.map((t: any) => ({
+      date: t.date,
+      CRITICAL: t.critical || 0,
+      WARN: Math.round(t.count * 0.2),
+      INFO: Math.max(t.count - (t.critical || 0) - Math.round(t.count * 0.2), 0),
+      total: t.count,
+    })) || [
+      { date: 'T-6', CRITICAL: 0, WARN: 1, INFO: 5, total: 6 },
+      { date: 'T-5', CRITICAL: 1, WARN: 0, INFO: 8, total: 9 },
+      { date: 'T-4', CRITICAL: 0, WARN: 2, INFO: 4, total: 6 },
+      { date: 'T-3', CRITICAL: 0, WARN: 1, INFO: 7, total: 8 },
+      { date: 'T-2', CRITICAL: 1, WARN: 1, INFO: 6, total: 8 },
+      { date: 'T-1', CRITICAL: 0, WARN: 1, INFO: 9, total: 10 },
+      {
+        date: 'Hôm nay',
+        CRITICAL: critCount,
+        WARN: warnCount,
+        INFO: infoCount,
+        total: totalEvents || 12,
+      },
+    ];
 
     return {
       total_events: totalEvents,
@@ -222,7 +224,9 @@ export function AuditSecurityTab({
               {summary.critical_events > 0 ? 'Cần xử lý' : 'An toàn'}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Thay đổi quyền Admin, xóa log, truy cập lạ</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Thay đổi quyền Admin, xóa log, truy cập lạ
+          </p>
         </div>
 
         {/* Card 3: Warnings */}
@@ -241,7 +245,9 @@ export function AuditSecurityTab({
             </span>
             <span className="text-xs font-bold text-amber-500">Bất thường</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Đình chỉ thành viên, sửa chính sách kỷ luật</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Đình chỉ thành viên, sửa chính sách kỷ luật
+          </p>
         </div>
 
         {/* Card 4: Unique Monitored Users */}
@@ -272,7 +278,10 @@ export function AuditSecurityTab({
             <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <MatIcon name="analytics" className="text-blue-600 dark:text-blue-400 text-[18px]" />
+                  <MatIcon
+                    name="analytics"
+                    className="text-blue-600 dark:text-blue-400 text-[18px]"
+                  />
                   <span>Tần Suất Biến Cố An Ninh 7 Ngày Gần Nhất</span>
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -363,7 +372,10 @@ export function AuditSecurityTab({
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-extrabold text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-              <MatIcon name="pie_chart" className="text-indigo-600 dark:text-indigo-400 text-[18px]" />
+              <MatIcon
+                name="pie_chart"
+                className="text-indigo-600 dark:text-indigo-400 text-[18px]"
+              />
               <span>Phân Bố Mức Độ Nghiêm Trọng</span>
             </h3>
 
@@ -376,7 +388,11 @@ export function AuditSecurityTab({
                     <span>Cấp 1 - CRITICAL</span>
                   </span>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {summary.critical_events} ({Math.round((summary.critical_events / Math.max(summary.total_events, 1)) * 100)}%)
+                    {summary.critical_events} (
+                    {Math.round(
+                      (summary.critical_events / Math.max(summary.total_events, 1)) * 100
+                    )}
+                    %)
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -397,7 +413,8 @@ export function AuditSecurityTab({
                     <span>Cấp 2 - WARN</span>
                   </span>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {summary.warn_events} ({Math.round((summary.warn_events / Math.max(summary.total_events, 1)) * 100)}%)
+                    {summary.warn_events} (
+                    {Math.round((summary.warn_events / Math.max(summary.total_events, 1)) * 100)}%)
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -418,7 +435,8 @@ export function AuditSecurityTab({
                     <span>Cấp 3 - INFO</span>
                   </span>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {summary.info_events} ({Math.round((summary.info_events / Math.max(summary.total_events, 1)) * 100)}%)
+                    {summary.info_events} (
+                    {Math.round((summary.info_events / Math.max(summary.total_events, 1)) * 100)}%)
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -446,7 +464,9 @@ export function AuditSecurityTab({
                   <MatIcon name="check_circle" className="text-emerald-500 text-[16px]" />
                   <span>Bảo vệ phiên họp Owner/Admin</span>
                 </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">Đã kích hoạt</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  Đã kích hoạt
+                </span>
               </div>
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
                 <span className="flex items-center gap-1.5">
@@ -581,7 +601,10 @@ export function AuditSecurityTab({
                 >
                   {/* Timestamp */}
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap text-[11px]">
-                    {log.timestamp || (log.created_at ? new Date(log.created_at).toLocaleString('vi-VN') : 'Vừa xong')}
+                    {log.timestamp ||
+                      (log.created_at
+                        ? new Date(log.created_at).toLocaleString('vi-VN')
+                        : 'Vừa xong')}
                   </td>
 
                   {/* Severity */}
@@ -681,9 +704,7 @@ export function AuditSecurityTab({
             <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5 text-xs text-slate-600 dark:text-slate-300 font-mono">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans">Thời điểm:</span>
-                <span>
-                  {selectedLogForDetail.timestamp || selectedLogForDetail.created_at}
-                </span>
+                <span>{selectedLogForDetail.timestamp || selectedLogForDetail.created_at}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-sans">Người thực hiện:</span>

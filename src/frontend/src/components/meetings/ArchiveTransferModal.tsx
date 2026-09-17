@@ -63,10 +63,20 @@ export function ArchiveTransferModal({
   const meetingType: 'EXECUTIVE' | 'DEPARTMENT' | 'MEMBER' = useMemo(() => {
     const title = (meeting.title || '').toLowerCase();
     const mType = (meeting.meeting_type || '').toUpperCase();
-    if (mType === 'EXECUTIVE' || title.includes('cấp cao') || title.includes('ban điều hành') || title.includes('lãnh đạo')) {
+    if (
+      mType === 'EXECUTIVE' ||
+      title.includes('cấp cao') ||
+      title.includes('ban điều hành') ||
+      title.includes('lãnh đạo')
+    ) {
       return 'EXECUTIVE';
     }
-    if (meeting.department_id || mType === 'DEPARTMENT' || title.includes('phòng ban') || title.includes('sprint')) {
+    if (
+      meeting.department_id ||
+      mType === 'DEPARTMENT' ||
+      title.includes('phòng ban') ||
+      title.includes('sprint')
+    ) {
       return 'DEPARTMENT';
     }
     return 'MEMBER';
@@ -80,7 +90,7 @@ export function ArchiveTransferModal({
         title: t.title || '',
         target_department: t.target_department || DEPARTMENTS[0].name,
         assignee_id: t.assignee_id || '',
-        assignee_name: t.assignee_name || (meetingMembers[0]?.user_name || ''),
+        assignee_name: t.assignee_name || meetingMembers[0]?.user_name || '',
         deadline: t.deadline || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
       }));
     }
@@ -237,11 +247,13 @@ export function ArchiveTransferModal({
                 </span>{' '}
                 {meetingType === 'EXECUTIVE' ? (
                   <span className="text-slate-600 dark:text-slate-400">
-                    Owner xem toàn bộ biên bản. Trưởng phòng xem được các nghị quyết được phân công cho phòng ban mình.
+                    Owner xem toàn bộ biên bản. Trưởng phòng xem được các nghị quyết được phân công
+                    cho phòng ban mình.
                   </span>
                 ) : (
                   <span className="text-slate-600 dark:text-slate-400">
-                    Owner xem được toàn bộ. Manager và Member chỉ xem được kho lưu trữ trong phạm vi phòng ban của mình.
+                    Owner xem được toàn bộ. Manager và Member chỉ xem được kho lưu trữ trong phạm vi
+                    phòng ban của mình.
                   </span>
                 )}
               </div>
@@ -402,7 +414,9 @@ export function ArchiveTransferModal({
                   Cuộc họp trao đổi nội bộ giữa các thành viên
                 </p>
                 <p className="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-400">
-                  Cuộc họp này không áp dụng quy trình phân chia nhiệm vụ. Toàn bộ bản ghi âm, phụ đề song ngữ và biên bản tóm tắt AI sẽ được chuyển thẳng về Kho lưu trữ của phòng ban.
+                  Cuộc họp này không áp dụng quy trình phân chia nhiệm vụ. Toàn bộ bản ghi âm, phụ
+                  đề song ngữ và biên bản tóm tắt AI sẽ được chuyển thẳng về Kho lưu trữ của phòng
+                  ban.
                 </p>
               </div>
             </div>

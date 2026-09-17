@@ -98,7 +98,9 @@ export function OverviewPulseTab({
         setExecUploadedFile(file.name);
       }
     } catch (err: any) {
-      alert(err?.message || 'Không thể trích xuất nội dung tệp. Vui lòng thử lại hoặc dán trực tiếp.');
+      alert(
+        err?.message || 'Không thể trích xuất nội dung tệp. Vui lòng thử lại hoặc dán trực tiếp.'
+      );
     } finally {
       setIsParsingExecFile(false);
       if (execFileInputRef.current) execFileInputRef.current.value = '';
@@ -178,7 +180,8 @@ export function OverviewPulseTab({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Giám sát vận hành thời gian thực, thẩm định phê duyệt cuộc họp phòng ban và điều hành các phiên họp trọng yếu.
+            Giám sát vận hành thời gian thực, thẩm định phê duyệt cuộc họp phòng ban và điều hành
+            các phiên họp trọng yếu.
           </p>
         </div>
 
@@ -349,7 +352,8 @@ export function OverviewPulseTab({
                     Không có yêu cầu nào chờ phê duyệt
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                    Toàn bộ đề xuất họp từ các phòng ban đã được xử lý. Hệ thống đang vận hành theo chuẩn kỷ luật DX-OS.
+                    Toàn bộ đề xuất họp từ các phòng ban đã được xử lý. Hệ thống đang vận hành theo
+                    chuẩn kỷ luật DX-OS.
                   </p>
                 </div>
               ) : (
@@ -458,9 +462,15 @@ export function OverviewPulseTab({
                       ? allMeetings.filter((m) => (m as any).approval_status !== 'PENDING')
                       : [...liveMeetings, ...(upcomingMeetings || []), ...(endedMeetings || [])];
 
-                  const liveCount = effectiveAll.filter((m) => resolveMeetingState(m) === 'LIVE').length;
-                  const upcomingCount = effectiveAll.filter((m) => resolveMeetingState(m) === 'UPCOMING').length;
-                  const endedCount = effectiveAll.filter((m) => resolveMeetingState(m) === 'ENDED').length;
+                  const liveCount = effectiveAll.filter(
+                    (m) => resolveMeetingState(m) === 'LIVE'
+                  ).length;
+                  const upcomingCount = effectiveAll.filter(
+                    (m) => resolveMeetingState(m) === 'UPCOMING'
+                  ).length;
+                  const endedCount = effectiveAll.filter(
+                    (m) => resolveMeetingState(m) === 'ENDED'
+                  ).length;
 
                   return (
                     <>
@@ -541,11 +551,13 @@ export function OverviewPulseTab({
                       <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         {meetingFilter === 'LIVE' && 'Hiện chưa có cuộc họp nào đang diễn ra'}
                         {meetingFilter === 'UPCOMING' && 'Không có cuộc họp nào sắp diễn ra'}
-                        {meetingFilter === 'ENDED' && 'Chưa có cuộc họp nào kết thúc trong danh mục'}
+                        {meetingFilter === 'ENDED' &&
+                          'Chưa có cuộc họp nào kết thúc trong danh mục'}
                         {meetingFilter === 'ALL' && 'Hiện chưa có cuộc họp nào được ghi nhận'}
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                        Bạn có thể mở phòng họp cấp cao với các Trưởng phòng ngay bây giờ hoặc xem các cuộc họp khác.
+                        Bạn có thể mở phòng họp cấp cao với các Trưởng phòng ngay bây giờ hoặc xem
+                        các cuộc họp khác.
                       </p>
                       <button
                         onClick={() => setIsExecModalOpen(true)}
@@ -570,11 +582,16 @@ export function OverviewPulseTab({
                       key={meeting.id}
                       onClick={() => {
                         if (isEnded) {
-                          setSelectedMeetingForDetails({ id: String(meeting.id), title: meeting.title });
+                          setSelectedMeetingForDetails({
+                            id: String(meeting.id),
+                            title: meeting.title,
+                          });
                         }
                       }}
                       className={`p-4 rounded-xl border transition-all flex flex-col gap-3 shadow-2xs group ${
-                        isEnded ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600' : ''
+                        isEnded
+                          ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-600'
+                          : ''
                       } ${
                         isLive
                           ? 'border-emerald-300 dark:border-emerald-800/80 bg-gradient-to-r from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 hover:border-emerald-400'
@@ -593,7 +610,9 @@ export function OverviewPulseTab({
                           <div
                             className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full ${badge.color}`}
                           >
-                            {badge.pulse && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
+                            {badge.pulse && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                            )}
                             <span>{badge.label}</span>
                           </div>
                         </div>
@@ -614,32 +633,38 @@ export function OverviewPulseTab({
                           >
                             <MatIcon name="schedule" className="text-[14px]" />
                             <span>
-                              {isLive && (
-                                meeting.started_at
-                                  ? `Bắt đầu lúc: ${new Date(meeting.started_at).toLocaleTimeString('vi-VN', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}`
-                                  : 'Đang diễn ra trực tiếp'
-                              )}
-                              {isUpcoming && (
-                                meeting.scheduled_at
-                                  ? `Dự kiến: ${new Date(meeting.scheduled_at).toLocaleTimeString('vi-VN', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })} (${new Date(meeting.scheduled_at).toLocaleDateString('vi-VN')})`
-                                  : 'Chưa tới giờ bắt đầu'
-                              )}
-                              {isEnded && (
-                                meeting.ended_at
-                                  ? `Kết thúc: ${new Date(meeting.ended_at).toLocaleTimeString('vi-VN', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                    })}`
-                                  : 'Cuộc họp đã kết thúc'
-                              )}
+                              {isLive &&
+                                (meeting.started_at
+                                  ? `Bắt đầu lúc: ${new Date(meeting.started_at).toLocaleTimeString(
+                                      'vi-VN',
+                                      {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      }
+                                    )}`
+                                  : 'Đang diễn ra trực tiếp')}
+                              {isUpcoming &&
+                                (meeting.scheduled_at
+                                  ? `Dự kiến: ${new Date(meeting.scheduled_at).toLocaleTimeString(
+                                      'vi-VN',
+                                      {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      }
+                                    )} (${new Date(meeting.scheduled_at).toLocaleDateString('vi-VN')})`
+                                  : 'Chưa tới giờ bắt đầu')}
+                              {isEnded &&
+                                (meeting.ended_at
+                                  ? `Kết thúc: ${new Date(meeting.ended_at).toLocaleTimeString(
+                                      'vi-VN',
+                                      {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                      }
+                                    )}`
+                                  : 'Cuộc họp đã kết thúc')}
                             </span>
                           </span>
 
@@ -674,14 +699,20 @@ export function OverviewPulseTab({
                         {isUpcoming && (
                           <div className="flex items-center gap-2 pt-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
                             <MatIcon name="info" className="text-[14px]" />
-                            <span>Phòng họp đã lên lịch. Chủ tịch / Quản trị viên có thể bấm "Bắt đầu sớm" để triệu tập họp ngay.</span>
+                            <span>
+                              Phòng họp đã lên lịch. Chủ tịch / Quản trị viên có thể bấm "Bắt đầu
+                              sớm" để triệu tập họp ngay.
+                            </span>
                           </div>
                         )}
 
                         {isEnded && (
                           <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium">
                             <MatIcon name="archive" className="text-[14px] text-slate-400" />
-                            <span>Cuộc họp đã kết thúc. Nhấp vào đây để xem Biên bản AI tóm tắt & Kho tri thức lưu trữ.</span>
+                            <span>
+                              Cuộc họp đã kết thúc. Nhấp vào đây để xem Biên bản AI tóm tắt & Kho
+                              tri thức lưu trữ.
+                            </span>
                           </div>
                         )}
                       </div>
@@ -696,7 +727,10 @@ export function OverviewPulseTab({
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
                               title="Dự thính âm thanh ẩn danh để kiểm toán mà không bật mic/camera"
                             >
-                              <MatIcon name="headset_mic" className="text-[15px] text-blue-600 dark:text-blue-400" />
+                              <MatIcon
+                                name="headset_mic"
+                                className="text-[15px] text-blue-600 dark:text-blue-400"
+                              />
                               <span>Dự thính</span>
                             </button>
 
@@ -732,14 +766,23 @@ export function OverviewPulseTab({
                             title="Bắt đầu phòng họp ngay và tự động gửi thông báo triệu tập tới các thành viên được mời"
                           >
                             <MatIcon name="play_arrow" className="text-[16px]" />
-                            <span>{startingEarlyId === String(meeting.id) ? 'Đang khởi động...' : 'Bắt đầu sớm & Triệu tập'}</span>
+                            <span>
+                              {startingEarlyId === String(meeting.id)
+                                ? 'Đang khởi động...'
+                                : 'Bắt đầu sớm & Triệu tập'}
+                            </span>
                           </button>
                         )}
 
                         {isEnded && (
                           <button
                             type="button"
-                            onClick={() => setSelectedMeetingForDetails({ id: String(meeting.id), title: meeting.title })}
+                            onClick={() =>
+                              setSelectedMeetingForDetails({
+                                id: String(meeting.id),
+                                title: meeting.title,
+                              })
+                            }
                             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
                             title="Mở Kho lưu trữ biên bản AI tóm tắt, quyết sách và danh sách task của cuộc họp đã kết thúc"
                           >
@@ -789,7 +832,8 @@ export function OverviewPulseTab({
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Đảm bảo tính chặt chẽ trong từng phiên họp: Agenda bắt buộc, AI ghi biên bản tự động và mã hóa độc lập.
+            Đảm bảo tính chặt chẽ trong từng phiên họp: Agenda bắt buộc, AI ghi biên bản tự động và
+            mã hóa độc lập.
           </p>
 
           <div className="space-y-2.5 text-xs">
@@ -810,7 +854,9 @@ export function OverviewPulseTab({
                   Trợ lý Ghi chép MoM Qwen AI
                 </span>
               </div>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">Tự động trích xuất</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                Tự động trích xuất
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
@@ -841,7 +887,9 @@ export function OverviewPulseTab({
             <div>
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
                 <span>LiveKit WebRTC Server</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">Port 7880 • Sẵn sàng</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  Port 7880 • Sẵn sàng
+                </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                 <div className="bg-emerald-500 h-full w-[98%]" />
@@ -851,7 +899,9 @@ export function OverviewPulseTab({
             <div>
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
                 <span>PostgreSQL Core Database</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">Port 5433 • Đã kết nối</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                  Port 5433 • Đã kết nối
+                </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                 <div className="bg-blue-500 h-full w-[100%]" />
@@ -861,7 +911,9 @@ export function OverviewPulseTab({
             <div>
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
                 <span>Ollama LLM Engine (Extraction Model)</span>
-                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">Port 11434 • GPU Active</span>
+                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                  Port 11434 • GPU Active
+                </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                 <div className="bg-purple-500 h-full w-[88%]" />
@@ -932,7 +984,9 @@ export function OverviewPulseTab({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200/70 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <MatIcon name="upload_file" className="text-[14px]" />
-                      <span>{isParsingExecFile ? 'Đang đọc...' : 'Nạp file (.txt, .md, .docx, .pdf)'}</span>
+                      <span>
+                        {isParsingExecFile ? 'Đang đọc...' : 'Nạp file (.txt, .md, .docx, .pdf)'}
+                      </span>
                     </button>
                     <span
                       className={`text-[11px] font-mono font-bold ${
@@ -997,14 +1051,17 @@ export function OverviewPulseTab({
                     onClick={handleSelectAllManagers}
                     className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold cursor-pointer"
                   >
-                    {selectedManagerIds.length === managers.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả Trưởng phòng'}
+                    {selectedManagerIds.length === managers.length
+                      ? 'Bỏ chọn tất cả'
+                      : 'Chọn tất cả Trưởng phòng'}
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
                   {managers.length === 0 ? (
                     <p className="text-xs text-slate-400 col-span-2 text-center py-2">
-                      Chưa có trưởng phòng nào trong hệ thống. Bạn có thể bổ nhiệm tại tab Cơ cấu nhân sự.
+                      Chưa có trưởng phòng nào trong hệ thống. Bạn có thể bổ nhiệm tại tab Cơ cấu
+                      nhân sự.
                     </p>
                   ) : (
                     managers.map((m) => {
@@ -1021,7 +1078,9 @@ export function OverviewPulseTab({
                         >
                           <div
                             className={`w-4 h-4 rounded flex items-center justify-center border ${
-                              isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                              isSelected
+                                ? 'bg-blue-600 border-blue-600 text-white'
+                                : 'border-slate-300 dark:border-slate-600'
                             }`}
                           >
                             {isSelected && <MatIcon name="check" className="text-[12px]" />}
