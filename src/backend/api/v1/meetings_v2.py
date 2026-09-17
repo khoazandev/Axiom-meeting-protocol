@@ -22,7 +22,7 @@ from src.backend.models import (
     KnowledgeChunk,
     User,
 )
-from src.backend.models import Department, AuditLog, OrganizationMember, Organization, Role
+from src.backend.models import Department, DepartmentMember, AuditLog, OrganizationMember, Organization, Role
 from src.backend.schemas.meeting import (
     MeetingApprovalRequest,
     MeetingCreate,
@@ -76,7 +76,38 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if is_meeting_member:
         return True
 
-    # User is not an invited member, creator, or Owner/Admin
+    # 3. Check Department: If meeting is assigned to a department, members of this department can access
+    if meeting.department_id:
+        dept_member = (
+            db.query(DepartmentMember)
+            .filter(
+                DepartmentMember.department_id == meeting.department_id,
+                DepartmentMember.user_id == user.id,
+            )
+            .first()
+        )
+        if dept_member:
+            return True
+
+    # 4. Check Colleague/Manager in same department: If meeting creator is in user's department
+    user_dept = (
+        db.query(DepartmentMember)
+        .filter(DepartmentMember.user_id == user.id)
+        .first()
+    )
+    if user_dept:
+        creator_dept = (
+            db.query(DepartmentMember)
+            .filter(
+                DepartmentMember.department_id == user_dept.department_id,
+                DepartmentMember.user_id == meeting.created_by_id,
+            )
+            .first()
+        )
+        if creator_dept:
+            return True
+
+    # User is not an invited member, creator, department colleague, or Owner/Admin
     return False
 
 
@@ -196,13 +227,21 @@ def create_meeting(
         if user_org:
             org_id = user_org.organization_id
 
-    sched_at = payload.scheduled_at or getattr(payload, "scheduled_start_time", None)
+    dept_id = payload.department_id
+    if not dept_id and current_user:
+        user_dept = (
+            db.query(DepartmentMember)
+            .filter(DepartmentMember.user_id == current_user.id)
+            .first()
+        )
+        if user_dept:
+            dept_id = user_dept.department_id
 
     meeting = Meeting(
         title=payload.title,
         description=payload.description or payload.agenda,
         organization_id=org_id,
-        department_id=payload.department_id,
+        department_id=dept_id,
         created_by_id=current_user.id,
         scheduled_at=sched_at,
         status=MeetingStatusEnum.SCHEDULED,
@@ -312,6 +351,14 @@ def list_my_meetings(
         ]
         if user_dept_id:
             access_conditions.append(Meeting.department_id == user_dept_id)
+            dept_user_ids = [
+                dm[0]
+                for dm in db.query(DepartmentMember.user_id)
+                .filter(DepartmentMember.department_id == user_dept_id)
+                .all()
+            ]
+            if dept_user_ids:
+                access_conditions.append(Meeting.created_by_id.in_(dept_user_ids))
 
         query = query.filter(or_(*access_conditions))
 

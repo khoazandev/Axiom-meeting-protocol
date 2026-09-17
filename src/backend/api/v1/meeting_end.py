@@ -113,26 +113,30 @@ def push_to_jira_endpoint(
         raise NotFoundException("Meeting")
     _require_host(db, meeting, current_user)
 
-    # 1. Ensure a default JiraProject exists for this org
+    # 1. Ensure target JiraProject exists (prioritizing meeting's department project e.g. SMA)
     org_id = meeting.organization_id
     project = None
-    if org_id:
+    if meeting.department_id:
+        project = db.query(JiraProject).filter(JiraProject.department_id == meeting.department_id).first()
+    if not project:
+        project = db.query(JiraProject).filter(JiraProject.key == "SMA").first()
+    if not project and org_id:
         project = db.query(JiraProject).filter(JiraProject.organization_id == org_id).first()
-    
     if not project:
         project = db.query(JiraProject).filter(JiraProject.key == "DX").first()
-        if not project:
-            project = JiraProject(
-                id=generate_uuid(),
-                key="DX",
-                name="Core Workspace",
-                organization_id=org_id,
-                created_by_id=current_user.id,
-                issue_counter=0
-            )
-            db.add(project)
-            db.commit()
-            db.refresh(project)
+    if not project:
+        project = JiraProject(
+            id=generate_uuid(),
+            key="SMA",
+            name="Smart Meeting AI Core",
+            organization_id=org_id,
+            department_id=meeting.department_id,
+            created_by_id=current_user.id,
+            issue_counter=0
+        )
+        db.add(project)
+        db.commit()
+        db.refresh(project)
 
     # 2. Process tasks
     for task_data in payload.tasks:
