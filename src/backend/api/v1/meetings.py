@@ -31,7 +31,8 @@ def create_meeting(
     """Create a new meeting.
     """
     meeting_data = meeting.model_dump()
-    agenda_text = meeting_data.pop("agenda_text", None)
+    agenda_text = meeting_data.pop("agenda_text", None) or meeting_data.get("agenda") or meeting_data.get("description")
+    print(f"AGENDA_TEXT_DEBUG: {repr(agenda_text)}", flush=True)
     if member:
         meeting_data["workspace_id"] = member.workspace_id
         meeting_data["created_by_id"] = member.user_id
@@ -63,7 +64,7 @@ def create_meeting(
             topic = models.Topic(
                 meeting_id=db_meeting.id,
                 title=title,
-                status=models.TopicStatusEnum.PENDING,
+                status=models.TopicStatusEnum.IN_PROGRESS if i == 0 else models.TopicStatusEnum.PENDING,
                 order_index=i
             )
             db.add(topic)

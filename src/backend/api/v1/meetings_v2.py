@@ -88,6 +88,34 @@ def create_meeting(
         status=MeetingMemberStatusEnum.ACCEPTED,
     )
     db.add(host)
+    db.flush()
+
+    # Extract topics from agenda
+    agenda_text = payload.agenda or payload.description
+    if agenda_text:
+        import re as regex
+        lines = [line.strip() for line in agenda_text.split("\n") if line.strip()]
+        valid_pattern = regex.compile(r"^(\d+[\.\)]|[\-\*\â€¢])\s+")
+        valid_lines = [line for line in lines if valid_pattern.match(line)]
+        if valid_lines:
+            lines = valid_lines
+            
+        from src.backend.models import Topic, TopicStatusEnum
+        for i, line in enumerate(lines):
+            title = line
+            for prefix in ["- ", "* ", "â€¢ "]:
+                if title.startswith(prefix):
+                    title = title[len(prefix):]
+            title = regex.sub(r"^\d+[\.\)]\s+", "", title)
+            
+            topic = Topic(
+                meeting_id=meeting.id,
+                title=title,
+                status=TopicStatusEnum.PENDING,
+                order_index=i
+            )
+            db.add(topic)
+
     db.commit()
     db.refresh(meeting)
     return meeting
@@ -186,7 +214,7 @@ def delete_meeting(
     is_admin = getattr(current_user, "role", None) in ("OWNER", "ADMIN")
 
     if not (is_creator or is_host or is_admin):
-        raise ForbiddenException("Bạn không có quyền xóa cuộc họp này. Chỉ người tạo hoặc chủ tọa mới có quyền xóa.")
+        raise ForbiddenException("Báº¡n khÃ´ng cÃ³ quyá»n xÃ³a cuá»™c há»p nÃ y. Chá»‰ ngÆ°á»i táº¡o hoáº·c chá»§ tá»a má»›i cÃ³ quyá»n xÃ³a.")
 
     # Delete dependent child rows to prevent foreign key errors
     try:
@@ -231,7 +259,7 @@ def delete_meeting(
 
     db.delete(meeting)
     db.commit()
-    return {"message": "Đã xóa cuộc họp thành công", "deleted_id": meeting_id}
+    return {"message": "ÄÃ£ xÃ³a cuá»™c há»p thÃ nh cÃ´ng", "deleted_id": meeting_id}
 
 
 @router.post("/parse-agenda")
@@ -263,7 +291,7 @@ async def parse_agenda_file(
             "filename": file.filename,
             "content": "",
             "char_count": 0,
-            "error": f"Không thể trích xuất nội dung tệp: {str(e)}",
+            "error": f"KhÃ´ng thá»ƒ trÃ­ch xuáº¥t ná»™i dung tá»‡p: {str(e)}",
         }
 
 
@@ -388,7 +416,7 @@ import uuid
 
 import json
 
-@router.get("/{meeting_id}/token", response_model=TokenResponse)
+@router.get("/{meeting_id}/access", response_model=TokenResponse)
 def get_meeting_token(
     meeting_id: str,
     participant_name: str,
@@ -477,7 +505,7 @@ def rag_query(
     if meeting.description and meeting.description.strip():
         sources.append({
             "type": "agenda",
-            "snippet": f"Agenda / Kế hoạch cuộc họp:\n{meeting.description.strip()}"
+            "snippet": f"Agenda / Káº¿ hoáº¡ch cuá»™c há»p:\n{meeting.description.strip()}"
         })
 
     # 2. Transcripts from DB if available
@@ -490,10 +518,10 @@ def rag_query(
             .all()
         )
         if segments:
-            lines = [f"- {s.speaker_name or 'Người tham gia'}: {s.content}" for s in segments[-25:]]
+            lines = [f"- {s.speaker_name or 'NgÆ°á»i tham gia'}: {s.content}" for s in segments[-25:]]
             sources.append({
                 "type": "transcript",
-                "snippet": "Biên bản phát biểu cuộc họp gần đây:\n" + "\n".join(lines)
+                "snippet": "BiÃªn báº£n phÃ¡t biá»ƒu cuá»™c há»p gáº§n Ä‘Ã¢y:\n" + "\n".join(lines)
             })
     except Exception as e:
         logger.debug(f"Could not load transcript segments for meeting {meeting_id}: {e}")
@@ -505,7 +533,7 @@ def rag_query(
         if summary and summary.summary:
             sources.append({
                 "type": "file",
-                "snippet": f"Tóm tắt cuộc họp: {summary.summary}\nCác điểm chính: {summary.key_points or ''}\nNghị quyết thống nhất: {summary.decisions or ''}"
+                "snippet": f"TÃ³m táº¯t cuá»™c há»p: {summary.summary}\nCÃ¡c Ä‘iá»ƒm chÃ­nh: {summary.key_points or ''}\nNghá»‹ quyáº¿t thá»‘ng nháº¥t: {summary.decisions or ''}"
             })
     except Exception as e:
         logger.debug(f"Could not load meeting summary for meeting {meeting_id}: {e}")
@@ -580,3 +608,89 @@ def translate_sentence(
     )
 
 
+
+from pydantic import BaseModel
+
+class JiraTaskItem(BaseModel):
+    id: str
+    title: str
+    assignee_id: str | None = None
+    deadline: str | None = None
+
+class PushJiraRequest(BaseModel):
+    tasks: list[JiraTaskItem]
+
+from src.backend.models import JiraProject, Issue, IssueStatusEnum, FollowUpTask, User
+from datetime import datetime
+
+
+@router.post("/{meeting_id}/push-jira")
+def push_tasks_to_jira(
+    meeting_id: str, 
+    payload: PushJiraRequest, 
+    db: Session = Depends(get_db)
+):
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    # 1. Resolve Project
+    project = db.query(JiraProject).filter(JiraProject.name == "Company Action Items").first()
+    if not project:
+        project = JiraProject(name="Company Action Items", key="CAI", description="Auto-generated project for meeting action items", created_by_id=meeting.created_by_id, issue_counter=0)
+        db.add(project)
+        db.commit()
+        db.refresh(project)
+
+    if project.issue_counter is None:
+        last_issue = db.query(Issue).filter(Issue.project_id == project.id).order_by(Issue.created_at.desc()).first()
+        counter = 0
+        if last_issue and last_issue.key.startswith("CAI-"):
+            try:
+                counter = int(last_issue.key.split("-")[1])
+            except:
+                pass
+        project.issue_counter = counter
+
+    next_seq = project.issue_counter + 1
+
+    # 3. Process Tasks
+    for task_item in payload.tasks:
+        fut = db.query(FollowUpTask).filter(FollowUpTask.id == task_item.id).first()
+        if not fut:
+            continue
+        
+        fut.title = task_item.title
+        fut.assignee_id = task_item.assignee_id
+        if task_item.deadline:
+            fut.deadline = datetime.fromisoformat(task_item.deadline.replace('Z', '+00:00')).replace(tzinfo=None)
+
+        if not fut.issue_id:
+            # Create new Issue
+            new_issue = Issue(
+                project_id=project.id,
+                key=f"CAI-{next_seq}",
+                summary=fut.title,
+                status=IssueStatusEnum.TODO,
+                reporter_id=meeting.created_by_id,
+                assignee_id=fut.assignee_id,
+                due_date=fut.deadline,
+                meeting_id=meeting.id
+            )
+            db.add(new_issue)
+            db.flush()
+            fut.issue_id = new_issue.id
+            next_seq += 1
+        else:
+            # Update existing Issue
+            existing_issue = db.query(Issue).filter(Issue.id == fut.issue_id).first()
+            if existing_issue:
+                existing_issue.summary = fut.title
+                existing_issue.assignee_id = fut.assignee_id
+                existing_issue.due_date = fut.deadline
+                
+    project.issue_counter = next_seq - 1
+
+    db.commit()
+    
+    return {"status": "success", "message": f"Pushed {len(payload.tasks)} tasks to Jira"}

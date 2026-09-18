@@ -208,7 +208,7 @@ async def websocket_realtime_stt(websocket: WebSocket):
 # ---------------------------------------------------------------------------
 # Meeting Events WebSocket — per-room event broadcasting
 # ---------------------------------------------------------------------------
-@app.websocket("/ws/meeting-events/{meeting_id}")
+@app.websocket("/ws/meeting-sync/{meeting_id}")
 async def websocket_meeting_events(websocket: WebSocket, meeting_id: str):
     """
     WebSocket for meeting room events.

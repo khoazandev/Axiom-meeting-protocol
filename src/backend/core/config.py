@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     task_extractor_model: str = "task-extractor"
     decision_extractor_model: str = "decision-extractor"
     ollama_base_url: str = "http://host.docker.internal:11434"
+    default_model: str = "qwen2.5:7b"
+    ollama_timeout: int = 120
 
     # STT Models
     stt_whisper_model: str = "large-v3"
@@ -71,7 +73,7 @@ class Settings(BaseSettings):
         "- Be concise in task descriptions (max 120 chars)\n\n"
         "Return ONLY a valid JSON array. No markdown, no explanation, no code blocks.\n"
         'Example: [{"task": "Update API docs", "owner": "Khoa", "due_date": "Friday", "priority": "HIGH", "status": "TODO"}]\n\n'
-        "If no action items found, return: []"
+        "If no action items found, return: []" + '\n\nCRITICAL RULE: All generated natural language text MUST be written entirely in Vietnamese (Tiếng Việt). Do NOT translate technical IT terms (e.g., API, Backend, UI/UX).'
     )
 
     # Decision Extractor Settings

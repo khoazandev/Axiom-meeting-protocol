@@ -1,7 +1,7 @@
 /**
  * useMeetingEvents — WebSocket hook for meeting room events.
  *
- * Connects to /ws/meeting-events/{meetingId} and listens for:
+ * Connects to /ws/meeting-sync/{meetingId} and listens for:
  * - `meeting_ended`: Meeting was ended by host
  * - `tasks_preview`: New follow-up tasks extracted by AI
  */
@@ -9,7 +9,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 export interface MeetingEvent {
-  type: 'meeting_ended' | 'tasks_preview' | 'tasks_extracting' | 'decisions_preview';
+  type: 'meeting_ended' | 'tasks_preview' | 'tasks_extracting' | 'decisions_preview' | 'topic_extraction_done';
   data: any;
 }
 
@@ -19,6 +19,7 @@ interface UseMeetingEventsOptions {
   onTasksPreview?: (data: any) => void;
   onTasksExtracting?: (data: any) => void;
   onDecisionsPreview?: (data: any) => void;
+  onTopicExtractionDone?: (data: any) => void;
   enabled?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function useMeetingEvents({
   onTasksPreview,
   onTasksExtracting,
   onDecisionsPreview,
+  onTopicExtractionDone,
   enabled = true,
 }: UseMeetingEventsOptions) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -37,10 +39,10 @@ export function useMeetingEvents({
   const connect = useCallback(() => {
     if (!meetingId || !enabled) return;
 
-    // Build WS URL — connect directly to backend port 8000
-    // (same pattern as useTranslationSocket.ts to avoid Next.js proxy issues)
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    const wsUrl = `ws://${hostname}:8000/ws/meeting-events/${meetingId}`;
+    // Build WS URL based on NEXT_PUBLIC_API_URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+    const wsBaseUrl = apiUrl.replace(/^http/, 'ws');
+    const wsUrl = `${wsBaseUrl}/ws/meeting-sync/${meetingId}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -68,6 +70,10 @@ export function useMeetingEvents({
               console.log('[MeetingEvents] Decisions preview event received');
               onDecisionsPreview?.(parsed.data);
               break;
+            case 'topic_extraction_done':
+              console.log('[MeetingEvents] Topic extraction done event received');
+              onTopicExtractionDone?.(parsed.data);
+              break;
             case 'tasks_extracting':
               console.log('[MeetingEvents] Tasks extracting event:', parsed.data);
               onTasksExtracting?.(parsed.data);
@@ -94,12 +100,15 @@ export function useMeetingEvents({
       };
 
       ws.onerror = (err) => {
-        console.error('[MeetingEvents] WS error:', err);
+        // Prevent noisy errors in Strict Mode if we intentionally closed it while connecting
+        if (ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+          console.error('[MeetingEvents] WS error:', err);
+        }
       };
     } catch (err) {
       console.error('[MeetingEvents] Failed to connect:', err);
     }
-  }, [meetingId, enabled, onMeetingEnded, onTasksPreview, onTasksExtracting, onDecisionsPreview]);
+  }, [meetingId, enabled, onMeetingEnded, onTasksPreview, onTasksExtracting, onDecisionsPreview, onTopicExtractionDone]);
 
   useEffect(() => {
     connect();
@@ -109,7 +118,16 @@ export function useMeetingEvents({
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
-        wsRef.current.close();
+        const ws = wsRef.current;
+        if (ws.readyState === WebSocket.CONNECTING) {
+          // If it's still connecting, wait for it to open before closing
+          // This prevents the native browser "WebSocket is closed before the connection is established" warning
+          ws.onopen = () => {
+            ws.close();
+          };
+        } else {
+          ws.close();
+        }
         wsRef.current = null;
       }
     };

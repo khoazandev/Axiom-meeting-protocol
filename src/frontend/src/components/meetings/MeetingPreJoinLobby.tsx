@@ -189,9 +189,11 @@ export function MeetingPreJoinLobby({
           console.warn('AudioContext volume meter init notice:', e);
         }
       } catch (err: any) {
-        console.warn('getUserMedia error in pre-join preview:', err);
+        // Silenced console.warn to prevent user confusion.
         if (isMounted) {
           setHasMediaPermission(false);
+          setMicEnabled(false);
+          setCamEnabled(false);
           setPermissionError(
             err.name === 'NotAllowedError'
               ? 'Trình duyệt chưa được cấp quyền truy cập Camera/Microphone.'

@@ -1,3 +1,4 @@
+import { MeetingNoteTable } from './MeetingNoteTable';
 'use client';
 
 import React, { useState } from 'react';
@@ -20,19 +21,21 @@ interface EndMeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLeave: () => void;
+  meeting?: any;
   members: any[];
-  onEndMeeting: () => Promise<{summary: string | null, tasks: any[], meetingId: string} | null>;
+  onEndMeeting: () => Promise<{summary: any, tasks: any[], meetingId: string} | null>;
 }
 
 export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
   isOpen,
   onClose,
   onLeave,
+  meeting,
   members,
   onEndMeeting,
 }) => {
   const [step, setStep] = useState<'prompt' | 'loading' | 'summary'>('prompt');
-  const [summaryData, setSummaryData] = useState<string>('');
+  const [summaryData, setSummaryData] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [meetingId, setMeetingId] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -46,11 +49,15 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
     try {
       const result = await onEndMeeting();
       if (result) {
-        let cleanSummary = result.summary || '';
-        // Strip out table if it was generated
-        cleanSummary = cleanSummary.replace(/## 7\. Danh sách Công việc[\s\S]*/g, '');
+        let cleanSummary = result.summary?.summary || result.summary || '';
+        if (typeof cleanSummary === 'string') {
+          cleanSummary = cleanSummary.replace(/## 7\. Danh sách Công việc[\s\S]*/g, '');
+        }
         
-        setSummaryData(cleanSummary.trim());
+        setSummaryData({
+          summary: typeof cleanSummary === 'string' ? cleanSummary.trim() : cleanSummary,
+          decisions: result.summary?.decisions || ''
+        });
         setTasks(result.tasks || []);
         setMeetingId(result.meetingId);
         setStep('summary');
@@ -73,13 +80,13 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
   const handlePushToJira = async () => {
     try {
       setIsPushing(true);
-      const payload = tasks.map(t => ({
+      const taskList = tasks.map(t => ({
         id: t.id,
         title: t.title,
         assignee_id: t.assignee_id,
         deadline: t.deadline
       }));
-      await meetingsApi.pushToJira(meetingId, payload);
+      await meetingsApi.pushToJira(meetingId, { tasks: taskList });
       alert("Đã đẩy thành công lên MiniJira!");
       handleDone();
     } catch(err) {
@@ -179,84 +186,18 @@ export const EndMeetingModal: React.FC<EndMeetingModalProps> = ({
             </div>
           )}
 
-          {step === 'summary' && (
-            <div className="flex flex-col gap-8">
-              <div className="prose prose-sm dark:prose-invert max-w-none bg-muted/20 p-6 rounded-xl border border-border">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {summaryData}
-                </ReactMarkdown>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                    Duyệt & Phân công Công việc
-                  </h3>
-                  <button onClick={addTask} className="text-xs font-medium px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Thêm việc
-                  </button>
-                </div>
-                
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
-                      <tr>
-                        <th className="px-4 py-3">Tên công việc</th>
-                        <th className="px-4 py-3 w-48">Người phụ trách</th>
-                        <th className="px-4 py-3 w-40">Hạn chót</th>
-                        <th className="px-4 py-3 w-16 text-center">Xóa</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {tasks.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground italic">
-                            Không có công việc nào được trích xuất
-                          </td>
-                        </tr>
-                      ) : tasks.map((task, idx) => (
-                        <tr key={idx} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2">
-                            <input 
-                              type="text" 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
-                              value={task.title}
-                              onChange={e => updateTask(idx, 'title', e.target.value)}
-                              placeholder="Nhập tên công việc..."
-                            />
-                          </td>
-                          <td className="px-4 py-2">
-                            <select 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors appearance-none"
-                              value={task.assignee_id || ''}
-                              onChange={e => updateTask(idx, 'assignee_id', e.target.value || null)}
-                            >
-                              <option value="">-- Chọn người --</option>
-                              {members.map(m => (
-                                <option key={m.user_id} value={m.user_id}>{m.user_name || m.user_id}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-2">
-                            <input 
-                              type="date" 
-                              className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1.5 outline-none transition-colors"
-                              value={task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : ''}
-                              onChange={e => updateTask(idx, 'deadline', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                            />
-                          </td>
-                          <td className="px-4 py-2 text-center">
-                            <button onClick={() => removeTask(idx)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          {step === 'summary' && meeting && summaryData && (
+            <div className="flex flex-col gap-8 pb-12 relative">
+              <MeetingNoteTable 
+                meeting={meeting} 
+                members={members} 
+                summary={summaryData} 
+                tasks={tasks}
+                isEditable={true}
+                onUpdateTask={updateTask}
+                onRemoveTask={removeTask}
+                onAddTask={addTask}
+              />
             </div>
           )}
         </div>

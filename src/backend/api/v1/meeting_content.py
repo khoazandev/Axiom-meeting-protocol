@@ -157,7 +157,7 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
     import logging
     from livekit.api import LiveKitAPI
     from livekit.protocol.room import SendDataRequest
-    from livekit.protocol.models import DataPacket_Kind
+    from livekit.protocol.models import DataPacket
     from src.backend.core.config import get_settings
 
     logger = logging.getLogger("axiom.livekit_broadcast")
@@ -182,7 +182,7 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
             req = SendDataRequest(
                 room=meeting_id,
                 data=json.dumps(payload).encode("utf-8"),
-                kind=DataPacket_Kind.RELIABLE,
+                kind=DataPacket.Kind.RELIABLE,
                 topic="records"
             )
             await api.room.send_data(req)
@@ -238,116 +238,7 @@ def add_transcript_segment(
     db.commit()
     db.refresh(seg)
 
-    # Trigger micro-batching task extraction
-    from src.backend.services.turn_accumulator import turn_accumulator
-    batch = turn_accumulator.add_segment(meeting_id, seg.id)
-    # Trigger early if segment contains action/directive keywords and has pending turns
-    has_action_kw = any(
-        kw in payload.content.lower()
-        for kw in ["hãy", "cần", "phải", "nhớ", "sẽ", "báo cáo", "kế hoạch", "hoàn thành", "deadline", "chốt", "giao", "please", "will"]
-    )
-    if not batch and has_action_kw and turn_accumulator.pending_count(meeting_id) >= 2:
-        batch = turn_accumulator.flush(meeting_id)
-
-    if batch:
-        from src.backend.services.task_extractor import (
-            task_extractor_service, sync_extracted_tasks, query_pending_tasks,
-        )
-        from src.backend.services.punctuation_restorer import PunctuationRestorer
-        from src.backend.models import FollowUpTaskSourceEnum
-
-        async def run_extraction():
-            import logging
-            _log = logging.getLogger("axiom.extraction")
-            _log.setLevel(logging.INFO)
-            _log.info("Batch ready for meeting=%s, segments=%s", meeting_id, batch)
-
-            # Broadcast "extracting" status to frontend
-            from src.backend.services.meeting_events import meeting_events_manager
-            try:
-                await meeting_events_manager.broadcast(
-                    meeting_id, {"type": "tasks_extracting", "data": {"status": "started"}}
-                )
-            except Exception:
-                _log.debug("Could not broadcast extraction start event")
-
-            db_generator = get_db()
-            bg_db = next(db_generator)
-            from sqlalchemy.orm import joinedload
-            try:
-                # Load transcript segments with speaker info
-                batch_segments = (
-                    bg_db.query(TranscriptSegment)
-                    .options(joinedload(TranscriptSegment.speaker))
-                    .filter(TranscriptSegment.id.in_(batch))
-                    .order_by(TranscriptSegment.sequence)
-                    .all()
-                )
-                _log.info("Loaded %d segments for extraction", len(batch_segments))
-                restorer = PunctuationRestorer()
-                text = restorer.restore(batch_segments)
-                _log.info("Restored text (%d chars): %s", len(text) if text else 0, (text or "")[:200])
-                if text:
-                    # Query pending tasks from DB
-                    pending = query_pending_tasks(bg_db, meeting_id)
-                    _log.info("Pending tasks for context: %d", len(pending))
-
-                    # Run blocking Ollama/Heuristic call in executor
-                    import asyncio
-                    loop = asyncio.get_running_loop()
-                    extracted = await loop.run_in_executor(
-                        None, task_extractor_service.extract, text, pending
-                    )
-                    _log.info("Extracted %d tasks: %s", len(extracted), extracted)
-                    if extracted:
-                        synced = sync_extracted_tasks(
-                            bg_db, meeting_id, extracted,
-                            source=FollowUpTaskSourceEnum.AI_REALTIME,
-                            segment_ids=batch,
-                        )
-                        _log.info("Synced %d follow-up tasks to DB", len(extracted))
-
-                        # Broadcast tasks_preview so frontend shows them immediately
-                        if synced:
-                            tasks_data = []
-                            for t in synced:
-                                a_name = t.assignee_name
-                                if not a_name and t.description and "Phân công cho:" in t.description:
-                                    a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
-                                tasks_data.append({
-                                    "id": t.id,
-                                    "meeting_id": t.meeting_id,
-                                    "title": t.title,
-                                    "description": t.description,
-                                    "status": t.status.value if t.status else "NOT_CONFIRMED",
-                                    "assignee_id": t.assignee_id,
-                                    "assignee_name": a_name,
-                                    "deadline": t.deadline.isoformat() if t.deadline else None,
-                                    "source": t.source.value if t.source else None,
-                                    "transcript_segment_id": t.transcript_segment_id,
-                                })
-                            try:
-                                await meeting_events_manager.broadcast(
-                                    meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
-                                )
-                                _log.info("Broadcast tasks_preview with %d tasks", len(tasks_data))
-                            except Exception:
-                                _log.debug("Could not broadcast tasks_preview event")
-                else:
-                    _log.warning("Restored text is empty, skipping extraction")
-            except Exception as exc:
-                _log.error("Extraction background task failed: %s", exc, exc_info=True)
-            finally:
-                bg_db.close()
-                # Broadcast "done" status to frontend
-                try:
-                    await meeting_events_manager.broadcast(
-                        meeting_id, {"type": "tasks_extracting", "data": {"status": "done"}}
-                    )
-                except Exception:
-                    _log.debug("Could not broadcast extraction done event")
-
-        background_tasks.add_task(run_extraction)
+    # Removed micro-batching task extraction to prevent DB and AI overload.
     # Broadcast to LiveKit so mock scripts will show subtitles on UI
     background_tasks.add_task(
         _broadcast_to_livekit, 
@@ -496,7 +387,7 @@ async def trigger_task_extraction(
         text = restorer.restore(segments)
         if text:
             pending = query_pending_tasks(db, meeting_id)
-            extracted = task_extractor_service.extract(text, pending)
+            extracted = await task_extractor_service.extract(text, pending)
             if extracted:
                 segment_ids = [s.id for s in segments]
                 synced = sync_extracted_tasks(
@@ -886,7 +777,7 @@ def next_meeting_topic(
 
 
 @router.post("/extract-tasks")
-def extract_tasks_endpoint(
+async def extract_tasks_endpoint(
     meeting_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -915,7 +806,7 @@ def extract_tasks_endpoint(
         return {"extracted_count": 0, "items": []}
 
     pending = query_pending_tasks(db, meeting_id)
-    extracted = task_extractor_service.extract(text, pending)
+    extracted = await task_extractor_service.extract(text, pending)
     if extracted:
         sync_extracted_tasks(
             db, meeting_id, extracted,

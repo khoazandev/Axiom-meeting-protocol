@@ -7,11 +7,12 @@
 
 import { useAuthStore } from './store/useAuthStore';
 
-// ── Types ────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface Topic {
   id: string;
   meeting_id: string;
+  topic_id?: string | null;
   title: string;
   transcript_text: string | null;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
@@ -96,18 +97,20 @@ export interface RagQueryResponse {
 export interface ActionItemResponse {
   id: string;
   meeting_id: string;
+  topic_id?: string | null;
   title: string;
   description: string | null;
   status: string;
   assignee_id?: string | null;
   assignee_name?: string | null;
-  due_date?: string | null;
+  due_date?: string | null; deadline?: string | null;
   created_at: string;
 }
 
 export interface FollowUpTask {
   id: string;
   meeting_id: string;
+  topic_id?: string | null;
   title: string;
   description: string | null;
   status: 'CONFIRMED' | 'NOT_CONFIRMED';
@@ -122,6 +125,7 @@ export interface FollowUpTask {
 export interface TranscriptResponse {
   id: string;
   meeting_id: string;
+  topic_id?: string | null;
   speaker_id?: string | null;
   speaker_name?: string | null;
   speaker?: string | null;
@@ -135,6 +139,7 @@ export interface TranscriptResponse {
 
 export interface MeetingEndResponse {
   meeting_id: string;
+  topic_id?: string | null;
   status: string;
   summary: {
     id: string | null;
@@ -145,7 +150,7 @@ export interface MeetingEndResponse {
   follow_up_tasks: FollowUpTask[];
 }
 
-// ── Error Class ──────────────────────────────────────────
+// â”€â”€ Error Class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class ApiRequestError extends Error {
   constructor(
@@ -159,13 +164,13 @@ export class ApiRequestError extends Error {
   }
 }
 
-// ── Base Fetch ───────────────────────────────────────────
+// â”€â”€ Base Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Get auth headers from Zustand store. Use this instead of
- * manually reading localStorage — keys are managed centrally.
+ * manually reading localStorage â€” keys are managed centrally.
  */
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -256,7 +261,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
-// ── Auth API ─────────────────────────────────────────────
+// â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const authApi = {
   register(email: string, password: string, full_name: string): Promise<User> {
@@ -285,7 +290,7 @@ export const authApi = {
   },
 };
 
-// ── User API ─────────────────────────────────────────────
+// â”€â”€ User API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface UserSearchResult {
   id: string;
@@ -297,6 +302,7 @@ export interface UserSearchResult {
 export interface MeetingMember {
   id: string;
   meeting_id: string;
+  topic_id?: string | null;
   user_id: string;
   role: string;
   status: string;
@@ -315,7 +321,7 @@ export const usersApi = {
   },
 };
 
-// ── Organization API ────────────────────────────────────────
+// â”€â”€ Organization API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const organizationApi = {
   create(name: string): Promise<Organization> {
@@ -334,7 +340,7 @@ export const organizationApi = {
   },
 };
 
-// ── Meeting API ──────────────────────────────────────────
+// â”€â”€ Meeting API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const topicsApi = {
   list: (meetingId: string): Promise<Topic[]> =>
@@ -344,6 +350,18 @@ export const topicsApi = {
 };
 
 export const meetingsApi = {
+
+  pushToJira(meetingId: string | number, payload: any): Promise<any> {
+    return apiFetch<any>(`/api/v1/meetings/${meetingId}/push-jira`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getAllTasks(): Promise<any[]> {
+    return apiFetch<any[]>('/api/v1/tasks');
+  },
+
   getDecisions(meetingId: number | string): Promise<any[]> {
     return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/decisions`);
   },
@@ -424,7 +442,7 @@ export const meetingsApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.detail || err?.message || 'Không thể trích xuất nội dung tệp');
+      throw new Error(err?.detail || err?.message || 'KhÃ´ng thá»ƒ trÃ­ch xuáº¥t ná»™i dung tá»‡p');
     }
     return res.json();
   },
@@ -437,7 +455,7 @@ export const meetingsApi = {
     signal?: AbortSignal
   ): Promise<TokenResponse> {
     return apiFetch<TokenResponse>(
-      `/api/v1/meetings/${meetingId}/token?participant_name=${encodeURIComponent(participantName)}&language=${encodeURIComponent(language)}`,
+      `/api/v1/meetings/${meetingId}/access?participant_name=${encodeURIComponent(participantName)}&language=${encodeURIComponent(language)}`,
       { signal }
     );
   },
@@ -610,6 +628,7 @@ export const meetingsApi = {
 export interface PendingInvitation {
   member_id: string;
   meeting_id: string;
+  topic_id?: string | null;
   meeting_title: string;
   meeting_description: string | null;
   invited_by: string;
@@ -618,7 +637,7 @@ export interface PendingInvitation {
   role: string;
 }
 
-// ── Jira Types & API ──────────────────────────────────────
+// â”€â”€ Jira Types & API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export interface JiraProject {
   id: string;
   key: string;
@@ -675,7 +694,7 @@ export interface Issue {
   reporter_name?: string | null;
   assignee_id?: string | null;
   assignee_name?: string | null;
-  due_date?: string | null;
+  due_date?: string | null; deadline?: string | null;
   meeting_id?: string | null;
   transcript_segment_id?: string | null;
   created_at: string;

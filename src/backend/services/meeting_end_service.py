@@ -60,7 +60,7 @@ def _collect_full_transcript(db: Session, meeting_id: str) -> tuple[str, list]:
     return punctuated_text, segments
 
 
-def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str) -> Optional[MeetingSummary]:
+async def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str) -> Optional[MeetingSummary]:
     """
     Generate meeting summary using qwen model via Ollama.
 
@@ -83,28 +83,15 @@ def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str
         "KEY POINTS:\n<bullet points>\n\n"
         "DECISIONS:\n<bullet points>\n\n"
         "Write in the same language as the transcript. Be concise and accurate."
+          '\n\nCRITICAL RULE: All generated natural language text MUST be written entirely in Vietnamese (Tiếng Việt). Do NOT translate technical IT terms (e.g., API, Backend, UI/UX).'
     )
 
     try:
         model_name = settings.default_model
 
-        response = requests.post(
-            f"{settings.ollama_base_url.rstrip('/')}/api/generate",
-            json={
-                "model": model_name,
-                "system": system_prompt,
-                "prompt": f"Meeting transcript:\n\n{transcript_text[:8000]}",
-                "stream": False,
-                "options": {
-                    "temperature": 0.3,
-                    "top_p": 0.9,
-                    "num_predict": 2000,
-                },
-            },
-            timeout=settings.ollama_timeout,
-        )
-        response.raise_for_status()
-        raw = response.json().get("response", "").strip()
+        from src.backend.core.llm import generate_text
+        prompt = f"{system_prompt}\n\nMeeting transcript:\n\n{transcript_text[:8000]}"
+        raw = await generate_text(["google/gemini-2.5-flash", model_name], prompt, max_tokens=2000, temperature=0.3)
 
         if not raw:
             return _generate_heuristic_meeting_summary(db, meeting_id, transcript_text)
@@ -136,9 +123,6 @@ def _generate_meeting_summary(db: Session, meeting_id: str, transcript_text: str
         db.refresh(summary)
         return summary
 
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
-        logger.info("Ollama unreachable or timed out for summary (%s), using dynamic heuristic MoM generator", exc)
-        return _generate_heuristic_meeting_summary(db, meeting_id, transcript_text)
     except Exception as exc:
         logger.warning("Summary generation exception: %s, using dynamic heuristic MoM generator", exc)
         return _generate_heuristic_meeting_summary(db, meeting_id, transcript_text)
@@ -277,7 +261,7 @@ def _parse_summary_response(raw: str) -> tuple[str, Optional[str], Optional[str]
     return summary, key_points, decisions
 
 
-def _close_livekit_room(meeting_id: str) -> bool:
+async def _close_livekit_room(meeting_id: str) -> bool:
     """
     Close a LiveKit room, removing all participants.
 
@@ -299,12 +283,8 @@ def _close_livekit_room(meeting_id: str) -> bool:
             api_secret=settings.livekit_api_secret,
         )
         # Delete room forces all participants to disconnect
-        import asyncio
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(api.room.delete_room(meeting_id))
-        finally:
-            loop.close()
+        from livekit.protocol import models
+        await api.room.delete_room(models.DeleteRoomRequest(room=meeting_id))
 
         logger.info("LiveKit room closed: %s", meeting_id)
         return True
@@ -317,7 +297,7 @@ def _close_livekit_room(meeting_id: str) -> bool:
     return False
 
 
-def end_meeting(
+async def end_meeting(
     db: Session,
     meeting_id: str,
     host_user_id: str,
@@ -341,6 +321,27 @@ def end_meeting(
     Returns:
         Dict with summary and follow_up_tasks data.
     """
+    # 0. Complete any in-progress topic and trigger its extraction
+    from src.backend.models import Topic, TopicStatusEnum
+    from src.backend.services.unified_topic_extractor import extract_topic_unified_bg
+    current_topic = db.query(Topic).filter(
+        Topic.meeting_id == meeting_id, 
+        Topic.status == TopicStatusEnum.IN_PROGRESS
+    ).first()
+    if current_topic:
+        current_topic.status = TopicStatusEnum.COMPLETED
+        db.commit()
+        # Fetch transcripts for this topic
+        from src.backend.models import TranscriptSegment
+        topic_segments = db.query(TranscriptSegment).filter(
+            TranscriptSegment.topic_id == current_topic.id
+        ).order_by(TranscriptSegment.sequence).all()
+        if topic_segments:
+            topic_text = "\n".join([f"{seg.speaker.full_name if getattr(seg, 'speaker', None) else 'Unknown'}: {seg.content}" for seg in topic_segments])
+            
+            # Await the topic extraction to ensure DB records are committed before ending meeting
+            await extract_topic_unified_bg(current_topic.id, topic_text)
+
     # 1. Flush remaining turns from accumulator
     turn_accumulator.flush(meeting_id)
 
@@ -348,11 +349,12 @@ def end_meeting(
     transcript_text, segments = _collect_full_transcript(db, meeting_id)
 
     # 3. Full task extraction with pending tasks context
+    logger.info("DEBUG: transcript_text length: %d", len(transcript_text))
     follow_up_tasks = []
     if transcript_text:
         segment_ids = [s.id for s in segments]
         pending = query_pending_tasks(db, meeting_id)
-        extracted = task_extractor_service.extract(transcript_text, pending)
+        extracted = await task_extractor_service.extract(transcript_text, pending)
         if extracted:
             created = sync_extracted_tasks(
                 db, meeting_id, extracted,
@@ -364,10 +366,10 @@ def end_meeting(
     # 4. Generate meeting summary
     summary = None
     if transcript_text:
-        summary = _generate_meeting_summary(db, meeting_id, transcript_text)
+        summary = await _generate_meeting_summary(db, meeting_id, transcript_text)
 
     # 5. Close LiveKit room
-    _close_livekit_room(meeting_id)
+    await _close_livekit_room(meeting_id)
 
     # 6. Update meeting status
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
@@ -429,19 +431,13 @@ def end_meeting(
 
     # 7. Broadcast meeting_ended event via WebSocket
     try:
-        import asyncio
         from src.backend.services.meeting_events import meeting_events_manager
 
         event = {
             "type": "meeting_ended",
             "data": result,
         }
-
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.ensure_future(meeting_events_manager.broadcast(meeting_id, event))
-        else:
-            loop.run_until_complete(meeting_events_manager.broadcast(meeting_id, event))
+        await meeting_events_manager.broadcast(meeting_id, event)
     except Exception as exc:
         logger.warning("Failed to broadcast meeting_ended event: %s", exc)
 

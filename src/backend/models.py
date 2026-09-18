@@ -499,6 +499,7 @@ class FollowUpTask(database.Base):
     )
     assignee_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     assignee = relationship("User", foreign_keys=[assignee_id])
+    issue_id = Column(String, ForeignKey("issues.id"), nullable=True)
     
     @property
     def assignee_name(self) -> str | None:

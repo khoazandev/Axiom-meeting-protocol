@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 import json
 import logging
 import re
@@ -14,6 +15,10 @@ logger.setLevel(logging.INFO)
 PROMPT_TEMPLATE = """
 Bạn là một trợ lý AI phân tích biên bản cuộc họp.
 Dưới đây là toàn bộ đoạn hội thoại của một chủ đề (Topic) vừa kết thúc. Mã định danh của chủ đề này là: {topic_id}
+
+[THÔNG TIN THỜI GIAN THỰC TẾ LÚC NÀY]
+Hôm nay là: {current_date}, giờ hiện tại: {current_time}.
+Hãy đối chiếu thời gian thực tế này để nội suy ra ngày tháng YYYY-MM-DD chính xác cho các mốc thời gian tương đối (như "ngày mai", "chiều thứ 6 tuần sau").
 
 Nhiệm vụ của bạn là trích xuất đồng thời CÁC QUYẾT ĐỊNH (decisions) và CÁC CÔNG VIỆC/NHIỆM VỤ (tasks) được giao trong chủ đề này.
 
@@ -52,7 +57,15 @@ async def extract_topic_unified_bg(topic_id: str, transcript_text: str):
         logger.info(f"No transcript text for topic {topic_id}, skipping unified extraction.")
         return
 
-    prompt = PROMPT_TEMPLATE.format(topic_id=topic_id, transcript_text=transcript_text)
+    vn_tz = timezone(timedelta(hours=7))
+    now = datetime.now(vn_tz)
+    
+    prompt = PROMPT_TEMPLATE.format(
+        topic_id=topic_id,
+        transcript_text=transcript_text,
+        current_date=now.strftime("%Y-%m-%d"),
+        current_time=now.strftime("%H:%M")
+    )
     
     # We use qwen2.5:7b strictly via Ollama
     from src.backend.core.llm import generate_json
@@ -77,7 +90,7 @@ async def extract_topic_unified_bg(topic_id: str, transcript_text: str):
     try:
         # Call LLM
         json_str = await generate_json(
-            model_or_models="qwen2.5:7b",
+            model_or_models=["google/gemini-2.5-flash", "qwen2.5:7b"],
             prompt=prompt
         )
         
@@ -96,6 +109,9 @@ async def extract_topic_unified_bg(topic_id: str, transcript_text: str):
             tasks_data = parsed.get("tasks", [])
         except (json.JSONDecodeError, TypeError) as e:
             logger.error(f"Failed to parse unified JSON from AI: {e}")
+            return
+        except Exception as e:
+            logger.error(f"Unexpected error in unified_topic_extractor: {e}", exc_info=True)
             return
         
         # Save to DB
@@ -182,6 +198,9 @@ async def extract_topic_unified_bg(topic_id: str, transcript_text: str):
         try:
             await meeting_events_manager.broadcast(
                 meeting_id, {"type": "tasks_extracting", "data": {"status": "done"}}
+            )
+            await meeting_events_manager.broadcast(
+                meeting_id, {"type": "topic_extraction_done", "data": {"topic_id": topic_id}}
             )
         except Exception:
             pass

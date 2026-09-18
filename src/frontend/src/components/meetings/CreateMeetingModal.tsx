@@ -87,6 +87,11 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
       setError('Vui lòng nhập chủ đề cuộc họp');
       return;
     }
+    
+    if (!agendaText.trim()) {
+      setError('Vui lòng nhập hoặc upload Agenda cuộc họp');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -195,7 +200,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-blue-600" />
-                <span>Kế Hoạch & Agenda Cuộc Họp</span>
+                <span>Kế Hoạch & Agenda Cuộc Họp <span className="text-red-500">*</span></span>
               </label>
 
               {/* Nút Import File duy nhất */}

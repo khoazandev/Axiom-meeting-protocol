@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { meetingsApi } from '@/lib/api';
 import {
   Kanban,
   Plus,
@@ -33,98 +34,7 @@ export interface KanbanTask {
   aiConfidenceScore: number;
 }
 
-const INITIAL_TASKS: KanbanTask[] = [
-  {
-    id: 'task-01',
-    title: 'Triển khai LiveKit Audio Egress & S3 Auto-Upload',
-    sourceMeeting: 'ENG-SPRINT-42',
-    status: 'IN_PROGRESS',
-    priority: 'URGENT',
-    assignee: {
-      name: 'Alex Rivera',
-      avatar:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-      role: 'Senior AI Engineer',
-    },
-    deadline: 'Hôm nay, 18:00',
-    aiConfidenceScore: 98,
-  },
-  {
-    id: 'task-02',
-    title: 'Tối ưu hóa Audio Buffer cho Whisper STT Latency < 400ms',
-    sourceMeeting: 'ENG-SPRINT-42',
-    status: 'TODO',
-    priority: 'HIGH',
-    assignee: {
-      name: 'Alex Rivera',
-      avatar:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-      role: 'Senior AI Engineer',
-    },
-    deadline: 'Ngày mai, 12:00',
-    aiConfidenceScore: 95,
-  },
-  {
-    id: 'task-03',
-    title: 'Kiểm thử tải đồng thời 50 Room LiveKit với docker-compose',
-    sourceMeeting: 'ENG-SPRINT-42',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    assignee: {
-      name: 'Phạm Quốc Bảo',
-      avatar:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-      role: 'DevOps Engineer',
-    },
-    deadline: '08/09/2026',
-    aiConfidenceScore: 92,
-  },
-  {
-    id: 'task-04',
-    title: 'Sửa lỗi Anti-Layout-Shift trên Dropdown phân quyền',
-    sourceMeeting: 'ENG-DAILY-SYNC',
-    status: 'IN_PROGRESS',
-    priority: 'HIGH',
-    assignee: {
-      name: 'Lê Thị Hồng',
-      avatar:
-        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-      role: 'Frontend Lead',
-    },
-    deadline: 'Hôm nay, 21:00',
-    aiConfidenceScore: 99,
-  },
-  {
-    id: 'task-05',
-    title: 'Viết Unit Test cho Agenda Gatekeeper Rule',
-    sourceMeeting: 'ENG-SPRINT-41',
-    status: 'DONE',
-    priority: 'MEDIUM',
-    assignee: {
-      name: 'Đặng Thùy Dung',
-      avatar:
-        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-      role: 'QA Automation',
-    },
-    deadline: 'Đã hoàn thành',
-    aiConfidenceScore: 96,
-  },
-  {
-    id: 'task-06',
-    title: 'Đồng bộ bảng User Schema với PostgreSQL 16 & Prisma',
-    sourceMeeting: 'ENG-SPRINT-41',
-    status: 'DONE',
-    priority: 'HIGH',
-    assignee: {
-      name: 'Vũ Hải Đăng',
-      avatar:
-        'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
-      role: 'Backend Specialist',
-    },
-    deadline: 'Đã hoàn thành',
-    aiConfidenceScore: 100,
-  },
-];
+const INITIAL_TASKS: KanbanTask[] = [];
 
 const COLUMNS: { key: TaskStatus; label: string; dotColor: string }[] = [
   { key: 'TODO', label: 'Cần Làm (To Do)', dotColor: 'bg-slate-400' },
@@ -137,7 +47,33 @@ interface ManagerKanbanTaskTabProps {
 }
 
 export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
-  const [tasks, setTasks] = useState<KanbanTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<KanbanTask[]>([]);
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const rawTasks = await meetingsApi.getAllTasks();
+        const formattedTasks: KanbanTask[] = rawTasks.map(t => ({
+          id: t.id,
+          title: t.title || 'Untitled Task',
+          sourceMeeting: 'Họp chung', // We don't have meeting name easily available
+          status: t.status === 'DONE' ? 'DONE' : (t.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'TODO'),
+          priority: 'MEDIUM', // Mock priority since backend doesn't have it yet
+          assignee: {
+            name: t.assignee_id ? 'Thành viên' : 'Chưa giao',
+            avatar: 'https://ui-avatars.com/api/?name=NV&background=random',
+            role: 'Member'
+          },
+          deadline: t.due_date ? new Date(t.due_date).toLocaleDateString('vi-VN') : 'Không có hạn',
+          aiConfidenceScore: 90
+        }));
+        setTasks(formattedTasks);
+      } catch (err) {
+        console.error('Failed to load tasks', err);
+      }
+    }
+    loadTasks();
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');

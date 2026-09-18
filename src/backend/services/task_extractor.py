@@ -81,7 +81,7 @@ def query_pending_tasks(db: Session, meeting_id: str) -> list[dict]:
 class TaskExtractorService:
     """Wrapper for Ollama task-extractor-v2 model (qwen3:8b based)."""
 
-    def extract(
+    async def extract(
         self,
         transcript_text: str,
         pending_tasks: list[dict] | None = None,
@@ -103,7 +103,7 @@ class TaskExtractorService:
             return self._heuristic_rule_extraction(transcript_text, pending_tasks)
 
         base_url = settings.ollama_base_url.rstrip("/")
-        timeout = min(settings.task_extractor_timeout, 12) if ("host.docker.internal" in base_url or "localhost" in base_url) else settings.task_extractor_timeout
+        timeout = min(30, 12) if ("host.docker.internal" in base_url or "localhost" in base_url) else 30
 
         try:
             # ── Build prompt payload ──────────────────────────────────
@@ -142,33 +142,12 @@ class TaskExtractorService:
                     "TUYỆT ĐỐI KHÔNG VIẾT ĐOẠN VĂN ĐÀM THOẠI HAY GIẢI THÍCH, CHỈ TRẢ VỀ JSON ARRAY.]"
                 )
 
-            payload = {
-                "model": model_to_use,
-                "messages": [
-                    {"role": "user", "content": user_content},
-                ],
-                "stream": False,
-                "options": {"temperature": 0.0, "top_p": 0.1},
-            }
-
-            logger.info(
-                "Calling Ollama chat model=%s (timeout=%ds, transcript=%d chars, pending=%d tasks)",
-                model_to_use,
-                timeout,
-                len(transcript_text),
-                len(pending_tasks) if pending_tasks else 0,
-            )
-            response = requests.post(
-                f"{base_url}/api/chat", json=payload, timeout=timeout,
-            )
-            response.raise_for_status()
-            msg = response.json().get("message", {})
-            content = msg.get("content", "").strip()
-            thinking = msg.get("thinking", "").strip()
-
-            raw = content or thinking
-            if raw:
-                parsed = self._parse_response(raw)
+            from src.backend.core.llm import generate_json
+            logger.info("Calling generate_json with Gemini/Ollama fallback for task extraction...")
+            parsed = await generate_json(["google/gemini-2.5-flash", model_to_use], user_content)
+            if parsed:
+                if isinstance(parsed, str):
+                    parsed = self._parse_response(parsed)
                 if parsed:
                     return parsed
             logger.info("Model returned empty or unparseable response, falling back to heuristic rule extraction")
@@ -493,6 +472,7 @@ def sync_extracted_tasks(
     extracted_items: list[dict],
     source: FollowUpTaskSourceEnum,
     segment_ids: list[str] | None = None,
+    topic_id: str | None = None,
 ) -> list[FollowUpTask]:
     """
     Sync LLM output to database using UPSERT logic.
@@ -610,6 +590,7 @@ def sync_extracted_tasks(
             # INSERT new task
             task = FollowUpTask(
                 meeting_id=meeting_id,
+                topic_id=topic_id,
                 transcript_segment_id=linked_segment_id,
                 assignee_id=assignee_id,
                 title=task_title,

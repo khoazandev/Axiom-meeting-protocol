@@ -1,11 +1,12 @@
 'use client';
+import { toast } from 'sonner';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Loader2,
-  Calendar,
+  Calendar, Edit3,
   Clock,
   ArrowLeft,
   Sparkles,
@@ -68,7 +69,10 @@ import {
   type TranscriptResponse,
   type MeetingMember,
   ApiRequestError,
+  topicsApi,
+  Topic,
 } from '@/lib/api';
+import { useMeetingEvents } from '@/hooks/useMeetingEvents';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADController';
@@ -76,6 +80,7 @@ import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTrans
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
 import { EndMeetingModal } from '@/components/meetings/EndMeetingModal';
+import EditTaskModal from '@/components/meetings/EditTaskModal';
 
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useWebSpeech } from '@/hooks/useWebSpeech';
@@ -1113,6 +1118,35 @@ export function MeetingRoomClient() {
   const [isEndMeetingModalOpen, setIsEndMeetingModalOpen] = useState(false);
 
   const [topics, setTopics] = useState<Topic[]>([]);
+
+const fetchAllData = useCallback(async () => {
+    if (!meetingId) return;
+    try {
+      const [topicsData, decisionsData, items, transcripts, members] = await Promise.all([
+        topicsApi.list(meetingId as string),
+        meetingsApi.getDecisions(meetingId as string),
+        meetingsApi.getActionItems(meetingId as string),
+        meetingsApi.getTranscripts(meetingId as string),
+        meetingsApi.getMembers(meetingId as string),
+      ]);
+      setTopics(topicsData);
+      setDecisions(decisionsData);
+      setActionItems(items);
+      setDbTranscripts(transcripts);
+      setMeetingMembers(members);
+      if (transcripts && transcripts.length > 0) {
+        const maxSeq = Math.max(...transcripts.map((t: any) => t.sequence || 0));
+        transcriptSequenceRef.current = Math.max(transcriptSequenceRef.current, maxSeq + 1);
+      }
+    } catch (err) {
+      console.error('Failed to fetch meeting content:', err);
+    }
+  }, [meetingId]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
   const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
@@ -1136,33 +1170,7 @@ export function MeetingRoomClient() {
     assignee_id: '',
     deadline: '',
   });
-
-  // Poll for action items
-  useEffect(() => {
-    if (!meetingId) return;
-    const fetchActionItems = async () => {
-      try {
-        const [items, transcripts, members] = await Promise.all([
-          meetingsApi.getActionItems(meetingId),
-          meetingsApi.getTranscripts(meetingId),
-          meetingsApi.getMembers(meetingId),
-        ]);
-        setActionItems(items);
-        setDbTranscripts(transcripts);
-        setMeetingMembers(members);
-        if (transcripts && transcripts.length > 0) {
-          const maxSeq = Math.max(...transcripts.map((t: any) => t.sequence || 0));
-          transcriptSequenceRef.current = Math.max(transcriptSequenceRef.current, maxSeq + 1);
-        }
-      } catch (err) {
-        console.error('Failed to fetch meeting content:', err);
-      }
-    };
-
-    fetchActionItems();
-    const interval = setInterval(fetchActionItems, 5000);
-    return () => clearInterval(interval);
-  }, [meetingId]);
+  
 
   const handleSaveEdit = async (taskId: string) => {
     if (!meetingId) return;
@@ -1599,10 +1607,37 @@ export function MeetingRoomClient() {
     }
   };
 
+  const handleTopicExtractionDone = useCallback(() => {
+    toast.success('Đã tổng hợp xong kết quả cho Topic!');
+    fetchAllData();
+  }, [fetchAllData]);
+
+
+  
+  useMeetingEvents({
+    meetingId: meetingId as string,
+    onTopicExtractionDone: handleTopicExtractionDone,
+  });
+
+  const handleNextTopic = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await topicsApi.next(meetingId as string);
+      toast.success('Đã chuyển sang Topic tiếp theo');
+      toast('AI đang tổng hợp kết quả Topic cũ...', { icon: '🤖' });
+      fetchAllData();
+    } catch (err) {
+      toast.error('Lỗi khi chuyển topic');
+      console.error(err);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        
       </div>
     );
   }
@@ -1620,6 +1655,7 @@ export function MeetingRoomClient() {
         >
           Quay lại bàn làm việc
         </button>
+        
       </div>
     );
   }
@@ -1642,7 +1678,7 @@ export function MeetingRoomClient() {
         onDeleteMeeting={
           user &&
           (user.id === meeting.created_by_id || user.role === 'OWNER' || user.role === 'ADMIN')
-            ? handleDeleteMeeting
+            ? undefined
             : undefined
         }
       />
@@ -1726,20 +1762,7 @@ export function MeetingRoomClient() {
           </button>
 
           {/* Delete Meeting for Creator / Host */}
-          {user &&
-            (user.id === meeting.created_by_id ||
-              user.role === 'OWNER' ||
-              user.role === 'ADMIN') && (
-              <button
-                type="button"
-                onClick={handleDeleteMeeting}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
-                title="Xóa vĩnh viễn cuộc họp này (Chỉ người tạo/chủ phòng có quyền)"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span className="hidden sm:inline">Xóa phòng</span>
-              </button>
-            )}
+          
         </div>
       </header>
 
@@ -1764,7 +1787,7 @@ export function MeetingRoomClient() {
               handleExitMeeting();
             }}
             onError={(err) => {
-              console.error('LiveKit connection error:', err);
+              // Silenced LiveKit connection error to prevent user confusion.
               setLiveKitError(true);
             }}
           >
@@ -2165,7 +2188,7 @@ export function MeetingRoomClient() {
                   }`}
                 >
                   {/* 1. Interactive Meeting Agenda Section (Trong cuộc họp) */}
-                  <div className="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                  <div className="p-3 bg-slate-50 flex-1 flex flex-col min-h-0">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5 text-blue-600" />
@@ -2342,16 +2365,35 @@ export function MeetingRoomClient() {
                                           .map((task) => (
                                             <div
                                               key={task.id}
-                                              className="text-[11px] text-slate-700 ml-2 flex items-start gap-1"
+                                              className="text-[11px] text-slate-700 ml-2 flex items-start gap-1 relative group"
                                             >
-                                              <span className="text-green-500 mt-0.5">✓</span>
-                                              <div className="flex flex-col">
+                                              <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                                              <div className="flex flex-col flex-1 pr-8">
                                                 <span className="font-medium">{task.title}</span>
                                                 <span className="text-[10px] text-slate-500">
                                                   Phụ trách:{' '}
                                                   {task.assignee_name || 'Chưa phân công'}
                                                 </span>
+                                                {task.deadline && (
+                                                  <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {new Date(task.deadline).toLocaleString('vi-VN', {
+                                                      year: 'numeric',
+                                                      month: '2-digit',
+                                                      day: '2-digit',
+                                                      hour: '2-digit',
+                                                      minute: '2-digit'
+                                                    })}
+                                                  </span>
+                                                )}
                                               </div>
+                                              <button
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleStartEdit(task); }}
+                                                className="absolute right-0 top-0 p-1 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-primary hover:bg-slate-100 rounded z-10 transition-all cursor-pointer"
+                                                title="Chỉnh sửa công việc"
+                                              >
+                                                <Edit3 className="w-3.5 h-3.5" />
+                                              </button>
                                             </div>
                                           ))}
                                       </div>
@@ -2366,185 +2408,7 @@ export function MeetingRoomClient() {
                     )}
                   </div>
 
-                  {/* 2. Tasks Subheader */}
-                  <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-amber-500" />
-                        Task
-                      </span>
-                      <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-bold">
-                        {actionItems.length}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleTriggerAiExtract}
-                        disabled={isExtractingTasks}
-                        className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                        title="Quét lại bản ghi để trích xuất Task bằng AI"
-                      >
-                        {isExtractingTasks ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Sparkles className="w-3 h-3 text-blue-600" />
-                        )}
-                        <span>Quét Task AI</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleOpenJiraWorkspace}
-                        disabled={isOpeningJira}
-                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                        title="Mở Mini Jira Kanban Board của phiên họp"
-                      >
-                        {isOpeningJira ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Kanban className="w-3 h-3 text-blue-600" />
-                        )}
-                        <span>Bảng Jira</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0 scrollbar-thin scrollbar-thumb-slate-200">
-                    {actionItems.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-48 text-center p-4 text-slate-400 text-xs my-auto">
-                        <CheckSquare className="w-8 h-8 text-slate-400 mb-2" />
-                        <p className="font-semibold text-slate-700">Chưa có Task nào</p>
-                        <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                          Bấm "Quét Task AI" hoặc "Tổng Kết MoM" trên thanh tiêu đề để AI tự động
-                          trích xuất nhiệm vụ và phân bổ cho các thành viên.
-                        </p>
-                      </div>
-                    ) : (
-                      actionItems.map((item: ActionItemResponse) => (
-                        <div
-                          key={item.id}
-                          className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-all text-xs"
-                        >
-                          {editingTaskId === item.id ? (
-                            <div className="flex flex-col gap-2.5">
-                              <input
-                                type="text"
-                                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
-                                value={editForm.title}
-                                onChange={(e) =>
-                                  setEditForm((prev) => ({ ...prev, title: e.target.value }))
-                                }
-                                placeholder="Tiêu đề task..."
-                              />
-                              <div className="flex flex-col gap-2">
-                                <select
-                                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 shadow-2xs"
-                                  value={editForm.assignee_id}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      assignee_id: e.target.value,
-                                    }))
-                                  }
-                                >
-                                  <option value="">-- Chọn người phụ trách --</option>
-                                  {meetingMembers.map((m) => (
-                                    <option key={m.user_id} value={m.user_id}>
-                                      {m.user_name || m.user_email || 'Người dùng ẩn danh'}
-                                    </option>
-                                  ))}
-                                </select>
-                                <CustomDateTimePicker
-                                  value={editForm.deadline}
-                                  onChange={(val) =>
-                                    setEditForm((prev) => ({ ...prev, deadline: val }))
-                                  }
-                                />
-                              </div>
-                              <div className="flex justify-end gap-2 mt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingTaskId(null)}
-                                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                                >
-                                  <X className="w-3.5 h-3.5" /> Hủy
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveEdit(item.id)}
-                                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-                                >
-                                  <Check className="w-3.5 h-3.5" /> Lưu
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-start gap-2">
-                                <div className="mt-1 shrink-0">
-                                  <span
-                                    className={`inline-block w-2 h-2 rounded-full ${
-                                      item.status === 'CONFIRMED'
-                                        ? 'bg-emerald-500'
-                                        : 'bg-amber-500'
-                                    }`}
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
-                                      {item.title}
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-700 text-xs leading-relaxed">
-                                    {item.description || ''}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
-                                <div className="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium">
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3 text-slate-400" />
-                                    <span className="text-slate-800 font-semibold">
-                                      {item.assignee_name || 'Chưa gán'}
-                                    </span>
-                                  </span>
-                                  <span className="text-slate-300">|</span>
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-slate-400" />
-                                    <span>
-                                      {(item as any).deadline || item.due_date
-                                        ? new Date(
-                                            (item as any).deadline || item.due_date
-                                          ).toLocaleString('vi-VN', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                          })
-                                        : 'Không có hạn'}
-                                    </span>
-                                  </span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEdit(item)}
-                                  className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                                  title="Chỉnh sửa task"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  
                 </div>
 
                 {/* ─────────────────────────────────────────────────────────────
@@ -2711,11 +2575,36 @@ export function MeetingRoomClient() {
         onClose={() => setInviteModalOpen(false)}
       />
 
-      <EndMeetingModal
+      <EditTaskModal
+        isOpen={!!editingTaskId}
+        onClose={() => setEditingTaskId(null)}
+        onSave={() => editingTaskId && handleSaveEdit(editingTaskId)}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        meetingMembers={meetingMembers}
+      />
+
+            <EndMeetingModal
         isOpen={isEndMeetingModalOpen}
         onClose={() => setIsEndMeetingModalOpen(false)}
-        meetingId={meetingId}
-        onComplete={() => router.push('/member?tab=meetings')}
+        onLeave={() => {
+          setIsEndMeetingModalOpen(false);
+          router.push('/member?tab=meetings');
+        }}
+        meeting={meeting}
+        members={meetingMembers}
+        onEndMeeting={async () => {
+          const res = await meetingsApi.endMeeting(meetingId as string);
+          // DONT ROUTE HERE! Let the modal show the summary!
+          return {
+            summary: {
+              summary: res.summary?.content || 'Cuộc họp đã kết thúc',
+              decisions: res.summary?.decisions || ''
+            },
+            tasks: res.follow_up_tasks || [],
+            meetingId: meetingId as string
+          };
+        }}
       />
     </div>
   );
