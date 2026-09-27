@@ -176,6 +176,10 @@ class InterviewSessionResponse(BaseModel):
     scheduled_at: datetime
     interviewer_member_ids_json: Optional[str] = None
     status: InterviewStatusEnum
+    consent_recording: bool = False
+    consent_transcription: bool = False
+    consent_ai_evaluation: bool = False
+    consented_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     created_at: datetime
 
@@ -183,7 +187,15 @@ class InterviewSessionResponse(BaseModel):
 
 
 class ConsentUpdate(BaseModel):
-    consent_given: bool
+    recording: bool = True
+    transcription: bool = True
+    ai_evaluation: bool = True
+
+
+class GuestMeetingAccessResponse(BaseModel):
+    token: str
+    room_name: str
+    livekit_url: str
 
 
 # ---------------------------------------------------------------------------

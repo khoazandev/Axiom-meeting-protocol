@@ -12,12 +12,16 @@ from src.backend.schemas.recruitment import (
     ApplicationDetail,
     AssessmentAttemptResponse,
     AssessmentSubmit,
+    ConsentUpdate,
+    GuestMeetingAccessResponse,
+    InterviewSessionResponse,
 )
 from src.backend.services.assessment_service import AssessmentService
 from src.backend.services.candidate_auth import (
     exchange_invitation_token,
     get_current_candidate_application,
 )
+from src.backend.services.interview_service import InterviewService
 from src.backend.services.recruitment_workflow import RecruitmentCommand, RecruitmentWorkflow
 
 router = APIRouter(
@@ -86,3 +90,35 @@ def withdraw_candidate_application(
     workflow = RecruitmentWorkflow(db)
     workflow.advance(app.id, RecruitmentCommand("WITHDRAW"))
     return {"message": "Application successfully withdrawn"}
+
+
+@router.post("/interviews/{interview_id}/consent", response_model=InterviewSessionResponse)
+def record_candidate_interview_consent(
+    interview_id: str,
+    payload: ConsentUpdate,
+    app: RecruitmentApplication = Depends(get_current_candidate_application),
+    db: Session = Depends(get_db),
+):
+    """Record candidate explicit consent for recording, transcription, and AI evaluation."""
+    service = InterviewService(db)
+    return service.record_consent(
+        interview_session_id=interview_id,
+        recording=payload.recording,
+        transcription=payload.transcription,
+        ai_evaluation=payload.ai_evaluation,
+    )
+
+
+@router.post("/interviews/{interview_id}/guest-access", response_model=GuestMeetingAccessResponse)
+def get_candidate_interview_guest_access(
+    interview_id: str,
+    app: RecruitmentApplication = Depends(get_current_candidate_application),
+    db: Session = Depends(get_db),
+):
+    """Generate scoped LiveKit guest access token for candidate interview room."""
+    service = InterviewService(db)
+    return service.issue_guest_access(
+        interview_session_id=interview_id,
+        candidate_id=app.candidate_id,
+        candidate_name=app.candidate.full_name if app.candidate else "Candidate",
+    )

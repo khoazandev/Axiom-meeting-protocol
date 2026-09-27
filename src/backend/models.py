@@ -1175,6 +1175,10 @@ class InterviewSession(database.Base):
     scheduled_at = Column(DateTime, nullable=False)
     interviewer_member_ids_json = Column(Text, nullable=True)
     status = Column(Enum(InterviewStatusEnum), default=InterviewStatusEnum.SCHEDULED, nullable=False)
+    consent_recording = Column(Boolean, default=False, nullable=False)
+    consent_transcription = Column(Boolean, default=False, nullable=False)
+    consent_ai_evaluation = Column(Boolean, default=False, nullable=False)
+    consented_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 

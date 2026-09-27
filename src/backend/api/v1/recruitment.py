@@ -46,6 +46,8 @@ from src.backend.schemas.recruitment import (
     AssessmentDefinitionResponse,
     HRReviewCreate,
     HRReviewResponse,
+    InterviewScheduleCreate,
+    InterviewSessionResponse,
     JobOpeningCreate,
     JobOpeningResponse,
     JobOpeningUpdate,
@@ -60,6 +62,7 @@ from src.backend.schemas.recruitment import (
 from src.backend.services.assessment_service import AssessmentService
 from src.backend.services.candidate_auth import generate_invitation_token
 from src.backend.services.email_service import send_recruitment_invitation_email
+from src.backend.services.interview_service import InterviewService
 from src.backend.services.recruitment_permissions import (
     assert_recruitment_reviewer,
     get_effective_permissions,
@@ -868,3 +871,46 @@ def submit_owner_approval(
 
     db.refresh(approval)
     return approval
+
+
+# ---------------------------------------------------------------------------
+# Interviews
+# ---------------------------------------------------------------------------
+@router.post(
+    "/applications/{application_id}/interviews",
+    response_model=InterviewSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def schedule_application_interview(
+    org_id: str,
+    application_id: str,
+    payload: InterviewScheduleCreate,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Schedule an interview session linked to a dedicated meeting."""
+    application = _get_application_or_404(db, org_id, application_id)
+    assert_recruitment_reviewer(db, member, application)
+
+    service = InterviewService(db)
+    return service.schedule(
+        application_id=application.id,
+        scheduled_at=payload.scheduled_at,
+        interviewer_member_ids=payload.interviewer_member_ids,
+        actor_member=member,
+    )
+
+
+@router.post(
+    "/interviews/{interview_id}/complete",
+    response_model=InterviewSessionResponse,
+)
+def complete_interview_session(
+    org_id: str,
+    interview_id: str,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Mark an interview session as completed and advance application stage."""
+    service = InterviewService(db)
+    return service.complete_interview(interview_id, actor_member=member)
