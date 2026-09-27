@@ -1,6 +1,7 @@
 """Organization Invitation API endpoints with automated Email Dispatch & Token Verification."""
 
 import datetime
+import hashlib
 import secrets
 import uuid
 from datetime import timezone
@@ -109,6 +110,7 @@ def create_invitation(
         p.status = OrgInvitationStatusEnum.REVOKED
 
     invitation_token = str(uuid.uuid4())
+    token_hash = hashlib.sha256(invitation_token.strip().encode("utf-8")).hexdigest()
     # Generate random 6-digit invitation code for easy manual entry
     invite_code = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.datetime.now(timezone.utc) + datetime.timedelta(days=7)
@@ -122,7 +124,7 @@ def create_invitation(
         role_id=resolved_role_id,
         department_id=dept_obj.id if dept_obj else None,
         invited_by_id=current_user.id,
-        token=invitation_token,
+        token_hash=token_hash,
         invite_code=invite_code,
         expires_at=expires_at,
     )
@@ -133,7 +135,7 @@ def create_invitation(
     # Build activation URL & Dispatch Email
     settings = get_settings()
     frontend_base = (settings.frontend_base_url or "http://localhost:3001").rstrip("/")
-    register_url = f"{frontend_base}/register?code={invitation.invite_code}&token={invitation.token}"
+    register_url = f"{frontend_base}/register?code={invitation.invite_code}&token={invitation_token}"
 
     email_result = send_org_invitation_email(
         recipient_email=invitation.email,
@@ -162,7 +164,7 @@ def create_invitation(
         department_id=invitation.department_id,
         department_name=dept_obj.name if dept_obj else None,
         status=invitation.status.value,
-        token=invitation.token,
+        token=invitation_token,
         invite_code=invitation.invite_code,
         register_url=register_url,
         email_status=email_status,
@@ -204,11 +206,14 @@ def list_invitations(
                 department_id=inv.department_id,
                 department_name=dept.name if dept else None,
                 status=inv.status.value,
-                token=inv.token,
-                register_url=f"{frontend_base}/register?invite_token={inv.token}",
+                token=None,
+                invite_code=inv.invite_code,
+                register_url=f"{frontend_base}/register?code={inv.invite_code}" if inv.invite_code else None,
                 email_status="READY",
                 expires_at=inv.expires_at,
                 created_at=inv.created_at,
+                recruitment_application_id=inv.recruitment_application_id,
+                idempotency_key=inv.idempotency_key,
             )
         )
     return results
@@ -233,10 +238,11 @@ def verify_invitation(token: str, db: Session = Depends(get_db)):
     Verifies an invitation token or 6-digit code and returns pre-filled onboarding parameters.
     """
     clean_val = _clean_token_input(token)
+    hash_val = hashlib.sha256(clean_val.encode("utf-8")).hexdigest()
     invitation = (
         db.query(OrganizationInvitation)
         .filter(
-            (OrganizationInvitation.token == clean_val) | (OrganizationInvitation.invite_code == clean_val),
+            (OrganizationInvitation.token_hash == hash_val) | (OrganizationInvitation.invite_code == clean_val),
             OrganizationInvitation.status == OrgInvitationStatusEnum.PENDING,
         )
         .first()
@@ -271,7 +277,7 @@ def verify_invitation(token: str, db: Session = Depends(get_db)):
     ]
 
     return OrgInvitationVerifyResponse(
-        token=invitation.token,
+        token=clean_val,
         invite_code=invitation.invite_code,
         email=invitation.email,
         full_name=invitation.full_name,
@@ -284,6 +290,7 @@ def verify_invitation(token: str, db: Session = Depends(get_db)):
         department_name=dept.name if dept else None,
         available_departments=dept_list,
         expires_at=invitation.expires_at,
+        recruitment_application_id=invitation.recruitment_application_id,
     )
 
 
@@ -295,10 +302,11 @@ def accept_invitation(
 ):
     """Accept an organization invitation using the token for an already logged-in user."""
     clean_val = _clean_token_input(token)
+    hash_val = hashlib.sha256(clean_val.encode("utf-8")).hexdigest()
     invitation = (
         db.query(OrganizationInvitation)
         .filter(
-            (OrganizationInvitation.token == clean_val) | (OrganizationInvitation.invite_code == clean_val),
+            (OrganizationInvitation.token_hash == hash_val) | (OrganizationInvitation.invite_code == clean_val),
             OrganizationInvitation.status == OrgInvitationStatusEnum.PENDING,
         )
         .first()
@@ -350,5 +358,9 @@ def accept_invitation(
     invitation.status = OrgInvitationStatusEnum.ACCEPTED
     invitation.accepted_at = now
     db.commit()
+
+    if invitation.recruitment_application_id:
+        from src.backend.services.onboarding_service import OnboardingService
+        OnboardingService(db).complete_from_invitation(invitation.id, current_user.id)
 
     return {"status": "accepted", "organization_id": invitation.organization_id}

@@ -317,3 +317,15 @@ class ReviewGrantResponse(BaseModel):
 
 class AssignHRUpdate(BaseModel):
     assigned_hr_member_id: Optional[str] = None
+
+
+class IssueOnboardingRequest(BaseModel):
+    idempotency_key: Optional[str] = None
+
+
+class IssueOnboardingResponse(BaseModel):
+    invitation_id: str
+    application_id: str
+    raw_token: str
+    register_url: str
+    status: str

@@ -49,6 +49,8 @@ from src.backend.schemas.recruitment import (
     HRReviewResponse,
     InterviewScheduleCreate,
     InterviewSessionResponse,
+    IssueOnboardingRequest,
+    IssueOnboardingResponse,
     JobOpeningCreate,
     JobOpeningResponse,
     JobOpeningUpdate,
@@ -69,6 +71,7 @@ from src.backend.services.candidate_evaluator import (
 )
 from src.backend.services.email_service import send_recruitment_invitation_email
 from src.backend.services.interview_service import InterviewService
+from src.backend.services.onboarding_service import OnboardingService
 from src.backend.services.recruitment_permissions import (
     assert_recruitment_reviewer,
     get_effective_permissions,
@@ -877,6 +880,29 @@ def submit_owner_approval(
 
     db.refresh(approval)
     return approval
+
+
+@router.post("/applications/{application_id}/issue-onboarding", response_model=IssueOnboardingResponse)
+def issue_application_onboarding(
+    org_id: str,
+    application_id: str,
+    payload: IssueOnboardingRequest,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Issue employee onboarding invitation to an approved candidate."""
+    if not (_is_owner(member) or has_effective_permission(db, member, "recruitment.approve")):
+        raise ForbiddenException("Owner or recruitment.approve permission required")
+
+    service = OnboardingService(db)
+    issued = service.issue_invitation(application_id, member, idempotency_key=payload.idempotency_key)
+    return IssueOnboardingResponse(
+        invitation_id=issued.invitation.id,
+        application_id=application_id,
+        raw_token=issued.raw_token,
+        register_url=issued.register_url,
+        status=issued.invitation.status.value,
+    )
 
 
 # ---------------------------------------------------------------------------

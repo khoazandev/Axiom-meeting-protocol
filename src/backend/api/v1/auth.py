@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 from datetime import timezone
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -54,10 +55,11 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
         elif "/invite/" in clean_inv:
             clean_inv = clean_inv.split("/invite/")[1].split("?")[0]
 
+        inv_hash = hashlib.sha256(clean_inv.encode("utf-8")).hexdigest()
         invitation = (
             db.query(OrganizationInvitation)
             .filter(
-                (OrganizationInvitation.token == clean_inv) | (OrganizationInvitation.invite_code == clean_inv),
+                (OrganizationInvitation.token_hash == inv_hash) | (OrganizationInvitation.invite_code == clean_inv),
                 OrganizationInvitation.status == OrgInvitationStatusEnum.PENDING,
             )
             .first()
@@ -123,6 +125,10 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
 
         invitation.status = OrgInvitationStatusEnum.ACCEPTED
         invitation.accepted_at = datetime.datetime.now(timezone.utc)
+
+        if invitation.recruitment_application_id:
+            from src.backend.services.onboarding_service import OnboardingService
+            OnboardingService(db).complete_from_invitation(invitation.id, user.id)
 
     elif is_creating_new_org:
         org_name = payload.organization_name.strip()

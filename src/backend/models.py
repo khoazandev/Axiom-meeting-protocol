@@ -420,7 +420,11 @@ class OrganizationInvitation(database.Base):
     role_id = Column(String, ForeignKey("roles.id"), nullable=False)
     department_id = Column(String, ForeignKey("departments.id"), nullable=True)
     invited_by_id = Column(String, ForeignKey("users.id"), nullable=False)
-    token = Column(String, unique=True, nullable=False)
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    recruitment_application_id = Column(
+        String, ForeignKey("recruitment_applications.id"), unique=True, nullable=True, index=True
+    )
+    idempotency_key = Column(String, unique=True, nullable=True, index=True)
     invite_code = Column(String, index=True, nullable=True)
     status = Column(
         Enum(OrgInvitationStatusEnum),
@@ -435,6 +439,25 @@ class OrganizationInvitation(database.Base):
     role = relationship("Role")
     department = relationship("Department")
     invited_by = relationship("User", foreign_keys=[invited_by_id])
+    recruitment_application = relationship(
+        "RecruitmentApplication", backref="organization_invitation"
+    )
+
+    def __init__(self, **kwargs):
+        if "token" in kwargs:
+            raw_tok = kwargs.pop("token")
+            if "token_hash" not in kwargs and raw_tok:
+                kwargs["token_hash"] = hashlib.sha256(raw_tok.strip().encode("utf-8")).hexdigest()
+        super().__init__(**kwargs)
+
+    @property
+    def token(self) -> str | None:
+        return None
+
+    @token.setter
+    def token(self, value: str) -> None:
+        if value:
+            self.token_hash = hashlib.sha256(value.strip().encode("utf-8")).hexdigest()
 
 
 # ---------------------------------------------------------------------------

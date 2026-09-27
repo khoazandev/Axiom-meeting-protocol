@@ -131,18 +131,20 @@ class OrgInvitationResponse(BaseModel):
     department_id: str | None = None
     department_name: str | None = None
     status: str
-    token: str
+    token: str | None = None
     invite_code: str | None = None
     register_url: str | None = None
     email_status: str | None = None
     expires_at: datetime
     created_at: datetime
+    recruitment_application_id: str | None = None
+    idempotency_key: str | None = None
 
     model_config = {"from_attributes": True}
 
 
 class OrgInvitationVerifyResponse(BaseModel):
-    token: str
+    token: str | None = None
     invite_code: str | None = None
     email: str
     full_name: str | None = None
@@ -155,3 +157,4 @@ class OrgInvitationVerifyResponse(BaseModel):
     department_name: str | None = None
     available_departments: list[dict] = []
     expires_at: datetime
+    recruitment_application_id: str | None = None
