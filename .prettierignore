@@ -11,4 +11,6 @@ storage/
 *.sqlite
 package-lock.json
 src/frontend/package-lock.json
+next-env.d.ts
+src/frontend/next-env.d.ts
 .superpowers/

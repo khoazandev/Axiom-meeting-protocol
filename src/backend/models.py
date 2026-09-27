@@ -188,6 +188,25 @@ class OrganizationMember(database.Base):
     organization = relationship("Organization", back_populates="members")
     user = relationship("User", back_populates="organization_memberships")
     role = relationship("Role")
+    direct_permissions = relationship(
+        "OrganizationMemberPermission",
+        back_populates="member",
+        cascade="all, delete-orphan",
+    )
+
+
+class OrganizationMemberPermission(database.Base):
+    __tablename__ = "organization_member_permissions"
+    __table_args__ = (UniqueConstraint("member_id", "permission_id"),)
+
+    member_id = Column(String, ForeignKey("organization_members.id"), primary_key=True)
+    permission_id = Column(String, ForeignKey("permissions.id"), primary_key=True)
+    granted_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    member = relationship("OrganizationMember", back_populates="direct_permissions")
+    permission = relationship("Permission")
+    granted_by = relationship("User", foreign_keys=[granted_by_id])
 
 
 # ---------------------------------------------------------------------------
