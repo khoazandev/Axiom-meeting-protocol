@@ -25,15 +25,10 @@ import {
   FileText,
   Upload,
   Filter,
+  Calendar,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  jiraApi,
-  organizationAdminApi,
-  Issue,
-  JiraProject,
-  OrgMemberDetail,
-} from '@/lib/api';
+import { jiraApi, organizationAdminApi, Issue, JiraProject, OrgMemberDetail } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
@@ -128,6 +123,8 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
 
   // Drag State
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const draggedTaskIdRef = useRef<string | null>(null);
+  draggedTaskIdRef.current = draggedTaskId;
   const [draggedOverCol, setDraggedOverCol] = useState<TaskStatusKey | null>(null);
 
   // Task Details Modal State
@@ -295,11 +292,23 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
 
   // Initial Load: Projects, Issues & Members
   useEffect(() => {
-    loadKanbanData();
+    loadKanbanData(true);
+    const interval = setInterval(() => {
+      loadKanbanData(false);
+    }, 4000);
+    const handleFocus = () => {
+      loadKanbanData(false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [user?.department_id, resolvedOrgId]);
 
-  const loadKanbanData = async () => {
-    setIsLoading(true);
+  const loadKanbanData = async (showLoading = true) => {
+    if (draggedTaskIdRef.current) return;
+    if (showLoading) setIsLoading(true);
     try {
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
       const members = Array.isArray(membersRes) ? membersRes : [];
@@ -336,7 +345,7 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
     } catch (err) {
       console.error('Failed to load Jira Kanban data for member:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -494,7 +503,9 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
 
     // RULE 2: ONLY MANAGER / OWNER can drag to DONE!
     if (targetColumn === 'DONE' && !isManagerOrAdmin) {
-      onNotify('Chỉ Quản lý mới có quyền duyệt sang Hoàn Thành (DONE). Hãy kéo sang Chờ Duyệt (IN PREVIEW)!');
+      onNotify(
+        'Chỉ Quản lý mới có quyền duyệt sang Hoàn Thành (DONE). Hãy kéo sang Chờ Duyệt (IN PREVIEW)!'
+      );
       return;
     }
 
@@ -626,7 +637,8 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Nhận nhiệm vụ từ cuộc họp và quản lý, tải tệp tài liệu/báo cáo và kéo task sang Chờ Duyệt (IN PREVIEW) để Quản lý nghiệm thu.
+            Nhận nhiệm vụ từ cuộc họp và quản lý, tải tệp tài liệu/báo cáo và kéo task sang Chờ
+            Duyệt (IN PREVIEW) để Quản lý nghiệm thu.
           </p>
         </div>
 
@@ -655,7 +667,9 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
             title="Lọc hiển thị nhiệm vụ của riêng bạn hoặc toàn bộ phòng ban"
           >
             <Filter size={12} />
-            <span className="truncate">{onlyMyTasks ? `Việc của tôi (${myTasksCount})` : 'Tất cả việc'}</span>
+            <span className="truncate">
+              {onlyMyTasks ? `Việc của tôi (${myTasksCount})` : 'Tất cả việc'}
+            </span>
           </button>
 
           {/* Add Task Button ("Thêm Task" thay thế "Tạo task") */}
@@ -822,6 +836,16 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
                                     style={{ width: `${progressPct}%` }}
                                   />
                                 </div>
+                              </div>
+                            )}
+
+                            {/* Due Date Indicator */}
+                            {task.dueDate && (
+                              <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400 font-mono">
+                                <Calendar size={11} className="text-amber-500 shrink-0" />
+                                <span>
+                                  Hạn chót: {new Date(task.dueDate).toLocaleDateString('vi-VN')}
+                                </span>
                               </div>
                             )}
 
@@ -1074,7 +1098,8 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
               {/* Attachments List */}
               {taskAttachments.length === 0 ? (
                 <div className="py-4 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
-                  Chưa có tệp đính kèm nào. Nhấn "Tải lên tệp" để import tài liệu hoặc hình ảnh minh chứng.
+                  Chưa có tệp đính kèm nào. Nhấn "Tải lên tệp" để import tài liệu hoặc hình ảnh minh
+                  chứng.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-36 overflow-y-auto">
@@ -1093,7 +1118,8 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
                             {att.name}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            {(att.size / 1024).toFixed(1)} KB • {att.uploaderName} • {att.uploadedAt}
+                            {(att.size / 1024).toFixed(1)} KB • {att.uploaderName} •{' '}
+                            {att.uploadedAt}
                           </p>
                         </div>
                       </div>
@@ -1216,7 +1242,9 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
                     onChange={(e) => setNewTaskAssigneeId(e.target.value)}
                     className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={user?.id || ''}>Gán cho tôi ({user?.full_name || 'Thành Viên Mẫu'})</option>
+                    <option value={user?.id || ''}>
+                      Gán cho tôi ({user?.full_name || 'Thành Viên Mẫu'})
+                    </option>
                     {deptMembers
                       .filter((m) => m.user_id !== user?.id)
                       .map((m) => (

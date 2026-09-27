@@ -89,13 +89,25 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
     };
   }, []);
 
-  // Fetch real meetings
+  // Fetch real meetings and keep synced
   useEffect(() => {
-    loadCalendarMeetings();
+    loadCalendarMeetings(true);
+    const interval = setInterval(() => {
+      loadCalendarMeetings(false);
+    }, 4000);
+    const onFocus = () => loadCalendarMeetings(false);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user?.department_id]);
 
-  const loadCalendarMeetings = async () => {
-    setIsLoading(true);
+  const loadCalendarMeetings = async (showLoadingSpinner: boolean = false) => {
+    if (showLoadingSpinner) {
+      setIsLoading(true);
+    }
     try {
       const data = await meetingApi.listWithFilters();
       if (data && Array.isArray(data)) {
@@ -107,7 +119,9 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
     } catch (err) {
       console.error('Failed to load meetings for calendar:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoadingSpinner) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -599,7 +613,14 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => router.push(`/meetings/${mtg.id}`)}
+                        onClick={async () => {
+                          if (state === 'UPCOMING') {
+                            try {
+                              await meetingsApi.startEarly(mtg.id);
+                            } catch {}
+                          }
+                          router.push(`/meetings/${mtg.id}`);
+                        }}
                         className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-xs cursor-pointer shrink-0 ${
                           isLive
                             ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 shadow-md'

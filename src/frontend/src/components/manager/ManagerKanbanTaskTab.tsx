@@ -24,6 +24,7 @@ import {
   Download,
   FileText,
   Upload,
+  Calendar,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -130,6 +131,8 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
   // Drag State
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const draggedTaskIdRef = useRef<string | null>(null);
+  draggedTaskIdRef.current = draggedTaskId;
   const [draggedOverCol, setDraggedOverCol] = useState<TaskStatusKey | null>(null);
 
   // Task Details Modal State
@@ -297,11 +300,23 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
   // 1. Initial Load: Projects, Issues & Members
   useEffect(() => {
-    loadKanbanData();
+    loadKanbanData(true);
+    const interval = setInterval(() => {
+      loadKanbanData(false);
+    }, 4000);
+    const handleFocus = () => {
+      loadKanbanData(false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [user?.department_id, resolvedOrgId]);
 
-  const loadKanbanData = async () => {
-    setIsLoading(true);
+  const loadKanbanData = async (showLoading = true) => {
+    if (draggedTaskIdRef.current) return;
+    if (showLoading) setIsLoading(true);
     try {
       // Load department members
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
@@ -339,7 +354,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
       let proj: JiraProject | null = null;
       if (projects && projects.length > 0) {
-        proj = projects[0];
+        proj = projects.find((p) => p.key === 'SMA') || projects[0];
       } else {
         // Auto-create initial project for this department
         try {
@@ -365,7 +380,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     } catch (err) {
       console.error('Failed to load Jira Kanban data:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -373,8 +388,9 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     try {
       const rawIssues = await jiraApi.getIssues(projectId);
 
-      // Strictly isolate tasks for this department's members
+      // Strictly isolate tasks for this department's members (plus manager self)
       const memberIds = new Set(membersList.map((m) => m.user_id));
+      if (user?.id) memberIds.add(user.id);
       const relevantIssues = (rawIssues || []).filter((issue: any) => {
         if (!issue.assignee_id) return true;
         return memberIds.has(issue.assignee_id);
@@ -867,6 +883,16 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                               </div>
                             )}
 
+                            {/* Due Date Indicator */}
+                            {task.dueDate && (
+                              <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400 font-mono">
+                                <Calendar size={11} className="text-amber-500 shrink-0" />
+                                <span>
+                                  Hạn chót: {new Date(task.dueDate).toLocaleDateString('vi-VN')}
+                                </span>
+                              </div>
+                            )}
+
                             {/* Footer: Assignee Avatar & Done Lock Indicator */}
                             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px]">
                               <div className="flex items-center gap-1.5 truncate">
@@ -1239,6 +1265,9 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                     className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">-- Chưa gán --</option>
+                    {user?.id && (
+                      <option value={user.id}>Gán cho tôi ({user.full_name || 'Quản lý'})</option>
+                    )}
                     {deptMembers.map((m) => (
                       <option key={m.user_id} value={m.user_id}>
                         {m.full_name}

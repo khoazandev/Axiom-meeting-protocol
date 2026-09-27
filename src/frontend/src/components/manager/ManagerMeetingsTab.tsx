@@ -79,13 +79,28 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     title: string;
   } | null>(null);
 
-  // Load Initial Real Data
+  // Load Initial Real Data and keep refreshed
   useEffect(() => {
-    loadRealData();
+    loadRealData(true);
+    const interval = setInterval(() => {
+      loadRealData(false);
+    }, 4000);
+
+    const onFocus = () => {
+      loadRealData(false);
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user?.department_id, resolvedOrgId]);
 
-  const loadRealData = async () => {
-    setIsLoading(true);
+  const loadRealData = async (showLoadingSpinner: boolean = false) => {
+    if (showLoadingSpinner) {
+      setIsLoading(true);
+    }
     try {
       const [meetingsRes, membersRes] = await Promise.allSettled([
         meetingApi.listWithFilters(),
@@ -347,7 +362,21 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
 
       const created = await meetingsApi.create(payload);
 
-      setMeetings((prev) => [created, ...prev]);
+      // Auto start meeting if created for immediate discussion
+      try {
+        await meetingsApi.startEarly(created.id);
+      } catch (e) {
+        console.warn('Auto startEarly failed:', e);
+      }
+
+      setMeetings((prev) => [
+        {
+          ...created,
+          status: 'IN_PROGRESS',
+          started_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
       setIsCreateModalOpen(false);
       setNewTitle('');
       setNewAgendaText('');
@@ -355,7 +384,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
       setSelectedMemberIds([]);
       setSelectedExecutiveMeetingId('');
 
-      onNotify(`Đã khởi tạo phòng họp: ${created.title}`);
+      onNotify(`Đã khởi tạo và bắt đầu phòng họp: ${created.title}`);
       router.push(`/meetings/${created.id}`);
     } catch (err: any) {
       console.error('Failed to create department meeting:', err);
@@ -369,6 +398,21 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const handleJoinRoom = async (mtg: Meeting) => {
     setIsJoiningRoom(mtg.id);
     try {
+      const state = resolveMeetingState(mtg);
+      if (state === 'UPCOMING') {
+        try {
+          await meetingsApi.startEarly(mtg.id);
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === mtg.id
+                ? { ...m, status: 'IN_PROGRESS', started_at: new Date().toISOString() }
+                : m
+            )
+          );
+        } catch (e) {
+          console.warn('startEarly failed:', e);
+        }
+      }
       router.push(`/meetings/${mtg.id}`);
     } finally {
       setIsJoiningRoom(null);

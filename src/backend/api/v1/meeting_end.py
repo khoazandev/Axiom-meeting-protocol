@@ -1,5 +1,6 @@
 """Meeting End API — Host-only endpoint to end a meeting."""
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -100,6 +101,8 @@ def push_to_jira_endpoint(
     from src.backend.models import (
         FollowUpTask,
         FollowUpTaskSourceEnum,
+        FollowUpTaskStatusEnum,
+        DepartmentMember,
         JiraProject,
         Issue,
         IssueTypeEnum,
@@ -142,10 +145,30 @@ def push_to_jira_endpoint(
     for task_data in payload.tasks:
         assignee_id = task_data.assignee_id if task_data.assignee_id and str(task_data.assignee_id).strip() else None
 
+        parsed_deadline = None
+        if task_data.deadline:
+            if isinstance(task_data.deadline, datetime):
+                parsed_deadline = task_data.deadline
+            else:
+                try:
+                    clean_str = str(task_data.deadline).replace("Z", "+00:00")
+                    if len(clean_str) == 10:
+                        parsed_deadline = datetime.strptime(clean_str, "%Y-%m-%d")
+                    else:
+                        parsed_deadline = datetime.fromisoformat(clean_str)
+                except Exception:
+                    parsed_deadline = None
+
         db_task = db.query(FollowUpTask).filter(
             FollowUpTask.id == task_data.id,
             FollowUpTask.meeting_id == meeting_id
         ).first()
+
+        if not db_task and task_data.title:
+            db_task = db.query(FollowUpTask).filter(
+                FollowUpTask.meeting_id == meeting_id,
+                FollowUpTask.title == task_data.title.strip()
+            ).first()
 
         if not db_task:
             db_task = FollowUpTask(
@@ -153,8 +176,8 @@ def push_to_jira_endpoint(
                 meeting_id=meeting_id,
                 title=task_data.title or "Nhiệm vụ mới",
                 assignee_id=assignee_id,
-                deadline=task_data.deadline,
-                status="CONFIRMED",
+                deadline=parsed_deadline,
+                status=FollowUpTaskStatusEnum.CONFIRMED,
                 source=FollowUpTaskSourceEnum.MANUAL,
             )
             db.add(db_task)
@@ -162,12 +185,34 @@ def push_to_jira_endpoint(
         else:
             db_task.title = task_data.title
             db_task.assignee_id = assignee_id
-            db_task.deadline = task_data.deadline
-            db_task.status = "CONFIRMED"
+            db_task.deadline = parsed_deadline
+            db_task.status = FollowUpTaskStatusEnum.CONFIRMED
 
-        # Create Issue if not already pushed to Jira
-        if not db_task.issue_id:
-            project.issue_counter += 1
+        # Resolve issue department
+        issue_dept_id = meeting.department_id or (project.department_id if project else None)
+        if not issue_dept_id and assignee_id:
+            user_dept = db.query(DepartmentMember).filter(DepartmentMember.user_id == assignee_id).first()
+            if user_dept:
+                issue_dept_id = user_dept.department_id
+
+        # Create or Update Issue in Jira
+        existing_issue = None
+        if db_task.issue_id:
+            existing_issue = db.query(Issue).filter(Issue.id == db_task.issue_id).first()
+
+        if not existing_issue:
+            # Safely calculate next issue counter to prevent unique constraint collisions
+            all_keys = db.query(Issue.key).filter(Issue.project_id == project.id).all()
+            max_num = project.issue_counter or 0
+            for (k,) in all_keys:
+                if k and k.startswith(f"{project.key}-"):
+                    try:
+                        num = int(k.split(f"{project.key}-")[1])
+                        if num > max_num:
+                            max_num = num
+                    except (ValueError, IndexError):
+                        pass
+            project.issue_counter = max_num + 1
             issue_key = f"{project.key}-{project.issue_counter}"
             new_issue = Issue(
                 id=generate_uuid(),
@@ -180,14 +225,21 @@ def push_to_jira_endpoint(
                 priority=IssuePriorityEnum.MEDIUM,
                 reporter_id=current_user.id,
                 assignee_id=assignee_id,
-                department_id=meeting.department_id,
-                due_date=db_task.deadline,
+                department_id=issue_dept_id,
+                due_date=parsed_deadline,
                 meeting_id=meeting.id,
                 transcript_segment_id=db_task.transcript_segment_id,
             )
             db.add(new_issue)
             db.flush()
             db_task.issue_id = new_issue.id
+        else:
+            existing_issue.summary = db_task.title
+            existing_issue.assignee_id = assignee_id
+            existing_issue.due_date = parsed_deadline
+            if issue_dept_id and not existing_issue.department_id:
+                existing_issue.department_id = issue_dept_id
 
     db.commit()
     return {"status": "success", "message": "Tasks pushed to MiniJira successfully"}
+

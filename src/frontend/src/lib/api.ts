@@ -108,6 +108,7 @@ export interface ActionItemResponse {
   title: string;
   description: string | null;
   status: string;
+  speaker_name?: string | null;
   assignee_id?: string | null;
   assignee_name?: string | null;
   due_date?: string | null;
@@ -120,6 +121,7 @@ export interface FollowUpTask {
   title: string;
   description: string | null;
   status: 'CONFIRMED' | 'NOT_CONFIRMED';
+  speaker_name?: string | null;
   assignee_id: string | null;
   assignee_name?: string | null;
   deadline: string | null;

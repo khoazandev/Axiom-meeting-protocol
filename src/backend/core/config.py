@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     decision_extractor_model: str = "decision-extractor"
     ollama_base_url: str = "http://host.docker.internal:11434"
     ollama_timeout: int = 30
+    task_extractor_timeout: int = 30
 
     # STT Models
     stt_whisper_model: str = "large-v3"

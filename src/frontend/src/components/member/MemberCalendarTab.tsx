@@ -89,12 +89,8 @@ export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
   }, []);
 
   // Fetch live meetings for member
-  useEffect(() => {
-    loadCalendarMeetings();
-  }, [user?.department_id]);
-
-  const loadCalendarMeetings = async () => {
-    setIsLoading(true);
+  const loadCalendarMeetings = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const data = await meetingApi.listWithFilters();
       if (data && Array.isArray(data)) {
@@ -106,9 +102,24 @@ export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
     } catch (err) {
       console.error('Failed to load meetings for member calendar:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadCalendarMeetings(true);
+    const interval = setInterval(() => {
+      loadCalendarMeetings(false);
+    }, 4000);
+    const handleFocus = () => {
+      loadCalendarMeetings(false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.department_id]);
 
   // Compute Current Week Days
   const weekDays: CalendarDayColumn[] = useMemo(() => {
@@ -267,7 +278,8 @@ export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Theo dõi các phiên họp do Quản lý tổ chức và tham gia đúng giờ. Nhấp vào cuộc họp để xem chi tiết hoặc tải Agenda.
+            Theo dõi các phiên họp do Quản lý tổ chức và tham gia đúng giờ. Nhấp vào cuộc họp để xem
+            chi tiết hoặc tải Agenda.
           </p>
         </div>
 

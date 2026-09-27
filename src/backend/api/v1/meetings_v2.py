@@ -237,6 +237,8 @@ def create_meeting(
         if user_dept:
             dept_id = user_dept.department_id
 
+    sched_at = payload.scheduled_at or getattr(payload, "scheduled_start_time", None)
+
     meeting = Meeting(
         title=payload.title,
         description=payload.description or payload.agenda,
@@ -791,7 +793,16 @@ def get_meeting_token(
     current_user: User = Depends(deps.get_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
-    _get_meeting_or_404(db, meeting_id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+
+    # Auto-start meeting if still scheduled and not yet ended
+    if (meeting.status == MeetingStatusEnum.SCHEDULED or not meeting.started_at) and not meeting.ended_at and meeting.status not in (MeetingStatusEnum.COMPLETED, MeetingStatusEnum.CANCELLED):
+        meeting.status = MeetingStatusEnum.IN_PROGRESS
+        if not meeting.started_at:
+            meeting.started_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(meeting)
+
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     unique_identity = f"user_{current_user.id}"

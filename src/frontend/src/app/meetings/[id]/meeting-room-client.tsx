@@ -40,6 +40,7 @@ import {
   Power,
   ArrowRight,
   CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -1189,6 +1190,16 @@ export function MeetingRoomClient() {
             }, 2500);
             return;
           }
+
+          // Auto-start meeting if currently SCHEDULED and active in room
+          if (
+            (latestMeeting.status === 'SCHEDULED' || !latestMeeting.started_at) &&
+            !latestMeeting.ended_at &&
+            latestMeeting.status !== 'COMPLETED' &&
+            latestMeeting.status !== 'ENDED'
+          ) {
+            meetingsApi.startEarly(meetingId).catch(() => {});
+          }
         }
         setActionItems(items);
         setDbTranscripts(transcripts);
@@ -1292,9 +1303,10 @@ export function MeetingRoomClient() {
     if (!meetingId) return;
     try {
       setIsExtractingTasks(true);
-      const tasks = await meetingsApi.extractTasks(meetingId);
-      if (tasks && tasks.length > 0) {
-        setActionItems(tasks as any);
+      const res: any = await meetingsApi.extractTasks(meetingId);
+      const taskList = Array.isArray(res) ? res : res?.items || [];
+      if (taskList && taskList.length > 0) {
+        setActionItems(taskList as any);
       }
     } catch (err) {
       console.error('Failed to extract tasks:', err);
@@ -1432,15 +1444,7 @@ export function MeetingRoomClient() {
     }) => {
       setIsArchivingMeeting(true);
       try {
-        // 1. Trigger full end meeting (AI summary from Agenda + Script, task extraction, status COMPLETED)
-        try {
-          await meetingsApi.endMeeting(data.meetingId);
-        } catch (endErr) {
-          console.warn('endMeeting endpoint warning, fallback to update:', endErr);
-          await meetingsApi.update(data.meetingId, { status: 'COMPLETED' });
-        }
-
-        // 2. Push confirmed action items to Jira / Management board
+        // 1. First push confirmed action items to Jira / Management board with exact assignees and deadlines
         if (data.tasks && data.tasks.length > 0) {
           try {
             const taskPayload = data.tasks.map((t, idx) => ({
@@ -1455,6 +1459,14 @@ export function MeetingRoomClient() {
           }
         }
 
+        // 2. Trigger full end meeting (AI summary from Agenda + Script, status COMPLETED)
+        try {
+          await meetingsApi.endMeeting(data.meetingId);
+        } catch (endErr) {
+          console.warn('endMeeting endpoint warning, fallback to update:', endErr);
+          await meetingsApi.update(data.meetingId, { status: 'COMPLETED' });
+        }
+
         setIsArchiveModalOpen(false);
 
         // Redirect to management page based on role
@@ -1467,9 +1479,9 @@ export function MeetingRoomClient() {
         if (isOwner) {
           router.push('/admin');
         } else if (isManager) {
-          router.push('/manager');
+          router.push('/manager?tab=tasks');
         } else {
-          router.push('/member');
+          router.push('/member?tab=jira');
         }
       } catch (err: any) {
         console.error('Failed to archive meeting:', err);
@@ -2612,29 +2624,36 @@ export function MeetingRoomClient() {
                             </div>
                           ) : (
                             <div className="flex flex-col gap-2">
-                              <div className="flex items-start gap-2">
-                                <div className="mt-1 shrink-0">
-                                  <span
-                                    className={`inline-block w-2 h-2 rounded-full ${
-                                      item.status === 'CONFIRMED'
-                                        ? 'bg-emerald-500'
-                                        : 'bg-amber-500'
-                                    }`}
-                                  />
+                              {/* Dòng 1: Người nói / Giao việc (Chủ tọa / Quản lý) */}
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 truncate min-w-0">
+                                  <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                  <span className="truncate">
+                                    Người nói:{' '}
+                                    <strong className="text-slate-800 font-bold">
+                                      {item.speaker_name ||
+                                        (meeting as any)?.created_by_name ||
+                                        'Trần Minh Khoa'}
+                                    </strong>
+                                  </span>
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                                    Host
+                                  </span>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
-                                      {item.title}
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-700 text-xs leading-relaxed">
-                                    {item.description || ''}
-                                  </p>
-                                </div>
+                                <span
+                                  className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                                    item.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-amber-500'
+                                  }`}
+                                />
                               </div>
 
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
+                              {/* Dòng 2: Tên task đầy đủ */}
+                              <div className="text-xs font-bold text-slate-900 leading-snug">
+                                {item.title}
+                              </div>
+
+                              {/* Dòng 3: Người đảm nhận & Hạn hoàn thành & Chỉnh sửa */}
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-0.5">
                                 <div className="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium">
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3 text-slate-400" />

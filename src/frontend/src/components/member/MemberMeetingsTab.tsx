@@ -45,19 +45,31 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     title: string;
   } | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const data = await meetingsApi.list();
-        setMeetings(data);
-      } catch (err) {
-        console.error('Failed to load meetings:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadMeetings = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      const data = await meetingsApi.list();
+      setMeetings(data);
+    } catch (err) {
+      console.error('Failed to load meetings for member:', err);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadMeetings(true);
+    const interval = setInterval(() => {
+      loadMeetings(false);
+    }, 4000);
+    const handleFocus = () => {
+      loadMeetings(false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleDeleteMeeting = async (id: string, title: string) => {
