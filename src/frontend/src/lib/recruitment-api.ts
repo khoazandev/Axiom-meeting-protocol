@@ -35,6 +35,7 @@ export interface JobOpening {
   id: string;
   organization_id: string;
   department_id: string;
+  department?: { id: string; name: string };
   title: string;
   description?: string | null;
   requirements?: string | null;
@@ -63,11 +64,20 @@ export interface Candidate {
   updated_at?: string | null;
 }
 
+export interface AssessmentQuestion {
+  id: string;
+  text: string;
+  type: 'MULTIPLE_CHOICE' | 'TEXT' | 'CODE';
+  options?: string[];
+  required?: boolean;
+}
+
 export interface AssessmentAttempt {
   id: string;
   application_id: string;
   definition_id?: string | null;
   definition_snapshot_json: string;
+  questions_snapshot?: AssessmentQuestion[];
   status: 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
   score?: number | null;
   answers_json?: string | null;
@@ -82,6 +92,8 @@ export interface InterviewSession {
   application_id: string;
   meeting_id: string;
   scheduled_at: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
   interviewer_member_ids_json?: string | null;
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   consent_recording: boolean;
@@ -139,6 +151,7 @@ export interface RecruitmentApplication {
   updated_at: string;
 
   opening?: JobOpening;
+  job_opening?: JobOpening;
   candidate?: Candidate;
   assessment_attempts?: AssessmentAttempt[];
   interview_sessions?: InterviewSession[];
