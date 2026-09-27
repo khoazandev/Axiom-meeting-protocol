@@ -212,7 +212,7 @@ export function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
   const headers: Record<string, string> = {

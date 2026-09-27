@@ -14,6 +14,7 @@ import { DepartmentsTab } from '@/components/admin/DepartmentsTab';
 import { ProtocolPoliciesTab } from '@/components/admin/ProtocolPoliciesTab';
 import { AuditSecurityTab } from '@/components/admin/AuditSecurityTab';
 import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
+import { RecruitmentTab } from '@/components/admin/RecruitmentTab';
 import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { MatIcon } from '@/components/ui/MatIcon';
@@ -673,6 +674,16 @@ export default function StandaloneAdminCenterPage() {
           {/* TAB 6: KHO TÀI LIỆU CUỘC HỌP & AI TRÍCH XUẤT */}
           {activeSection === 'archives' && (
             <MeetingArchiveRepository userRole="OWNER" onNotify={showToast} />
+          )}
+
+          {/* TAB 7: TUYỂN DỤNG & ONBOARDING PIPELINE */}
+          {activeSection === 'recruitment' && (
+            <RecruitmentTab
+              organizationId={activeOrganization?.id || activeOrgId}
+              managers={members.filter((m) => m.role === 'MANAGER' || m.role === 'ADMIN')}
+              departments={departments}
+              onNotify={showToast}
+            />
           )}
         </div>
       </main>

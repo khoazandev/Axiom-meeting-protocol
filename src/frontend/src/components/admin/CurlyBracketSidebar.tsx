@@ -7,7 +7,7 @@ import { Pin, PinOff, ChevronRight, LogOut } from 'lucide-react';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type AdminSectionKey =
-  'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'archives';
+  | 'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'archives' | 'recruitment';
 
 export interface NavSectionItem {
   id: AdminSectionKey;
@@ -74,6 +74,15 @@ export const NAV_SECTIONS: NavSectionItem[] = [
     badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
     shortcut: '⌘6',
   },
+  {
+    id: 'recruitment',
+    label: 'Tuyển dụng',
+    sublabel: 'Pipeline & Duyệt Onboarding',
+    icon: 'badge',
+    badge: 'Pipeline',
+    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    shortcut: '⌘7',
+  },
 ];
 
 import { useAuthStore } from '@/lib/store/useAuthStore';
@@ -101,7 +110,7 @@ export function CurlyBracketSidebar({
   // Debounce ref to prevent accidental closing when mouse moves slightly outside
   const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keyboard navigation (Esc, ⌘1-6)
+  // Keyboard navigation (Esc, ⌘1-NAV_SECTIONS.length)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isPinned) {
@@ -109,7 +118,7 @@ export function CurlyBracketSidebar({
       }
       if (e.metaKey || e.ctrlKey) {
         const num = parseInt(e.key);
-        if (num >= 1 && num <= 6) {
+        if (num >= 1 && num <= NAV_SECTIONS.length) {
           e.preventDefault();
           onSelectSection(NAV_SECTIONS[num - 1].id);
           // Briefly reveal sidebar to confirm selection

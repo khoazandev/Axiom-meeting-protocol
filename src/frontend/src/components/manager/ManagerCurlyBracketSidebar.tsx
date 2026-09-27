@@ -17,7 +17,7 @@ import {
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'archives';
+export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'archives' | 'recruitment';
 
 export interface ManagerNavSectionItem {
   id: ManagerNavKey;
@@ -78,6 +78,7 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
 interface ManagerCurlyBracketSidebarProps {
   activeTab: ManagerNavKey;
   onSelectTab: (tab: ManagerNavKey) => void;
+  sections?: ManagerNavSectionItem[];
   onOpenProfile?: () => void;
   onLogout?: () => void;
 }
@@ -85,6 +86,7 @@ interface ManagerCurlyBracketSidebarProps {
 export function ManagerCurlyBracketSidebar({
   activeTab,
   onSelectTab,
+  sections,
   onOpenProfile,
   onLogout,
 }: ManagerCurlyBracketSidebarProps) {
@@ -93,9 +95,11 @@ export function ManagerCurlyBracketSidebar({
   const [isPinned, setIsPinned] = useState(false);
   const [hoveredSection, setHoveredSection] = useState<ManagerNavKey | null>(null);
 
+  const navItems = sections && sections.length > 0 ? sections : MANAGER_NAV_SECTIONS;
+
   const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keyboard navigation (Esc, ⌘1-5)
+  // Keyboard navigation (Esc, ⌘1-navItems.length)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isPinned) {
@@ -103,9 +107,9 @@ export function ManagerCurlyBracketSidebar({
       }
       if (e.metaKey || e.ctrlKey) {
         const num = parseInt(e.key);
-        if (num >= 1 && num <= 5) {
+        if (num >= 1 && num <= navItems.length) {
           e.preventDefault();
-          onSelectTab(MANAGER_NAV_SECTIONS[num - 1].id);
+          onSelectTab(navItems[num - 1].id);
           setIsOpen(true);
           if (!isPinned) {
             if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
@@ -116,7 +120,7 @@ export function ManagerCurlyBracketSidebar({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPinned, onSelectTab]);
+  }, [isPinned, onSelectTab, navItems]);
 
   const handleMouseEnter = () => {
     if (leaveTimerRef.current) {
@@ -188,9 +192,9 @@ export function ManagerCurlyBracketSidebar({
             <div className="w-6 h-[1px] bg-slate-200/80 dark:bg-slate-800 mt-2" />
           </div>
 
-          {/* Navigation Item Stack (5 Sections) */}
+          {/* Navigation Item Stack */}
           <nav className="flex flex-col items-center gap-1.5" aria-label="Manager Navigation">
-            {MANAGER_NAV_SECTIONS.map((section, idx) => {
+            {navItems.map((section, idx) => {
               const isActive = activeTab === section.id;
               const isHovered = hoveredSection === section.id;
               const Icon = section.icon;

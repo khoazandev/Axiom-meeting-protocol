@@ -7,26 +7,31 @@ import {
   ManagerCurlyBracketSidebar,
   ManagerNavKey,
   MANAGER_NAV_SECTIONS,
+  ManagerNavSectionItem,
 } from '@/components/manager/ManagerCurlyBracketSidebar';
 import { ManagerMeetingsTab } from '@/components/manager/ManagerMeetingsTab';
 import { ManagerKanbanTaskTab } from '@/components/manager/ManagerKanbanTaskTab';
 import { ManagerTeamTab } from '@/components/manager/ManagerTeamTab';
 import { ManagerCalendarTab } from '@/components/manager/ManagerCalendarTab';
+import { ManagerRecruitmentTab } from '@/components/manager/ManagerRecruitmentTab';
 import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
 import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { authApi } from '@/lib/api';
+import { recruitmentApi } from '@/lib/recruitment-api';
 import Logo from '@/components/Logo';
-import { Video, Clock, Bell, CheckCircle2, Building2, Search, User } from 'lucide-react';
+import { Video, Bell, CheckCircle2, Search, Briefcase } from 'lucide-react';
 
 export default function ManagerWorkspacePage() {
   const router = useRouter();
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, activeOrganization, organizations, logout, updateUser } = useAuthStore();
+  const orgId = activeOrganization?.id || organizations[0]?.id || '';
   const [activeTab, setActiveTab] = useState<ManagerNavKey>('meetings');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [timeStr, setTimeStr] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [canReviewRecruitment, setCanReviewRecruitment] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -68,8 +73,39 @@ export default function ManagerWorkspacePage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!orgId) return;
+    recruitmentApi
+      .getContext(orgId)
+      .then((ctx) => {
+        if (
+          ctx.permissions.includes('recruitment.review') ||
+          ctx.permissions.includes('recruitment.manage')
+        ) {
+          setCanReviewRecruitment(true);
+        }
+      })
+      .catch(() => {});
+  }, [orgId]);
+
+  const navSections: ManagerNavSectionItem[] = React.useMemo(() => {
+    if (!canReviewRecruitment) return MANAGER_NAV_SECTIONS;
+    return [
+      ...MANAGER_NAV_SECTIONS,
+      {
+        id: 'recruitment',
+        label: 'Đánh Giá Tuyển Dụng',
+        sublabel: 'HR Review & Phỏng Vấn',
+        icon: Briefcase,
+        badge: 'Tuyển dụng',
+        badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+        shortcut: '⌘6',
+      },
+    ];
+  }, [canReviewRecruitment]);
+
   const currentSection =
-    MANAGER_NAV_SECTIONS.find((s) => s.id === activeTab) || MANAGER_NAV_SECTIONS[0];
+    navSections.find((s) => s.id === activeTab) || navSections[0];
   const CurrentIcon = currentSection.icon;
 
   const currentAvatar =
@@ -81,6 +117,7 @@ export default function ManagerWorkspacePage() {
       <ManagerCurlyBracketSidebar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        sections={navSections}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onLogout={handleLogout}
       />
@@ -218,7 +255,7 @@ export default function ManagerWorkspacePage() {
 
           {/* Quick Horizontal Pill Switcher Bar */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto max-w-full">
-            {MANAGER_NAV_SECTIONS.map((sec) => {
+            {navSections.map((sec) => {
               const isSelected = activeTab === sec.id;
               const Icon = sec.icon;
               return (
@@ -255,6 +292,13 @@ export default function ManagerWorkspacePage() {
               userRole="MANAGER"
               departmentId={user?.department_id}
               departmentName={user?.department_name || 'Khối Kỹ Thuật'}
+              onNotify={showToast}
+            />
+          )}
+
+          {activeTab === 'recruitment' && (
+            <ManagerRecruitmentTab
+              organizationId={orgId}
               onNotify={showToast}
             />
           )}
