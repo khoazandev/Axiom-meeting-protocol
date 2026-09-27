@@ -1048,6 +1048,30 @@ class RecruitmentApplication(database.Base):
     hr_review = relationship("HRReview", back_populates="application", uselist=False, cascade="all, delete-orphan")
     owner_approval = relationship("OwnerApproval", back_populates="application", uselist=False, cascade="all, delete-orphan")
 
+    @property
+    def opening_title(self) -> str | None:
+        return self.opening.title if self.opening else None
+
+    @property
+    def department_name(self) -> str | None:
+        return self.opening.department.name if self.opening and self.opening.department else None
+
+    @property
+    def candidate_name(self) -> str:
+        return self.candidate.full_name if self.candidate else ""
+
+    @property
+    def candidate_email(self) -> str:
+        return self.candidate.email if self.candidate else ""
+
+    @property
+    def assigned_hr_name(self) -> str | None:
+        return (
+            self.assigned_hr_member.user.full_name
+            if self.assigned_hr_member and self.assigned_hr_member.user
+            else None
+        )
+
 
 class RecruitmentAuditEvent(database.Base):
     __tablename__ = "recruitment_audit_events"

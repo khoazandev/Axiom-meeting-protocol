@@ -195,6 +195,7 @@ class HRReviewCreate(BaseModel):
     decision: HRDecisionEnum
     reason: str = Field(..., min_length=5)
     ai_diff_reason: Optional[str] = None
+    expected_version: Optional[int] = None
 
 
 class HRReviewResponse(BaseModel):
@@ -212,6 +213,7 @@ class HRReviewResponse(BaseModel):
 class OwnerApprovalCreate(BaseModel):
     decision: OwnerDecisionEnum
     reason: Optional[str] = None
+    expected_version: Optional[int] = None
 
 
 class OwnerApprovalResponse(BaseModel):
@@ -269,3 +271,25 @@ class RecruitmentPolicyResponse(BaseModel):
 
 class RecruitmentPolicyUpdate(BaseModel):
     retention_days: int = Field(..., ge=30, le=730)
+
+
+# ---------------------------------------------------------------------------
+# Navigation & Management Schemas
+# ---------------------------------------------------------------------------
+class RecruitmentMeResponse(BaseModel):
+    role: Optional[str] = None
+    permissions: List[str] = Field(default_factory=list)
+    department_ids: List[str] = Field(default_factory=list)
+
+
+class ReviewGrantUpdate(BaseModel):
+    enabled: bool
+
+
+class ReviewGrantResponse(BaseModel):
+    member_id: str
+    enabled: bool
+
+
+class AssignHRUpdate(BaseModel):
+    assigned_hr_member_id: Optional[str] = None

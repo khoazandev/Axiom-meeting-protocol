@@ -94,3 +94,25 @@ def assert_recruitment_reviewer(db: Session, member: models.OrganizationMember, 
     assigned_hr_id = getattr(application, "assigned_hr_member_id", None)
     if assigned_hr_id and assigned_hr_id != member.id:
         raise ForbiddenException("Reviewer is not assigned to this recruitment application")
+
+
+def get_effective_permissions(db: Session, member: models.OrganizationMember) -> list[str]:
+    """Return all distinct permission codes granted to the member via role or direct grant."""
+    codes: set[str] = set()
+    if member.role_id:
+        role_perms = (
+            db.query(models.Permission.code)
+            .join(models.RolePermission, models.Permission.id == models.RolePermission.permission_id)
+            .filter(models.RolePermission.role_id == member.role_id)
+            .all()
+        )
+        codes.update(p[0] for p in role_perms)
+
+    direct_perms = (
+        db.query(models.Permission.code)
+        .join(models.OrganizationMemberPermission, models.Permission.id == models.OrganizationMemberPermission.permission_id)
+        .filter(models.OrganizationMemberPermission.member_id == member.id)
+        .all()
+    )
+    codes.update(p[0] for p in direct_perms)
+    return sorted(list(codes))

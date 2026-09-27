@@ -131,3 +131,17 @@ def recruitment_org(db_session: Session) -> SimpleNamespace:
         manager_role=manager_role,
         member_role=member_role,
     )
+
+
+@pytest.fixture
+def auth_as():
+    def _auth(user: models.User):
+        from src.backend.core.security import create_access_token
+        from src.backend.api import deps
+        from src.backend.main import app
+
+        token = create_access_token(data={"sub": user.id, "type": "access"})
+        app.dependency_overrides[deps.get_current_user] = lambda: user
+        return {"Authorization": f"Bearer {token}"}
+
+    return _auth
