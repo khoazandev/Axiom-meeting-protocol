@@ -42,6 +42,7 @@ from src.backend.schemas.recruitment import (
     AssignAssessmentRequest,
     AssignHRUpdate,
     AssessmentAttemptResponse,
+    AIEvaluationResponse,
     AssessmentDefinitionCreate,
     AssessmentDefinitionResponse,
     HRReviewCreate,
@@ -61,6 +62,11 @@ from src.backend.schemas.recruitment import (
 )
 from src.backend.services.assessment_service import AssessmentService
 from src.backend.services.candidate_auth import generate_invitation_token
+from src.backend.services.candidate_evaluator import (
+    CandidateEvaluator,
+    EvaluationService,
+    get_candidate_evaluator,
+)
 from src.backend.services.email_service import send_recruitment_invitation_email
 from src.backend.services.interview_service import InterviewService
 from src.backend.services.recruitment_permissions import (
@@ -914,3 +920,30 @@ def complete_interview_session(
     """Mark an interview session as completed and advance application stage."""
     service = InterviewService(db)
     return service.complete_interview(interview_id, actor_member=member)
+
+
+# ---------------------------------------------------------------------------
+# AI Evaluation
+# ---------------------------------------------------------------------------
+@router.post(
+    "/applications/{application_id}/ai-evaluations",
+    response_model=AIEvaluationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def run_application_ai_evaluation(
+    org_id: str,
+    application_id: str,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+    evaluator: CandidateEvaluator = Depends(get_candidate_evaluator),
+):
+    """Trigger evidence-backed AI evaluation of candidate assessments and interviews."""
+    application = _get_application_or_404(db, org_id, application_id)
+    assert_recruitment_reviewer(db, member, application)
+
+    service = EvaluationService(db)
+    return await service.run(
+        application_id=application.id,
+        actor_member=member,
+        evaluator=evaluator,
+    )
