@@ -7,6 +7,8 @@ export interface User {
   full_name: string;
   avatar_url?: string | null;
   role?: string | null;
+  phone?: string | null;
+  job_title?: string | null;
   provider: string;
   is_active: boolean;
   department_id?: string | null;

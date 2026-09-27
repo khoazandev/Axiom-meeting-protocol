@@ -229,6 +229,11 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     role_name = _resolve_user_role(current_user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    dept_id = dept_mem.department_id if dept_mem else None
+    dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
+    dept_name = dept.name if dept else None
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
@@ -239,6 +244,8 @@ def get_me(
         job_title=current_user.job_title,
         provider=current_user.provider,
         is_active=current_user.is_active,
+        department_id=dept_id,
+        department_name=dept_name,
     )
 
 
@@ -255,9 +262,24 @@ def update_me(
             current_user.full_name = trimmed
     if payload.avatar_url is not None:
         current_user.avatar_url = payload.avatar_url
+    if payload.email is not None:
+        trimmed_email = payload.email.strip().lower()
+        if trimmed_email and trimmed_email != current_user.email:
+            existing = db.query(User).filter(User.email == trimmed_email, User.id != current_user.id).first()
+            if existing:
+                from src.backend.core.exceptions import ValidationException
+                raise ValidationException("Email này đã được sử dụng bởi tài khoản khác trong hệ thống")
+            current_user.email = trimmed_email
+    if payload.phone is not None:
+        current_user.phone = payload.phone.strip()
     db.commit()
     db.refresh(current_user)
     role_name = _resolve_user_role(current_user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    dept_id = dept_mem.department_id if dept_mem else None
+    dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
+    dept_name = dept.name if dept else None
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
@@ -268,5 +290,7 @@ def update_me(
         job_title=current_user.job_title,
         provider=current_user.provider,
         is_active=current_user.is_active,
+        department_id=dept_id,
+        department_name=dept_name,
     )
 

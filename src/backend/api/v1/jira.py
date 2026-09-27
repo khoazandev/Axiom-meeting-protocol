@@ -398,8 +398,10 @@ def update_issue(
         issue.description = payload.description
     if payload.type is not None and payload.type in IssueTypeEnum.__members__:
         issue.type = IssueTypeEnum(payload.type)
-    if payload.status is not None and payload.status in IssueStatusEnum.__members__:
-        issue.status = IssueStatusEnum(payload.status)
+    if payload.status is not None:
+        target_status = "IN_REVIEW" if payload.status == "IN_PREVIEW" else payload.status
+        if target_status in IssueStatusEnum.__members__:
+            issue.status = IssueStatusEnum(target_status)
     if payload.priority is not None and payload.priority in IssuePriorityEnum.__members__:
         issue.priority = IssuePriorityEnum(payload.priority)
     if payload.story_points is not None:
@@ -442,8 +444,10 @@ def reorder_issue(
 
     if payload.sprint_id is not None:
         issue.sprint_id = payload.sprint_id if payload.sprint_id != "backlog" else None
-    if payload.status is not None and payload.status in IssueStatusEnum.__members__:
-        issue.status = IssueStatusEnum(payload.status)
+    if payload.status is not None:
+        target_status = "IN_REVIEW" if payload.status == "IN_PREVIEW" else payload.status
+        if target_status in IssueStatusEnum.__members__:
+            issue.status = IssueStatusEnum(target_status)
     issue.sprint_position = payload.position
     issue.board_position = payload.position
 

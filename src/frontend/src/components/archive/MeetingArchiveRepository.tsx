@@ -121,7 +121,7 @@ export function MeetingArchiveRepository({
   const loadMeetings = async () => {
     setIsLoadingMeetings(true);
     try {
-      // Owner sees all org meetings; Manager and Member are scoped by backend RBAC
+      // Owner sees all org meetings; Manager & Member strictly get own department / invited meetings
       const data = await meetingApi.listWithFilters({
         all_org_meetings: userRole === 'OWNER',
       });
@@ -309,9 +309,13 @@ export function MeetingArchiveRepository({
       const s = (m.status || '').toUpperCase();
       if (s !== 'ENDED' && s !== 'COMPLETED') return false;
 
-      // Department Filter (for OWNER)
-      if (userRole === 'OWNER' && selectedDeptFilter !== 'ALL') {
-        if (m.department_id !== selectedDeptFilter) return false;
+      // Department Filter: OWNER can filter by dropdown; MANAGER & MEMBER see own department and attended executive meetings
+      if (userRole === 'OWNER') {
+        if (selectedDeptFilter !== 'ALL' && m.department_id !== selectedDeptFilter) return false;
+      } else {
+        const isOwnDept = !departmentId || m.department_id === departmentId;
+        const isExecutive = m.meeting_type === 'EXECUTIVE' || !m.department_id;
+        if (!isOwnDept && !isExecutive) return false;
       }
 
       // Search Query

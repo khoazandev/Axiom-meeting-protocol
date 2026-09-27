@@ -22,7 +22,7 @@ from src.backend.models import (
     KnowledgeChunk,
     User,
 )
-from src.backend.models import Department, AuditLog, OrganizationMember, Organization, Role
+from src.backend.models import Department, DepartmentMember, AuditLog, OrganizationMember, Organization, Role
 from src.backend.schemas.meeting import (
     MeetingApprovalRequest,
     MeetingCreate,
@@ -76,16 +76,38 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if is_meeting_member:
         return True
 
-    # 3. Check Department RBAC
-    from src.backend.models import DepartmentMember
-    dept_member = (
+    # 3. Check Department: If meeting is assigned to a department, members of this department can access
+    if meeting.department_id:
+        dept_member = (
+            db.query(DepartmentMember)
+            .filter(
+                DepartmentMember.department_id == meeting.department_id,
+                DepartmentMember.user_id == user.id,
+            )
+            .first()
+        )
+        if dept_member:
+            return True
+
+    # 4. Check Colleague/Manager in same department: If meeting creator is in user's department
+    user_dept = (
         db.query(DepartmentMember)
         .filter(DepartmentMember.user_id == user.id)
         .first()
     )
-    if dept_member and meeting.department_id and str(dept_member.department_id) == str(meeting.department_id):
-        return True
+    if user_dept:
+        creator_dept = (
+            db.query(DepartmentMember)
+            .filter(
+                DepartmentMember.department_id == user_dept.department_id,
+                DepartmentMember.user_id == meeting.created_by_id,
+            )
+            .first()
+        )
+        if creator_dept:
+            return True
 
+    # User is not an invited member, creator, department colleague, or Owner/Admin
     return False
 
 
@@ -205,13 +227,23 @@ def create_meeting(
         if user_org:
             org_id = user_org.organization_id
 
+    dept_id = payload.department_id
+    if not dept_id and current_user:
+        user_dept = (
+            db.query(DepartmentMember)
+            .filter(DepartmentMember.user_id == current_user.id)
+            .first()
+        )
+        if user_dept:
+            dept_id = user_dept.department_id
+
     sched_at = payload.scheduled_at or getattr(payload, "scheduled_start_time", None)
 
     meeting = Meeting(
         title=payload.title,
         description=payload.description or payload.agenda,
         organization_id=org_id,
-        department_id=payload.department_id,
+        department_id=dept_id,
         created_by_id=current_user.id,
         scheduled_at=sched_at,
         status=MeetingStatusEnum.SCHEDULED,
@@ -267,6 +299,7 @@ def list_my_meetings(
     approval_filter: str | None = None,
     meeting_type_filter: str | None = None,
     org_id: str | None = None,
+    department_id: str | None = None,
     all_org_meetings: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -289,7 +322,15 @@ def list_my_meetings(
         or (hasattr(current_user, "role") and getattr(current_user, "role") in ("OWNER", "ADMIN"))
     )
 
-    if not is_owner_or_admin and not all_org_meetings:
+    if department_id:
+        if is_owner_or_admin:
+            query = query.filter(Meeting.department_id == department_id)
+        else:
+            query = query.filter(
+                (Meeting.department_id == department_id) | (Meeting.department_id.is_(None))
+            )
+
+    if not is_owner_or_admin:
         from src.backend.models import DepartmentMember
         dept_member = (
             db.query(DepartmentMember)
@@ -305,18 +346,23 @@ def list_my_meetings(
         )
         meeting_ids = [m.meeting_id for m in memberships]
 
-        # Department RBAC: Owner sees all; Manager/Member see only their department or invited meetings
+        from sqlalchemy import or_
+        access_conditions = [
+            Meeting.id.in_(meeting_ids),
+            Meeting.created_by_id == current_user.id,
+        ]
         if user_dept_id:
-            query = query.filter(
-                (Meeting.department_id == user_dept_id)
-                | (Meeting.id.in_(meeting_ids))
-                | (Meeting.created_by_id == current_user.id)
-            )
-        else:
-            query = query.filter(
-                (Meeting.id.in_(meeting_ids))
-                | (Meeting.created_by_id == current_user.id)
-            )
+            access_conditions.append(Meeting.department_id == user_dept_id)
+            dept_user_ids = [
+                dm[0]
+                for dm in db.query(DepartmentMember.user_id)
+                .filter(DepartmentMember.department_id == user_dept_id)
+                .all()
+            ]
+            if dept_user_ids:
+                access_conditions.append(Meeting.created_by_id.in_(dept_user_ids))
+
+        query = query.filter(or_(*access_conditions))
 
     if status_filter:
         query = query.filter(Meeting.status == status_filter)
@@ -364,7 +410,7 @@ def get_meeting(
     """Get meeting details. User must be a member."""
     meeting = _get_meeting_or_404(db, meeting_id)
     _require_meeting_member(db, meeting_id, current_user.id)
-    return meeting
+    return _enrich_meeting(meeting, db)
 
 
 @router.patch("/{meeting_id}", response_model=MeetingResponse)
@@ -484,49 +530,103 @@ def delete_meeting(
         if not (is_creator or is_host or is_owner):
             raise ForbiddenException("Bạn không có quyền xóa cuộc họp này. Chỉ người tạo, chủ tọa hoặc Owner mới có quyền xóa.")
 
-    # Delete dependent child rows to prevent foreign key errors
+    # Delete dependent child rows in strict FK dependency order
+    from sqlalchemy import text
     try:
-        from sqlalchemy import text
-        # 1. Jira projects & issues
-        jp_ids = [r[0] for r in db.execute(text('SELECT id FROM jira_projects WHERE meeting_id = :mid'), {'mid': meeting_id}).fetchall()]
-        if jp_ids:
-            jp_tuple = tuple(jp_ids)
-            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE project_id IN :jpids OR meeting_id = :mid)'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('DELETE FROM issues WHERE project_id IN :jpids OR meeting_id = :mid'), {'jpids': jp_tuple, 'mid': meeting_id})
-            db.execute(text('DELETE FROM sprints WHERE project_id IN :jpids'), {'jpids': jp_tuple})
-            db.execute(text('DELETE FROM jira_projects WHERE id IN :jpids'), {'jpids': jp_tuple})
-        else:
-            db.execute(text('DELETE FROM issue_comments WHERE issue_id IN (SELECT id FROM issues WHERE meeting_id = :mid)'), {'mid': meeting_id})
-            db.execute(text('UPDATE issues SET parent_id = NULL, epic_id = NULL, sprint_id = NULL WHERE meeting_id = :mid'), {'mid': meeting_id})
-            db.execute(text('DELETE FROM issues WHERE meeting_id = :mid'), {'mid': meeting_id})
+        # 1. Update issue self-references (parent_id, epic_id)
+        db.execute(
+            text(
+                'UPDATE issues SET parent_id = NULL, epic_id = NULL '
+                'WHERE meeting_id = :mid OR project_id IN (SELECT id FROM jira_projects WHERE meeting_id = :mid)'
+            ),
+            {'mid': meeting_id},
+        )
 
-        # 1.5 meeting decisions
-        db.execute(text('DELETE FROM meeting_decisions WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 2. follow up tasks FIRST (has FK to transcript_segments and topics)
-        db.execute(text('DELETE FROM follow_up_tasks WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 3. extraction corrections
+        # 2. Delete extraction corrections (references transcript_segments)
         db.execute(text('DELETE FROM extraction_corrections WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 4. meeting chat messages
-        db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 5. knowledge chunks & documents
+
+        # 3. Delete follow-up tasks (references issues, transcript_segments, topics)
+        db.execute(
+            text(
+                'DELETE FROM follow_up_tasks '
+                'WHERE meeting_id = :mid OR issue_id IN ('
+                '  SELECT id FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '    SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                '  )'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 4. Delete issue comments (references issues)
+        db.execute(
+            text(
+                'DELETE FROM issue_comments WHERE issue_id IN ('
+                '  SELECT id FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '    SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                '  )'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 5. Delete issues (references jira_projects, sprints, meetings)
+        db.execute(
+            text(
+                'DELETE FROM issues WHERE meeting_id = :mid OR project_id IN ('
+                '  SELECT id FROM jira_projects WHERE meeting_id = :mid'
+                ')'
+            ),
+            {'mid': meeting_id},
+        )
+
+        # 6. Delete sprints (references jira_projects)
+        db.execute(
+            text('DELETE FROM sprints WHERE project_id IN (SELECT id FROM jira_projects WHERE meeting_id = :mid)'),
+            {'mid': meeting_id},
+        )
+
+        # 7. Delete jira projects
+        db.execute(text('DELETE FROM jira_projects WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 8. Delete topics (references meetings)
+        db.execute(text('DELETE FROM topics WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 9. Delete knowledge chunks & documents
         db.execute(text('DELETE FROM knowledge_chunks WHERE meeting_id = :mid'), {'mid': meeting_id})
         db.execute(text('DELETE FROM knowledge_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 6. meeting summaries
-        db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 7. transcript segments
-        db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 7.5 topics (must be deleted after transcript segments and tasks)
-        db.execute(text('DELETE FROM topics WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 8. meeting documents
-        db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
-        # 9. meeting members
-        db.execute(text('DELETE FROM meeting_members WHERE meeting_id = :mid'), {'mid': meeting_id})
-    except Exception as e:
-        logger.warning(f"Note when cleaning child records for meeting {meeting_id}: {e}")
 
-    db.delete(meeting)
-    db.commit()
+        # 10. Delete meeting summaries
+        db.execute(text('DELETE FROM meeting_summaries WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 11. Delete meeting decisions
+        db.execute(text('DELETE FROM meeting_decisions WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 12. Delete meeting chat messages
+        db.execute(text('DELETE FROM meeting_chat_messages WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 13. Delete transcript segments
+        db.execute(text('DELETE FROM transcript_segments WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 14. Delete meeting documents
+        db.execute(text('DELETE FROM meeting_documents WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 15. Delete meeting members
+        db.execute(text('DELETE FROM meeting_members WHERE meeting_id = :mid'), {'mid': meeting_id})
+
+        # 16. Delete meeting itself via SQL
+        db.execute(text('DELETE FROM meetings WHERE id = :mid'), {'mid': meeting_id})
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to delete meeting {meeting_id}: {e}", exc_info=True)
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Không thể xóa cuộc họp: {str(e)}",
+        )
+
     return {"message": "Đã xóa cuộc họp thành công", "deleted_id": meeting_id}
 
 
@@ -693,7 +793,16 @@ def get_meeting_token(
     current_user: User = Depends(deps.get_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
-    _get_meeting_or_404(db, meeting_id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+
+    # Auto-start meeting if still scheduled and not yet ended
+    if (meeting.status == MeetingStatusEnum.SCHEDULED or not meeting.started_at) and not meeting.ended_at and meeting.status not in (MeetingStatusEnum.COMPLETED, MeetingStatusEnum.CANCELLED):
+        meeting.status = MeetingStatusEnum.IN_PROGRESS
+        if not meeting.started_at:
+            meeting.started_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(meeting)
+
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
     unique_identity = f"user_{current_user.id}"

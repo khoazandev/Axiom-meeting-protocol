@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Archive,
@@ -8,24 +8,28 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Building2,
-  User,
   Calendar,
   Sparkles,
   Shield,
   Layers,
   ArrowRight,
-  Info,
+  Clock,
+  UserCheck,
+  User as UserIcon,
+  Tag,
 } from 'lucide-react';
-import type { Meeting } from '@/lib/api';
+import { Meeting, organizationAdminApi, meetingsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export interface ActionItemDraft {
   id: string;
   title: string;
   target_department?: string;
+  speaker_name?: string;
   assignee_id?: string;
   assignee_name?: string;
   deadline?: string;
+  isAiGenerated?: boolean;
 }
 
 interface ArchiveTransferModalProps {
@@ -42,14 +46,6 @@ interface ArchiveTransferModalProps {
   isSubmitting?: boolean;
 }
 
-const DEPARTMENTS = [
-  { id: 'dept-eng', name: 'Khối Kỹ Thuật (ENG)', code: 'ENG' },
-  { id: 'dept-prod', name: 'Khối Sản Phẩm (PROD)', code: 'PROD' },
-  { id: 'dept-biz', name: 'Khối Kinh Doanh (BIZ)', code: 'BIZ' },
-  { id: 'dept-ops', name: 'Khối Vận Hành (OPS)', code: 'OPS' },
-  { id: 'dept-fin', name: 'Khối Tài Chính (FIN)', code: 'FIN' },
-];
-
 export function ArchiveTransferModal({
   isOpen,
   onClose,
@@ -59,6 +55,99 @@ export function ArchiveTransferModal({
   onConfirmArchive,
   isSubmitting = false,
 }: ArchiveTransferModalProps) {
+  const { user, activeOrganization } = useAuthStore();
+
+  // All available assignees (meeting participants + department colleagues)
+  const [allAssignees, setAllAssignees] = useState<
+    Array<{ id: string; name: string; email?: string; role?: string; isAttendee?: boolean }>
+  >([]);
+
+  // AI Extraction state
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  // Load all assignees: attendees + department colleagues
+  useEffect(() => {
+    const list: Array<{
+      id: string;
+      name: string;
+      email?: string;
+      role?: string;
+      isAttendee?: boolean;
+    }> = [];
+    const seen = new Set<string>();
+
+    // 1. First prioritize meeting attendees
+    meetingMembers.forEach((m: any) => {
+      const uid = m.user_id || m.id;
+      if (uid && !seen.has(uid)) {
+        seen.add(uid);
+        list.push({
+          id: uid,
+          name: m.user_name || m.name || m.full_name || 'Người tham gia',
+          email: m.user_email || m.email,
+          role: m.role || 'Người họp',
+          isAttendee: true,
+        });
+      }
+    });
+
+    // 2. Also load organization / department members so all colleagues can be assigned
+    const orgId =
+      activeOrganization?.id ||
+      (user as any)?.organization_id ||
+      '2846981f-7028-4ef4-9cad-d2c3719703c4';
+
+    organizationAdminApi
+      .getMembers(orgId)
+      .then((res) => {
+        const mems = Array.isArray(res) ? res : [];
+        mems.forEach((m) => {
+          if (m.user_id && !seen.has(m.user_id)) {
+            seen.add(m.user_id);
+            list.push({
+              id: m.user_id,
+              name: m.full_name,
+              email: m.email,
+              role: m.role || 'Thành viên',
+              isAttendee: false,
+            });
+          }
+        });
+        setAllAssignees([...list]);
+      })
+      .catch(() => {
+        setAllAssignees([...list]);
+      });
+  }, [meetingMembers, activeOrganization?.id, user]);
+
+  // Split assignees into attendees present in room vs other colleagues
+  const meetingAttendees = useMemo(() => {
+    const attendeeUserIds = new Set(meetingMembers.map((m: any) => m.user_id || m.id));
+    return allAssignees.filter((a) => a.isAttendee || attendeeUserIds.has(a.id));
+  }, [allAssignees, meetingMembers]);
+
+  const otherColleagues = useMemo(() => {
+    const attendeeUserIds = new Set(meetingMembers.map((m: any) => m.user_id || m.id));
+    return allAssignees.filter((a) => !a.isAttendee && !attendeeUserIds.has(a.id));
+  }, [allAssignees, meetingMembers]);
+
+  // Resolve Host/Manager display name
+  const hostMemberName = useMemo(() => {
+    return (
+      (meeting as any).host_name ||
+      (meeting as any).created_by_name ||
+      meetingAttendees.find(
+        (a) =>
+          a.email?.includes('admin') ||
+          a.email?.includes('manager') ||
+          a.role?.toLowerCase().includes('host') ||
+          a.role?.toLowerCase().includes('chủ tọa')
+      )?.name ||
+      (user as any)?.full_name ||
+      'Trần Minh Khoa'
+    );
+  }, [meeting, meetingAttendees, user]);
+
   // Determine meeting category
   const meetingType: 'EXECUTIVE' | 'DEPARTMENT' | 'MEMBER' = useMemo(() => {
     const title = (meeting.title || '').toLowerCase();
@@ -71,91 +160,138 @@ export function ArchiveTransferModal({
     ) {
       return 'EXECUTIVE';
     }
-    if (
-      meeting.department_id ||
-      mType === 'DEPARTMENT' ||
-      title.includes('phòng ban') ||
-      title.includes('sprint')
-    ) {
-      return 'DEPARTMENT';
-    }
-    return 'MEMBER';
+    return 'DEPARTMENT';
   }, [meeting]);
 
   // Tasks state
-  const [tasks, setTasks] = useState<ActionItemDraft[]>(() => {
-    if (initialTasks && initialTasks.length > 0) {
-      return initialTasks.map((t, idx) => ({
-        id: t.id || `task-${idx + 1}`,
-        title: t.title || '',
-        target_department: t.target_department || DEPARTMENTS[0].name,
-        assignee_id: t.assignee_id || '',
-        assignee_name: t.assignee_name || meetingMembers[0]?.user_name || '',
-        deadline: t.deadline || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-      }));
-    }
-    if (meetingType === 'EXECUTIVE') {
-      return [
-        {
-          id: 'task-1',
-          title: 'Triển khai hạ tầng máy chủ On-Premise và kiểm chuẩn an ninh',
-          target_department: 'Khối Kỹ Thuật (ENG)',
-          deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
-        },
-        {
-          id: 'task-2',
-          title: 'Chuẩn bị kế hoạch truyền thông và giới thiệu giải pháp Qwen AI',
-          target_department: 'Khối Kinh Doanh (BIZ)',
-          deadline: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        },
-      ];
-    }
-    if (meetingType === 'DEPARTMENT') {
-      return [
-        {
-          id: 'task-1',
-          title: 'Tối ưu hóa độ trễ xử lý Voice STT song ngữ dưới 300ms',
-          assignee_id: meetingMembers[0]?.user_id || 'mem-1',
-          assignee_name: meetingMembers[0]?.user_name || 'Kỹ sư AI',
-          deadline: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
-        },
-        {
-          id: 'task-2',
-          title: 'Cập nhật tài liệu kỹ thuật tích hợp WebRTC và LiveKit Room',
-          assignee_id: meetingMembers[1]?.user_id || 'mem-2',
-          assignee_name: meetingMembers[1]?.user_name || 'Frontend Dev',
-          deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
-        },
-      ];
-    }
-    return [];
-  });
+  const [tasks, setTasks] = useState<ActionItemDraft[]>([]);
 
-  if (!isOpen) return null;
+  // Synchronize tasks when modal opens or initialTasks change
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialTasks && initialTasks.length > 0) {
+      const mapped = initialTasks.map((t, idx) => {
+        let assignedId = t.assignee_id || '';
+        let assignedName = t.assignee_name || '';
+
+        // Auto-match assignee by name if missing id
+        if (!assignedId && assignedName) {
+          const found = allAssignees.find(
+            (a) =>
+              a.name.toLowerCase().includes(assignedName.toLowerCase()) ||
+              assignedName.toLowerCase().includes(a.name.toLowerCase())
+          );
+          if (found) {
+            assignedId = found.id;
+            assignedName = found.name;
+          }
+        }
+
+        // Speaker resolution
+        let spk = t.speaker_name || '';
+        if (!spk && t.description && t.description.includes('Người giao:')) {
+          spk = t.description.split('Người giao:')[1].split('|')[0].trim();
+        }
+        if (!spk) {
+          spk = hostMemberName;
+        }
+
+        return {
+          id: t.id || `task-${idx + 1}`,
+          title: t.title || t.task || '',
+          speaker_name: spk,
+          assignee_id: assignedId,
+          assignee_name: assignedName,
+          deadline: t.deadline ? String(t.deadline).split('T')[0] : '',
+          isAiGenerated: true,
+        };
+      });
+      setTasks(mapped);
+    } else {
+      // Demo / contextual tasks
+      const sampleMember =
+        meetingAttendees.find(
+          (a) => !a.email?.startsWith('admin') && !a.email?.startsWith('manager')
+        ) || meetingAttendees[0];
+
+      setTasks([
+        {
+          id: 'task-1',
+          title: `Triển khai giải pháp kỹ thuật theo kết luận cuộc họp: ${meeting.title || 'Dự án AI'}`,
+          speaker_name: hostMemberName,
+          assignee_id: sampleMember ? sampleMember.id : '',
+          assignee_name: sampleMember ? sampleMember.name : '',
+          deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+          isAiGenerated: true,
+        },
+        {
+          id: 'task-2',
+          title: 'Kiểm thử tích hợp, tối ưu hiệu năng và cập nhật tài liệu kỹ thuật',
+          speaker_name: hostMemberName,
+          assignee_id: '',
+          assignee_name: '',
+          deadline: '',
+          isAiGenerated: true,
+        },
+      ]);
+    }
+  }, [isOpen, initialTasks, allAssignees, meetingAttendees, hostMemberName, meeting.title]);
+
+  // AI Re-Scan tasks directly in modal
+  const handleAiExtractTasks = async () => {
+    setIsExtracting(true);
+    try {
+      const res = await meetingsApi.extractTasks(meeting.id);
+      const list = Array.isArray(res) ? res : (res as any)?.items || [];
+      if (list && list.length > 0) {
+        const mapped = list.map((item: any, idx: number) => {
+          let assignedUser = allAssignees.find(
+            (a) =>
+              a.id === item.assignee_id ||
+              (item.assignee_name &&
+                (a.name.toLowerCase().includes(item.assignee_name.toLowerCase()) ||
+                  item.assignee_name.toLowerCase().includes(a.name.toLowerCase())))
+          );
+          let spk = item.speaker_name || '';
+          if (!spk && item.description && item.description.includes('Người giao:')) {
+            spk = item.description.split('Người giao:')[1].split('|')[0].trim();
+          }
+          if (!spk) {
+            spk = hostMemberName;
+          }
+          return {
+            id: item.id || `extracted-${Date.now()}-${idx}`,
+            title: item.title || item.task || '',
+            speaker_name: spk,
+            assignee_id: assignedUser ? assignedUser.id : item.assignee_id || '',
+            assignee_name: assignedUser ? assignedUser.name : item.assignee_name || '',
+            deadline: item.deadline ? String(item.deadline).split('T')[0] : '',
+            isAiGenerated: true,
+          };
+        });
+        setTasks(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to trigger AI extract in modal:', err);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
   const handleAddTask = () => {
-    if (meetingType === 'EXECUTIVE') {
-      setTasks((prev) => [
-        ...prev,
-        {
-          id: `task-manual-${Date.now()}`,
-          title: '',
-          target_department: DEPARTMENTS[0].name,
-          deadline: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        },
-      ]);
-    } else if (meetingType === 'DEPARTMENT') {
-      setTasks((prev) => [
-        ...prev,
-        {
-          id: `task-manual-${Date.now()}`,
-          title: '',
-          assignee_id: meetingMembers[0]?.user_id || '',
-          assignee_name: meetingMembers[0]?.user_name || '',
-          deadline: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        },
-      ]);
-    }
+    setTasks((prev) => [
+      ...prev,
+      {
+        id: `task-manual-${Date.now()}`,
+        title: '',
+        speaker_name: hostMemberName,
+        assignee_id: '',
+        assignee_name: '',
+        deadline: '',
+        isAiGenerated: false,
+      },
+    ]);
   };
 
   const handleUpdateTask = (idx: number, field: keyof ActionItemDraft, value: any) => {
@@ -163,11 +299,19 @@ export function ArchiveTransferModal({
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
       if (field === 'assignee_id') {
-        const found = meetingMembers.find((m) => m.user_id === value);
-        if (found) next[idx].assignee_name = found.user_name;
+        const found = allAssignees.find((m) => m.id === value);
+        if (found) next[idx].assignee_name = found.name;
       }
       return next;
     });
+  };
+
+  const setQuickDeadline = (idx: number, daysToAdd: number) => {
+    const target = new Date(Date.now() + daysToAdd * 86400000);
+    const yyyy = target.getFullYear();
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    const dd = String(target.getDate()).padStart(2, '0');
+    handleUpdateTask(idx, 'deadline', `${yyyy}-${mm}-${dd}`);
   };
 
   const handleRemoveTask = (idx: number) => {
@@ -175,28 +319,36 @@ export function ArchiveTransferModal({
   };
 
   const handleSubmit = async () => {
+    const validTasks = tasks.filter((t) => t.title.trim().length > 0);
+    if (validTasks.length === 0) {
+      alert('Vui lòng thêm ít nhất 1 nhiệm vụ trước khi kết thúc cuộc họp.');
+      return;
+    }
     await onConfirmArchive({
       meetingId: meeting.id,
-      tasks: meetingType === 'MEMBER' ? [] : tasks,
+      tasks: validTasks,
       meetingType,
     });
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/40">
+        <div className="px-6 py-4.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/40 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-2xs">
               <Archive className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Chuyển Thông Tin Cuộc Họp Về Kho Lưu Trữ
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <span>Kết Thúc Cuộc Họp & Phân Bổ Action Items Vào Mini Jira</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Xác nhận kết thúc, thiết lập phân quyền kho và phân bổ nhiệm vụ
+                Giao task trực tiếp cho nhân viên có mặt trong phòng họp, điều chỉnh hạn chót và lưu
+                trữ biên bản
               </p>
             </div>
           </div>
@@ -212,219 +364,239 @@ export function ArchiveTransferModal({
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
-          {/* Meeting Identity & RBAC Warehouse Tag */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+          {/* Meeting Identity Banner */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-md">
-                {meeting.title}
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-lg">
+                  {meeting.title}
+                </span>
+              </div>
+              <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wide flex items-center gap-1">
+                <Layers className="w-3 h-3" />
+                <span>{meeting.department_name || 'Khối Kỹ Thuật & Công Nghệ'}</span>
               </span>
-              {meetingType === 'EXECUTIVE' && (
-                <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 uppercase tracking-wide flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
-                  Cuộc họp cấp cao
-                </span>
-              )}
-              {meetingType === 'DEPARTMENT' && (
-                <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wide flex items-center gap-1">
-                  <Layers className="w-3 h-3" />
-                  {meeting.department_name || 'Phòng ban trực thuộc'}
-                </span>
-              )}
-              {meetingType === 'MEMBER' && (
-                <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase tracking-wide flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  Họp nội bộ thành viên
-                </span>
-              )}
             </div>
 
-            {/* RBAC Visibility Guarantee */}
-            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-start gap-2 text-xs">
-              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Phân quyền truy cập kho lưu trữ:
-                </span>{' '}
-                {meetingType === 'EXECUTIVE' ? (
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Owner xem toàn bộ biên bản. Trưởng phòng xem được các nghị quyết được phân công
-                    cho phòng ban mình.
-                  </span>
-                ) : (
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Owner xem được toàn bộ. Manager và Member chỉ xem được kho lưu trữ trong phạm vi
-                    phòng ban của mình.
-                  </span>
-                )}
-              </div>
+            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-blue-500" />
+                <span>
+                  Thời gian:{' '}
+                  {meeting.scheduled_at
+                    ? new Date(meeting.scheduled_at).toLocaleDateString('vi-VN')
+                    : 'Hôm nay'}
+                </span>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <span>
+                  Thành viên có mặt:{' '}
+                  <strong className="text-slate-700 dark:text-slate-300">
+                    {meetingAttendees.length} nhân sự
+                  </strong>
+                </span>
+              </span>
+              <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Tự động đồng bộ sang bảng Mini Jira của Quản lý & Thành viên</span>
+              </span>
             </div>
           </div>
 
-          {/* Action Items Section */}
-          {meetingType === 'EXECUTIVE' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Nghị Quyết Cấp Cao & Phân Công Khối Phòng Ban
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Chuyển giao đầu việc cho các phòng ban thực thi theo cơ cấu tổ chức
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddTask}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm quyết sách (Gán tay)</span>
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {tasks.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-2xl">
-                    Chưa có quyết sách nào. Bấm 'Thêm quyết sách' để gán việc cho phòng ban.
-                  </div>
-                ) : (
-                  tasks.map((task, idx) => (
-                    <div
-                      key={task.id || idx}
-                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
-                    >
-                      <input
-                        type="text"
-                        value={task.title}
-                        onChange={(e) => handleUpdateTask(idx, 'title', e.target.value)}
-                        placeholder="Nội dung quyết sách / chỉ đạo..."
-                        className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                      />
-                      <select
-                        value={task.target_department || DEPARTMENTS[0].name}
-                        onChange={(e) => handleUpdateTask(idx, 'target_department', e.target.value)}
-                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:border-blue-500 shrink-0"
-                      >
-                        {DEPARTMENTS.map((d) => (
-                          <option key={d.id} value={d.name}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="date"
-                        value={task.deadline || ''}
-                        onChange={(e) => handleUpdateTask(idx, 'deadline', e.target.value)}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-300 focus:outline-none shrink-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTask(idx)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
-                        title="Xóa dòng này"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {meetingType === 'DEPARTMENT' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                    Phân Bổ Nhiệm Vụ Cho Thành Viên (Jira Action Items)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Trích xuất tự động từ phiên họp kết hợp gán tay thêm việc cho member
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddTask}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Gán tay thêm việc</span>
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {tasks.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-2xl">
-                    Chưa có nhiệm vụ nào. Bấm 'Gán tay thêm việc' để tạo task cho member.
-                  </div>
-                ) : (
-                  tasks.map((task, idx) => (
-                    <div
-                      key={task.id || idx}
-                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
-                    >
-                      <input
-                        type="text"
-                        value={task.title}
-                        onChange={(e) => handleUpdateTask(idx, 'title', e.target.value)}
-                        placeholder="Tên công việc cần thực hiện..."
-                        className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                      />
-                      <select
-                        value={task.assignee_id || ''}
-                        onChange={(e) => handleUpdateTask(idx, 'assignee_id', e.target.value)}
-                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:border-blue-500 shrink-0"
-                      >
-                        <option value="">-- Chọn Member --</option>
-                        {meetingMembers.map((m) => (
-                          <option key={m.user_id || m.id} value={m.user_id || m.id}>
-                            {m.user_name || m.name || m.user_id}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="date"
-                        value={task.deadline || ''}
-                        onChange={(e) => handleUpdateTask(idx, 'deadline', e.target.value)}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-300 focus:outline-none shrink-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTask(idx)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
-                        title="Xóa công việc"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {meetingType === 'MEMBER' && (
-            <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 flex items-start gap-3 text-xs text-slate-700 dark:text-slate-300">
-              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          {/* Action Items Allocation Section */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="font-semibold text-slate-900 dark:text-white mb-0.5">
-                  Cuộc họp trao đổi nội bộ giữa các thành viên
-                </p>
-                <p className="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-400">
-                  Cuộc họp này không áp dụng quy trình phân chia nhiệm vụ. Toàn bộ bản ghi âm, phụ
-                  đề song ngữ và biên bản tóm tắt AI sẽ được chuyển thẳng về Kho lưu trữ của phòng
-                  ban.
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                  <span>Danh Sách Nhiệm Vụ Cần Giao ({tasks.length} tasks)</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Chọn người chịu trách nhiệm và điều chỉnh hạn chót hoàn thành trước khi chuyển vào
+                  Kanban Board
                 </p>
               </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAiExtractTasks}
+                  disabled={isExtracting || isSubmitting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+                  title="Quét lại nội dung cuộc họp bằng AI để bắt trích xuất Action Items"
+                >
+                  {isExtracting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  )}
+                  <span>{isExtracting ? 'Đang quét AI...' : 'AI Quét Lại Task'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddTask}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Thêm Task</span>
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Tasks Form List */}
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              {tasks.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                  <UserCheck className="w-6 h-6 mx-auto text-slate-300" />
+                  <p>
+                    Chưa có nhiệm vụ nào. Bấm 'AI Quét Lại Task' hoặc '+ Thêm Task' để phân công cho
+                    nhân viên trong phòng họp.
+                  </p>
+                </div>
+              ) : (
+                tasks.map((task, idx) => (
+                  <div
+                    key={task.id || idx}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:border-blue-300 dark:hover:border-blue-700 transition-all space-y-3"
+                  >
+                    {/* Dòng 1: Người nói / Người giao việc (Chủ tọa / Quản lý) */}
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold flex items-center justify-center shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0">
+                            <UserCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>Người nói / Giao việc:</span>
+                          </span>
+                          <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                            {task.speaker_name || hostMemberName}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
+                            Host / Quản lý
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTask(idx)}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0 cursor-pointer"
+                        title="Xóa nhiệm vụ này"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Dòng 2: Tên task đầy đủ */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                        <Tag className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Tên task đầy đủ:</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={task.title}
+                        onChange={(e) => handleUpdateTask(idx, 'title', e.target.value)}
+                        placeholder="Nhập tên nhiệm vụ đầy đủ..."
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    </div>
+
+                    {/* Dòng 3: Người đảm nhận & Hạn hoàn thành */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 items-center">
+                      {/* Assignee Selection */}
+                      <div className="md:col-span-6 flex items-center gap-2">
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+                          <UserIcon className="w-3.5 h-3.5 text-blue-500" />
+                          <span>Người đảm nhận:</span>
+                        </label>
+                        <select
+                          value={task.assignee_id || ''}
+                          onChange={(e) => handleUpdateTask(idx, 'assignee_id', e.target.value)}
+                          className="flex-1 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 truncate"
+                        >
+                          <option value="">-- Chưa gán người phụ trách --</option>
+                          {meetingAttendees.length > 0 && (
+                            <optgroup
+                              label={`✨ Nhân viên có mặt trong phòng họp (${meetingAttendees.length})`}
+                            >
+                              {meetingAttendees.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} {m.email ? `(${m.email.split('@')[0]})` : ''} — Có mặt
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {otherColleagues.length > 0 && (
+                            <optgroup
+                              label={`🏢 Nhân sự khác trong phòng ban (${otherColleagues.length})`}
+                            >
+                              {otherColleagues.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} {m.email ? `(${m.email.split('@')[0]})` : ''} —{' '}
+                                  {m.role || 'Thành viên'}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* Deadline Date Picker & Quick Presets */}
+                      <div className="md:col-span-6 flex flex-wrap items-center justify-end gap-1.5">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <input
+                            type="date"
+                            value={task.deadline || ''}
+                            onChange={(e) => handleUpdateTask(idx, 'deadline', e.target.value)}
+                            className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300 font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 w-36"
+                          />
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setQuickDeadline(idx, 3)}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                            title="Hạn chót 3 ngày sau"
+                          >
+                            +3 ngày
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickDeadline(idx, 7)}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                            title="Hạn chót 1 tuần sau"
+                          >
+                            +1 tuần
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickDeadline(idx, 14)}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                            title="Hạn chót 2 tuần sau"
+                          >
+                            +2 tuần
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-end gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -433,20 +605,24 @@ export function ArchiveTransferModal({
           >
             Quay lại phòng họp
           </button>
+
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+            disabled={isSubmitting || tasks.length === 0}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Đang lưu vào kho...</span>
+                <span>Đang lưu trữ & phân bổ nhiệm vụ vào Mini Jira...</span>
               </>
             ) : (
               <>
-                <span>Xác nhận & Lưu vào kho lưu trữ</span>
+                <span>
+                  Xác nhận kết thúc & Phân bổ nhiệm vụ vào Mini Jira (
+                  {tasks.filter((t) => t.title.trim()).length})
+                </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}

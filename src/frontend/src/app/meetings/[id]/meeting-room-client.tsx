@@ -39,6 +39,8 @@ import {
   Trash2,
   Power,
   ArrowRight,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -70,6 +72,7 @@ import {
   ApiRequestError,
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { resolveMeetingState } from '@/lib/meetingState';
 import { useVADController } from '@/hooks/useVADController';
 import type { TranslationStream, TranscriptHistoryEntry } from '@/hooks/useVADController';
 import { useTranslationAudioMuting, useTranslationStore } from '@/hooks/useTranslationAudioMuting';
@@ -1118,6 +1121,7 @@ export function MeetingRoomClient() {
   const [actionItems, setActionItems] = useState<ActionItemResponse[]>([]);
   const [dbTranscripts, setDbTranscripts] = useState<TranscriptResponse[]>([]);
   const [meetingMembers, setMeetingMembers] = useState<MeetingMember[]>([]);
+  const [meetingEndedNotice, setMeetingEndedNotice] = useState(false);
 
   // Edit Task state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -1134,9 +1138,10 @@ export function MeetingRoomClient() {
   const user = useAuthStore((state) => state.user);
 
   const handleExitMeeting = useCallback(() => {
-    const isOwner =
-      user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
-    const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
+    const roleUpper = (user?.role || '').toUpperCase();
+    const email = (user?.email || '').toLowerCase();
+    const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN' || email === 'admin@axiom.com';
+    const isManager = roleUpper === 'MANAGER' || email.startsWith('manager');
 
     if (isOwner) {
       router.push('/admin');
@@ -1149,11 +1154,13 @@ export function MeetingRoomClient() {
 
   const isHost = useMemo(() => {
     if (!user || !meeting) return false;
+    const roleUpper = (user?.role || '').toUpperCase();
+    const email = (user?.email || '').toLowerCase();
     return (
       user.id === meeting.created_by_id ||
-      user.role === 'OWNER' ||
-      user.role === 'ADMIN' ||
-      user.email === 'admin@axiom.com'
+      roleUpper === 'OWNER' ||
+      roleUpper === 'ADMIN' ||
+      email === 'admin@axiom.com'
     );
   }, [user, meeting]);
 
@@ -1170,10 +1177,28 @@ export function MeetingRoomClient() {
         ]);
         if (latestMeeting) {
           setMeeting(latestMeeting);
-          if (latestMeeting.status === 'COMPLETED') {
-            alert('Cuộc họp đã được kết thúc và chuyển về kho lưu trữ.');
-            handleExitMeeting();
+          const isEnded =
+            latestMeeting.status === 'COMPLETED' ||
+            latestMeeting.status === 'ENDED' ||
+            Boolean(latestMeeting.ended_at) ||
+            resolveMeetingState(latestMeeting) === 'ENDED';
+
+          if (isEnded) {
+            setMeetingEndedNotice(true);
+            setTimeout(() => {
+              handleExitMeeting();
+            }, 2500);
             return;
+          }
+
+          // Auto-start meeting if currently SCHEDULED and active in room
+          if (
+            (latestMeeting.status === 'SCHEDULED' || !latestMeeting.started_at) &&
+            !latestMeeting.ended_at &&
+            latestMeeting.status !== 'COMPLETED' &&
+            latestMeeting.status !== 'ENDED'
+          ) {
+            meetingsApi.startEarly(meetingId).catch(() => {});
           }
         }
         setActionItems(items);
@@ -1278,9 +1303,10 @@ export function MeetingRoomClient() {
     if (!meetingId) return;
     try {
       setIsExtractingTasks(true);
-      const tasks = await meetingsApi.extractTasks(meetingId);
-      if (tasks && tasks.length > 0) {
-        setActionItems(tasks as any);
+      const res: any = await meetingsApi.extractTasks(meetingId);
+      const taskList = Array.isArray(res) ? res : res?.items || [];
+      if (taskList && taskList.length > 0) {
+        setActionItems(taskList as any);
       }
     } catch (err) {
       console.error('Failed to extract tasks:', err);
@@ -1418,15 +1444,7 @@ export function MeetingRoomClient() {
     }) => {
       setIsArchivingMeeting(true);
       try {
-        // 1. Trigger full end meeting (AI summary from Agenda + Script, task extraction, status COMPLETED)
-        try {
-          await meetingsApi.endMeeting(data.meetingId);
-        } catch (endErr) {
-          console.warn('endMeeting endpoint warning, fallback to update:', endErr);
-          await meetingsApi.update(data.meetingId, { status: 'COMPLETED' });
-        }
-
-        // 2. Push confirmed action items to Jira / Management board
+        // 1. First push confirmed action items to Jira / Management board with exact assignees and deadlines
         if (data.tasks && data.tasks.length > 0) {
           try {
             const taskPayload = data.tasks.map((t, idx) => ({
@@ -1441,19 +1459,29 @@ export function MeetingRoomClient() {
           }
         }
 
+        // 2. Trigger full end meeting (AI summary from Agenda + Script, status COMPLETED)
+        try {
+          await meetingsApi.endMeeting(data.meetingId);
+        } catch (endErr) {
+          console.warn('endMeeting endpoint warning, fallback to update:', endErr);
+          await meetingsApi.update(data.meetingId, { status: 'COMPLETED' });
+        }
+
         setIsArchiveModalOpen(false);
 
         // Redirect to management page based on role
+        const roleUpper = (user?.role || '').toUpperCase();
+        const email = (user?.email || '').toLowerCase();
         const isOwner =
-          user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
-        const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
+          roleUpper === 'OWNER' || roleUpper === 'ADMIN' || email === 'admin@axiom.com';
+        const isManager = roleUpper === 'MANAGER' || email.startsWith('manager');
 
         if (isOwner) {
           router.push('/admin');
         } else if (isManager) {
-          router.push('/manager');
+          router.push('/manager?tab=tasks');
         } else {
-          router.push('/member');
+          router.push('/member?tab=jira');
         }
       } catch (err: any) {
         console.error('Failed to archive meeting:', err);
@@ -1786,6 +1814,41 @@ export function MeetingRoomClient() {
   }
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
+
+  // Check if meeting has already concluded
+  const isMeetingEnded =
+    meeting.status === 'COMPLETED' ||
+    meeting.status === 'ENDED' ||
+    Boolean(meeting.ended_at) ||
+    resolveMeetingState(meeting) === 'ENDED';
+
+  if (isMeetingEnded) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100 p-6 text-center">
+        <div className="max-w-md w-full bg-slate-800/90 border border-slate-700/80 rounded-2xl p-8 shadow-2xl backdrop-blur-md flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-5 text-emerald-400">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 mb-3 uppercase tracking-wider">
+            Đã kết thúc
+          </span>
+          <h2 className="text-xl font-bold text-white mb-2">{meeting.title}</h2>
+          <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+            Cuộc họp này đã hoàn tất và kết thúc. Toàn bộ biên bản tóm tắt AI và danh sách công việc
+            đã được lưu trữ an toàn trong hệ thống.
+          </p>
+          <button
+            type="button"
+            onClick={handleExitMeeting}
+            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <ArrowRight className="w-4 h-4" />
+            Quay lại Bàn Làm Việc
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasJoined) {
     return (
@@ -2561,29 +2624,36 @@ export function MeetingRoomClient() {
                             </div>
                           ) : (
                             <div className="flex flex-col gap-2">
-                              <div className="flex items-start gap-2">
-                                <div className="mt-1 shrink-0">
-                                  <span
-                                    className={`inline-block w-2 h-2 rounded-full ${
-                                      item.status === 'CONFIRMED'
-                                        ? 'bg-emerald-500'
-                                        : 'bg-amber-500'
-                                    }`}
-                                  />
+                              {/* Dòng 1: Người nói / Giao việc (Chủ tọa / Quản lý) */}
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 truncate min-w-0">
+                                  <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                  <span className="truncate">
+                                    Người nói:{' '}
+                                    <strong className="text-slate-800 font-bold">
+                                      {item.speaker_name ||
+                                        (meeting as any)?.created_by_name ||
+                                        'Trần Minh Khoa'}
+                                    </strong>
+                                  </span>
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                                    Host
+                                  </span>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
-                                      {item.title}
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-700 text-xs leading-relaxed">
-                                    {item.description || ''}
-                                  </p>
-                                </div>
+                                <span
+                                  className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                                    item.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-amber-500'
+                                  }`}
+                                />
                               </div>
 
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
+                              {/* Dòng 2: Tên task đầy đủ */}
+                              <div className="text-xs font-bold text-slate-900 leading-snug">
+                                {item.title}
+                              </div>
+
+                              {/* Dòng 3: Người đảm nhận & Hạn hoàn thành & Chỉnh sửa */}
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-0.5">
                                 <div className="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium">
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3 text-slate-400" />
@@ -2869,6 +2939,29 @@ export function MeetingRoomClient() {
           onConfirmArchive={handleConfirmArchive}
           isSubmitting={isArchivingMeeting}
         />
+      )}
+
+      {/* Meeting Ended Overlay Notice */}
+      {meetingEndedNotice && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+            <div className="w-14 h-14 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4">
+              <Power className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Cuộc họp đã kết thúc</h3>
+            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+              Chủ tọa đã hoàn tất và kết thúc phiên họp. Hệ thống đang tự động chuyển bạn về bàn làm
+              việc...
+            </p>
+            <button
+              type="button"
+              onClick={handleExitMeeting}
+              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-xl transition-all cursor-pointer"
+            >
+              Rời ngay
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

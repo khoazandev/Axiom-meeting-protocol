@@ -17,7 +17,7 @@ import {
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'analytics' | 'archives';
+export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'archives';
 
 export interface ManagerNavSectionItem {
   id: ManagerNavKey;
@@ -65,20 +65,13 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
     shortcut: '⌘4',
   },
   {
-    id: 'analytics',
-    label: 'Sức Khỏe Kỷ Luật',
-    sublabel: 'Tải công việc & Agenda Gate',
-    icon: BarChart3,
-    shortcut: '⌘5',
-  },
-  {
     id: 'archives',
     label: 'Kho Tài Liệu',
     sublabel: 'Biên bản & Tri thức phòng ban',
     icon: FolderArchive,
     badge: 'Phòng ban',
     badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
-    shortcut: '⌘6',
+    shortcut: '⌘5',
   },
 ];
 

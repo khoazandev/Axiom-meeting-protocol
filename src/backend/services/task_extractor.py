@@ -85,6 +85,7 @@ class TaskExtractorService:
         self,
         transcript_text: str,
         pending_tasks: list[dict] | None = None,
+        host_manager_names: list[str] | None = None,
     ) -> list[dict]:
         """
         Send [PENDING TASKS] + [TRANSCRIPT MỚI] to LLM via Ollama Chat API.
@@ -92,18 +93,20 @@ class TaskExtractorService:
         Args:
             transcript_text: Punctuated transcript text.
             pending_tasks: List of pending task dicts from query_pending_tasks().
+            host_manager_names: List of names of host and managers authorized to give tasks.
 
         Returns:
-            List of dicts: {task_id, task, assignee, deadline, status}
+            List of dicts: {task_id, task, speaker, assignee, deadline, status}
         """
         settings = get_settings()
 
         if not settings.ollama_base_url:
             logger.info("Ollama base URL not configured, using heuristic NLP fallback")
-            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks, host_manager_names)
 
         base_url = settings.ollama_base_url.rstrip("/")
-        timeout = min(settings.task_extractor_timeout, 12) if ("host.docker.internal" in base_url or "localhost" in base_url) else settings.task_extractor_timeout
+        raw_to = getattr(settings, "task_extractor_timeout", 30)
+        timeout = min(raw_to, 12) if ("host.docker.internal" in base_url or "localhost" in base_url) else raw_to
 
         try:
             # ── Build prompt payload ──────────────────────────────────
@@ -130,15 +133,29 @@ class TaskExtractorService:
             # [C] RAG: Find similar past corrections
             corrections_section = self._build_corrections_section(transcript_text)
 
+            # [D] Host & Management Authority Instructions
+            host_rule = ""
+            if host_manager_names:
+                host_list_str = ", ".join(host_manager_names)
+                host_rule = (
+                    f"\n[QUY TẮC PHÂN QUYỀN GIAO VIỆC & CẤU TRÚC ACTION ITEM]:\n"
+                    f"- CHỈ trích xuất Action Item từ lời nói của Người chủ trì cuộc họp (Host) hoặc cấp Quản lý: {host_list_str}.\n"
+                    f"- Lời nói của nhân viên / thành viên thông thường KHÔNG ĐƯỢC trích xuất thành Action Item.\n"
+                    f"- Dòng 1 (Người giao việc): Điền vào trường 'speaker' tên người nói/giao việc.\n"
+                    f"- Dòng 2 (Tên task đầy đủ): Điền vào trường 'task' tên công việc cụ thể, đầy đủ.\n"
+                    f"- Thành viên (assignee): CHỈ gán tên người phụ trách NẾU người nói có chỉ định đích danh (ví dụ: 'Khoa em làm...', 'Nam chịu trách nhiệm...'). Nếu người nói KHÔNG chỉ định ai làm, bắt buộc trả về null.\n"
+                    f"- Thời gian (deadline): CHỈ điền ngày hoàn thành dạng 'YYYY-MM-DD' NẾU người nói có đề cập thời hạn (ví dụ: 'trước thứ Sáu', 'trong 3 ngày'). Nếu người nói KHÔNG đề cập thời hạn, bắt buộc trả về null.\n"
+                )
+
             # Combine
-            user_content = time_context + pending_section + transcript_section + corrections_section
+            user_content = time_context + pending_section + transcript_section + corrections_section + host_rule
 
             model_to_use = settings.task_extractor_model
 
             if "task-extractor" not in model_to_use:
                 user_content += (
                     "\n\n[YÊU CẦU ĐẶC BIỆT: Hãy trích xuất tất cả action items và TRẢ VỀ DUY NHẤT MỘT JSON ARRAY HỢP LỆ. "
-                    'Cấu trúc: [{"task": "Mô tả ngắn gọn việc cần làm", "assignee": "Tên người phụ trách", "deadline": "YYYY-MM-DD", "status": "TODO"}]. '
+                    'Cấu trúc: [{"task": "Tên task đầy đủ", "speaker": "Tên người nói / giao việc", "assignee": "Tên người phụ trách (hoặc null)", "deadline": "YYYY-MM-DD (hoặc null)", "status": "CONFIRMED"}]. '
                     "TUYỆT ĐỐI KHÔNG VIẾT ĐOẠN VĂN ĐÀM THOẠI HAY GIẢI THÍCH, CHỈ TRẢ VỀ JSON ARRAY.]"
                 )
 
@@ -172,14 +189,14 @@ class TaskExtractorService:
                 if parsed:
                     return parsed
             logger.info("Model returned empty or unparseable response, falling back to heuristic rule extraction")
-            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks, host_manager_names)
 
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
             logger.info("Ollama unreachable or timed out (%s), using robust heuristic NLP extractor", exc)
-            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks, host_manager_names)
         except Exception as exc:
             logger.warning("Task extraction exception: %s, falling back to heuristic extractor", exc)
-            return self._heuristic_rule_extraction(transcript_text, pending_tasks)
+            return self._heuristic_rule_extraction(transcript_text, pending_tasks, host_manager_names)
 
     def _parse_relative_deadline(self, text: str) -> str | None:
         """Parse natural language relative deadlines into ISO YYYY-MM-DD format."""
@@ -231,14 +248,18 @@ class TaskExtractorService:
         self,
         transcript_text: str,
         pending_tasks: list[dict] | None = None,
+        host_manager_names: list[str] | None = None,
     ) -> list[dict]:
         """
         Meeting-grade NLP extractor for Vietnamese & English meetings.
-        Correctly extracts tasks, assignees, deadlines, and status from speech turns.
+        Only allows Host and Management roles to assign tasks.
+        Assignee and Deadline are only set if explicitly mentioned by the speaker.
         """
         lines = [l.strip() for l in transcript_text.split("\n") if l.strip()]
         extracted = []
         seen_titles = set()
+
+        default_host_name = host_manager_names[0] if (host_manager_names and len(host_manager_names) > 0) else "Chủ tọa cuộc họp"
 
         for line in lines:
             speaker = ""
@@ -247,6 +268,20 @@ class TaskExtractorService:
             if m_spk:
                 speaker = m_spk.group(1).strip()
                 content = m_spk.group(2).strip()
+
+            # Authority check: Only host or management can assign action items
+            if host_manager_names and speaker:
+                speaker_norm = speaker.strip().lower()
+                is_authorized = any(
+                    (h.lower() in speaker_norm or speaker_norm in h.lower())
+                    for h in host_manager_names
+                ) or any(
+                    title in speaker_norm
+                    for title in ["host", "chủ tọa", "quản lý", "manager", "admin", "owner", "sếp", "lead"]
+                )
+                if not is_authorized:
+                    # Regular member speeches are not action items
+                    continue
 
             target_assignee = None
             raw_task = None
@@ -262,7 +297,7 @@ class TaskExtractorService:
                 target_assignee = m_voc.group(1).strip()
                 raw_task = m_voc.group(2).strip()
 
-            # 2. Speaker commitment: "Em sẽ làm việc với team...", "Tôi sẽ chuẩn bị..."
+            # 2. Speaker commitment: "Tôi sẽ...", "Anh sẽ chuẩn bị..."
             if not raw_task:
                 m_commit = re.search(
                     r"(?:em|tôi|mình|anh|chị|chúng tôi)\s+(?:sẽ|cam kết|đang nhận việc|sẽ chịu trách nhiệm)\s+(.*?)(?=[.!?]|$)",
@@ -285,7 +320,8 @@ class TaskExtractorService:
                     re.IGNORECASE,
                 )
                 if m_team:
-                    target_assignee = "Mọi người"
+                    # Not assigned to a specific individual
+                    target_assignee = None
                     raw_task = m_team.group(1).strip()
 
             # 4. Fallback directive pattern: "cần phải...", "hãy lập kế hoạch..."
@@ -296,7 +332,8 @@ class TaskExtractorService:
                     re.IGNORECASE,
                 )
                 if m_dir:
-                    target_assignee = speaker or "Unassigned"
+                    # Not assigned unless explicitly mentioned
+                    target_assignee = None
                     raw_task = m_dir.group(1).strip()
 
             if raw_task and len(raw_task) >= 6:
@@ -309,11 +346,14 @@ class TaskExtractorService:
 
                 deadline_val = self._parse_relative_deadline(content)
                 key = cleaned.lower()[:35]
+                speaker_val = speaker or default_host_name
+
                 if key not in seen_titles:
                     seen_titles.add(key)
                     extracted.append({
                         "task_id": None,
                         "task": cleaned,
+                        "speaker": speaker_val,
                         "assignee": target_assignee,
                         "deadline": deadline_val,
                         "status": "CONFIRMED" if is_confirmed else "NOT_CONFIRMED",
@@ -391,12 +431,19 @@ class TaskExtractorService:
             if not task or len(task) < 5:
                 continue
 
-            # Normalize assignee
+            # Normalize assignee (null if unassigned)
             assignee = item.get("assignee")
             if assignee:
                 assignee = str(assignee).strip()
-                if assignee.lower() in ("unassigned", "null", "none", ""):
+                if assignee.lower() in ("unassigned", "null", "none", "", "chưa gán", "chưa phân bổ"):
                     assignee = None
+
+            # Normalize deadline (null if not specified)
+            deadline = item.get("deadline")
+            if deadline:
+                deadline = str(deadline).strip()
+                if deadline.lower() in ("null", "none", "", "không có"):
+                    deadline = None
 
             # Normalize status
             status = item.get("status", "NOT_CONFIRMED")
@@ -408,8 +455,9 @@ class TaskExtractorService:
             valid_items.append({
                 "task_id": item.get("task_id"),  # None for new tasks
                 "task": task[:200],
+                "speaker": item.get("speaker"),
                 "assignee": assignee,
-                "deadline": item.get("deadline"),  # YYYY-MM-DD or null
+                "deadline": deadline,  # YYYY-MM-DD or null
                 "status": status,
             })
         return valid_items
@@ -558,10 +606,17 @@ def sync_extracted_tasks(
             except (ValueError, TypeError):
                 logger.warning("Cannot parse deadline: %s", deadline_str)
 
-        # Build clean description with assignee name preserved
-        desc = f"Phân công cho: {assignee_name or 'Chưa phân bổ'}"
+        speaker_name = item_data.get("speaker")
+
+        # Build clean description with speaker and assignee name preserved
+        desc_parts = []
+        if speaker_name:
+            desc_parts.append(f"Người giao: {speaker_name}")
+        if assignee_name:
+            desc_parts.append(f"Phân công cho: {assignee_name}")
         if deadline:
-            desc += f" | Hạn chót: {deadline.strftime('%d/%m/%Y')}"
+            desc_parts.append(f"Hạn chót: {deadline.strftime('%d/%m/%Y')}")
+        desc = " | ".join(desc_parts) if desc_parts else "Nhiệm vụ cuộc họp"
 
         # ── UPSERT logic ──────────────────────────────────────────
         if task_id:
@@ -581,6 +636,8 @@ def sync_extracted_tasks(
                 if deadline:
                     existing.deadline = deadline
                 existing.status = task_status
+                if speaker_name and not existing.evidence_quote:
+                    existing.evidence_quote = speaker_name
                 if desc and not existing.description:
                     existing.description = desc
                 affected_tasks.append(existing)
@@ -602,6 +659,8 @@ def sync_extracted_tasks(
                     existing_dupe.assignee_id = assignee_id
                 if deadline and not existing_dupe.deadline:
                     existing_dupe.deadline = deadline
+                if speaker_name and not existing_dupe.evidence_quote:
+                    existing_dupe.evidence_quote = speaker_name
                 if task_status == FollowUpTaskStatusEnum.CONFIRMED:
                     existing_dupe.status = task_status
                 affected_tasks.append(existing_dupe)
@@ -614,13 +673,14 @@ def sync_extracted_tasks(
                 assignee_id=assignee_id,
                 title=task_title,
                 description=desc,
+                evidence_quote=speaker_name,
                 status=task_status,
                 deadline=deadline,
                 source=source,
             )
             db.add(task)
             affected_tasks.append(task)
-            logger.info("Created new task: '%s' (assignee=%s, status=%s)", task_title, assignee_name, task_status.value)
+            logger.info("Created new task: '%s' (assignee=%s, speaker=%s, status=%s)", task_title, assignee_name, speaker_name, task_status.value)
 
     if affected_tasks:
         db.commit()

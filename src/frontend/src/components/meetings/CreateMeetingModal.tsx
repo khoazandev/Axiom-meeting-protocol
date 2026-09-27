@@ -23,6 +23,7 @@ interface CreateMeetingModalProps {
 
 export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeetingModalProps) {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const activeOrganization = useAuthStore((state) => state.activeOrganization);
 
   const [title, setTitle] = useState('');
@@ -98,6 +99,7 @@ export function CreateMeetingModal({ isOpen, onClose, onCreated }: CreateMeeting
         agenda: agendaText.trim() || undefined,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         organization_id: activeOrganization?.id || undefined,
+        department_id: user?.department_id || undefined,
       };
 
       const created = await meetingsApi.create(payload);

@@ -11,17 +11,17 @@ import {
 import { ManagerMeetingsTab } from '@/components/manager/ManagerMeetingsTab';
 import { ManagerKanbanTaskTab } from '@/components/manager/ManagerKanbanTaskTab';
 import { ManagerTeamTab } from '@/components/manager/ManagerTeamTab';
-import { ManagerAnalyticsTab } from '@/components/manager/ManagerAnalyticsTab';
 import { ManagerCalendarTab } from '@/components/manager/ManagerCalendarTab';
 import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
 import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { authApi } from '@/lib/api';
 import Logo from '@/components/Logo';
 import { Video, Clock, Bell, CheckCircle2, Building2, Search, User } from 'lucide-react';
 
 export default function ManagerWorkspacePage() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ManagerNavKey>('meetings');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [timeStr, setTimeStr] = useState('');
@@ -54,6 +54,18 @@ export default function ManagerWorkspacePage() {
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Ensure current manager session has up-to-date department_id and department_name
+  useEffect(() => {
+    authApi
+      .me()
+      .then((freshUser) => {
+        if (freshUser) {
+          updateUser(freshUser);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const currentSection =
@@ -237,8 +249,6 @@ export default function ManagerWorkspacePage() {
           {activeTab === 'calendar' && <ManagerCalendarTab onNotify={showToast} />}
 
           {activeTab === 'team' && <ManagerTeamTab onNotify={showToast} />}
-
-          {activeTab === 'analytics' && <ManagerAnalyticsTab onNotify={showToast} />}
 
           {activeTab === 'archives' && (
             <MeetingArchiveRepository

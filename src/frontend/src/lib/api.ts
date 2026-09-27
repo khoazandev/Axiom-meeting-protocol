@@ -24,8 +24,8 @@ export interface Meeting {
   host_name?: string | null;
   host_avatar?: string | null;
   participant_count?: number;
-  approval_status?: 'APPROVED' | 'PENDING' | 'REJECTED';
-  meeting_type?: 'OFFICIAL' | 'INTERNAL_TEAM';
+  approval_status?: 'APPROVED' | 'PENDING' | 'REJECTED' | string;
+  meeting_type?: 'OFFICIAL' | 'INTERNAL_TEAM' | 'EXECUTIVE' | string;
   duration_minutes?: number;
   summary?: string | null;
   key_points?: string | null;
@@ -54,8 +54,12 @@ export interface User {
   full_name: string;
   avatar_url?: string | null;
   role?: string | null;
+  phone?: string | null;
+  job_title?: string | null;
   provider: string;
   is_active: boolean;
+  department_id?: string | null;
+  department_name?: string | null;
 }
 
 export interface Organization {
@@ -104,6 +108,7 @@ export interface ActionItemResponse {
   title: string;
   description: string | null;
   status: string;
+  speaker_name?: string | null;
   assignee_id?: string | null;
   assignee_name?: string | null;
   due_date?: string | null;
@@ -116,6 +121,7 @@ export interface FollowUpTask {
   title: string;
   description: string | null;
   status: 'CONFIRMED' | 'NOT_CONFIRMED';
+  speaker_name?: string | null;
   assignee_id: string | null;
   assignee_name?: string | null;
   deadline: string | null;
@@ -321,7 +327,12 @@ export const authApi = {
     return apiFetch<User>('/api/v1/auth/me');
   },
 
-  updateMe(data: { full_name?: string; avatar_url?: string }): Promise<User> {
+  updateMe(data: {
+    full_name?: string;
+    avatar_url?: string;
+    email?: string;
+    phone?: string;
+  }): Promise<User> {
     return apiFetch<User>('/api/v1/auth/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -670,6 +681,7 @@ export const meetingsApi = {
     approval_filter?: string;
     meeting_type_filter?: string;
     org_id?: string;
+    department_id?: string;
     all_org_meetings?: boolean;
   }): Promise<Meeting[]> {
     const q = new URLSearchParams();
@@ -677,6 +689,7 @@ export const meetingsApi = {
     if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
     if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
     if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.department_id) q.append('department_id', params.department_id);
     if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
     const qs = q.toString();
     return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');
@@ -1088,8 +1101,9 @@ export const adminApi = {
 
 // Extend organizationApi with members and analytics
 export const organizationAdminApi = {
-  getMembers(orgId: string): Promise<OrgMemberDetail[]> {
-    return apiFetch<OrgMemberDetail[]>(`/api/v1/organizations/${orgId}/members`);
+  getMembers(orgId: string, departmentId?: string): Promise<OrgMemberDetail[]> {
+    const query = departmentId ? `?department_id=${encodeURIComponent(departmentId)}` : '';
+    return apiFetch<OrgMemberDetail[]>(`/api/v1/organizations/${orgId}/members${query}`);
   },
 
   updateMemberRole(orgId: string, userId: string, role: string): Promise<OrgMemberDetail> {
@@ -1175,6 +1189,7 @@ export const meetingsAdminApi = {
     approval_filter?: string;
     meeting_type_filter?: string;
     org_id?: string;
+    department_id?: string;
     all_org_meetings?: boolean;
   }): Promise<Meeting[]> {
     const q = new URLSearchParams();
@@ -1182,6 +1197,7 @@ export const meetingsAdminApi = {
     if (params?.approval_filter) q.append('approval_filter', params.approval_filter);
     if (params?.meeting_type_filter) q.append('meeting_type_filter', params.meeting_type_filter);
     if (params?.org_id) q.append('org_id', params.org_id);
+    if (params?.department_id) q.append('department_id', params.department_id);
     if (params?.all_org_meetings) q.append('all_org_meetings', 'true');
     const qs = q.toString();
     return apiFetch<Meeting[]>(qs ? `/api/v1/meetings?${qs}` : '/api/v1/meetings');

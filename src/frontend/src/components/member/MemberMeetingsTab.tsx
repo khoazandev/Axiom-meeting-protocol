@@ -45,19 +45,31 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     title: string;
   } | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const data = await meetingsApi.list();
-        setMeetings(data);
-      } catch (err) {
-        console.error('Failed to load meetings:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadMeetings = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      const data = await meetingsApi.list();
+      setMeetings(data);
+    } catch (err) {
+      console.error('Failed to load meetings for member:', err);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadMeetings(true);
+    const interval = setInterval(() => {
+      loadMeetings(false);
+    }, 4000);
+    const handleFocus = () => {
+      loadMeetings(false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleDeleteMeeting = async (id: string, title: string) => {
@@ -118,11 +130,25 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
   ).length;
   const endedMeetingsCount = meetings.filter((m) => resolveMeetingState(m) === 'ENDED').length;
 
+  const STATE_ORDER: Record<MeetingState, number> = {
+    LIVE: 1,
+    UPCOMING: 2,
+    ENDED: 3,
+  };
+
   const filteredMeetings = meetings
     .filter((m) => m.title.toLowerCase().includes(searchFilter.toLowerCase()))
     .filter((m) => {
       if (statusFilter === 'ALL') return true;
       return resolveMeetingState(m) === statusFilter;
+    })
+    .sort((a, b) => {
+      const orderA = STATE_ORDER[resolveMeetingState(a)] || 99;
+      const orderB = STATE_ORDER[resolveMeetingState(b)] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = new Date(a.scheduled_at || a.started_at || a.created_at || 0).getTime();
+      const timeB = new Date(b.scheduled_at || b.started_at || b.created_at || 0).getTime();
+      return timeB - timeA;
     });
 
   return (
