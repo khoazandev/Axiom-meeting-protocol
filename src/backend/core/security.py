@@ -63,3 +63,27 @@ def decode_token(token: str) -> dict | None:
         return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except Exception:
         return None
+
+
+def hash_recruitment_token(raw_token: str) -> str:
+    """Return SHA-256 hash of a candidate recruitment invitation token."""
+    import hashlib
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def create_candidate_access_token(
+    application_id: str,
+    candidate_id: str,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Create a signed 30-minute JWT token for candidate portal access."""
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=30)
+    )
+    to_encode = {
+        "sub": candidate_id,
+        "application_id": application_id,
+        "type": "candidate",
+        "exp": expire,
+    }
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)

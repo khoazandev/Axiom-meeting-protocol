@@ -201,6 +201,8 @@ def upgrade() -> None:
         sa.Column('used_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('max_uses', sa.Integer(), nullable=False, server_default='1'),
         sa.Column('revoked_at', sa.DateTime(), nullable=True),
+        sa.Column('delivery_status', sa.String(), nullable=True, server_default='PENDING'),
+        sa.Column('delivery_attempts', sa.Integer(), nullable=True, server_default='0'),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['application_id'], ['recruitment_applications.id']),
         sa.ForeignKeyConstraint(['organization_id'], ['organizations.id']),
@@ -216,6 +218,7 @@ def upgrade() -> None:
         'assessment_attempts',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('application_id', sa.String(), nullable=False),
+        sa.Column('definition_id', sa.String(), nullable=True),
         sa.Column('definition_snapshot_json', sa.Text(), nullable=False),
         sa.Column(
             'status',
@@ -230,6 +233,7 @@ def upgrade() -> None:
         sa.Column('expires_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['application_id'], ['recruitment_applications.id']),
+        sa.ForeignKeyConstraint(['definition_id'], ['assessment_definitions.id']),
         sa.PrimaryKeyConstraint('id'),
     )
     with op.batch_alter_table('assessment_attempts', schema=None) as batch_op:

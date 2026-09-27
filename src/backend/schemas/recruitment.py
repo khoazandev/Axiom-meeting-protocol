@@ -87,6 +87,18 @@ class ApplicationInviteCreate(BaseModel):
     assigned_hr_member_id: Optional[str] = None
 
 
+class ApplicationInviteResponse(BaseModel):
+    application_id: str
+    candidate_id: str
+    invitation_token: str
+    delivery_status: str
+
+
+class AssignAssessmentRequest(BaseModel):
+    definition_id: str
+    duration_minutes_override: Optional[int] = None
+
+
 class ApplicationSummary(BaseModel):
     id: str
     organization_id: str

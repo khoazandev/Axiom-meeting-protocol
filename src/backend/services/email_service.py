@@ -324,3 +324,94 @@ def render_mom_digest_email(email: str, meeting_title: str, summary: str) -> str
       </body>
     </html>
     """
+
+
+def render_recruitment_invitation_email(
+    candidate_name: str,
+    opening_title: str,
+    organization_name: str,
+    portal_url: str,
+    expires_at_str: str,
+) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Lời mời tham gia ứng tuyển: {opening_title} — {organization_name}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; line-height: 1.6;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden;">
+          <tr>
+            <td style="background-color: #0f172a; padding: 28px 32px; border-bottom: 3px solid #2563eb;">
+              <h1 style="margin: 0; font-size: 20px; color: #ffffff;">Cổng Ứng Tuyển — {organization_name}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <p style="font-size: 15px; margin: 0 0 16px;">Xin chào <strong>{candidate_name}</strong>,</p>
+              <p style="font-size: 14px; color: #334155; margin: 0 0 20px;">
+                Bạn đã được mời tham gia quy trình tuyển dụng cho vị trí <strong>{opening_title}</strong> tại <strong>{organization_name}</strong>.
+              </p>
+              <div style="text-align: center; margin: 28px 0;">
+                <a href="{portal_url}" style="background-color: #2563eb; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+                  Truy Cập Cổng Ứng Viên
+                </a>
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin-top: 24px;">
+                Liên kết này có hiệu lực đến: <strong>{expires_at_str}</strong>. Vui lòng không chia sẻ liên kết này.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_recruitment_invitation_email(
+    candidate_email: str,
+    candidate_name: str,
+    opening_title: str,
+    organization_name: str,
+    portal_url: str,
+    expires_at_str: str,
+) -> dict:
+    settings = get_settings()
+    html_content = render_recruitment_invitation_email(
+        candidate_name=candidate_name,
+        opening_title=opening_title,
+        organization_name=organization_name,
+        portal_url=portal_url,
+        expires_at_str=expires_at_str,
+    )
+    subject = f"Lời mời ứng tuyển vị trí {opening_title} — {organization_name}"
+
+    if settings.smtp_user and settings.smtp_password:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+            msg["To"] = candidate_email
+            part_html = MIMEText(html_content, "html", "utf-8")
+            msg.attach(part_html)
+
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                clean_user = settings.smtp_user.strip()
+                clean_pass = settings.smtp_password.replace(" ", "").strip()
+                server.login(clean_user, clean_pass)
+                server.sendmail(settings.smtp_from_email, [candidate_email], msg.as_string())
+
+            return {"sent": True, "recipient": candidate_email, "mode": "smtp"}
+        except Exception as e:
+            logger.warning(f"[EmailService] Candidate recruitment email failed via SMTP: {e}")
+            return {"sent": False, "recipient": candidate_email, "mode": "failed", "error": str(e)}
+
+    return {"sent": True, "recipient": candidate_email, "mode": "simulated", "portal_url": portal_url}

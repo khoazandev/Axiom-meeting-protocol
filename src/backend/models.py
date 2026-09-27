@@ -1101,6 +1101,8 @@ class RecruitmentInvitation(database.Base):
     used_count = Column(Integer, default=0, nullable=False)
     max_uses = Column(Integer, default=1, nullable=False)
     revoked_at = Column(DateTime, nullable=True)
+    delivery_status = Column(String, default="PENDING", nullable=True)
+    delivery_attempts = Column(Integer, default=0, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
     application = relationship("RecruitmentApplication", back_populates="invitations")
@@ -1142,6 +1144,7 @@ class AssessmentAttempt(database.Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    definition_id = Column(String, ForeignKey("assessment_definitions.id"), nullable=True)
     definition_snapshot_json = Column(Text, nullable=False)
     status = Column(Enum(AssessmentStatusEnum), default=AssessmentStatusEnum.PENDING, nullable=False)
     score = Column(Float, nullable=True)
@@ -1152,6 +1155,15 @@ class AssessmentAttempt(database.Base):
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
 
     application = relationship("RecruitmentApplication", back_populates="assessment_attempts")
+    definition = relationship("AssessmentDefinition")
+
+    @property
+    def questions_snapshot(self) -> str:
+        return self.definition_snapshot_json
+
+    @questions_snapshot.setter
+    def questions_snapshot(self, value: str) -> None:
+        self.definition_snapshot_json = value
 
 
 class InterviewSession(database.Base):

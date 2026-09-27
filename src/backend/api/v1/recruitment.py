@@ -1,6 +1,6 @@
 """Recruitment pipeline API endpoints for Organization Owners and HR Managers."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -12,8 +12,12 @@ from src.backend.core.exceptions import (
     ForbiddenException,
     NotFoundException,
 )
+from src.backend.core.security import hash_recruitment_token
 from src.backend.database import get_db
 from src.backend.models import (
+    AssessmentAttempt,
+    AssessmentDefinition,
+    Candidate,
     Department,
     DepartmentMember,
     HRDecisionEnum,
@@ -26,13 +30,20 @@ from src.backend.models import (
     OwnerDecisionEnum,
     Permission,
     RecruitmentApplication,
+    RecruitmentInvitation,
     RecruitmentPolicy,
     RecruitmentStageEnum,
 )
 from src.backend.schemas.recruitment import (
     ApplicationDetail,
+    ApplicationInviteCreate,
+    ApplicationInviteResponse,
     ApplicationSummary,
+    AssignAssessmentRequest,
     AssignHRUpdate,
+    AssessmentAttemptResponse,
+    AssessmentDefinitionCreate,
+    AssessmentDefinitionResponse,
     HRReviewCreate,
     HRReviewResponse,
     JobOpeningCreate,
@@ -46,6 +57,9 @@ from src.backend.schemas.recruitment import (
     ReviewGrantResponse,
     ReviewGrantUpdate,
 )
+from src.backend.services.assessment_service import AssessmentService
+from src.backend.services.candidate_auth import generate_invitation_token
+from src.backend.services.email_service import send_recruitment_invitation_email
 from src.backend.services.recruitment_permissions import (
     assert_recruitment_reviewer,
     get_effective_permissions,
@@ -405,6 +419,249 @@ def update_job_opening(
     db.commit()
     db.refresh(opening)
     return opening
+
+
+# ---------------------------------------------------------------------------
+# Applications & Candidate Invitations
+# ---------------------------------------------------------------------------
+@router.post("/applications", response_model=ApplicationInviteResponse, status_code=status.HTTP_201_CREATED)
+def create_candidate_application(
+    org_id: str,
+    payload: ApplicationInviteCreate,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Invite a candidate to an opening, creating candidate, application, and invitation token."""
+    if not _can_manage_recruitment(db, member):
+        raise ForbiddenException("Owner or recruitment.manage permission required")
+
+    opening = _get_opening_or_404(db, org_id, payload.opening_id)
+
+    # 1. Find or create candidate
+    candidate = (
+        db.query(Candidate)
+        .filter(Candidate.organization_id == org_id, Candidate.email == payload.candidate_email)
+        .first()
+    )
+    if not candidate:
+        candidate = Candidate(
+            organization_id=org_id,
+            email=payload.candidate_email,
+            full_name=payload.candidate_name,
+            phone=payload.candidate_phone,
+            notes=payload.notes,
+        )
+        db.add(candidate)
+        db.flush()
+    else:
+        if payload.candidate_name and not candidate.full_name:
+            candidate.full_name = payload.candidate_name
+        if payload.candidate_phone and not candidate.phone:
+            candidate.phone = payload.candidate_phone
+
+    # 2. Check duplicate active application
+    existing_app = (
+        db.query(RecruitmentApplication)
+        .filter(
+            RecruitmentApplication.opening_id == opening.id,
+            RecruitmentApplication.candidate_id == candidate.id,
+        )
+        .first()
+    )
+    if existing_app:
+        raise ConflictException("Candidate already has an application for this job opening")
+
+    # 3. Determine assigned HR
+    assigned_hr = payload.assigned_hr_member_id or opening.assigned_hr_member_id
+    if assigned_hr:
+        _validate_assigned_hr_member(db, org_id, opening.department_id, assigned_hr)
+
+    # 4. Create application
+    application = RecruitmentApplication(
+        organization_id=org_id,
+        opening_id=opening.id,
+        candidate_id=candidate.id,
+        assigned_hr_member_id=assigned_hr,
+        stage=RecruitmentStageEnum.INVITED,
+        version=1,
+    )
+    db.add(application)
+    db.flush()
+
+    # 5. Generate secure invitation token
+    raw_token = generate_invitation_token()
+    token_hash = hash_recruitment_token(raw_token)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=7)
+
+    invitation = RecruitmentInvitation(
+        organization_id=org_id,
+        application_id=application.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+        delivery_status="PENDING",
+        delivery_attempts=1,
+    )
+    db.add(invitation)
+
+    # 6. Audit event
+    record_recruitment_event(
+        db,
+        application,
+        action="CREATE_APPLICATION",
+        actor_id=member.user_id,
+        metadata={"candidate_email": candidate.email, "opening_id": opening.id},
+    )
+
+    db.commit()
+    db.refresh(application)
+    db.refresh(invitation)
+
+    # 7. Dispatch invitation email
+    portal_url = f"/recruitment/portal?token={raw_token}"
+    email_res = send_recruitment_invitation_email(
+        candidate_email=candidate.email,
+        candidate_name=candidate.full_name,
+        opening_title=opening.title,
+        organization_name=member.organization.name if member.organization else "Axiom",
+        portal_url=portal_url,
+        expires_at_str=expires_at.strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    invitation.delivery_status = "SENT" if email_res.get("sent") else "FAILED"
+    db.commit()
+
+    return ApplicationInviteResponse(
+        application_id=application.id,
+        candidate_id=candidate.id,
+        invitation_token=raw_token,
+        delivery_status=invitation.delivery_status,
+    )
+
+
+@router.post("/applications/{application_id}/resend-invitation", response_model=ApplicationInviteResponse)
+def resend_application_invitation(
+    org_id: str,
+    application_id: str,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Revoke existing invitation tokens and issue a fresh invitation link to candidate."""
+    if not _can_manage_recruitment(db, member):
+        raise ForbiddenException("Owner or recruitment.manage permission required")
+
+    application = _get_application_or_404(db, org_id, application_id)
+    candidate = application.candidate
+    opening = application.opening
+
+    now = datetime.now(timezone.utc)
+    # Revoke old active invitations
+    active_invs = (
+        db.query(RecruitmentInvitation)
+        .filter(
+            RecruitmentInvitation.application_id == application.id,
+            RecruitmentInvitation.revoked_at == None,
+        )
+        .all()
+    )
+    for inv in active_invs:
+        inv.revoked_at = now
+
+    raw_token = generate_invitation_token()
+    token_hash = hash_recruitment_token(raw_token)
+    expires_at = now + timedelta(days=7)
+
+    invitation = RecruitmentInvitation(
+        organization_id=org_id,
+        application_id=application.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+        delivery_status="PENDING",
+        delivery_attempts=1,
+    )
+    db.add(invitation)
+
+    record_recruitment_event(
+        db,
+        application,
+        action="RESEND_INVITATION",
+        actor_id=member.user_id,
+        metadata={"candidate_email": candidate.email},
+    )
+    db.commit()
+    db.refresh(invitation)
+
+    portal_url = f"/recruitment/portal?token={raw_token}"
+    email_res = send_recruitment_invitation_email(
+        candidate_email=candidate.email,
+        candidate_name=candidate.full_name,
+        opening_title=opening.title,
+        organization_name=member.organization.name if member.organization else "Axiom",
+        portal_url=portal_url,
+        expires_at_str=expires_at.strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    invitation.delivery_status = "SENT" if email_res.get("sent") else "FAILED"
+    db.commit()
+
+    return ApplicationInviteResponse(
+        application_id=application.id,
+        candidate_id=candidate.id,
+        invitation_token=raw_token,
+        delivery_status=invitation.delivery_status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Assessment Definitions & Assignment
+# ---------------------------------------------------------------------------
+@router.post("/assessment-definitions", response_model=AssessmentDefinitionResponse, status_code=status.HTTP_201_CREATED)
+def create_assessment_definition(
+    org_id: str,
+    payload: AssessmentDefinitionCreate,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Create a new versioned assessment definition."""
+    if not _can_manage_recruitment(db, member):
+        raise ForbiddenException("Owner or recruitment.manage permission required")
+
+    service = AssessmentService(db)
+    return service.create_definition(org_id, payload)
+
+
+@router.get("/assessment-definitions", response_model=List[AssessmentDefinitionResponse])
+def list_assessment_definitions(
+    org_id: str,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """List assessment definitions for the organization."""
+    return (
+        db.query(AssessmentDefinition)
+        .filter(AssessmentDefinition.organization_id == org_id)
+        .order_by(AssessmentDefinition.created_at.desc())
+        .all()
+    )
+
+
+@router.post("/applications/{application_id}/assign-assessment", response_model=AssessmentAttemptResponse)
+def assign_application_assessment(
+    org_id: str,
+    application_id: str,
+    payload: AssignAssessmentRequest,
+    db: Session = Depends(get_db),
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+):
+    """Assign an assessment definition to an application, taking an immutable snapshot."""
+    application = _get_application_or_404(db, org_id, application_id)
+    assert_recruitment_reviewer(db, member, application)
+
+    service = AssessmentService(db)
+    return service.assign_attempt(
+        application_id=application.id,
+        definition_id=payload.definition_id,
+        actor_member=member,
+        duration_minutes_override=payload.duration_minutes_override,
+    )
 
 
 # ---------------------------------------------------------------------------
