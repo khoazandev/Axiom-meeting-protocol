@@ -988,9 +988,9 @@ class Candidate(database.Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
-    email = Column(String, nullable=False)
+    email = Column(String, nullable=True)
     email_hash = Column(String, nullable=True, index=True)
-    full_name = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     cv_url = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
