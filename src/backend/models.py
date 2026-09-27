@@ -8,12 +8,15 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
 )
+import hashlib
 from sqlalchemy.orm import relationship
 
 from . import database
@@ -898,5 +901,294 @@ class IssueComment(database.Base):
     @property
     def author_name(self) -> str | None:
         return self.author.full_name if self.author else None
+
+
+# ---------------------------------------------------------------------------
+# Recruitment Pipeline Enums & Models
+# ---------------------------------------------------------------------------
+class RecruitmentStageEnum(str, enum.Enum):
+    INVITED = "INVITED"
+    ASSESSMENT_PENDING = "ASSESSMENT_PENDING"
+    ASSESSMENT_SUBMITTED = "ASSESSMENT_SUBMITTED"
+    INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED"
+    INTERVIEW_COMPLETED = "INTERVIEW_COMPLETED"
+    HR_REVIEW_PENDING = "HR_REVIEW_PENDING"
+    OWNER_APPROVAL_PENDING = "OWNER_APPROVAL_PENDING"
+    APPROVED = "APPROVED"
+    ONBOARDING_INVITED = "ONBOARDING_INVITED"
+    HIRED = "HIRED"
+    REJECTED = "REJECTED"
+    WITHDRAWN = "WITHDRAWN"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+
+
+class JobOpeningStatusEnum(str, enum.Enum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    CLOSED = "CLOSED"
+
+
+class AssessmentStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
+    EXPIRED = "EXPIRED"
+
+
+class InterviewStatusEnum(str, enum.Enum):
+    SCHEDULED = "SCHEDULED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class HRDecisionEnum(str, enum.Enum):
+    RECOMMEND_HIRE = "RECOMMEND_HIRE"
+    RECOMMEND_REJECT = "RECOMMEND_REJECT"
+    NEEDS_MORE_EVIDENCE = "NEEDS_MORE_EVIDENCE"
+
+
+class OwnerDecisionEnum(str, enum.Enum):
+    APPROVE = "APPROVE"
+    REJECT = "REJECT"
+
+
+class JobOpening(database.Base):
+    __tablename__ = "job_openings"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    department_id = Column(String, ForeignKey("departments.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    requirements = Column(Text, nullable=True)
+    status = Column(Enum(JobOpeningStatusEnum), default=JobOpeningStatusEnum.ACTIVE, nullable=False)
+    created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    assigned_hr_member_id = Column(String, ForeignKey("organization_members.id"), nullable=True)
+    requires_assessment = Column(Boolean, default=False, nullable=False)
+    assessment_definition_id = Column(String, nullable=True)
+    competency_rubric_json = Column(Text, nullable=True)
+    rubric_version = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    organization = relationship("Organization")
+    department = relationship("Department")
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    assigned_hr_member = relationship("OrganizationMember", foreign_keys=[assigned_hr_member_id])
+    applications = relationship("RecruitmentApplication", back_populates="opening", cascade="all, delete-orphan")
+
+
+class Candidate(database.Base):
+    __tablename__ = "candidates"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    email = Column(String, nullable=False)
+    email_hash = Column(String, nullable=True, index=True)
+    full_name = Column(String, nullable=False)
+    phone = Column(String, nullable=True)
+    cv_url = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    redacted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    organization = relationship("Organization")
+    applications = relationship("RecruitmentApplication", back_populates="candidate", cascade="all, delete-orphan")
+
+    def __init__(self, **kwargs):
+        if "email" in kwargs and "email_hash" not in kwargs and kwargs["email"]:
+            kwargs["email_hash"] = hashlib.sha256(kwargs["email"].strip().lower().encode("utf-8")).hexdigest()
+        super().__init__(**kwargs)
+
+
+class RecruitmentApplication(database.Base):
+    __tablename__ = "recruitment_applications"
+    __table_args__ = (
+        UniqueConstraint("opening_id", "candidate_id", name="uq_opening_candidate"),
+        Index("ix_rec_app_org_stage", "organization_id", "stage"),
+        Index("ix_rec_app_open_stage", "opening_id", "stage"),
+    )
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    opening_id = Column(String, ForeignKey("job_openings.id"), nullable=False, index=True)
+    candidate_id = Column(String, ForeignKey("candidates.id"), nullable=False, index=True)
+    assigned_hr_member_id = Column(String, ForeignKey("organization_members.id"), nullable=True)
+    stage = Column(Enum(RecruitmentStageEnum), default=RecruitmentStageEnum.INVITED, nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    consent_given = Column(Boolean, default=False, nullable=False)
+    consent_timestamp = Column(DateTime, nullable=True)
+    terminal_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    organization = relationship("Organization")
+    opening = relationship("JobOpening", back_populates="applications")
+    candidate = relationship("Candidate", back_populates="applications")
+    assigned_hr_member = relationship("OrganizationMember", foreign_keys=[assigned_hr_member_id])
+    audit_events = relationship("RecruitmentAuditEvent", back_populates="application", cascade="all, delete-orphan")
+    invitations = relationship("RecruitmentInvitation", back_populates="application", cascade="all, delete-orphan")
+    assessment_attempts = relationship("AssessmentAttempt", back_populates="application", cascade="all, delete-orphan")
+    interview_sessions = relationship("InterviewSession", back_populates="application", cascade="all, delete-orphan")
+    ai_evaluations = relationship("AIEvaluation", back_populates="application", cascade="all, delete-orphan")
+    hr_review = relationship("HRReview", back_populates="application", uselist=False, cascade="all, delete-orphan")
+    owner_approval = relationship("OwnerApproval", back_populates="application", uselist=False, cascade="all, delete-orphan")
+
+
+class RecruitmentAuditEvent(database.Base):
+    __tablename__ = "recruitment_audit_events"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    action = Column(String, nullable=False)
+    actor_id = Column(String, nullable=True)
+    previous_stage = Column(String, nullable=True)
+    new_stage = Column(String, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    correlation_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="audit_events")
+
+
+class RecruitmentInvitation(database.Base):
+    __tablename__ = "recruitment_invitations"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    token_hash = Column(String, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used_count = Column(Integer, default=0, nullable=False)
+    max_uses = Column(Integer, default=1, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="invitations")
+
+
+class RecruitmentPolicy(database.Base):
+    __tablename__ = "recruitment_policies"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), unique=True, nullable=False, index=True)
+    retention_days = Column(Integer, default=180, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+
+class AssessmentDefinition(database.Base):
+    __tablename__ = "assessment_definitions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    duration_minutes = Column(Integer, default=60, nullable=False)
+    questions_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+
+class AssessmentAttempt(database.Base):
+    __tablename__ = "assessment_attempts"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    definition_snapshot_json = Column(Text, nullable=False)
+    status = Column(Enum(AssessmentStatusEnum), default=AssessmentStatusEnum.PENDING, nullable=False)
+    score = Column(Float, nullable=True)
+    answers_json = Column(Text, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    submitted_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="assessment_attempts")
+
+
+class InterviewSession(database.Base):
+    __tablename__ = "interview_sessions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=False, index=True)
+    scheduled_at = Column(DateTime, nullable=False)
+    interviewer_member_ids_json = Column(Text, nullable=True)
+    status = Column(Enum(InterviewStatusEnum), default=InterviewStatusEnum.SCHEDULED, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="interview_sessions")
+    meeting = relationship("Meeting")
+
+
+class AIEvaluation(database.Base):
+    __tablename__ = "ai_evaluations"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), nullable=False, index=True)
+    rubric_version = Column(Integer, default=1, nullable=False)
+    model_name = Column(String, nullable=True)
+    summary = Column(Text, nullable=True)
+    scores_json = Column(Text, nullable=True)
+    evidence_json = Column(Text, nullable=True)
+    recommendation = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="ai_evaluations")
+
+
+class HRReview(database.Base):
+    __tablename__ = "hr_reviews"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), unique=True, nullable=False, index=True)
+    reviewer_member_id = Column(String, ForeignKey("organization_members.id"), nullable=False)
+    decision = Column(Enum(HRDecisionEnum), nullable=False)
+    reason = Column(Text, nullable=False)
+    ai_diff_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="hr_review")
+    reviewer_member = relationship("OrganizationMember", foreign_keys=[reviewer_member_id])
+
+
+class OwnerApproval(database.Base):
+    __tablename__ = "owner_approvals"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, ForeignKey("recruitment_applications.id"), unique=True, nullable=False, index=True)
+    approver_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    decision = Column(Enum(OwnerDecisionEnum), nullable=False)
+    reason = Column(Text, nullable=True)
+    onboarding_invitation_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    application = relationship("RecruitmentApplication", back_populates="owner_approval")
+    approver_user = relationship("User", foreign_keys=[approver_user_id])
 
 

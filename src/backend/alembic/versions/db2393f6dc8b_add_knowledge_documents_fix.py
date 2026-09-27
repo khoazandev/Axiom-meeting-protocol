@@ -20,6 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "knowledge_documents" in inspector.get_table_names():
+        op.drop_table("knowledge_documents")
+
     op.create_table(
         "knowledge_documents",
         sa.Column("id", sa.String(), nullable=False),
