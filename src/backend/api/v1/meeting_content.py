@@ -1,13 +1,16 @@
 """Meeting Content & AI API: Transcripts, Summaries, FollowUpTasks, Chat."""
 
 import datetime
+import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+logger = logging.getLogger(__name__)
+
 from src.backend.api import deps
 from src.backend.api.v1.meetings_v2 import _get_meeting_or_404, _require_meeting_member
-from src.backend.core.exceptions import NotFoundException
+from src.backend.core.exceptions import ForbiddenException, NotFoundException
 from src.backend.database import get_db
 from src.backend.models import (
     CorrectionTypeEnum,
@@ -48,6 +51,7 @@ class TranscriptSegmentResponse(BaseModel):
     start_time: str
     end_time: str
     sequence: int
+    detected_tasks: list[dict] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -158,7 +162,7 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
     import logging
     from livekit.api import LiveKitAPI
     from livekit.protocol.room import SendDataRequest
-    from livekit.protocol.models import DataPacket_Kind
+    from livekit.protocol.models import DataPacket
     from src.backend.core.config import get_settings
 
     logger = logging.getLogger("axiom.livekit_broadcast")
@@ -181,9 +185,9 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
                 "is_mock": True
             }
             req = SendDataRequest(
-                room=meeting_id,
+                room=f"meeting-{meeting_id}",
                 data=json.dumps(payload).encode("utf-8"),
-                kind=DataPacket_Kind.RELIABLE,
+                kind=DataPacket.Kind.RELIABLE,
                 topic="records"
             )
             await api.room.send_data(req)
@@ -202,22 +206,7 @@ def add_transcript_segment(
     current_user: User = Depends(deps.get_current_user),
 ):
     _get_meeting_or_404(db, meeting_id)
-
-    # Đang tạm tắt tính năng membership của cuộc họp để test
-    # _require_meeting_member(db, meeting_id, current_user.id)
-
-    from src.backend.models import MeetingMember, MeetingMemberRoleEnum, MeetingMemberStatusEnum
-    
-    # Auto-add user to meeting if they aren't a member (useful for test scripts bypassing join)
-    member = db.query(MeetingMember).filter_by(meeting_id=meeting_id, user_id=current_user.id).first()
-    if not member:
-        new_member = MeetingMember(
-            meeting_id=meeting_id,
-            user_id=current_user.id,
-            role=MeetingMemberRoleEnum.PARTICIPANT,
-            status=MeetingMemberStatusEnum.JOINED
-        )
-        db.add(new_member)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     from src.backend.models import Topic, TopicStatusEnum
     current_topic = db.query(Topic).filter(
@@ -225,11 +214,39 @@ def add_transcript_segment(
         Topic.status == TopicStatusEnum.IN_PROGRESS
     ).first()
 
+    speaker_name = current_user.full_name or current_user.email or "Thành viên"
+    clean_content = payload.content.strip()
+    if not clean_content:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Empty transcript")
+
+    # Deduplication guard: return existing segment if exact same transcript from same speaker within 3s
+    recent_dup = (
+        db.query(TranscriptSegment)
+        .filter(
+            TranscriptSegment.meeting_id == meeting_id,
+            TranscriptSegment.speaker_id == current_user.id,
+            TranscriptSegment.content == clean_content,
+        )
+        .order_by(TranscriptSegment.created_at.desc())
+        .first()
+    )
+    if recent_dup and recent_dup.created_at:
+        c_time = recent_dup.created_at
+        if c_time.tzinfo is None:
+            c_time = c_time.replace(tzinfo=datetime.timezone.utc)
+        diff = abs((datetime.datetime.now(datetime.timezone.utc) - c_time).total_seconds())
+        if diff < 3.0:
+            logger.info("Ignored duplicate transcript segment within %.2fs: %s", diff, clean_content)
+            res = TranscriptSegmentResponse.model_validate(recent_dup)
+            res.speaker_name = speaker_name
+            return res
+
     seg = TranscriptSegment(
         meeting_id=meeting_id,
         topic_id=current_topic.id if current_topic else None,
         speaker_id=current_user.id,
-        content=payload.content,
+        content=clean_content,
         start_time=payload.start_time,
         end_time=payload.end_time,
         sequence=payload.sequence,
@@ -239,14 +256,99 @@ def add_transcript_segment(
     db.commit()
     db.refresh(seg)
 
+    fast_detected_tasks = []
+
+    # ── Instant Realtime Fast-Path Task Extraction (< 15ms) ──
+    has_action_kw = any(
+        kw in payload.content.lower()
+        for kw in [
+            "hãy", "cần", "phải", "nhớ", "sẽ", "báo cáo", "kế hoạch", "hoàn thành",
+            "deadline", "chốt", "giao", "làm", "viết", "chuẩn bị", "kiểm tra",
+            "check", "gửi", "triển khai", "setup", "update", "phụ trách", "tiến hành",
+            "please", "will", "assign"
+        ]
+    )
+    if has_action_kw:
+        try:
+            from src.backend.services.task_extractor import (
+                task_extractor_service, sync_extracted_tasks,
+            )
+            from src.backend.models import FollowUpTaskSourceEnum
+            from src.backend.services.meeting_events import meeting_events_manager
+
+            fast_items = task_extractor_service._heuristic_rule_extraction(
+                f"[{speaker_name}]: {payload.content}",
+                host_manager_names=None,
+            )
+            if fast_items:
+                synced_fast = sync_extracted_tasks(
+                    db,
+                    meeting_id,
+                    fast_items,
+                    source=FollowUpTaskSourceEnum.AI_REALTIME,
+                    segment_ids=[seg.id],
+                    topic_id=current_topic.id if current_topic else None,
+                )
+                if synced_fast:
+                    for t in synced_fast:
+                        a_name = t.assignee.full_name if (t.assignee and t.assignee.full_name) else getattr(t, "assignee_name", None)
+                        if not a_name and t.description and "Phân công cho:" in t.description:
+                            a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+                        item_dict = {
+                            "id": t.id,
+                            "meeting_id": t.meeting_id,
+                            "title": t.title,
+                            "description": t.description,
+                            "status": t.status.value if t.status else "NOT_CONFIRMED",
+                            "assignee_id": t.assignee_id,
+                            "assignee_name": a_name,
+                            "deadline": t.deadline.isoformat() if t.deadline else None,
+                            "source": t.source.value if t.source else "AI_REALTIME",
+                            "evidence_quote": payload.content,
+                            "speaker_name": speaker_name,
+                            "transcript_segment_id": t.transcript_segment_id,
+                        }
+                        fast_detected_tasks.append(item_dict)
+
+                    for t_item in fast_detected_tasks:
+                        background_tasks.add_task(
+                            meeting_events_manager.broadcast,
+                            meeting_id,
+                            {"type": "task_realtime_detected", "data": {"task": t_item}},
+                        )
+                    background_tasks.add_task(
+                        meeting_events_manager.broadcast,
+                        meeting_id,
+                        {"type": "tasks_preview", "data": {"tasks": fast_detected_tasks}},
+                    )
+
+                    async def broadcast_livekit_fast_task(tasks_list):
+                        try:
+                            from livekit.api import LiveKitAPI, SendDataRequest, DataPacket
+                            url = settings.livekit_url
+                            if url.startswith("ws://"):
+                                url = url.replace("ws://", "http://")
+                            elif url.startswith("wss://"):
+                                url = url.replace("wss://", "https://")
+                            async with LiveKitAPI(url, settings.livekit_api_key, settings.livekit_api_secret) as api:
+                                for t_obj in tasks_list:
+                                    req = SendDataRequest(
+                                        room=f"meeting-{meeting_id}",
+                                        data=json.dumps({"type": "task_realtime_detected", "task": t_obj}).encode("utf-8"),
+                                        kind=DataPacket.Kind.RELIABLE,
+                                        topic="action_items",
+                                    )
+                                    await api.room.send_data(req)
+                        except Exception as exc:
+                            logger.warning("LiveKit fast task broadcast error: %s", exc)
+
+                    background_tasks.add_task(broadcast_livekit_fast_task, fast_detected_tasks)
+        except Exception as fast_err:
+            logger.warning("Fast-path heuristic task extraction failed: %s", fast_err)
+
     # Trigger micro-batching task extraction
     from src.backend.services.turn_accumulator import turn_accumulator
     batch = turn_accumulator.add_segment(meeting_id, seg.id)
-    # Trigger early if segment contains action/directive keywords and has pending turns
-    has_action_kw = any(
-        kw in payload.content.lower()
-        for kw in ["hãy", "cần", "phải", "nhớ", "sẽ", "báo cáo", "kế hoạch", "hoàn thành", "deadline", "chốt", "giao", "please", "will"]
-    )
     if not batch and has_action_kw and turn_accumulator.pending_count(meeting_id) >= 2:
         batch = turn_accumulator.flush(meeting_id)
 
@@ -349,18 +451,15 @@ def add_transcript_segment(
                     _log.debug("Could not broadcast extraction done event")
 
         background_tasks.add_task(run_extraction)
-    # Broadcast to LiveKit so mock scripts will show subtitles on UI
-    background_tasks.add_task(
-        _broadcast_to_livekit, 
-        meeting_id, 
-        current_user.full_name or current_user.email, 
-        payload.content
-    )
+    # Note: Client already streams live subtitles directly via WebRTC data channel.
+    # We do NOT re-broadcast to LiveKit here to prevent infinite transcript echo loops.
 
     # Đã gỡ bỏ tính năng trích xuất Real-time (micro-batching) theo yêu cầu thiết kế mới.
-    # Trích xuất sẽ chỉ được thực hiện 1 lần duy nhất ở cuối mỗi Topic.
-
-    return seg
+    res = TranscriptSegmentResponse.model_validate(seg)
+    res.speaker_name = speaker_name
+    if fast_detected_tasks:
+        res.detected_tasks = fast_detected_tasks
+    return res
 
 
 @router.get("/transcripts", response_model=list[TranscriptSegmentResponse])
@@ -370,7 +469,7 @@ def list_transcript_segments(
     current_user: User = Depends(deps.get_current_user),
 ):
     _get_meeting_or_404(db, meeting_id)
-    # _require_meeting_member(db, meeting_id, current_user.id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     return (
@@ -476,13 +575,14 @@ async def trigger_task_extraction(
     Extracts action items from transcript segments, chat messages, or agenda.
     """
     meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     from src.backend.services.punctuation_restorer import PunctuationRestorer
     from src.backend.services.task_extractor import (
         task_extractor_service, sync_extracted_tasks, query_pending_tasks,
     )
-    from src.backend.models import FollowUpTaskSourceEnum, MeetingMember, Role, UserRole
+    from src.backend.models import FollowUpTaskSourceEnum, MeetingMember, MeetingMemberRoleEnum, OrganizationMember, OrgMemberStatusEnum, Role
     from src.backend.services.meeting_events import meeting_events_manager
     import datetime
 
@@ -496,11 +596,13 @@ async def trigger_task_extraction(
     for mm in m_members:
         u = db.query(User).filter(User.id == mm.user_id).first()
         if u and u.full_name and u.full_name not in host_manager_names:
-            ur = db.query(UserRole).join(Role).filter(
-                UserRole.user_id == u.id,
+            om = db.query(OrganizationMember).join(Role, OrganizationMember.role_id == Role.id).filter(
+                OrganizationMember.user_id == u.id,
+                OrganizationMember.organization_id == meeting.organization_id,
+                OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
                 Role.name.in_(["OWNER", "ADMIN", "MANAGER", "dept_manager", "org_admin", "system_admin"])
             ).first()
-            if ur or "manager" in (u.email or "").lower() or "admin" in (u.email or "").lower():
+            if om or mm.role in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
                 host_manager_names.append(u.full_name)
 
     segments = (
@@ -566,7 +668,7 @@ async def trigger_task_extraction(
         assignee_user = None
         for m in members:
             u = db.query(User).filter(User.id == m.user_id).first()
-            if u and "manager" not in (u.email or "").lower() and "admin" not in (u.email or "").lower():
+            if u and m.role not in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
                 assignee_user = u
                 break
         if not assignee_user and members:
@@ -662,7 +764,7 @@ def list_follow_up_tasks(
     current_user: User = Depends(deps.get_current_user),
 ):
     meeting = _get_meeting_or_404(db, meeting_id)
-    # _require_meeting_member(db, meeting_id, current_user.id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     tasks = (
@@ -700,6 +802,7 @@ def list_decisions(
     current_user: User = Depends(deps.get_current_user),
 ):
     _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
     from sqlalchemy.orm import joinedload
     return (
         db.query(MeetingDecision)
@@ -719,6 +822,7 @@ def update_decision(
     current_user: User = Depends(deps.get_current_user),
 ):
     _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
     
     decision = (
         db.query(MeetingDecision)
@@ -749,6 +853,7 @@ def delete_decision(
 ):
     """Delete a meeting decision."""
     _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     decision = (
         db.query(MeetingDecision)
@@ -773,7 +878,7 @@ def update_follow_up_task(
     current_user: User = Depends(deps.get_current_user),
 ):
     _get_meeting_or_404(db, meeting_id)
-    # _require_meeting_member(db, meeting_id, current_user.id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     item = (
         db.query(FollowUpTask)
@@ -836,6 +941,7 @@ def delete_follow_up_task(
 ):
     """Delete a follow-up task. If AI-generated, captures a RAG correction."""
     _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     item = (
         db.query(FollowUpTask)
@@ -931,7 +1037,101 @@ def _capture_correction(
 # ---------------------------------------------------------------------------
 # AI Task Extraction
 # ---------------------------------------------------------------------------
-@router.post("/extract-tasks")
+@router.post("/extract-tasks", response_model=list[FollowUpTaskResponse])
+async def extract_tasks_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    On-demand AI task extraction from meeting transcripts.
+    Collects full transcript, calls task extractor, and returns updated tasks.
+    """
+    _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
+
+    from sqlalchemy.orm import joinedload
+    from src.backend.services.punctuation_restorer import PunctuationRestorer
+    from src.backend.services.task_extractor import (
+        task_extractor_service, sync_extracted_tasks, query_pending_tasks,
+    )
+    from src.backend.models import FollowUpTaskSourceEnum, MeetingMember, MeetingMemberRoleEnum
+    from src.backend.services.meeting_events import meeting_events_manager
+
+    # Get host and manager names for authority checking
+    meeting_members = (
+        db.query(MeetingMember)
+        .options(joinedload(MeetingMember.user))
+        .filter(MeetingMember.meeting_id == meeting_id)
+        .all()
+    )
+    host_manager_names = [
+        m.user.full_name for m in meeting_members 
+        if m.user and m.role in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST)
+    ]
+
+    segments = (
+        db.query(TranscriptSegment)
+        .options(joinedload(TranscriptSegment.speaker))
+        .filter(TranscriptSegment.meeting_id == meeting_id)
+        .order_by(TranscriptSegment.sequence.asc())
+        .all()
+    )
+    if segments:
+        restorer = PunctuationRestorer()
+        text = restorer.restore(segments)
+        if text:
+            pending = query_pending_tasks(db, meeting_id)
+            extracted = task_extractor_service.extract(text, pending, host_manager_names=host_manager_names)
+            if extracted:
+                segment_ids = [s.id for s in segments]
+                synced = sync_extracted_tasks(
+                    db, meeting_id, extracted,
+                    source=FollowUpTaskSourceEnum.AI_REALTIME,
+                    segment_ids=segment_ids,
+                )
+
+                tasks_data = []
+                for t in synced:
+                    a_name = t.assignee_name
+                    if not a_name and t.description and "Phân công cho:" in t.description:
+                        a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+                    tasks_data.append({
+                        "id": t.id,
+                        "meeting_id": t.meeting_id,
+                        "title": t.title,
+                        "description": t.description,
+                        "status": t.status.value if t.status else "NOT_CONFIRMED",
+                        "assignee_id": t.assignee_id,
+                        "assignee_name": a_name,
+                        "deadline": t.deadline.isoformat() if t.deadline else None,
+                        "source": t.source.value if t.source else None,
+                        "transcript_segment_id": t.transcript_segment_id,
+                    })
+                try:
+                    await meeting_events_manager.broadcast(
+                        meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
+                    )
+                except Exception:
+                    pass
+
+    # Return all tasks for this meeting
+    all_tasks = (
+        db.query(FollowUpTask)
+        .options(joinedload(FollowUpTask.assignee))
+        .filter(FollowUpTask.meeting_id == meeting_id)
+        .order_by(FollowUpTask.created_at.asc())
+        .all()
+    )
+    res = []
+    for t in all_tasks:
+        item = FollowUpTaskResponse.model_validate(t)
+        if not item.assignee_name and t.description and "Phân công cho:" in t.description:
+            item.assignee_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
+        res.append(item)
+    return res
+
+
 @router.get("/topics", response_model=list[TopicResponse])
 def get_meeting_topics(
     meeting_id: str,
@@ -954,16 +1154,13 @@ def next_meeting_topic(
     current_user: User = Depends(deps.get_current_user)
 ):
     """Advance to the next topic and trigger decision extraction for the completed topic."""
-    from fastapi import HTTPException
     from src.backend.services.unified_topic_extractor import extract_topic_unified_bg
-    from src.backend.models import MeetingMember, MeetingMemberRoleEnum
+    from src.backend.models import MeetingMemberRoleEnum
 
     meeting = _get_meeting_or_404(db, meeting_id)
-    # member = _require_meeting_member(db, meeting.id, current_user.id)
-    
-    # Allow any member to advance topics for testing purposes
-    # if not member or member.role not in [MeetingMemberRoleEnum.OWNER, MeetingMemberRoleEnum.ADMIN]:
-    #     raise HTTPException(status_code=403, detail="Not authorized to change topic")s.")
+    member = _require_meeting_member(db, meeting.id, current_user.id)
+    if member.role not in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
+        raise ForbiddenException("Only the meeting host can advance topics")
 
     topics = db.query(Topic).filter(Topic.meeting_id == meeting_id).order_by(Topic.order_index).all()
     if not topics:

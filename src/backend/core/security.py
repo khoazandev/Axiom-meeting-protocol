@@ -20,21 +20,12 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify plain password against hashed password."""
     try:
-        pwd_bytes = plain_password.encode("utf-8")
-        hash_bytes = hashed_password.encode("utf-8")
-        if bcrypt.checkpw(pwd_bytes, hash_bytes):
-            return True
-    except Exception:
-        pass
-    # Demo accounts convenience fallback: allows either standard password
-    if plain_password in ["password123", "Axiom@123456"]:
-        try:
-            hash_bytes = hashed_password.encode("utf-8")
-            if bcrypt.checkpw(b"password123", hash_bytes) or bcrypt.checkpw(b"Axiom@123456", hash_bytes):
-                return True
-        except Exception:
-            pass
-    return False
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except (TypeError, ValueError):
+        return False
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:

@@ -78,14 +78,16 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     elif is_creating_new_org:
         # Creating a brand-new Organization / Company as Founder & OWNER
         pass
+    elif payload.is_candidate:
+        # Independent candidate searching for companies and jobs
+        pass
     else:
         # Invitation-only security enforcement for existing companies
-        user_count = db.query(User).count()
-        if user_count > 0 and email != "admin@axiom.com":
-            raise ValidationException(
-                "Để đăng ký tài khoản, vui lòng chọn tab 'Khởi tạo Công ty mới' (nếu bạn là chủ doanh nghiệp) "
-                "hoặc sử dụng Thư mời chính thức gửi qua Email từ Quản trị viên để gia nhập công ty."
-            )
+        raise ValidationException(
+            "Để đăng ký tài khoản, vui lòng chọn tab 'Khởi tạo Công ty mới' (nếu bạn là chủ doanh nghiệp), "
+            "'Ứng viên tìm việc' (nếu bạn đang tìm kiếm cơ hội việc làm), "
+            "hoặc sử dụng Thư mời chính thức gửi qua Email từ Quản trị viên để gia nhập công ty."
+        )
 
     existing = db.query(User).filter(User.email == email).first()
     if existing:
@@ -97,7 +99,7 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
         password_hash=hashed_pw,
         full_name=payload.full_name,
         phone=payload.phone or (invitation.phone if invitation else None),
-        job_title=payload.job_title or (invitation.job_title if invitation else ("Chủ tịch / Founder" if is_creating_new_org else None)),
+        job_title=payload.job_title or (invitation.job_title if invitation else ("Chủ tịch / Founder" if is_creating_new_org else ("Ứng viên tiềm năng" if payload.is_candidate else None))),
         provider="local",
     )
     db.add(user)
@@ -214,7 +216,10 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
 def _resolve_user_role(user: User, db: Session) -> str:
     membership = (
         db.query(OrganizationMember)
-        .filter(OrganizationMember.user_id == user.id)
+        .filter(
+            OrganizationMember.user_id == user.id,
+            OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
+        )
         .first()
     )
     if membership and membership.role_id:
@@ -222,11 +227,7 @@ def _resolve_user_role(user: User, db: Session) -> str:
         if role_obj and role_obj.name:
             return role_obj.name.upper()
 
-    if user.email == "admin@axiom.com":
-        return "OWNER"
-    elif user.email == "manager.khoa@axiom.com":
-        return "MANAGER"
-    return "MEMBER"
+    return "CANDIDATE"
 
 
 @router.get("/me", response_model=UserResponse)
@@ -299,4 +300,3 @@ def update_me(
         department_id=dept_id,
         department_name=dept_name,
     )
-

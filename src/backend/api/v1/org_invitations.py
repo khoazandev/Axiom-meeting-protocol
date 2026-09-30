@@ -56,13 +56,16 @@ def create_invitation(
     # Verify inviter is an org member
     membership = (
         db.query(OrganizationMember)
+        .join(Role, OrganizationMember.role_id == Role.id)
         .filter(
             OrganizationMember.organization_id == org_id,
             OrganizationMember.user_id == current_user.id,
+            OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
+            Role.name.in_(("OWNER", "ADMIN")),
         )
         .first()
     )
-    if not membership and current_user.email != "admin@axiom.com":
+    if not membership:
         raise ForbiddenException("Bạn không có quyền mời thành viên vào tổ chức này")
 
     org = db.query(Organization).filter(Organization.id == org_id).first()

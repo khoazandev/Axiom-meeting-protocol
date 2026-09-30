@@ -22,7 +22,7 @@ from src.backend.models import (
     KnowledgeChunk,
     User,
 )
-from src.backend.models import Department, DepartmentMember, AuditLog, OrganizationMember, Organization, Role
+from src.backend.models import Department, DepartmentMember, AuditLog, OrganizationMember, OrgMemberStatusEnum, Organization, Role
 from src.backend.schemas.meeting import (
     MeetingApprovalRequest,
     MeetingCreate,
@@ -46,25 +46,103 @@ def _get_meeting_or_404(db: Session, meeting_id: str) -> Meeting:
     return meeting
 
 
+def _get_user_role_and_dept(
+    db: Session, user: User, organization_id: str | None = None,
+) -> tuple[str, str | None]:
+    """
+    Returns (role_name, department_id).
+    role_name is 'OWNER', 'ADMIN', 'MANAGER', or 'MEMBER'.
+    """
+    if not user:
+        return "MEMBER", None
+
+    # A meeting role belongs to its organization, not another organization on the user.
+    om_query = db.query(OrganizationMember).filter(
+        OrganizationMember.user_id == user.id,
+        OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
+    )
+    if organization_id is not None:
+        om_query = om_query.filter(OrganizationMember.organization_id == organization_id)
+    om = om_query.first()
+    om_role_name = ""
+    if om and om.role_id:
+        r = db.query(Role).filter(Role.id == om.role_id).first()
+        if r:
+            om_role_name = r.name.upper()
+
+    # Check DepartmentMember
+    dm_query = db.query(DepartmentMember).filter(DepartmentMember.user_id == user.id)
+    if organization_id is not None:
+        dm_query = dm_query.join(Department, DepartmentMember.department_id == Department.id).filter(
+            Department.organization_id == organization_id,
+        )
+    dm = dm_query.first() if om else None
+    dept_id = dm.department_id if dm else None
+    dm_role_name = ""
+    if dm and dm.role_id:
+        r = db.query(Role).filter(Role.id == dm.role_id).first()
+        if r:
+            dm_role_name = r.name.upper()
+
+    if om_role_name in ("OWNER", "ADMIN"):
+        return om_role_name, dept_id
+
+    if om_role_name == "MANAGER" or dm_role_name == "MANAGER":
+        return "MANAGER", dept_id
+
+    return "MEMBER", dept_id
+
+
+def _is_high_level_meeting(meeting: Meeting) -> bool:
+    """
+    Check if a meeting is a high-level executive meeting.
+    High-level meetings include:
+    - Meetings without a department (organization-wide / executive board)
+    - Meetings with meeting_type in ('EXECUTIVE', 'BOARD')
+    - Meetings with titles indicating executive / board / leadership
+    """
+    if meeting.department_id is None:
+        return True
+    m_type = str(getattr(meeting, "meeting_type", "") or "").upper()
+    if m_type in ("EXECUTIVE", "BOARD"):
+        return True
+    title_lower = (meeting.title or "").lower()
+    keywords = ["cấp cao", "ban điều hành", "hội nghị ban", "executive", "hội đồng", "toàn công ty"]
+    return any(kw in title_lower for kw in keywords)
+
+
 def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if not user:
         return False
-    # 1. Check Owner / Admin
-    if user.email == "admin@axiom.com":
-        return True
-    org_member = (
-        db.query(OrganizationMember)
-        .filter(OrganizationMember.user_id == user.id)
-        .first()
+
+    role, user_dept_id = (
+        _get_user_role_and_dept(db, user, meeting.organization_id)
+        if meeting.organization_id else ("MEMBER", None)
     )
-    if org_member and org_member.role and getattr(org_member.role, "name", "").upper() in ("OWNER", "ADMIN"):
-        return True
-    if hasattr(user, "role") and str(getattr(user, "role")).upper() in ("OWNER", "ADMIN"):
+
+    # 1. OWNER / ADMIN has universal access
+    if role in ("OWNER", "ADMIN"):
         return True
 
-    # 2. Check Host / Creator / Direct Member of meeting
+    is_high_level = _is_high_level_meeting(meeting)
+
+    # 2. High-level meetings: ONLY OWNER, ADMIN, and MANAGER can see / access
+    if is_high_level:
+        if role == "MANAGER":
+            return True
+        # Regular members are NEVER allowed to access high-level meetings
+        return False
+
+    # 3. For regular department meetings:
+    # Creator always has access
     if meeting.created_by_id == user.id:
         return True
+
+    # Department access: If meeting belongs to user's department
+    if user_dept_id and meeting.department_id == user_dept_id:
+        return True
+
+    # Direct invited member of this regular meeting
     is_meeting_member = (
         db.query(MeetingMember)
         .filter(
@@ -76,42 +154,18 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if is_meeting_member:
         return True
 
-    # 3. Check Department: If meeting is assigned to a department, members of this department can access
-    if meeting.department_id:
-        dept_member = (
-            db.query(DepartmentMember)
-            .filter(
-                DepartmentMember.department_id == meeting.department_id,
-                DepartmentMember.user_id == user.id,
-            )
-            .first()
-        )
-        if dept_member:
-            return True
-
-    # 4. Check Colleague/Manager in same department: If meeting creator is in user's department
-    user_dept = (
-        db.query(DepartmentMember)
-        .filter(DepartmentMember.user_id == user.id)
-        .first()
-    )
-    if user_dept:
-        creator_dept = (
-            db.query(DepartmentMember)
-            .filter(
-                DepartmentMember.department_id == user_dept.department_id,
-                DepartmentMember.user_id == meeting.created_by_id,
-            )
-            .first()
-        )
-        if creator_dept:
-            return True
-
-    # User is not an invited member, creator, department colleague, or Owner/Admin
     return False
 
 
 def _require_meeting_member(db: Session, meeting_id: str, user_id: str) -> MeetingMember:
+    meeting = _get_meeting_or_404(db, meeting_id)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise AuthenticationException("Người dùng không tồn tại")
+
+    if not _can_user_access_meeting(db, meeting, user):
+        raise ForbiddenException("Bạn không có quyền truy cập cuộc họp này")
+
     member = (
         db.query(MeetingMember)
         .filter(
@@ -123,41 +177,45 @@ def _require_meeting_member(db: Session, meeting_id: str, user_id: str) -> Meeti
     if member:
         return member
 
-    user = db.query(User).filter(User.id == user_id).first()
-    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-    if user and meeting and _can_user_access_meeting(db, meeting, user):
-        org_mem = db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).first()
-        is_owner_admin = (
-            user.email == "admin@axiom.com"
-            or (org_mem and org_mem.role and getattr(org_mem.role, "name", "").upper() in ("OWNER", "ADMIN"))
-            or (hasattr(user, "role") and str(getattr(user, "role")).upper() in ("OWNER", "ADMIN"))
-        )
-        role = MeetingMemberRoleEnum.HOST if is_owner_admin else MeetingMemberRoleEnum.PARTICIPANT
-        new_member = MeetingMember(
-            meeting_id=meeting_id,
-            user_id=user_id,
-            role=role,
-            status=MeetingMemberStatusEnum.ACCEPTED,
-        )
-        db.add(new_member)
-        try:
-            db.commit()
-            db.refresh(new_member)
-        except Exception:
-            db.rollback()
-            existing = (
-                db.query(MeetingMember)
-                .filter(
-                    MeetingMember.meeting_id == meeting_id,
-                    MeetingMember.user_id == user_id,
-                )
-                .first()
+    role_name, _ = (
+        _get_user_role_and_dept(db, user, meeting.organization_id)
+        if meeting.organization_id else ("MEMBER", None)
+    )
+    is_host = role_name in ("OWNER", "ADMIN") or meeting.created_by_id == user.id
+    new_member = MeetingMember(
+        meeting_id=meeting_id,
+        user_id=user_id,
+        role=MeetingMemberRoleEnum.HOST if is_host else MeetingMemberRoleEnum.PARTICIPANT,
+        status=MeetingMemberStatusEnum.ACCEPTED,
+    )
+    db.add(new_member)
+    try:
+        db.commit()
+        db.refresh(new_member)
+    except Exception:
+        db.rollback()
+        existing = (
+            db.query(MeetingMember)
+            .filter(
+                MeetingMember.meeting_id == meeting_id,
+                MeetingMember.user_id == user_id,
             )
-            if existing:
-                return existing
-        return new_member
+            .first()
+        )
+        if existing:
+            return existing
+    return new_member
 
-    raise ForbiddenException("Bạn không có quyền truy cập cuộc họp này")
+
+def _is_meeting_org_admin(db: Session, meeting: Meeting, user: User) -> bool:
+    if not meeting.organization_id:
+        return False
+    if db.query(Organization).filter(
+        Organization.id == meeting.organization_id,
+        Organization.created_by_id == user.id,
+    ).first():
+        return True
+    return _get_user_role_and_dept(db, user, meeting.organization_id)[0] in ("OWNER", "ADMIN")
 
 
 def _enrich_meeting(m: Meeting, db: Session) -> dict:
@@ -304,65 +362,15 @@ def list_my_meetings(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    """List meetings with rich filters for Owner/Admin radar & approval oversight."""
+    """List meetings with role-based visibility:
+    - OWNER / ADMIN: All meetings
+    - MANAGER: High-level meetings + meetings of own department + meetings created/invited
+    - MEMBER: Only meetings of own department (never high-level meetings)
+    """
     query = db.query(Meeting)
 
     if org_id:
         query = query.filter(Meeting.organization_id == org_id)
-
-    # Check if current_user is OWNER or ADMIN
-    user_org_member = (
-        db.query(OrganizationMember)
-        .filter(OrganizationMember.user_id == current_user.id)
-        .first()
-    )
-    is_owner_or_admin = (
-        current_user.email == "admin@axiom.com"
-        or (user_org_member and user_org_member.role in ("OWNER", "ADMIN"))
-        or (hasattr(current_user, "role") and getattr(current_user, "role") in ("OWNER", "ADMIN"))
-    )
-
-    if department_id:
-        if is_owner_or_admin:
-            query = query.filter(Meeting.department_id == department_id)
-        else:
-            query = query.filter(
-                (Meeting.department_id == department_id) | (Meeting.department_id.is_(None))
-            )
-
-    if not is_owner_or_admin:
-        from src.backend.models import DepartmentMember
-        dept_member = (
-            db.query(DepartmentMember)
-            .filter(DepartmentMember.user_id == current_user.id)
-            .first()
-        )
-        user_dept_id = dept_member.department_id if dept_member else None
-
-        memberships = (
-            db.query(MeetingMember)
-            .filter(MeetingMember.user_id == current_user.id)
-            .all()
-        )
-        meeting_ids = [m.meeting_id for m in memberships]
-
-        from sqlalchemy import or_
-        access_conditions = [
-            Meeting.id.in_(meeting_ids),
-            Meeting.created_by_id == current_user.id,
-        ]
-        if user_dept_id:
-            access_conditions.append(Meeting.department_id == user_dept_id)
-            dept_user_ids = [
-                dm[0]
-                for dm in db.query(DepartmentMember.user_id)
-                .filter(DepartmentMember.department_id == user_dept_id)
-                .all()
-            ]
-            if dept_user_ids:
-                access_conditions.append(Meeting.created_by_id.in_(dept_user_ids))
-
-        query = query.filter(or_(*access_conditions))
 
     if status_filter:
         query = query.filter(Meeting.status == status_filter)
@@ -371,7 +379,19 @@ def list_my_meetings(
     if meeting_type_filter:
         query = query.filter(Meeting.meeting_type == meeting_type_filter)
 
-    meetings = query.order_by(Meeting.created_at.desc()).all()
+    meetings = [
+        meeting for meeting in query.order_by(Meeting.created_at.desc()).all()
+        if _can_user_access_meeting(db, meeting, current_user)
+        and (
+            not department_id
+            or meeting.department_id == department_id
+            or (
+                _is_high_level_meeting(meeting)
+                and meeting.organization_id
+                and _get_user_role_and_dept(db, current_user, meeting.organization_id)[0] == "MANAGER"
+            )
+        )
+    ]
     return [_enrich_meeting(m, db) for m in meetings]
 
 
@@ -384,6 +404,8 @@ def update_meeting_approval(
 ):
     """Owner or Admin approves or rejects a meeting proposal."""
     meeting = _get_meeting_or_404(db, meeting_id)
+    if not _is_meeting_org_admin(db, meeting, current_user):
+        raise ForbiddenException("Only an organization owner or admin can approve meetings")
     old_approval = getattr(meeting, "approval_status", "PENDING")
     meeting.approval_status = payload.approval_status
 
@@ -422,13 +444,10 @@ def update_meeting(
 ):
     """Update meeting details. Only HOST or creator can update."""
     meeting = _get_meeting_or_404(db, meeting_id)
-    is_creator = meeting.created_by_id == current_user.id
-    is_owner = (
-        current_user.email == "admin@axiom.com"
-        or (hasattr(current_user, "role") and current_user.role in ("OWNER", "ADMIN"))
-    )
-    if not is_creator and not is_owner:
-        _require_meeting_member(db, meeting_id, current_user.id)
+    if meeting.created_by_id != current_user.id and not _is_meeting_org_admin(db, meeting, current_user):
+        member = _require_meeting_member(db, meeting_id, current_user.id)
+        if member.role not in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
+            raise ForbiddenException("Only the creator, host, or organization admin can update a meeting")
 
     if payload.title is not None:
         meeting.title = payload.title
@@ -467,6 +486,10 @@ def start_meeting_early(
 ):
     """Start a scheduled meeting early and set status to IN_PROGRESS."""
     meeting = _get_meeting_or_404(db, meeting_id)
+    if meeting.created_by_id != current_user.id and not _is_meeting_org_admin(db, meeting, current_user):
+        member = _require_meeting_member(db, meeting_id, current_user.id)
+        if member.role not in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
+            raise ForbiddenException("Only the creator, host, or organization admin can start a meeting")
     meeting.status = MeetingStatusEnum.IN_PROGRESS
     if not meeting.started_at:
         meeting.started_at = datetime.now(timezone.utc)
@@ -486,26 +509,7 @@ def delete_meeting(
     meeting = _get_meeting_or_404(db, meeting_id)
 
     # Check if user is Owner/Admin
-    user_role = (getattr(current_user, "role", None) or "").upper()
-    is_owner = (
-        user_role in ("OWNER", "ADMIN")
-        or current_user.email == "admin@axiom.com"
-        or bool(
-            meeting.organization_id
-            and db.query(Organization).filter(
-                Organization.id == meeting.organization_id,
-                Organization.created_by_id == current_user.id
-            ).first()
-        )
-        or bool(
-            db.query(OrganizationMember)
-            .join(Role, OrganizationMember.role_id == Role.id)
-            .filter(
-                OrganizationMember.user_id == current_user.id,
-                Role.name.in_(("OWNER", "ADMIN"))
-            ).first()
-        )
-    )
+    is_owner = _is_meeting_org_admin(db, meeting, current_user)
 
     # If meeting is in the archive (COMPLETED or ENDED), ONLY OWNER can delete!
     status_val = str(getattr(meeting.status, "value", meeting.status) or "").upper()
@@ -794,6 +798,7 @@ def get_meeting_token(
 ):
     """Generate a LiveKit access token for a meeting room."""
     meeting = _get_meeting_or_404(db, meeting_id)
+    _require_meeting_member(db, meeting_id, current_user.id)
 
     # Auto-start meeting if still scheduled and not yet ended
     if (meeting.status == MeetingStatusEnum.SCHEDULED or not meeting.started_at) and not meeting.ended_at and meeting.status not in (MeetingStatusEnum.COMPLETED, MeetingStatusEnum.CANCELLED):
@@ -805,7 +810,9 @@ def get_meeting_token(
 
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    unique_identity = f"user_{current_user.id}"
+    import uuid
+    session_suffix = uuid.uuid4().hex[:6]
+    unique_identity = f"user_{current_user.id}___{session_suffix}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
     token.with_metadata(json.dumps({"target_lang": language}))
@@ -1043,5 +1050,3 @@ def translate_sentence(
         from_lang=req.from_lang,
         to_lang=req.to_lang
     )
-
-
