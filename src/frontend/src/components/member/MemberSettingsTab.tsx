@@ -53,7 +53,7 @@ export function MemberSettingsTab({ onNotify }: MemberSettingsTabProps) {
     try {
       const list = await candidatePortalApi.getSavedResumes();
       setSavedResumes(list);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Failed to load member resumes:', err);
     } finally {
       setIsLoadingResumes(false);

@@ -66,12 +66,16 @@ export function useWebSpeech(
   const { enabled = false, lang = 'vi-VN', onFinalTranscript, onInterimTranscript } = options;
 
   const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const win = window as WindowWithSpeech;
+    return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
+  });
 
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const enabledRef = useRef(enabled);
-  const restartTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const restartTimerRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<number | null>(null);
   const latestInterimRef = useRef<string>('');
   const lastFinalRef = useRef<string>('');
   const lastFinalTimeRef = useRef<number>(0);
@@ -90,15 +94,20 @@ export function useWebSpeech(
     if (!clean) return;
 
     const now = Date.now();
-    if (clean === lastFinalRef.current && now - lastFinalTimeRef.current < 1500) {
+    // Strong deduplication: exact match or recent repetition within 2.5s
+    if (
+      (clean === lastFinalRef.current || lastFinalRef.current.endsWith(clean)) &&
+      now - lastFinalTimeRef.current < 2500
+    ) {
       return;
     }
+
     lastFinalRef.current = clean;
     lastFinalTimeRef.current = now;
     latestInterimRef.current = '';
 
     if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
+      window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
 
@@ -106,17 +115,14 @@ export function useWebSpeech(
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isSupported || typeof window === 'undefined') return;
 
     const win = window as WindowWithSpeech;
     const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRecognitionClass) {
-      setIsSupported(false);
       return;
     }
-
-    setIsSupported(true);
 
     const recognition = new SpeechRecognitionClass();
     recognition.continuous = true;
@@ -131,12 +137,12 @@ export function useWebSpeech(
       setIsListening(false);
       // Auto-restart if user still has mic enabled (continuous loop)
       if (enabledRef.current) {
-        if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
-        restartTimerRef.current = setTimeout(() => {
+        if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = window.setTimeout(() => {
           if (enabledRef.current && recognitionRef.current) {
             try {
               recognitionRef.current.start();
-            } catch (err) {
+            } catch {
               // Already running or starting
             }
           }
@@ -177,22 +183,15 @@ export function useWebSpeech(
         latestInterimRef.current = cleanInterim;
         callbacksRef.current.onInterimTranscript?.(cleanInterim);
 
-        // Adaptive Silence Finalizer:
-        // Automatically commit after 750ms of natural pause instead of waiting 3s for Chrome
+        // Natural pause fallback timer: commit if silence extends beyond 1.8s without native isFinal
         if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
+          window.clearTimeout(silenceTimerRef.current);
         }
-        silenceTimerRef.current = setTimeout(() => {
-          if (latestInterimRef.current) {
-            const pending = latestInterimRef.current;
-            commitFinal(pending);
-            if (recognitionRef.current && enabledRef.current) {
-              try {
-                recognitionRef.current.abort();
-              } catch (e) {}
-            }
+        silenceTimerRef.current = window.setTimeout(() => {
+          if (latestInterimRef.current && latestInterimRef.current === cleanInterim) {
+            commitFinal(latestInterimRef.current);
           }
-        }, 750);
+        }, 1800);
       }
     };
 
@@ -201,20 +200,22 @@ export function useWebSpeech(
     if (enabledRef.current) {
       try {
         recognition.start();
-      } catch (e) {
+      } catch {
         // Recognition may already be running or initializing
       }
     }
 
     return () => {
-      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       try {
         recognition.onend = null;
         recognition.stop();
-      } catch (e) {}
+      } catch {
+        // Ignored
+      }
     };
-  }, [lang, commitFinal]);
+  }, [isSupported, lang, commitFinal]);
 
   // Sync with enabled prop
   useEffect(() => {
@@ -224,14 +225,16 @@ export function useWebSpeech(
     if (enabled) {
       try {
         recognition.start();
-      } catch (e) {
+      } catch {
         // Recognition may already be running
       }
     } else {
-      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
       try {
         recognition.stop();
-      } catch (e) {}
+      } catch {
+        // Ignored
+      }
     }
   }, [enabled]);
 
@@ -239,15 +242,19 @@ export function useWebSpeech(
     enabledRef.current = true;
     try {
       recognitionRef.current?.start();
-    } catch (e) {}
+    } catch {
+      // Ignored
+    }
   }, []);
 
   const stopRecognition = useCallback(() => {
     enabledRef.current = false;
-    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     try {
       recognitionRef.current?.stop();
-    } catch (e) {}
+    } catch {
+      // Ignored
+    }
   }, []);
 
   return {
