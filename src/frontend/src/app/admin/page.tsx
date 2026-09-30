@@ -19,6 +19,7 @@ import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/U
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { MatIcon } from '@/components/ui/MatIcon';
 import Logo from '@/components/Logo';
+import { getErrorMessage } from '@/lib/errors';
 
 import {
   adminApi,
@@ -38,20 +39,19 @@ import {
   Department,
 } from '@/lib/api';
 
-import { MOCK_POLICIES, DepartmentNode, ProtocolPolicySettings } from '@/lib/mockAdminData';
+import { DepartmentNode } from '@/types/admin';
 import { resolveMeetingState } from '@/lib/meetingState';
 
-// Fallback initial metrics if database is fresh
-const DEFAULT_ORG_ANALYTICS: OrgAnalytics = {
-  total_meetings_this_month: 24,
-  meetings_growth: '+12.5%',
-  on_time_punctual_rate: 96.4,
-  task_execution_rate: 84.0,
-  hours_saved_by_ai: 38.5,
-  total_members: 27,
-  total_departments: 5,
-  active_meetings_count: 2,
-  pending_approvals_count: 1,
+const EMPTY_ORG_ANALYTICS: OrgAnalytics = {
+  total_meetings_this_month: 0,
+  meetings_growth: '0%',
+  on_time_punctual_rate: 0,
+  task_execution_rate: 0,
+  hours_saved_by_ai: 0,
+  total_members: 0,
+  total_departments: 0,
+  active_meetings_count: 0,
+  pending_approvals_count: 0,
 };
 
 export default function StandaloneAdminCenterPage() {
@@ -69,11 +69,12 @@ export default function StandaloneAdminCenterPage() {
   const [timeStr, setTimeStr] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Active Organization ID (defaulting to primary seeded Axiom Enterprise)
-  const [activeOrgId, setActiveOrgId] = useState<string>('2846981f-7028-4ef4-9cad-d2c3719703c4');
+  // Active Organization ID (nullable)
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(activeOrganization?.id ?? null);
 
   // Real Data States
-  const [analytics, setAnalytics] = useState<OrgAnalytics>(DEFAULT_ORG_ANALYTICS);
+  const [analytics, setAnalytics] = useState<OrgAnalytics | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [liveMeetings, setLiveMeetings] = useState<Meeting[]>([]);
   const [upcomingMeetings, setUpcomingMeetings] = useState<Meeting[]>([]);
   const [endedMeetings, setEndedMeetings] = useState<Meeting[]>([]);
@@ -87,12 +88,8 @@ export default function StandaloneAdminCenterPage() {
   const [auditLogs, setAuditLogs] = useState<EnrichedAuditLog[]>([]);
   const [securitySummary, setSecuritySummary] = useState<SecuritySummary | null>(null);
 
-  // Policies
-  const [policies, setPolicies] = useState<ProtocolPolicySettings>(MOCK_POLICIES);
-
   // Loading States
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(false);
 
   // Global Toast Feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -125,23 +122,25 @@ export default function StandaloneAdminCenterPage() {
   // Fetch all real organizational data
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
-    let resolvedOrgId = (user as any)?.organization_id || activeOrganization?.id;
+    setLoadError(null);
+    let resolvedOrgId = activeOrganization?.id || (user as { organization_id?: string })?.organization_id;
 
-    if (!resolvedOrgId || resolvedOrgId === 'org-axiom-corp') {
+    if (!resolvedOrgId) {
       try {
         const orgList = await organizationApi.list();
         if (orgList && orgList.length > 0) {
-          const axiomOrg =
-            orgList.find((o) => o.name.toLowerCase().includes('axiom')) || orgList[0];
-          resolvedOrgId = axiomOrg.id;
+          resolvedOrgId = orgList[0].id;
         }
       } catch (err) {
-        console.warn('Could not fetch org list from API, fallback to default:', err);
+        console.warn('Could not fetch org list from API:', err);
       }
     }
 
     if (!resolvedOrgId) {
-      resolvedOrgId = '2846981f-7028-4ef4-9cad-d2c3719703c4';
+      setActiveOrgId(null);
+      setAnalytics(null);
+      setIsLoading(false);
+      return;
     }
     setActiveOrgId(resolvedOrgId);
 
@@ -167,14 +166,16 @@ export default function StandaloneAdminCenterPage() {
       // 1. Process Analytics
       if (analyticsRes.status === 'fulfilled' && analyticsRes.value) {
         setAnalytics(analyticsRes.value);
+      } else {
+        setAnalytics(null);
       }
 
       // 2. Process Meetings (separate into pending approvals & 3 lifecycle states: LIVE, UPCOMING, ENDED)
       if (meetingsRes.status === 'fulfilled' && Array.isArray(meetingsRes.value)) {
         const all = meetingsRes.value;
         setAllMeetings(all);
-        const pending = all.filter((m) => (m as any).approval_status === 'PENDING');
-        const approvedOrOfficial = all.filter((m) => (m as any).approval_status !== 'PENDING');
+        const pending = all.filter((m) => m.approval_status === 'PENDING');
+        const approvedOrOfficial = all.filter((m) => m.approval_status !== 'PENDING');
 
         const live = approvedOrOfficial.filter((m) => resolveMeetingState(m) === 'LIVE');
         const upcoming = approvedOrOfficial.filter((m) => resolveMeetingState(m) === 'UPCOMING');
@@ -187,32 +188,28 @@ export default function StandaloneAdminCenterPage() {
       }
 
       // 3. Process Members
-      if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
-        setMembers(membersRes.value);
-      }
+      const fetchedMembers =
+        membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)
+          ? membersRes.value
+          : [];
+      setMembers(fetchedMembers);
 
       // 4. Process Departments
       if (departmentsRes.status === 'fulfilled' && Array.isArray(departmentsRes.value)) {
         setDepartments(departmentsRes.value);
-        const codeMap: Record<string, { code: string; color: string }> = {
-          'Khối Kỹ Thuật & Công Nghệ': { code: 'ENG', color: '#3B82F6' },
-          'Khối Sản Phẩm & Thiết Kế': { code: 'PROD', color: '#8B5CF6' },
-          'Khối Kinh Doanh & Tiếp Thị': { code: 'BIZ', color: '#EC4899' },
-          'Khối Vận Hành & Nhân Sự': { code: 'OPS', color: '#10B981' },
-          'Khối Tài Chính & Pháp Chế': { code: 'FIN', color: '#F59E0B' },
-        };
         const mappedNodes: DepartmentNode[] = departmentsRes.value.map((d) => {
-          const mapped = codeMap[d.name];
+          const departmentMembers = fetchedMembers.filter((m) => m.department_id === d.id);
+          const manager = departmentMembers.find((m) => m.role === 'MANAGER');
           return {
             id: d.id,
             name: d.name,
-            code: mapped ? mapped.code : d.name.slice(0, 3).toUpperCase(),
+            code: d.name.slice(0, 3).toUpperCase(),
             description: d.description || 'Khối phòng ban chức năng Axiom',
-            managerName: 'Trưởng Khối',
-            managerEmail: 'manager@axiom.internal',
-            memberCount: (d as any).member_count || 1,
-            activeMeetingsCount: (d as any).active_meetings_count || 0,
-            color: mapped ? mapped.color : '#3B82F6',
+            managerName: manager?.full_name || 'Chưa bổ nhiệm',
+            managerEmail: manager?.email || null,
+            memberCount: departmentMembers.length,
+            activeMeetingsCount: 0,
+            color: '#3B82F6',
           };
         });
         setDepartmentNodes(mappedNodes);
@@ -235,13 +232,24 @@ export default function StandaloneAdminCenterPage() {
       }
     } catch (err) {
       console.error('Failed to load admin data:', err);
+      setLoadError('Không thể tải toàn bộ dữ liệu quản trị. Vui lòng kiểm tra lại kết nối.');
     } finally {
       setIsLoading(false);
     }
-  }, [(user as any)?.organization_id, activeOrgId]);
+  }, [user, activeOrganization]);
 
   useEffect(() => {
-    fetchAllData();
+    let ignore = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        await fetchAllData();
+      }
+    };
+    void run();
+    return () => {
+      ignore = true;
+    };
   }, [fetchAllData]);
 
   // Tab Switching Handler
@@ -249,8 +257,6 @@ export default function StandaloneAdminCenterPage() {
     setActiveSection(section);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const currentSection = NAV_SECTIONS.find((s) => s.id === activeSection) || NAV_SECTIONS[0];
 
   // ── Meeting Approval & Executive Action Handlers ──
   const handleApproveMeeting = async (meetingId: string) => {
@@ -261,8 +267,8 @@ export default function StandaloneAdminCenterPage() {
       });
       showToast('Đã phê duyệt cuộc họp thành công! Lịch họp đã có hiệu lực chính thức.');
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Không thể duyệt cuộc họp: ${err?.message || 'Lỗi kết nối'}`);
+    } catch (err: unknown) {
+      showToast(`Không thể duyệt cuộc họp: ${getErrorMessage(err, 'Lỗi kết nối')}`);
     }
   };
 
@@ -274,8 +280,8 @@ export default function StandaloneAdminCenterPage() {
       });
       showToast('Đã bác bỏ yêu cầu phê duyệt cuộc họp.');
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Không thể bác bỏ cuộc họp: ${err?.message || 'Lỗi kết nối'}`);
+    } catch (err: unknown) {
+      showToast(`Không thể bác bỏ cuộc họp: ${getErrorMessage(err, 'Lỗi kết nối')}`);
     }
   };
 
@@ -301,9 +307,9 @@ export default function StandaloneAdminCenterPage() {
 
       showToast('Đã ban hành Hội Nghị Ban Điều Hành Cấp Cao và gửi thư triệu tập!');
       await fetchAllData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create executive meeting:', err);
-      showToast(`Lỗi tạo cuộc họp cấp cao: ${err?.message || 'Kiểm tra máy chủ'}`);
+      showToast(`Lỗi tạo cuộc họp cấp cao: ${getErrorMessage(err, 'Kiểm tra máy chủ')}`);
       throw err;
     }
   };
@@ -318,7 +324,7 @@ export default function StandaloneAdminCenterPage() {
       showToast('Đã bắt đầu cuộc họp sớm và gửi thông báo triệu tập tới các thành viên!');
       fetchAllData();
       router.push(`/meetings/${meetingId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to start meeting early:', err);
       showToast('Đang kết nối vào phòng họp...');
       router.push(`/meetings/${meetingId}`);
@@ -330,17 +336,25 @@ export default function StandaloneAdminCenterPage() {
     userId: string,
     newRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER'
   ) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await organizationAdminApi.updateMemberRole(activeOrgId, userId, newRole);
       setMembers((prev) => prev.map((m) => (m.user_id === userId ? { ...m, role: newRole } : m)));
       showToast(`Đã điều chỉnh chức danh nhân sự thành công sang ${newRole}!`);
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Không thể cập nhật chức vụ: ${err?.message || 'Lỗi kết nối'}`);
+    } catch (err: unknown) {
+      showToast(`Không thể cập nhật chức vụ: ${(err as Error)?.message || 'Lỗi kết nối'}`);
     }
   };
 
   const handleUpdateMemberDepartment = async (userId: string, departmentId: string | null) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await organizationAdminApi.updateMemberDepartment(activeOrgId, userId, departmentId);
       const targetDept = departments.find((d) => d.id === departmentId);
@@ -359,8 +373,8 @@ export default function StandaloneAdminCenterPage() {
         `Đã điều chuyển nhân sự sang ${targetDept?.name || 'Khối Không Phân Bổ'} thành công!`
       );
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Không thể điều chuyển phòng ban: ${err?.message || 'Lỗi kết nối'}`);
+    } catch (err: unknown) {
+      showToast(`Không thể điều chuyển phòng ban: ${(err as Error)?.message || 'Lỗi kết nối'}`);
     }
   };
 
@@ -368,6 +382,10 @@ export default function StandaloneAdminCenterPage() {
   const handleAddDepartmentFromTab = async (
     newDept: Omit<DepartmentNode, 'id' | 'memberCount' | 'activeMeetingsCount'>
   ) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await departmentAdminApi.create(activeOrgId, {
         name: newDept.name,
@@ -375,38 +393,50 @@ export default function StandaloneAdminCenterPage() {
       });
       showToast(`Đã thành lập khối phòng ban mới: ${newDept.name} (${newDept.code})`);
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Lỗi tạo phòng ban: ${err?.message || 'Vui lòng thử lại'}`);
+    } catch (err: unknown) {
+      showToast(`Lỗi tạo phòng ban: ${(err as Error)?.message || 'Vui lòng thử lại'}`);
     }
   };
 
   const handleAddDepartment = async (name: string, description?: string) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await departmentAdminApi.create(activeOrgId, { name, description });
       showToast(`Đã thành lập khối phòng ban mới: ${name}`);
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Lỗi tạo phòng ban: ${err?.message || 'Vui lòng thử lại'}`);
+    } catch (err: unknown) {
+      showToast(`Lỗi tạo phòng ban: ${(err as Error)?.message || 'Vui lòng thử lại'}`);
     }
   };
 
   const handleEditDepartment = async (deptId: string, name: string, description?: string) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await departmentAdminApi.update(activeOrgId, deptId, { name, description });
       showToast(`Đã cập nhật thông tin phòng ban: ${name}`);
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Lỗi cập nhật phòng ban: ${err?.message || 'Vui lòng thử lại'}`);
+    } catch (err: unknown) {
+      showToast(`Lỗi cập nhật phòng ban: ${(err as Error)?.message || 'Vui lòng thử lại'}`);
     }
   };
 
   const handleDeleteDepartment = async (deptId: string) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       await departmentAdminApi.delete(activeOrgId, deptId);
       showToast('Đã xóa phòng ban khỏi cơ cấu tổ chức thành công.');
       fetchAllData();
-    } catch (err: any) {
-      showToast(`Lỗi xóa phòng ban: ${err?.message || 'Vui lòng kiểm tra lại'}`);
+    } catch (err: unknown) {
+      showToast(`Lỗi xóa phòng ban: ${(err as Error)?.message || 'Vui lòng kiểm tra lại'}`);
     }
   };
 
@@ -419,6 +449,10 @@ export default function StandaloneAdminCenterPage() {
     jobTitle?: string;
     note?: string;
   }) => {
+    if (!activeOrgId) {
+      showToast('Chưa chọn tổ chức hợp lệ.');
+      return;
+    }
     try {
       const res = await invitationApi.create(activeOrgId, {
         email: newMember.email,
@@ -448,17 +482,11 @@ export default function StandaloneAdminCenterPage() {
         showToast(`Đã gửi thư mời tham gia tới ${newMember.email}`);
       }
       fetchAllData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to send invitation:', err);
-      showToast(`Không thể gửi thư mời: ${err?.message || 'Vui lòng kiểm tra lại'}`);
+      showToast(`Không thể gửi thư mời: ${(err as Error)?.message || 'Vui lòng kiểm tra lại'}`);
       throw err;
     }
-  };
-
-  // ── Policy Handlers ──
-  const handleSavePolicies = (updated: ProtocolPolicySettings) => {
-    setPolicies(updated);
-    showToast('Đã lưu và áp dụng toàn bộ chính sách kỷ luật cuộc họp vào hệ thống!');
   };
 
   // Filter managers for executive meetings
@@ -608,84 +636,123 @@ export default function StandaloneAdminCenterPage() {
 
       {/* ── 3. Tab Page Content Stage ── */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Tab View Container: Only the Active Tab is rendered */}
-        <div key={activeSection} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {/* TAB 1: OVERVIEW PULSE (Zero Mock Data, Real Metrics, Join, Approvals, Executive Meeting) */}
-          {activeSection === 'overview' && (
-            <OverviewPulseTab
-              metrics={analytics}
-              liveMeetings={liveMeetings}
-              upcomingMeetings={upcomingMeetings}
-              endedMeetings={endedMeetings}
-              allMeetings={allMeetings}
-              pendingMeetings={pendingMeetings}
-              managers={managers}
-              onApproveMeeting={handleApproveMeeting}
-              onRejectMeeting={handleRejectMeeting}
-              onStartEarly={handleStartEarly}
-              onCreateExecutiveMeeting={handleCreateExecutiveMeeting}
-              onRefresh={fetchAllData}
-            />
-          )}
+        {loadError && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3 text-rose-700 dark:text-rose-300 text-xs">
+            <div className="flex items-center gap-2">
+              <MatIcon name="error_outline" size={18} className="text-rose-500 shrink-0" />
+              <span>{loadError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void fetchAllData()}
+              className="shrink-0 px-3 py-1 bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 font-semibold rounded-lg border border-rose-200 dark:border-rose-800 text-xs hover:bg-rose-50 transition-colors"
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
 
-          {/* TAB 2: COMPANY ORG TREE & DIRECTORY (Drag-and-Drop, Reassign, Profile Drawer, Dept CRUD) */}
-          {activeSection === 'members' && (
-            <MembersDirectoryTab
-              members={members}
-              departments={departments}
-              onUpdateRole={handleUpdateRole}
-              onUpdateDepartment={handleUpdateMemberDepartment}
-              onAddDepartment={handleAddDepartment}
-              onEditDepartment={handleEditDepartment}
-              onDeleteDepartment={handleDeleteDepartment}
-              onInviteMember={handleInviteMember}
-              onRefresh={fetchAllData}
-            />
-          )}
+        {!activeOrgId && !isLoading ? (
+          <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto shadow-sm">
+              <MatIcon name="domain" className="text-[32px]" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Chưa tìm thấy thông tin tổ chức
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                Tài khoản chưa được gán vào tổ chức nào hoặc tổ chức chưa sẵn sàng. Vui lòng liên hệ quản trị viên hoặc kiểm tra lại lời mời.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchAllData}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <MatIcon name="refresh" className="text-[16px]" />
+              <span>Thử lại</span>
+            </button>
+          </div>
+        ) : (
+          <div key={activeSection} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+            {/* TAB 1: OVERVIEW PULSE (Zero Mock Data, Real Metrics, Join, Approvals, Executive Meeting) */}
+            {activeSection === 'overview' && (
+              <OverviewPulseTab
+                metrics={analytics || EMPTY_ORG_ANALYTICS}
+                liveMeetings={liveMeetings}
+                upcomingMeetings={upcomingMeetings}
+                endedMeetings={endedMeetings}
+                allMeetings={allMeetings}
+                pendingMeetings={pendingMeetings}
+                managers={managers}
+                onApproveMeeting={handleApproveMeeting}
+                onRejectMeeting={handleRejectMeeting}
+                onStartEarly={handleStartEarly}
+                onCreateExecutiveMeeting={handleCreateExecutiveMeeting}
+                onRefresh={fetchAllData}
+              />
+            )}
 
-          {/* TAB 3: DEPARTMENTS & JIRA-STYLE GANTT ROADMAP TIMELINE */}
-          {activeSection === 'departments' && (
-            <DepartmentsTab
-              departments={departmentNodes}
-              departmentProgress={departmentProgress}
-              timelineItems={timelineItems}
-              onAddDepartment={handleAddDepartmentFromTab}
-              onNotify={showToast}
-              loadingProgress={loadingProgress}
-              onRefreshProgress={fetchAllData}
-            />
-          )}
+            {/* TAB 2: COMPANY ORG TREE & DIRECTORY (Drag-and-Drop, Reassign, Profile Drawer, Dept CRUD) */}
+            {activeSection === 'members' && (
+              <MembersDirectoryTab
+                members={members}
+                departments={departments}
+                onUpdateRole={handleUpdateRole}
+                onUpdateDepartment={handleUpdateMemberDepartment}
+                onAddDepartment={handleAddDepartment}
+                onEditDepartment={handleEditDepartment}
+                onDeleteDepartment={handleDeleteDepartment}
+                onInviteMember={handleInviteMember}
+                onRefresh={fetchAllData}
+              />
+            )}
 
-          {/* TAB 4: PROTOCOL POLICIES */}
-          {activeSection === 'policies' && (
-            <ProtocolPoliciesTab initialPolicies={policies} onSavePolicies={handleSavePolicies} />
-          )}
+            {/* TAB 3: DEPARTMENTS & JIRA-STYLE GANTT ROADMAP TIMELINE */}
+            {activeSection === 'departments' && (
+              <DepartmentsTab
+                departments={departmentNodes}
+                departmentProgress={departmentProgress}
+                timelineItems={timelineItems}
+                onAddDepartment={handleAddDepartmentFromTab}
+                onNotify={showToast}
+                loadingProgress={isLoading}
+                onRefreshProgress={fetchAllData}
+              />
+            )}
 
-          {/* TAB 5: SOC SECURITY OPERATIONS CENTER (7-day Trend, Severity Donut, Tamper-proof) */}
-          {activeSection === 'audit' && (
-            <AuditSecurityTab
-              logs={auditLogs}
-              securitySummary={securitySummary}
-              loading={isLoading}
-              onRefresh={fetchAllData}
-            />
-          )}
+            {/* TAB 4: PROTOCOL POLICIES */}
+            {activeSection === 'policies' && (
+              <ProtocolPoliciesTab onNotify={showToast} />
+            )}
 
-          {/* TAB 6: KHO TÀI LIỆU CUỘC HỌP & AI TRÍCH XUẤT */}
-          {activeSection === 'archives' && (
-            <MeetingArchiveRepository userRole="OWNER" onNotify={showToast} />
-          )}
+            {/* TAB 5: SOC SECURITY OPERATIONS CENTER (7-day Trend, Severity Donut, Tamper-proof) */}
+            {activeSection === 'audit' && (
+              <AuditSecurityTab
+                logs={auditLogs}
+                securitySummary={securitySummary}
+                loading={isLoading}
+                onRefresh={fetchAllData}
+              />
+            )}
 
-          {/* TAB 7: TUYỂN DỤNG & ONBOARDING PIPELINE */}
-          {activeSection === 'recruitment' && (
-            <RecruitmentTab
-              organizationId={activeOrganization?.id || activeOrgId}
-              managers={members.filter((m) => m.role === 'MANAGER' || m.role === 'ADMIN')}
-              departments={departments}
-              onNotify={showToast}
-            />
-          )}
-        </div>
+            {/* TAB 6: KHO TÀI LIỆU CUỘC HỌP & AI TRÍCH XUẤT */}
+            {activeSection === 'archives' && (
+              <MeetingArchiveRepository userRole="OWNER" onNotify={showToast} />
+            )}
+
+            {/* TAB 7: TUYỂN DỤNG & ONBOARDING PIPELINE */}
+            {activeSection === 'recruitment' && (
+              <RecruitmentTab
+                organizationId={activeOrganization?.id || activeOrgId || ''}
+                managers={members.filter((m) => m.role === 'MANAGER' || m.role === 'ADMIN')}
+                departments={departments}
+                onNotify={showToast}
+              />
+            )}
+          </div>
+        )}
       </main>
 
       {/* ── PROFILE & AVATAR EDIT MODAL ── */}

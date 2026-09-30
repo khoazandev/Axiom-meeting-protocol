@@ -2,21 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { MatIcon } from '@/components/ui/MatIcon';
-import { DepartmentNode } from '@/lib/mockAdminData';
-import {
-  MOCK_DEPARTMENTS_CAPACITY,
-  MOCK_EXECUTIVE_MANDATES,
-  INITIAL_ENG_MEMBERS,
-  DepartmentCapacityMetric,
-  ExecutiveMandate,
-  getStoredMandates,
-} from '@/lib/workloadProtocolData';
+import { DepartmentNode } from '@/types/admin';
 import { DepartmentProgressItem, TimelineGanttItem } from '@/lib/api';
 import { DepartmentGanttTimeline } from './DepartmentGanttTimeline';
 import {
   DEPARTMENT_ICONS,
   getDepartmentIcon,
-  getUsedDepartmentIcons,
   getFirstAvailableIcon,
   formatDeptDescriptionWithIcon,
 } from '@/lib/departmentIcons';
@@ -42,27 +33,11 @@ export function DepartmentsTab({
   loadingProgress = false,
   onRefreshProgress,
 }: DepartmentsTabProps) {
-  // Tab view mode: 'TIMELINE' (Gantt) vs 'CAPACITY' (Tổng quan phòng ban)
-  const [activeSubTab, setActiveSubTab] = useState<'TIMELINE' | 'CAPACITY'>('TIMELINE');
+  // Tab view mode: 'TIMELINE' (Gantt) vs 'PROGRESS' (Tiến độ phòng ban)
+  const [activeSubTab, setActiveSubTab] = useState<'TIMELINE' | 'PROGRESS'>('TIMELINE');
 
-  // Capacity States
-  const [deptList, setDeptList] = useState<DepartmentCapacityMetric[]>(MOCK_DEPARTMENTS_CAPACITY);
-  const [mandates, setMandates] = useState<ExecutiveMandate[]>(() => getStoredMandates());
-
-  React.useEffect(() => {
-    setMandates(getStoredMandates());
-  }, []);
-
-  const [capacityFilter, setCapacityFilter] = useState<
-    'ALL' | 'OVERLOADED_OR_FULL' | 'OPTIMAL' | 'AVAILABLE'
-  >('ALL');
-
-  // Drawer / Modal States
-  const [selectedDeptForDetail, setSelectedDeptForDetail] =
-    useState<DepartmentCapacityMetric | null>(null);
+  // Modal State for adding department
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form states for adding department
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -76,59 +51,34 @@ export function DepartmentsTab({
     }
   };
 
-  // Merge real progress with capacity metrics if available
-  const mergedDeptProgress: DepartmentProgressItem[] = useMemo(() => {
+  // Merge real progress: when empty, map departments to zero-valued progress rows
+  const progressList: DepartmentProgressItem[] = useMemo(() => {
     if (departmentProgress && departmentProgress.length > 0) {
       return departmentProgress;
     }
-    // Fallback based on departments prop
     return departments.map((d) => ({
       id: d.id,
       name: d.name,
       description: d.description,
-      manager_name: d.managerName,
-      member_count: d.memberCount || 1,
-      total_tasks: 12,
-      done_tasks: 8,
-      in_progress_tasks: 3,
-      todo_tasks: 1,
-      completion_rate: 67,
-      rating: 'TỐT',
-      rating_color: 'text-emerald-500',
-      color: d.color || '#3b82f6',
+      manager_name: d.managerName ?? 'Chưa bổ nhiệm',
+      member_count: d.memberCount,
+      total_tasks: 0,
+      done_tasks: 0,
+      in_progress_tasks: 0,
+      todo_tasks: 0,
+      completion_rate: 0,
+      rating: 'Tiêu chuẩn',
+      rating_color: '#3B82F6',
+      color: d.color || '#3B82F6',
     }));
   }, [departmentProgress, departments]);
 
-  // Filtered departments for capacity tab
-  const filteredDepts = deptList.filter((d) => {
-    if (capacityFilter === 'OVERLOADED_OR_FULL') {
-      return d.status === 'OVERLOADED' || d.status === 'FULL';
-    }
-    if (capacityFilter === 'OPTIMAL') return d.status === 'OPTIMAL';
-    if (capacityFilter === 'AVAILABLE') return d.status === 'AVAILABLE';
-    return true;
-  });
-
-  // Calculate top macro metrics
-  const totalWeeklyCap = deptList.reduce((acc, d) => acc + d.totalWeeklyHours, 0);
-  const totalCommitted = deptList.reduce((acc, d) => acc + d.totalCommittedHours, 0);
-  const avgUtilization = Math.round((totalCommitted / totalWeeklyCap) * 100) || 78;
-  const totalMandatesHours = mandates.reduce((acc, m) => acc + m.allocatedHours, 0);
-  const totalDecomposedTasks = mandates.reduce((acc, m) => acc + m.decomposedTasksCount, 0);
-  const totalTargetTasks = mandates.reduce((acc, m) => acc + m.totalTasksTarget, 0);
-  const overallDecomposeRate =
-    totalTargetTasks > 0 ? Math.round((totalDecomposedTasks / totalTargetTasks) * 100) : 85;
-
-  const totalRealIssues = mergedDeptProgress.reduce((acc, d) => acc + d.total_tasks, 0);
-  const completedRealIssues = mergedDeptProgress.reduce((acc, d) => acc + d.done_tasks, 0);
-  const overallRealProgress =
-    totalRealIssues > 0 ? Math.round((completedRealIssues / totalRealIssues) * 100) : 72;
-
-  const handleUrgeManager = (mandate: ExecutiveMandate) => {
-    triggerNotify(
-      `Đã gửi thông báo đôn đốc Trưởng phòng ${mandate.managerName} đẩy nhanh phân rã quyết sách ${mandate.code}`
-    );
-  };
+  // Macro metrics calculated from real progress
+  const totalTasks = progressList.reduce((acc, d) => acc + (d.total_tasks || 0), 0);
+  const doneTasks = progressList.reduce((acc, d) => acc + (d.done_tasks || 0), 0);
+  const inProgressTasks = progressList.reduce((acc, d) => acc + (d.in_progress_tasks || 0), 0);
+  const todoTasks = progressList.reduce((acc, d) => acc + (d.todo_tasks || 0), 0);
+  const overallRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,32 +91,9 @@ export function DepartmentsTab({
       code: code.trim().toUpperCase(),
       description: formattedDesc,
       managerName: managerName.trim() || 'Chưa bổ nhiệm',
-      managerEmail: managerEmail.trim() || 'unassigned@axiom.internal',
+      managerEmail: managerEmail.trim() || null,
       color: '#4F7BF7',
     });
-
-    // Also push to local capacity metrics
-    const newCapacityDept: DepartmentCapacityMetric = {
-      code: code.trim().toUpperCase() as any,
-      name: name.trim(),
-      managerName: managerName.trim() || 'Chưa bổ nhiệm',
-      managerEmail: managerEmail.trim() || 'unassigned@axiom.internal',
-      memberCount: 1,
-      totalWeeklyHours: 40,
-      meetingHoursTotal: 0,
-      taskHoursCommitted: 0,
-      totalCommittedHours: 0,
-      utilizationRate: 0,
-      status: 'AVAILABLE',
-      activeMeetingsCount: 0,
-      mandatesCount: 0,
-      zeroTaskCount: 1,
-      optimalTaskCount: 0,
-      overloadedCount: 0,
-      bottlenecksAlert: null,
-      mandates: [],
-    };
-    setDeptList([...deptList, newCapacityDept]);
 
     setName('');
     setCode('');
@@ -175,42 +102,12 @@ export function DepartmentsTab({
     setManagerName('');
     setManagerEmail('');
     setIsAddModalOpen(false);
-    triggerNotify(`Đã khai báo phòng ban ${name.trim()} vào cây cơ cấu tổ chức!`);
-  };
-
-  const getCapacityStatusBadge = (status: DepartmentCapacityMetric['status']) => {
-    switch (status) {
-      case 'OVERLOADED':
-        return {
-          bg: 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300',
-          dot: 'bg-rose-500',
-          text: 'QUÁ TẢI',
-        };
-      case 'FULL':
-        return {
-          bg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300',
-          dot: 'bg-amber-500',
-          text: 'ĐẦY TẢI',
-        };
-      case 'OPTIMAL':
-        return {
-          bg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300',
-          dot: 'bg-emerald-500',
-          text: 'TỐI ƯU',
-        };
-      case 'AVAILABLE':
-      default:
-        return {
-          bg: 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-          dot: 'bg-slate-400',
-          text: 'DƯ THỪA CÔNG SUẤT',
-        };
-    }
+    triggerNotify(`Đã khai báo phòng ban ${name.trim()} vào cơ cấu tổ chức!`);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* ── TOP EXECUTIVE BANNER: WORKLOAD & MANDATE RADAR ── */}
+      {/* ── TOP EXECUTIVE BANNER: WORKLOAD & PROGRESS RADAR ── */}
       <div className="bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-blue-800/40">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-0 right-1/4 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -220,10 +117,10 @@ export function DepartmentsTab({
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <MatIcon name="domain" className="text-blue-400 text-[24px]" />
-                <span>Cơ cấu phòng ban</span>
+                <span>Cơ Cấu Phòng Ban</span>
               </h1>
               <p className="text-xs text-slate-300 max-w-xl mt-1 leading-relaxed">
-                Theo dõi lịch làm việc, tiến độ Jira và phân bổ tải trọng các khối ban chức năng.
+                Theo dõi lịch làm việc, tiến độ thực thi nhiệm vụ và phân bổ nguồn lực các khối ban chức năng.
               </p>
             </div>
 
@@ -260,48 +157,48 @@ export function DepartmentsTab({
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
               <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
                 <MatIcon name="trending_up" className="text-blue-400 text-[16px]" />
-                <span>Tiến Độ Tổng Thể</span>
+                <span>Tiến Độ Nghiệm Thu</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-black font-mono text-white">
-                  {overallRealProgress}%
+                  {overallRate}%
                 </span>
-                <span className="text-[11px] text-emerald-400 font-bold">● Vận hành ổn định</span>
+                <span className="text-[11px] text-emerald-400 font-bold">● Vận hành thực tế</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                {completedRealIssues} / {totalRealIssues} tasks đã nghiệm thu
+                {doneTasks} / {totalTasks} tasks đã hoàn thành
               </div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
               <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                <MatIcon name="speed" className="text-indigo-400 text-[16px]" />
-                <span>Tải Năng Lực Toàn Cục</span>
+                <MatIcon name="pending_actions" className="text-amber-400 text-[16px]" />
+                <span>Đang Triển Khai</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black font-mono text-white">{avgUtilization}%</span>
-                <span className="text-[11px] text-indigo-300 font-bold">Tuần làm việc</span>
+                <span className="text-2xl font-black font-mono text-white">{inProgressTasks}</span>
+                <span className="text-[11px] text-amber-300 font-bold">Nhiệm vụ</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                {totalCommitted}h / {totalWeeklyCap}h công suất
+                Đang được các bộ phận xử lý
               </div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
               <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                <MatIcon name="account_tree" className="text-purple-400 text-[16px]" />
-                <span>Nghị Quyết Phân Rã</span>
+                <MatIcon name="assignment" className="text-purple-400 text-[16px]" />
+                <span>Chờ Tiếp Nhận</span>
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-black font-mono text-white">
-                  {overallDecomposeRate}%
+                  {todoTasks}
                 </span>
                 <span className="text-[11px] text-purple-300 font-bold">
-                  {mandates.length} Trọng tâm
+                  Nhiệm vụ
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                {totalDecomposedTasks}/{totalTargetTasks} tasks gán cho nhân viên
+                Đã phân bổ từ các cuộc họp
               </div>
             </div>
 
@@ -312,19 +209,19 @@ export function DepartmentsTab({
               </div>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-black font-mono text-white">
-                  {mergedDeptProgress.length}
+                  {progressList.length}
                 </span>
                 <span className="text-[11px] text-emerald-300 font-bold">Khối phòng ban</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                Toàn bộ dữ liệu đồng bộ thời gian thực
+                Cơ cấu tổ chức thời gian thực
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── SUB-TAB SELECTOR: GANTT vs OVERVIEW ── */}
+      {/* ── SUB-TAB SELECTOR: GANTT vs PROGRESS ── */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80">
           <button
@@ -342,15 +239,15 @@ export function DepartmentsTab({
 
           <button
             type="button"
-            onClick={() => setActiveSubTab('CAPACITY')}
+            onClick={() => setActiveSubTab('PROGRESS')}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'CAPACITY'
+              activeSubTab === 'PROGRESS'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <MatIcon name="domain" className="text-[16px]" />
-            <span>Tổng quan phòng ban</span>
+            <span>Tiến độ phòng ban</span>
           </button>
         </div>
 
@@ -362,647 +259,215 @@ export function DepartmentsTab({
 
       {/* ── SUB-VIEW 1: GANTT TIMELINE ── */}
       {activeSubTab === 'TIMELINE' && (
-        <DepartmentGanttTimeline departments={mergedDeptProgress} timelineItems={timelineItems} />
+        <DepartmentGanttTimeline departments={progressList} timelineItems={timelineItems} />
       )}
 
-      {/* ── SUB-VIEW 2: TỔNG QUAN PHÒNG BAN ── */}
-      {activeSubTab === 'CAPACITY' && (
-        <div className="space-y-6">
-          {/* SECTION: NGHỊ QUYẾT CẤP CAO TRÍCH XUẤT TỪ CUỘC HỌP BAN LÃNH ĐẠO */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <div className="flex items-center gap-2">
-                  <MatIcon
-                    name="assignment"
-                    className="text-blue-600 dark:text-blue-400 text-[20px]"
-                  />
-                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                    Nghị Quyết Ban Lãnh Đạo Đang Phân Rã Xuống Các Khối (Executive Mandates)
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    {mandates.length} Trọng tâm chiến lược
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Chỉ đạo từ cuộc họp của Chủ Tịch & Trưởng Phòng. AI theo dõi xem Trưởng phòng đã
-                  phân rã thành bao nhiêu task cho nhân viên.
-                </p>
-              </div>
-            </div>
+      {/* ── SUB-VIEW 2: TIẾN ĐỘ PHÒNG BAN ── */}
+      {activeSubTab === 'PROGRESS' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {progressList.map((dept) => {
+              const deptIcon = getDepartmentIcon({ name: dept.name, description: dept.description });
+              const completion = dept.completion_rate ?? 0;
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mandates.map((m) => {
-                const percent = Math.round((m.decomposedTasksCount / m.totalTasksTarget) * 100);
-                const isCompleted = percent === 100;
-
-                return (
-                  <div
-                    key={m.id}
-                    className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 hover:border-blue-400/80 transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-[10px] font-mono font-bold tracking-wider">
-                          {m.code}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            isCompleted
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                          }`}
-                        >
-                          {isCompleted ? 'ĐÃ PHÂN RÃ 100%' : `ĐANG PHÂN RÃ (${percent}%)`}
-                        </span>
-                      </div>
-
-                      <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                        {m.title}
-                      </h3>
-
-                      <div className="mt-2.5 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span>Phòng ban đích:</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {m.targetDepartmentName}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Trưởng khối chịu trách nhiệm:</span>
-                          <span className="font-semibold text-blue-600 dark:text-blue-400">
-                            {m.managerName}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Nguồn gốc chỉ đạo:</span>
-                          <span
-                            className="italic truncate max-w-[200px]"
-                            title={m.sourceMeetingTitle}
-                          >
-                            {m.sourceMeetingTitle}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="mt-3 space-y-1">
-                        <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span className="text-slate-500">
-                            Tiến độ phân rã: {m.decomposedTasksCount}/{m.totalTasksTarget} tasks
-                          </span>
-                          <span className="font-bold text-blue-600 dark:text-blue-400">
-                            {m.allocatedHours}h tải ({m.storyPoints} SP)
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              isCompleted ? 'bg-emerald-500' : 'bg-blue-600'
-                            }`}
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer Action */}
-                    <div className="mt-3.5 pt-2.5 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400">Hạn chót: {m.deadline}</span>
-
-                      {!isCompleted && (
-                        <button
-                          type="button"
-                          onClick={() => handleUrgeManager(m)}
-                          className="px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <MatIcon name="notifications_active" className="text-[14px]" />
-                          <span>Đôn đốc Trưởng phòng</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECTION: BẢN ĐỒ TẢI TRỌNG CÁC PHÒNG BAN */}
-          <div className="space-y-4">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <MatIcon
-                    name="grid_view"
-                    className="text-indigo-600 dark:text-indigo-400 text-[20px]"
-                  />
-                  <span>Năng Lực Vận Hành Các Khối</span>
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Theo dõi tải công việc và phân bổ nhân sự theo từng phòng ban.
-                </p>
-              </div>
-
-              {/* Filter Bar with Dimension Locking (Fixed Width, Anti-CLS) */}
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('ALL')}
-                  className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                    capacityFilter === 'ALL'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Tất cả các phòng ban"
+              return (
+                <div
+                  key={dept.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs space-y-4 hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col justify-between"
                 >
-                  Tất Cả ({deptList.length})
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('OVERLOADED_OR_FULL')}
-                  className={`w-32 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                    capacityFilter === 'OVERLOADED_OR_FULL'
-                      ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Phòng ban đầy tải hoặc quá tải"
-                >
-                  Đầy / Quá Tải
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('OPTIMAL')}
-                  className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                    capacityFilter === 'OPTIMAL'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Phòng ban tải tối ưu"
-                >
-                  Tối Ưu
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('AVAILABLE')}
-                  className={`w-28 text-center py-1.5 text-xs font-bold rounded-lg transition-all truncate cursor-pointer ${
-                    capacityFilter === 'AVAILABLE'
-                      ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Phòng ban còn dư thừa công suất"
-                >
-                  Dư Thừa
-                </button>
-              </div>
-            </div>
-
-            {/* Bento Grid of Departments */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {filteredDepts.map((dept) => {
-                const badge = getCapacityStatusBadge(dept.status);
-                // Find matching department from props to get icon
-                const matchedDept = departments.find(
-                  (d) => d.code === dept.code || d.name === dept.name
-                );
-                const deptIcon = matchedDept ? getDepartmentIcon(matchedDept) : 'domain';
-
-                return (
-                  <div
-                    key={dept.code}
-                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs hover:border-blue-400/80 hover:shadow-md transition-all flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Top Bar: Icon + Code & Capacity Badge */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <MatIcon name={deptIcon} className="text-[18px]" />
-                          </div>
-                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold">
-                            {dept.code}
-                          </span>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
+                          <MatIcon name={deptIcon} className="text-[20px]" />
                         </div>
-
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${badge.bg}`}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${badge.dot}`} />
-                          <span>{badge.text}</span>
-                        </span>
-                      </div>
-
-                      {/* Title & Manager */}
-                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                        {dept.name}
-                      </h3>
-
-                      <div className="mt-2 flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
-                        <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[10px]">
-                          {dept.managerAvatar ? (
-                            <img
-                              src={dept.managerAvatar}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            dept.managerName.charAt(0)
-                          )}
-                        </div>
-                        <span>
-                          Trưởng phòng:{' '}
-                          <strong className="text-slate-800 dark:text-slate-200">
-                            {dept.managerName}
-                          </strong>
-                        </span>
-                      </div>
-
-                      {/* CAPACITY METER BAR */}
-                      <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                            <MatIcon name="speed" className="text-blue-500 text-[15px]" />
-                            <span>Tải công việc</span>
-                          </span>
-                          <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
-                            {dept.utilizationRate}%
-                          </span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden flex">
-                          <div
-                            className={`h-full transition-all duration-500 ${
-                              dept.status === 'OVERLOADED'
-                                ? 'bg-rose-500'
-                                : dept.status === 'FULL'
-                                  ? 'bg-amber-500'
-                                  : dept.status === 'OPTIMAL'
-                                    ? 'bg-emerald-500'
-                                    : 'bg-slate-400'
-                            }`}
-                            style={{ width: `${Math.min(dept.utilizationRate, 100)}%` }}
-                          />
-                        </div>
-
-                        {/* Hours Breakdown */}
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
-                          <span>{dept.meetingHoursTotal}h họp</span>
-                          <span className="text-slate-300 dark:text-slate-600">+</span>
-                          <span>{dept.taskHoursCommitted}h tasks</span>
-                          <span className="text-slate-300 dark:text-slate-600">=</span>
-                          <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {dept.totalCommittedHours}h / {dept.totalWeeklyHours}h
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                            {dept.name}
+                          </h3>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                            Trưởng khối: {dept.manager_name || 'Chưa bổ nhiệm'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Member Capacity Distribution Chips */}
-                      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                        <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                          <div className="font-mono text-xs text-slate-800 dark:text-slate-200">
-                            {dept.zeroTaskCount}
-                          </div>
-                          <div>Rảnh</div>
-                        </div>
-                        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-                          <div className="font-mono text-xs font-black">
-                            {dept.optimalTaskCount}
-                          </div>
-                          <div>Tối ưu</div>
-                        </div>
-                        <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
-                          <div className="font-mono text-xs font-black">{dept.overloadedCount}</div>
-                          <div>Quá tải</div>
-                        </div>
-                      </div>
-
-                      {/* Bottleneck alert if any */}
-                      {dept.bottlenecksAlert && (
-                        <div className="mt-3 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
-                          <MatIcon
-                            name="warning"
-                            className="text-[14px] text-amber-600 shrink-0 mt-0.5"
-                          />
-                          <span>{dept.bottlenecksAlert}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Footer action */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-semibold">
-                        <MatIcon name="groups" className="text-[16px]" />
-                        <span>{dept.memberCount} nhân sự</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+                        {dept.member_count} nhân sự
                       </span>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDeptForDetail(dept)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                      >
-                        <span>Chi tiết</span>
-                        <MatIcon name="arrow_forward" className="text-[14px]" />
-                      </button>
+                    {/* Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400">Tiến độ hoàn thành:</span>
+                        <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                          {completion}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(0, completion))}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Task Metrics Grid */}
+                  <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                      <span className="text-[10px] text-slate-400 block font-medium">Tổng task</span>
+                      <strong className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                        {dept.total_tasks || 0}
+                      </strong>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium">Đã xong</span>
+                      <strong className="text-xs font-bold text-emerald-700 dark:text-emerald-300 font-mono">
+                        {dept.done_tasks || 0}
+                      </strong>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30">
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-medium">Đang làm</span>
+                      <strong className="text-xs font-bold text-amber-700 dark:text-amber-300 font-mono">
+                        {dept.in_progress_tasks || 0}
+                      </strong>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/30">
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 block font-medium">Chờ xử lý</span>
+                      <strong className="text-xs font-bold text-blue-700 dark:text-blue-300 font-mono">
+                        {dept.todo_tasks || 0}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* ── MODAL DEEP-DIVE: CHI TIẾT TẢI NHÂN SỰ & QUYẾT SÁCH CỦA PHÒNG BAN ── */}
-      {selectedDeptForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full p-6 relative max-h-[85vh] flex flex-col">
-            <button
-              type="button"
-              onClick={() => setSelectedDeptForDetail(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-            >
-              <MatIcon name="close" className="text-[22px]" />
-            </button>
-
-            {/* Header */}
-            <div className="pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-xs font-mono font-bold">
-                  {selectedDeptForDetail.code}
-                </span>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  {selectedDeptForDetail.name}
-                </h3>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Trưởng phòng: <strong>{selectedDeptForDetail.managerName}</strong>
-                <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
-                <span className="font-mono">{selectedDeptForDetail.managerEmail}</span>
-              </p>
-            </div>
-
-            {/* Content Body: Scrollable list of members in this department */}
-            <div className="overflow-y-auto py-4 space-y-4 pr-1">
-              <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Danh sách nhân sự</span>
-                <span className="text-[11px] font-normal text-slate-400">40h/tuần = 100%</span>
-              </div>
-
-              {selectedDeptForDetail.code === 'ENG' ? (
-                <div className="space-y-3">
-                  {INITIAL_ENG_MEMBERS.map((mem) => {
-                    const isZero = mem.activeTasksCount === 0;
-                    const isOver = mem.capacityPercent > 100;
-
-                    return (
-                      <div
-                        key={mem.id}
-                        className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={mem.avatar}
-                            alt=""
-                            className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
-                          />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                                {mem.name}
-                              </h4>
-                              {isZero && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                                  0 Task • Trống việc
-                                </span>
-                              )}
-                              {isOver && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                                  Quá tải nguy hiểm
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-blue-600 dark:text-blue-400">
-                              {mem.title}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              {mem.weeklyMeetingHours}h họp + {mem.estimatedTaskHours}h task ·{' '}
-                              {mem.activeTasksCount} nhiệm vụ
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Capacity Percentage Pill */}
-                        <div className="text-right shrink-0">
-                          <div
-                            className={`font-mono text-sm font-black ${
-                              isOver
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : isZero
-                                  ? 'text-slate-400'
-                                  : 'text-emerald-600 dark:text-emerald-400'
-                            }`}
-                          >
-                            {mem.capacityPercent}%
-                          </div>
-                          <div className="w-20 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div
-                              className={`h-full rounded-full ${
-                                isOver ? 'bg-rose-500' : isZero ? 'bg-slate-400' : 'bg-emerald-500'
-                              }`}
-                              style={{ width: `${Math.min(mem.capacityPercent, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800 text-center text-xs text-slate-500">
-                  Phòng ban gồm {selectedDeptForDetail.memberCount} nhân sự đang vận hành theo cơ
-                  chế phân tán. Tổng công suất khả dụng: {selectedDeptForDetail.totalWeeklyHours}
-                  h/tuần.
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+      {/* ── MODAL: THÊM PHÒNG BAN MỚI ── */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <MatIcon name="domain" className="text-blue-600" />
+                <span>Thêm Khối Phòng Ban Mới</span>
+              </h2>
               <button
                 type="button"
-                onClick={() => setSelectedDeptForDetail(null)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
               >
-                Đóng
+                <MatIcon name="close" className="text-[20px]" />
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ── MODAL THÊM PHÒNG BAN MỚI ── */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 relative">
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-            >
-              <MatIcon name="close" className="text-[20px]" />
-            </button>
-
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                <MatIcon name="domain_add" filled className="text-[20px]" />
-              </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Thêm phòng ban
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Khai báo phòng ban mới vào cơ cấu tổ chức.
-                </p>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tên phòng ban <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="VD: Khối Kỹ Thuật & Công Nghệ"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                />
               </div>
-            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Tên phòng ban <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ví dụ: Khối Truyền Thông"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mã code <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Mã khối (Code) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="MKT"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 uppercase"
+                    placeholder="VD: ENG"
+                    className="w-full px-3 py-2 text-xs font-mono uppercase rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
-              </div>
 
-              {/* Icon Picker - Exclusive */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Biểu tượng nhận diện
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Biểu tượng Icon
                   </label>
-                  <span className="text-[10px] text-slate-400">
-                    Mỗi phòng ban một biểu tượng riêng
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                  {DEPARTMENT_ICONS.map((item) => {
-                    const usedBy = getUsedDepartmentIcons(departments)[item.icon];
-                    const isUsed = Boolean(usedBy);
-                    const isSelected = icon === item.icon;
-
-                    return (
-                      <button
-                        key={item.icon}
-                        type="button"
-                        disabled={isUsed}
-                        onClick={() => setIcon(item.icon)}
-                        title={
-                          isUsed
-                            ? `${item.label} (Đã dùng: ${usedBy})`
-                            : `${item.label} - ${item.domain}`
-                        }
-                        className={`relative p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${
-                          isUsed
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 pointer-events-none'
-                            : isSelected
-                              ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400 scale-105 cursor-pointer font-bold'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer'
-                        }`}
-                      >
-                        <MatIcon name={item.icon} className="text-[20px]" />
-                        <span className="text-[9.5px] truncate max-w-full font-medium">
-                          {item.label}
-                        </span>
-                        {isUsed && (
-                          <span
-                            className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 text-[8px] font-bold border border-slate-300 dark:border-slate-600"
-                            title={`Đã gán cho ${usedBy}`}
-                          >
-                            Đã dùng
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                  <select
+                    value={icon}
+                    onChange={(e) => setIcon(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    {DEPARTMENT_ICONS.map((i) => (
+                      <option key={i.icon} value={i.icon}>
+                        {i.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Mô tả chức năng
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Mô tả chức năng nhiệm vụ
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Chịu trách nhiệm thương hiệu, chiến dịch và nội dung..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 resize-none"
+                  placeholder="Mô tả tóm tắt vai trò của phòng ban trong công ty..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Trưởng phòng
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Trưởng phòng (Họ và tên)
                   </label>
                   <input
                     type="text"
                     value={managerName}
                     onChange={(e) => setManagerName(e.target.value)}
-                    placeholder="Nguyễn Văn An"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    placeholder="Chưa bổ nhiệm"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Email trưởng phòng
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Email liên hệ
                   </label>
                   <input
                     type="email"
                     value={managerEmail}
                     onChange={(e) => setManagerEmail(e.target.value)}
-                    placeholder="an.nguyen@axiom.vn"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    placeholder="email@company.com"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs cursor-pointer active:scale-95"
                 >
                   Tạo phòng ban
                 </button>
