@@ -76,8 +76,9 @@ export function AppSidebar() {
     { title: 'Backlog & Sprints', url: '/member?tab=jira', icon: ListTodo, badge: null },
   ];
 
-  const isOwner = user?.email === 'admin@axiom.com';
-  const isManager = user?.email === 'manager.khoa@axiom.com';
+  const roleUpper = (user?.role || '').toUpperCase();
+  const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
+  const isManager = roleUpper === 'MANAGER';
   const isMember = !isOwner && !isManager;
 
   const navSystem = [
@@ -91,8 +92,8 @@ export function AppSidebar() {
     { title: 'Settings', url: '/settings', icon: Settings, badge: null },
   ];
 
-  const userName = user?.full_name || 'Alex Rivera (Kỹ sư AI / Thành viên)';
-  const userEmail = user?.email || 'alex@axiom.com';
+  const userName = user?.full_name || 'Người dùng Axiom';
+  const userEmail = user?.email || 'Chưa cập nhật';
   const roleLabel = isOwner ? 'OWNER' : isManager ? 'MANAGER' : 'MEMBER';
   const userInitials = (
     userName

@@ -40,8 +40,8 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
   const { user, activeOrganization } = useAuthStore();
   const resolvedOrgId =
     activeOrganization?.id ||
-    (user as any)?.organization_id ||
-    '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    (user as { organization_id?: string } | null)?.organization_id ||
+    null;
 
   // Meeting Data State
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -101,6 +101,13 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     if (showLoadingSpinner) {
       setIsLoading(true);
     }
+    if (!resolvedOrgId) {
+      setIsLoading(false);
+      setMeetings([]);
+      setExecutiveMeetings([]);
+      setDeptMembers([]);
+      return;
+    }
     try {
       const [meetingsRes, membersRes] = await Promise.allSettled([
         meetingApi.listWithFilters(),
@@ -116,7 +123,13 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         const executiveList = accessible
           .filter((m) => {
             const s = (m.status || '').toUpperCase();
-            return s === 'ENDED' || s === 'COMPLETED' || !m.department_id;
+            return (
+              s === 'ENDED' ||
+              s === 'COMPLETED' ||
+              !m.department_id ||
+              (m as any).meeting_type === 'EXECUTIVE' ||
+              Boolean(m.title && (m.title.toLowerCase().includes('cấp cao') || m.title.toLowerCase().includes('ban điều hành')))
+            );
           })
           .sort((a, b) => {
             const isAEnded =
@@ -345,6 +358,11 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     e.preventDefault();
     if (!newTitle.trim()) {
       alert('Vui lòng nhập chủ đề cuộc họp');
+      return;
+    }
+
+    if (!resolvedOrgId) {
+      onNotify('Chưa chọn tổ chức đang hoạt động.');
       return;
     }
 

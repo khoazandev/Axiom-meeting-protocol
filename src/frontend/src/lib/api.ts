@@ -812,12 +812,15 @@ export interface Department {
   updated_at: string;
 }
 
+export function requireActiveOrganizationId(explicitId?: string): string {
+  const orgId = explicitId ?? useAuthStore.getState().activeOrganization?.id;
+  if (!orgId) throw new Error('Chưa chọn tổ chức đang hoạt động');
+  return orgId;
+}
+
 export const departmentApi = {
   list: async (orgId?: string): Promise<Department[]> => {
-    const resolvedOrgId = orgId || useAuthStore.getState().activeOrganization?.id;
-    if (!resolvedOrgId) {
-      return [];
-    }
+    const resolvedOrgId = requireActiveOrganizationId(orgId);
     return apiFetch<Department[]>(`/api/v1/organizations/${resolvedOrgId}/departments`);
   },
   create: async (

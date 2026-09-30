@@ -143,10 +143,10 @@ export function SovereignNavbar({
               </div>
               <div className="hidden xl:block text-left">
                 <p className="text-xs font-bold text-slate-900 dark:text-white leading-none">
-                  {user?.full_name || 'Nguyễn Thế Khang'}
+                  {user?.full_name || 'Quản trị viên'}
                 </p>
                 <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-tight">
-                  OWNER
+                  {user?.role || 'OWNER'}
                 </p>
               </div>
               <MatIcon name="expand_more" className="text-slate-400 text-[18px]" />
@@ -159,13 +159,13 @@ export function SovereignNavbar({
                 <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 py-1.5 text-xs text-slate-700 dark:text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                     <p className="font-bold text-slate-900 dark:text-white">
-                      {user?.full_name || 'Nguyễn Thế Khang'}
+                      {user?.full_name || 'Quản trị viên'}
                     </p>
                     <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate">
-                      {user?.email || 'admin@axiom.com'}
+                      {user?.email || 'Chưa cập nhật'}
                     </p>
                     <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
-                      Role: OWNER
+                      Role: {user?.role || 'OWNER'}
                     </span>
                   </div>
 

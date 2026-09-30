@@ -114,8 +114,8 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const { user, activeOrganization } = useAuthStore();
   const resolvedOrgId =
     activeOrganization?.id ||
-    (user as any)?.organization_id ||
-    '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    (user as { organization_id?: string } | null)?.organization_id ||
+    null;
 
   const isManagerOrAdmin =
     user?.role === 'MANAGER' || user?.role === 'OWNER' || user?.role === 'ADMIN';
@@ -317,6 +317,12 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const loadKanbanData = async (showLoading = true) => {
     if (draggedTaskIdRef.current) return;
     if (showLoading) setIsLoading(true);
+    if (!resolvedOrgId) {
+      setIsLoading(false);
+      setDeptMembers([]);
+      setTasks([]);
+      return;
+    }
     try {
       // Load department members
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
@@ -354,7 +360,9 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
 
       let proj: JiraProject | null = null;
       if (projects && projects.length > 0) {
-        proj = projects.find((p) => p.key === 'SMA') || projects[0];
+        proj =
+          projects.find((p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA') ||
+          projects[0];
       } else {
         // Auto-create initial project for this department
         try {

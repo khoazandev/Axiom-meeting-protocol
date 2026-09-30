@@ -10,7 +10,6 @@ import { useLanguageStore } from '@/lib/store/useLanguageStore';
 import Logo from '@/components/Logo';
 import { MaterialIcon } from '@/components/ui/MaterialIcon';
 import AuthLivelyStage from '@/components/auth/AuthLivelyStage';
-import AuthQuickAccess from '@/components/auth/AuthQuickAccess';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,25 +31,17 @@ export default function LoginPage() {
       const tokens = await authApi.login(email, password);
       useAuthStore.setState({ token: tokens.access_token });
       const user = await authApi.me();
-      const enrichedUser = {
-        ...user,
-        role:
-          user.role ||
-          (email === 'admin@axiom.com'
-            ? 'OWNER'
-            : email === 'manager.khoa@axiom.com'
-              ? 'MANAGER'
-              : 'MEMBER'),
-      };
       const organizations = await organizationApi.list();
-      setAuth(enrichedUser, tokens.access_token, organizations, organizations[0]);
-      const targetRole = (enrichedUser.role || '').toUpperCase();
-      if (targetRole === 'OWNER' || email === 'admin@axiom.com') {
+      setAuth(user, tokens.access_token, organizations, organizations[0] || null);
+      const role = (user.role ?? '').toUpperCase();
+      if (role === 'OWNER' || role === 'ADMIN') {
         router.push('/admin');
-      } else if (targetRole === 'MANAGER' || email.startsWith('manager.')) {
+      } else if (role === 'MANAGER') {
         router.push('/manager');
-      } else {
+      } else if (role === 'MEMBER') {
         router.push('/member');
+      } else {
+        router.push('/candidate/discovery');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.auth.loginError);
@@ -204,14 +195,6 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
-
-                {/* Quick Demo Credentials for Reviewers */}
-                <AuthQuickAccess
-                  onSelect={(quickEmail, quickPass) => {
-                    setEmail(quickEmail);
-                    setPassword(quickPass);
-                  }}
-                />
 
                 {/* Submit Button */}
                 <button

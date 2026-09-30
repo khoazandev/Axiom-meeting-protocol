@@ -71,12 +71,11 @@ export function CompanyOrgTree({
     );
   };
 
-  // Exactly ONE Chairman at the root level (User's System Admin account)
+  // Exactly ONE Chairman at the root level (persisted member with role OWNER or ADMIN)
   const chairman = useMemo(() => {
     return (
-      members.find((m) => m.email === 'admin@axiom.com') ||
-      members.find((m) => m.full_name.toLowerCase().includes('admin')) ||
       members.find((m) => m.role === 'OWNER') ||
+      members.find((m) => m.role === 'ADMIN') ||
       members[0]
     );
   }, [members]);

@@ -16,6 +16,7 @@ import {
   Briefcase,
   Check,
   Building2,
+  Calendar,
 } from 'lucide-react';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { organizationAdminApi, invitationApi, jiraApi, OrgMemberDetail, Issue } from '@/lib/api';
@@ -39,8 +40,8 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
   const { user, activeOrganization, updateUser } = useAuthStore();
   const resolvedOrgId =
     activeOrganization?.id ||
-    (user as any)?.organization_id ||
-    '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    (user as { organization_id?: string } | null)?.organization_id ||
+    null;
 
   const [members, setMembers] = useState<EnrichedTeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +63,18 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
     null
   );
   const [taskToAssignTitle, setTaskToAssignTitle] = useState('');
+  const [taskToAssignDesc, setTaskToAssignDesc] = useState('');
+  const [taskToAssignPriority, setTaskToAssignPriority] = useState<
+    'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+  >('HIGH');
+  const [taskToAssignDueDate, setTaskToAssignDueDate] = useState('');
   const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
+
+  // Member Detailed View Modal State
+  const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<EnrichedTeamMember | null>(
+    null
+  );
+  const [allDepartmentIssues, setAllDepartmentIssues] = useState<Issue[]>([]);
 
   // Load Real Members and Tasks
   useEffect(() => {
@@ -71,6 +83,11 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
 
   const loadTeamData = async () => {
     setIsLoading(true);
+    if (!resolvedOrgId) {
+      setIsLoading(false);
+      setMembers([]);
+      return;
+    }
     try {
       const [membersRes, projectsRes] = await Promise.allSettled([
         organizationAdminApi.getMembers(resolvedOrgId),
@@ -118,7 +135,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         return false; // Zero leakage if department unresolved
       });
 
-      // Fetch issues to calculate member capacity
+      // Fetch issues from relevant projects to calculate member capacity
       let issues: Issue[] = [];
       if (
         projectsRes.status === 'fulfilled' &&
@@ -126,12 +143,19 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         projectsRes.value.length > 0
       ) {
         try {
-          const rawIssues = await jiraApi.getIssues(projectsRes.value[0].id);
-          issues = rawIssues || [];
+          const targetProjects = projectsRes.value.filter(
+            (p) => p.department_id === myDeptId || p.key === 'ENG' || !p.department_id
+          );
+          const projectsToQuery = targetProjects.length > 0 ? targetProjects : projectsRes.value;
+          const issueLists = await Promise.all(
+            projectsToQuery.map((p) => jiraApi.getIssues(p.id).catch(() => []))
+          );
+          issues = issueLists.flat();
         } catch {
           // ignore
         }
       }
+      setAllDepartmentIssues(issues);
 
       // Enrich members with real active/completed tasks count and capacity percentage
       const enriched: EnrichedTeamMember[] = effectiveMembers.map((m) => {
@@ -201,6 +225,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim() || !inviteName.trim()) return;
+    if (!resolvedOrgId) {
+      onNotify('Chưa chọn tổ chức đang hoạt động.');
+      return;
+    }
 
     setIsSubmittingInvite(true);
     try {
@@ -220,9 +248,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       setInviteJobTitle('');
       setInvitePhone('');
       await loadTeamData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to invite department member:', err);
-      alert(err?.message || 'Không thể gửi lời mời. Vui lòng kiểm tra lại địa chỉ email.');
+      alert((err as Error)?.message || 'Không thể gửi lời mời. Vui lòng kiểm tra lại địa chỉ email.');
     } finally {
       setIsSubmittingInvite(false);
     }
@@ -232,6 +260,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
   const handleConfirmAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMemberForAssign || !taskToAssignTitle.trim()) return;
+    if (!resolvedOrgId) {
+      onNotify('Chưa chọn tổ chức đang hoạt động.');
+      return;
+    }
 
     setIsSubmittingAssign(true);
     try {
@@ -240,23 +272,42 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         department_id: user?.department_id || undefined,
         organization_id: resolvedOrgId,
       });
-      const projId = projects && projects[0] ? projects[0].id : undefined;
+      let targetProj =
+        projects?.find(
+          (p) =>
+            p.department_id === user?.department_id ||
+            p.key === 'ENG' ||
+            p.key === 'SMA'
+        ) || (projects && projects[0] ? projects[0] : null);
 
-      if (projId) {
-        await jiraApi.createIssue({
-          project_id: projId,
-          summary: taskToAssignTitle.trim(),
-          assignee_id: selectedMemberForAssign.user_id,
-          priority: 'HIGH',
-          status: 'TODO',
+      if (!targetProj) {
+        targetProj = await jiraApi.createProject({
+          key: 'ENG',
+          name: user?.department_name || 'Khối Kỹ Thuật & Công Nghệ',
+          description: 'Dự án quản lý công việc và phân bổ nhiệm vụ của phòng ban',
+          department_id: user?.department_id || undefined,
+          organization_id: resolvedOrgId,
         });
       }
+
+      await jiraApi.createIssue({
+        project_id: targetProj.id,
+        summary: taskToAssignTitle.trim(),
+        description: taskToAssignDesc.trim() || undefined,
+        assignee_id: selectedMemberForAssign.user_id,
+        priority: taskToAssignPriority,
+        due_date: taskToAssignDueDate ? new Date(taskToAssignDueDate).toISOString() : undefined,
+        status: 'TODO',
+      });
 
       onNotify(
         `Đã giao nhiệm vụ "${taskToAssignTitle}" cho ${selectedMemberForAssign.full_name} thành công!`
       );
       setSelectedMemberForAssign(null);
       setTaskToAssignTitle('');
+      setTaskToAssignDesc('');
+      setTaskToAssignPriority('HIGH');
+      setTaskToAssignDueDate('');
       await loadTeamData();
     } catch (err: any) {
       console.error('Failed to assign task:', err);
@@ -455,18 +506,24 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
                       />
                       <div className="truncate">
-                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate" title={mem.full_name}>
                           {mem.full_name}
                         </h3>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold truncate">
-                          {mem.role}
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold truncate" title={mem.job_title || 'Kỹ sư Kỹ thuật (Software Engineer)'}>
+                          {mem.job_title || (mem.role === 'MEMBER' ? 'Kỹ sư Kỹ thuật (Software Engineer)' : mem.role)}
                         </p>
-                        <p className="text-[11px] text-slate-400 truncate">{mem.email}</p>
+                        <p className="text-[11px] text-slate-400 truncate" title={mem.email}>{mem.email}</p>
+                        {mem.phone && (
+                          <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5" title={mem.phone}>
+                            <Phone size={10} className="text-slate-400" />
+                            <span>{mem.phone}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <span
-                      className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                      className={`w-20 text-center text-[10px] font-black py-0.5 rounded-full uppercase shrink-0 truncate ${
                         isOverloaded
                           ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                           : isZeroTask
@@ -505,7 +562,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                   </div>
 
                   {/* Task counts */}
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400 pb-3">
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400 pb-2">
                     <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 text-center">
                       <div className="text-xs font-black text-slate-800 dark:text-slate-200">
                         {mem.activeTasks}
@@ -519,20 +576,62 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                       <div>Cuộc Họp Tham Gia</div>
                     </div>
                   </div>
+
+                  {/* Recent Assigned Tasks */}
+                  <div className="mt-1 pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+                      <span className="flex items-center gap-1">
+                        <Briefcase size={11} className="text-blue-500" />
+                        <span>Nhiệm vụ phụ trách:</span>
+                      </span>
+                      <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
+                        {mem.activeTasks}
+                      </span>
+                    </div>
+                    {mem.tasksList && mem.tasksList.length > 0 ? (
+                      <ul className="space-y-1">
+                        {mem.tasksList.map((t, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                            <span className="truncate" title={t}>
+                              {t}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 italic">
+                        Chưa có nhiệm vụ đang xử lý
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Bottom Action Button */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                {/* Bottom Action Buttons */}
+                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMemberForDetails(mem)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer text-center truncate"
+                  >
+                    Chi Tiết
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedMemberForAssign(mem);
                       setTaskToAssignTitle('');
+                      setTaskToAssignDesc('');
+                      setTaskToAssignPriority('HIGH');
+                      setTaskToAssignDueDate('');
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/60 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-2xs cursor-pointer text-center truncate"
                   >
                     <Plus size={13} />
-                    <span>Giao Việc Cho Nhân Sự</span>
+                    <span>Giao Việc</span>
                   </button>
                 </div>
               </div>
@@ -541,16 +640,152 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         </div>
       )}
 
+      {/* ── MODAL CHI TIẾT & QUẢN LÝ NHÂN SỰ ── */}
+      {selectedMemberForDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3.5">
+                <img
+                  src={
+                    selectedMemberForDetails.avatar_url ||
+                    generateInitialsAvatar(selectedMemberForDetails.full_name)
+                  }
+                  alt={selectedMemberForDetails.full_name}
+                  className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-500/20"
+                />
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                    {selectedMemberForDetails.full_name}
+                  </h3>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                    {selectedMemberForDetails.job_title ||
+                      'Kỹ sư Kỹ thuật (Software Engineer)'}
+                  </p>
+                  <p className="text-xs text-slate-400">{selectedMemberForDetails.email}</p>
+                  {selectedMemberForDetails.phone && (
+                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                      <Phone size={11} /> {selectedMemberForDetails.phone}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMemberForDetails(null)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Workload Stats */}
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400">
+                  {selectedMemberForDetails.activeTasks}
+                </div>
+                <div className="text-[11px] text-slate-500">Đang Thực Hiện</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {selectedMemberForDetails.completedTasks}
+                </div>
+                <div className="text-[11px] text-slate-500">Đã Hoàn Thành</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                  {selectedMemberForDetails.capacityPercent}%
+                </div>
+                <div className="text-[11px] text-slate-500">Tải Công Việc</div>
+              </div>
+            </div>
+
+            {/* List of Tasks */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Danh Sách Nhiệm Vụ Được Giao
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMemberForAssign(selectedMemberForDetails);
+                    setTaskToAssignTitle('');
+                    setTaskToAssignDesc('');
+                    setTaskToAssignPriority('HIGH');
+                    setTaskToAssignDueDate('');
+                    setSelectedMemberForDetails(null);
+                  }}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={12} /> Giao việc mới
+                </button>
+              </div>
+
+              {allDepartmentIssues.filter(
+                (i) => i.assignee_id === selectedMemberForDetails.user_id
+              ).length === 0 ? (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400 italic">
+                  Nhân sự này hiện chưa có nhiệm vụ nào được phân bổ.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {allDepartmentIssues
+                    .filter((i) => i.assignee_id === selectedMemberForDetails.user_id)
+                    .map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono text-[10px] font-bold text-slate-400 mr-2">
+                            {task.key}
+                          </span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {task.summary}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            task.status === 'DONE'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                              : task.status === 'IN_PROGRESS'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {task.status}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSelectedMemberForDetails(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL GIAO VIỆC TRỰC TIẾP ── */}
       {selectedMemberForAssign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                   Giao Nhiệm Vụ Cho Nhân Sự
                 </h3>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold truncate max-w-xs" title={selectedMemberForAssign.email}>
                   {selectedMemberForAssign.full_name} ({selectedMemberForAssign.email})
                 </p>
               </div>
@@ -563,17 +798,60 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmAssign} className="space-y-4">
+            <form onSubmit={handleConfirmAssign} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Tên nhiệm vụ cần giao *
                 </label>
-                <textarea
+                <input
+                  type="text"
                   required
-                  rows={3}
                   placeholder="VD: Nghiên cứu phương án tối ưu nén âm thanh WebRTC Opus"
                   value={taskToAssignTitle}
                   onChange={(e) => setTaskToAssignTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Mức độ ưu tiên
+                  </label>
+                  <select
+                    value={taskToAssignPriority}
+                    onChange={(e) => setTaskToAssignPriority(e.target.value as any)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="CRITICAL">Khẩn cấp (Critical)</option>
+                    <option value="HIGH">Cao (High)</option>
+                    <option value="MEDIUM">Trung bình (Medium)</option>
+                    <option value="LOW">Thấp (Low)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Hạn hoàn thành
+                  </label>
+                  <input
+                    type="date"
+                    value={taskToAssignDueDate}
+                    onChange={(e) => setTaskToAssignDueDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Mô tả chi tiết / Hướng dẫn
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Ghi chú yêu cầu kỹ thuật hoặc kết quả đầu ra cần đạt được..."
+                  value={taskToAssignDesc}
+                  onChange={(e) => setTaskToAssignDesc(e.target.value)}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>

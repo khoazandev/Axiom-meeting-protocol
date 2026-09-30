@@ -81,8 +81,11 @@ import { InviteMembersModal } from '@/components/meetings/InviteMembersModal';
 
 import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 import { useWebSpeech } from '@/hooks/useWebSpeech';
+import { useMeetingEvents } from '@/hooks/useMeetingEvents';
 import { MeetingPreJoinLobby, BackgroundOption } from '@/components/meetings/MeetingPreJoinLobby';
 import { ArchiveTransferModal } from '@/components/meetings/ArchiveTransferModal';
+import { InterviewScorecardModal } from '@/components/meetings/InterviewScorecardModal';
+import { interviewEvaluationApi } from '@/lib/interviewRubric';
 import Logo from '@/components/Logo';
 
 function SpeechTranslationControl() {
@@ -346,15 +349,25 @@ function RecordsListener({
   onNewRecord,
   onTranscriptFinalized,
   onLiveSubtitleUpdate,
+  onRealtimeTaskDetected,
 }: {
   onNewRecord: (r: RecordEntry) => void;
   onTranscriptFinalized?: (text: string, timestamp: string) => void;
   onLiveSubtitleUpdate?: (sub: LiveSubtitleRecord) => void;
+  onRealtimeTaskDetected?: (task: any) => void;
 }) {
   const room = useRoomContext();
-  const callbacksRef = useRef({ onNewRecord, onTranscriptFinalized, onLiveSubtitleUpdate });
+  const callbacksRef = useRef({
+    onNewRecord,
+    onLiveSubtitleUpdate,
+    onRealtimeTaskDetected,
+  });
   useEffect(() => {
-    callbacksRef.current = { onNewRecord, onTranscriptFinalized, onLiveSubtitleUpdate };
+    callbacksRef.current = {
+      onNewRecord,
+      onLiveSubtitleUpdate,
+      onRealtimeTaskDetected,
+    };
   });
 
   const lastProcessedRef = useRef<string>('');
@@ -362,14 +375,13 @@ function RecordsListener({
 
   const processIncomingMessage = useCallback((topic: string, text: string) => {
     const now = Date.now();
-    if (text === lastProcessedRef.current && now - lastProcessedTimeRef.current < 80) {
-      return; // Deduplicate rapid twin events
+    if (text === lastProcessedRef.current && now - lastProcessedTimeRef.current < 500) {
+      return; // Deduplicate rapid twin events within 500ms
     }
     lastProcessedRef.current = text;
     lastProcessedTimeRef.current = now;
 
     try {
-      console.log(`[DataChannel ${topic}] Received:`, text);
       const data = JSON.parse(text);
       const timeStr = new Date().toLocaleTimeString([], {
         hour: '2-digit',
@@ -377,7 +389,14 @@ function RecordsListener({
         second: '2-digit',
       });
 
-      if (data.type === 'original_transcript') {
+      // Filter out self-broadcast messages (local participant already handled their own transcripts in WebSpeechPublisher)
+      if (room?.localParticipant?.identity && data.participant_identity === room.localParticipant.identity) {
+        return;
+      }
+
+      if (data.type === 'task_realtime_detected') {
+        callbacksRef.current.onRealtimeTaskDetected?.(data.task || data);
+      } else if (data.type === 'original_transcript') {
         const entry: RecordEntry = {
           timestamp: timeStr,
           participant_identity: data.participant_identity,
@@ -394,14 +413,7 @@ function RecordsListener({
         });
 
         callbacksRef.current.onNewRecord(entry);
-
-        if (
-          data.is_final &&
-          data.source !== 'client' &&
-          callbacksRef.current.onTranscriptFinalized
-        ) {
-          callbacksRef.current.onTranscriptFinalized(data.original_text, timeStr);
-        }
+        // Note: No onTranscriptFinalized here. Only the speaker's own browser saves their speech to DB.
       } else if (data.type === 'translation_record' || data.type === 'translation') {
         const fromLang = data.from_language || 'vi';
         const toLang = data.to_language || (fromLang === 'en' ? 'vi' : 'en');
@@ -427,9 +439,9 @@ function RecordsListener({
     } catch (e) {
       console.warn(`Failed to parse data message for topic ${topic}`, e);
     }
-  }, []);
+  }, [room]);
 
-  // Primary listener: direct RoomEvent.DataReceived
+  // Single authoritative listener: RoomEvent.DataReceived
   useEffect(() => {
     if (!room) return;
 
@@ -447,23 +459,6 @@ function RecordsListener({
       room.off(RoomEvent.DataReceived, onDataReceived);
     };
   }, [room, processIncomingMessage]);
-
-  // Fallback redundancy: useDataChannel hooks
-  useDataChannel('records', (msg) => {
-    try {
-      const payload = msg.payload || msg;
-      const text = new TextDecoder().decode(payload as Uint8Array);
-      processIncomingMessage('records', text);
-    } catch (e) {}
-  });
-
-  useDataChannel('translations', (msg) => {
-    try {
-      const payload = msg.payload || msg;
-      const text = new TextDecoder().decode(payload as Uint8Array);
-      processIncomingMessage('translations', text);
-    } catch (e) {}
-  });
 
   return null;
 }
@@ -901,18 +896,26 @@ export function MeetingRoomClient() {
   const router = useRouter();
   const meetingId = params.id as string;
 
-  // Suppress harmless LiveKit internal tile-sorting console errors
+  // Suppress harmless LiveKit internal tile-sorting console errors and transient WS reconnect notices
   useEffect(() => {
+    const isIgnored = (msg: string) =>
+      msg.includes('Element not part of the array') ||
+      msg.includes('[MeetingEvents]') ||
+      msg.includes('WebSocket') ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('[STT]') ||
+      msg.includes('NETWORK_ERROR');
+
     const originalError = console.error;
     console.error = (...args: unknown[]) => {
       const msg = args[0] ? String(args[0]) : '';
-      if (msg.includes('Element not part of the array')) return;
+      if (isIgnored(msg)) return;
       originalError.apply(console, args);
     };
 
     const handleUnhandledError = (event: ErrorEvent) => {
       const msg = event.message || (event.error && String(event.error)) || '';
-      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+      if (typeof msg === 'string' && isIgnored(msg)) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }
@@ -920,7 +923,7 @@ export function MeetingRoomClient() {
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const msg = (event.reason && String(event.reason)) || '';
-      if (typeof msg === 'string' && msg.includes('Element not part of the array')) {
+      if (typeof msg === 'string' && isIgnored(msg)) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }
@@ -1072,14 +1075,28 @@ export function MeetingRoomClient() {
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const transcriptSequenceRef = useRef(1);
+  const lastSavedTranscriptRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
 
   const handleTranscriptFinalized = useCallback(
     async (text: string, timestamp: string) => {
       if (!meetingId) return;
+      const clean = text.trim();
+      if (!clean) return;
+
+      const now = Date.now();
+      if (
+        lastSavedTranscriptRef.current.text.toLowerCase() === clean.toLowerCase() &&
+        now - lastSavedTranscriptRef.current.time < 2500
+      ) {
+        console.log('[STT] Dropped duplicate transcript save within 2.5s:', clean);
+        return;
+      }
+      lastSavedTranscriptRef.current = { text: clean, time: now };
+
       try {
         const currentSequence = transcriptSequenceRef.current++;
         await meetingsApi.saveTranscript(meetingId, {
-          content: text,
+          content: clean,
           start_time: timestamp,
           end_time: new Date().toLocaleTimeString([], {
             hour: '2-digit',
@@ -1088,7 +1105,7 @@ export function MeetingRoomClient() {
           }),
           sequence: currentSequence,
         });
-        console.log('[STT] Saved transcript segment to DB', currentSequence);
+        console.log('[STT] Saved transcript segment to DB', currentSequence, clean);
       } catch (err) {
         console.error('[STT] Failed to save transcript segment:', err);
       }
@@ -1135,32 +1152,58 @@ export function MeetingRoomClient() {
     deadline: '',
   });
 
+  // Realtime Action Item Notification Alert State (Floating Card)
+  const [realtimeTaskAlert, setRealtimeTaskAlert] = useState<{
+    id: string;
+    meeting_id: string;
+    title: string;
+    description?: string;
+    assignee_id?: string;
+    assignee_name?: string;
+    deadline?: string;
+    speaker_name?: string;
+    evidence_quote?: string;
+    status?: string;
+  } | null>(null);
+  const [isAlertEditing, setIsAlertEditing] = useState(false);
+  const [alertForm, setAlertForm] = useState<{
+    title: string;
+    assignee_id: string;
+    deadline: string;
+  }>({
+    title: '',
+    assignee_id: '',
+    deadline: '',
+  });
+  const [isSavingAlert, setIsSavingAlert] = useState(false);
+  const [alertSuccessMsg, setAlertSuccessMsg] = useState<string | null>(null);
+  const alertDismissTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const user = useAuthStore((state) => state.user);
 
   const handleExitMeeting = useCallback(() => {
     const roleUpper = (user?.role || '').toUpperCase();
-    const email = (user?.email || '').toLowerCase();
-    const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN' || email === 'admin@axiom.com';
-    const isManager = roleUpper === 'MANAGER' || email.startsWith('manager');
+    const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
+    const isManager = roleUpper === 'MANAGER';
 
     if (isOwner) {
       router.push('/admin');
     } else if (isManager) {
       router.push('/manager');
-    } else {
+    } else if (roleUpper === 'MEMBER') {
       router.push('/member');
+    } else {
+      router.push('/candidate/discovery');
     }
   }, [user, router]);
 
   const isHost = useMemo(() => {
     if (!user || !meeting) return false;
     const roleUpper = (user?.role || '').toUpperCase();
-    const email = (user?.email || '').toLowerCase();
     return (
       user.id === meeting.created_by_id ||
       roleUpper === 'OWNER' ||
-      roleUpper === 'ADMIN' ||
-      email === 'admin@axiom.com'
+      roleUpper === 'ADMIN'
     );
   }, [user, meeting]);
 
@@ -1209,7 +1252,7 @@ export function MeetingRoomClient() {
           transcriptSequenceRef.current = Math.max(transcriptSequenceRef.current, maxSeq + 1);
         }
       } catch (err) {
-        console.error('Failed to fetch meeting content:', err);
+        console.warn('Failed to fetch meeting content (retrying):', err);
       }
     };
 
@@ -1250,6 +1293,148 @@ export function MeetingRoomClient() {
     }
   };
 
+  const handleTaskRealtimeDetected = useCallback(
+    (task: any) => {
+      if (!task || !task.id) return;
+      console.log('[RealtimeTask] Received detected task:', task);
+
+      // Upsert into actionItems
+      setActionItems((prev) => {
+        const index = prev.findIndex((it) => it.id === task.id);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], ...task };
+          return updated;
+        }
+        return [task, ...prev];
+      });
+
+      // Prepare alert form data
+      let defaultDeadline = '';
+      if (task.deadline) {
+        try {
+          const d = new Date(task.deadline);
+          const tzOffset = d.getTimezoneOffset() * 60000;
+          defaultDeadline = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+        } catch (e) {}
+      }
+
+      setAlertForm({
+        title: task.title || '',
+        assignee_id: task.assignee_id || '',
+        deadline: defaultDeadline,
+      });
+      setIsAlertEditing(false);
+      setAlertSuccessMsg(null);
+      setRealtimeTaskAlert(task);
+
+      // Auto-dismiss after 25s if no interaction
+      if (alertDismissTimeoutRef.current) clearTimeout(alertDismissTimeoutRef.current);
+      alertDismissTimeoutRef.current = setTimeout(() => {
+        setRealtimeTaskAlert((curr) => (curr?.id === task.id && !isAlertEditing ? null : curr));
+      }, 25000);
+    },
+    [isAlertEditing]
+  );
+
+  const handleConfirmAlertTask = async () => {
+    if (!meetingId || !realtimeTaskAlert) return;
+    setIsSavingAlert(true);
+    try {
+      await meetingsApi.updateFollowUpTask(meetingId, realtimeTaskAlert.id, {
+        status: 'CONFIRMED',
+      });
+      setActionItems((prev) =>
+        prev.map((item) =>
+          item.id === realtimeTaskAlert.id ? { ...item, status: 'CONFIRMED' } : item
+        )
+      );
+      setAlertSuccessMsg('Đã xác nhận nhiệm vụ thành công!');
+      setTimeout(() => {
+        setRealtimeTaskAlert(null);
+        setAlertSuccessMsg(null);
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to confirm task:', err);
+    } finally {
+      setIsSavingAlert(false);
+    }
+  };
+
+  const handleSaveAlertEdit = async () => {
+    if (!meetingId || !realtimeTaskAlert) return;
+    setIsSavingAlert(true);
+    try {
+      const payload: any = {
+        title: alertForm.title.trim(),
+        status: 'CONFIRMED',
+      };
+      if (alertForm.assignee_id) payload.assignee_id = alertForm.assignee_id;
+      if (alertForm.deadline) payload.deadline = new Date(alertForm.deadline).toISOString();
+
+      await meetingsApi.updateFollowUpTask(meetingId, realtimeTaskAlert.id, payload);
+
+      const assignedMember = meetingMembers.find((m) => m.user_id === alertForm.assignee_id);
+      const assigneeName = assignedMember?.user_name || alertForm.assignee_id;
+
+      setActionItems((prev) =>
+        prev.map((item) =>
+          item.id === realtimeTaskAlert.id
+            ? {
+                ...item,
+                title: alertForm.title.trim(),
+                assignee_id: alertForm.assignee_id,
+                assignee_name: assigneeName,
+                deadline: payload.deadline,
+                status: 'CONFIRMED',
+              }
+            : item
+        )
+      );
+
+      setAlertSuccessMsg('Đã cập nhật & xác nhận nhiệm vụ!');
+      setTimeout(() => {
+        setRealtimeTaskAlert(null);
+        setIsAlertEditing(false);
+        setAlertSuccessMsg(null);
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to save alert edit:', err);
+    } finally {
+      setIsSavingAlert(false);
+    }
+  };
+
+  const handleDismissAlert = (taskId?: string) => {
+    if (alertDismissTimeoutRef.current) clearTimeout(alertDismissTimeoutRef.current);
+    setRealtimeTaskAlert(null);
+    setIsAlertEditing(false);
+    setAlertSuccessMsg(null);
+  };
+
+  // WebSocket meeting events for realtime updates
+  useMeetingEvents({
+    meetingId,
+    enabled: Boolean(meetingId),
+    onTaskRealtimeDetected: handleTaskRealtimeDetected,
+    onTasksPreview: (data) => {
+      const tasks = data?.tasks;
+      if (Array.isArray(tasks) && tasks.length > 0) {
+        setActionItems((prev) => {
+          const map = new Map(prev.map((it) => [it.id, it]));
+          tasks.forEach((t) => {
+            if (t.id) map.set(t.id, { ...map.get(t.id), ...t });
+          });
+          return Array.from(map.values());
+        });
+      }
+    },
+    onMeetingEnded: () => {
+      setMeetingEndedNotice(true);
+      setTimeout(() => handleExitMeeting(), 2500);
+    },
+  });
+
   const handleStartEdit = (item: any) => {
     setEditingTaskId(item.id);
     let defaultDeadline = '';
@@ -1280,9 +1465,9 @@ export function MeetingRoomClient() {
       if (actionItems.length > 0) {
         await jiraApi.syncMeetingTasksToJira(meetingId, { target_project_id: project.id });
       }
-      const isOwner =
-        user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.email === 'admin@axiom.com';
-      const isManager = user?.role === 'MANAGER' || user?.email === 'manager.khoa@axiom.com';
+      const roleUpper = (user?.role || '').toUpperCase();
+      const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
+      const isManager = roleUpper === 'MANAGER';
 
       if (isOwner) {
         router.push('/admin');
@@ -1331,20 +1516,13 @@ export function MeetingRoomClient() {
         .then((u) => {
           if (u?.full_name) {
             setParticipantName(u.full_name);
-            const role =
-              u.role ||
-              (u.email === 'admin@axiom.com'
-                ? 'OWNER'
-                : u.email === 'manager.khoa@axiom.com'
-                  ? 'MANAGER'
-                  : 'MEMBER');
-            useAuthStore.setState({ user: { ...u, role } });
+            useAuthStore.setState({ user: u });
           } else {
-            setParticipantName(`User-${Math.floor(Math.random() * 1000)}`);
+            setParticipantName('Người tham gia');
           }
         })
         .catch(() => {
-          setParticipantName(`User-${Math.floor(Math.random() * 1000)}`);
+          setParticipantName('Người tham gia');
         });
     }
   }, [user]);
@@ -1355,6 +1533,8 @@ export function MeetingRoomClient() {
   const [hostLeaveConfirmOpen, setHostLeaveConfirmOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isArchivingMeeting, setIsArchivingMeeting] = useState(false);
+  const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);
+  const [isInterviewScorecardOpen, setIsInterviewScorecardOpen] = useState(false);
 
   // Sync initial paused state from meeting
   useEffect(() => {
@@ -1431,10 +1611,37 @@ export function MeetingRoomClient() {
     handleExitMeeting();
   }, [meetingId, handleExitMeeting]);
 
+  const handleOpenInterviewScorecard = useCallback(async () => {
+    if (interviewSessionId) {
+      setIsInterviewScorecardOpen(true);
+      return;
+    }
+    const orgId =
+      meeting?.organization_id ||
+      (typeof window !== 'undefined' ? localStorage.getItem('axiom_org_id') : '') ||
+      '';
+    if (orgId && meetingId) {
+      try {
+        const interview = await interviewEvaluationApi.getByMeeting(orgId, meetingId);
+        setInterviewSessionId(interview.id);
+        setIsInterviewScorecardOpen(true);
+      } catch (err) {
+        console.error('Failed to find interview session for meeting:', err);
+        setIsArchiveModalOpen(true);
+      }
+    } else {
+      setIsArchiveModalOpen(true);
+    }
+  }, [interviewSessionId, meeting?.organization_id, meetingId]);
+
   const handleHostEndFromDialog = useCallback(() => {
     setHostLeaveConfirmOpen(false);
-    setIsArchiveModalOpen(true);
-  }, []);
+    if (meeting?.meeting_type === 'INTERVIEW') {
+      handleOpenInterviewScorecard();
+    } else {
+      setIsArchiveModalOpen(true);
+    }
+  }, [meeting?.meeting_type, handleOpenInterviewScorecard]);
 
   const handleConfirmArchive = useCallback(
     async (data: {
@@ -1471,10 +1678,8 @@ export function MeetingRoomClient() {
 
         // Redirect to management page based on role
         const roleUpper = (user?.role || '').toUpperCase();
-        const email = (user?.email || '').toLowerCase();
-        const isOwner =
-          roleUpper === 'OWNER' || roleUpper === 'ADMIN' || email === 'admin@axiom.com';
-        const isManager = roleUpper === 'MANAGER' || email.startsWith('manager');
+        const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
+        const isManager = roleUpper === 'MANAGER';
 
         if (isOwner) {
           router.push('/admin');
@@ -1483,9 +1688,9 @@ export function MeetingRoomClient() {
         } else {
           router.push('/member?tab=jira');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to archive meeting:', err);
-        alert(`Không thể hoàn tất lưu trữ: ${err?.message || 'Có lỗi xảy ra'}`);
+        alert(`Không thể hoàn tất lưu trữ: ${(err as Error)?.message || 'Có lỗi xảy ra'}`);
       } finally {
         setIsArchivingMeeting(false);
       }
@@ -1503,7 +1708,7 @@ export function MeetingRoomClient() {
       ) {
         return name;
       }
-      const cleanId = identity ? identity.replace(/^user_/, '') : '';
+      const cleanId = identity ? identity.replace(/^user_/, '').split('___')[0] : '';
       // Match with meeting members
       const member = meetingMembers.find((m) => m.user_id === cleanId || m.id === cleanId);
       if (member?.user_name) return member.user_name;
@@ -1586,13 +1791,24 @@ export function MeetingRoomClient() {
       is_final: boolean;
     }> = [];
 
-    // 1. Add DB transcripts first (past session history)
+    // 1. Add DB transcripts first (past session history) with consecutive deduplication
     dbTranscripts.forEach((dt, idx) => {
+      const dtText = (dt.content || '').trim();
+      if (!dtText) return;
+
+      // Skip duplicate if previous record has identical content
+      if (merged.length > 0) {
+        const last = merged[merged.length - 1];
+        if (last.text.trim().toLowerCase() === dtText.toLowerCase()) {
+          return;
+        }
+      }
+
       merged.push({
         id: `db-${dt.id || idx}`,
         timestamp: dt.start_time || '',
         speaker: dt.speaker_name || getSpeakerDisplayName((dt as any).user_id),
-        text: dt.content,
+        text: dtText,
         language: 'VI',
         is_final: true,
       });
@@ -1605,14 +1821,15 @@ export function MeetingRoomClient() {
 
       const speakerName = getSpeakerDisplayName(rh.participant_identity, rh.participant_name);
 
-      // Check if this record already exists in merged (from DB transcripts)
+      // Check if this record already exists in merged (from DB transcripts or earlier entries)
       const existingIdx = merged.findIndex((m) => {
-        const mText = m.text.trim();
+        const mText = m.text.trim().toLowerCase();
+        const rhLower = rhText.toLowerCase();
         return (
-          mText === rhText ||
+          mText === rhLower ||
           (mText.length > 6 &&
-            rhText.length > 6 &&
-            (mText.includes(rhText) || rhText.includes(mText)))
+            rhLower.length > 6 &&
+            (mText.includes(rhLower) || rhLower.includes(mText)))
         );
       });
 
@@ -1620,7 +1837,7 @@ export function MeetingRoomClient() {
         // Update the existing record with translation, correct speaker name, and language
         merged[existingIdx] = {
           ...merged[existingIdx],
-          speaker: speakerName,
+          speaker: speakerName || merged[existingIdx].speaker,
           translated_text: rh.translated_text || merged[existingIdx].translated_text,
           language: (rh.language || 'vi').toUpperCase(),
           to_language: (rh.to_language || 'en').toUpperCase(),
@@ -1964,12 +2181,31 @@ export function MeetingRoomClient() {
           {isHost && (
             <button
               type="button"
-              onClick={() => setIsArchiveModalOpen(true)}
+              onClick={() => {
+                if (meeting?.meeting_type === 'INTERVIEW') {
+                  handleOpenInterviewScorecard();
+                } else {
+                  setIsArchiveModalOpen(true);
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs"
               title="Kết thúc cuộc họp và chuyển thông tin về kho lưu trữ"
             >
               <Power className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Kết thúc cuộc họp</span>
+            </button>
+          )}
+
+          {/* Quick Scorecard Action for Interview meetings */}
+          {meeting?.meeting_type === 'INTERVIEW' && (
+            <button
+              type="button"
+              onClick={handleOpenInterviewScorecard}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs"
+              title="Xem bảng điểm và phân tích hội thoại AI"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden sm:inline">Thang Điểm AI</span>
             </button>
           )}
         </div>
@@ -1992,19 +2228,19 @@ export function MeetingRoomClient() {
             data-lk-theme="default"
             className="w-full h-full flex overflow-hidden"
             onDisconnected={() => {
-              console.log('User left the meeting room.');
-              handleExitMeeting();
+              console.warn('LiveKit room disconnected.');
+              setLiveKitError(true);
             }}
             onError={(err) => {
-              console.error('LiveKit connection error:', err);
+              console.warn('LiveKit connection error:', err);
               setLiveKitError(true);
             }}
           >
             {/* Left Side: LiveKit Video Canvas + Subtitle Overlay */}
             <div className="flex-1 bg-background relative flex flex-col overflow-hidden min-h-0 min-w-0 border-r border-border">
               <RecordsListener
-                onTranscriptFinalized={handleTranscriptFinalized}
                 onLiveSubtitleUpdate={handleLiveSubtitleUpdate}
+                onRealtimeTaskDetected={handleTaskRealtimeDetected}
                 onNewRecord={(r) => {
                   setRecordsHistory((prev) => {
                     const newArr = [...prev];
@@ -2013,7 +2249,7 @@ export function MeetingRoomClient() {
                       for (let i = newArr.length - 1; i >= 0; i--) {
                         if (
                           newArr[i].participant_identity === r.participant_identity &&
-                          (newArr[i].original_text === r.original_text ||
+                          (newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase() ||
                             !newArr[i].translated_text)
                         ) {
                           newArr[i] = {
@@ -2028,11 +2264,11 @@ export function MeetingRoomClient() {
                     }
 
                     let found = false;
-                    // Try to find an existing interim record from this participant
+                    // Try to find an existing interim or identical record from this participant
                     for (let i = newArr.length - 1; i >= 0; i--) {
                       if (
                         newArr[i].participant_identity === r.participant_identity &&
-                        !newArr[i].is_final
+                        (!newArr[i].is_final || newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase())
                       ) {
                         newArr[i] = {
                           ...newArr[i],
@@ -2063,7 +2299,7 @@ export function MeetingRoomClient() {
                     for (let i = newArr.length - 1; i >= 0; i--) {
                       if (
                         newArr[i].participant_identity === r.participant_identity &&
-                        (newArr[i].original_text === r.original_text || !newArr[i].is_final)
+                        (!newArr[i].is_final || newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase())
                       ) {
                         newArr[i] = {
                           ...newArr[i],
@@ -2941,6 +3177,21 @@ export function MeetingRoomClient() {
         />
       )}
 
+      {/* Interview Scorecard Modal */}
+      {isInterviewScorecardOpen && (
+        <InterviewScorecardModal
+          isOpen={true}
+          onClose={() => setIsInterviewScorecardOpen(false)}
+          orgId={meeting?.organization_id || ''}
+          sessionId={interviewSessionId || ''}
+          jobTitle={meeting?.title}
+          onArchiveSuccess={() => {
+            setIsInterviewScorecardOpen(false);
+            handleExitMeeting();
+          }}
+        />
+      )}
+
       {/* Meeting Ended Overlay Notice */}
       {meetingEndedNotice && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -2960,6 +3211,201 @@ export function MeetingRoomClient() {
             >
               Rời ngay
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Realtime AI Action Item Notification Toast & Host Quick Editor ── */}
+      {realtimeTaskAlert && (
+        <div className="fixed top-20 right-6 z-50 w-[420px] max-w-[calc(100vw-32px)] shrink-0 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-blue-500/50 rounded-2xl p-4 shadow-2xl text-slate-100 ring-1 ring-blue-500/30">
+            {/* Header Badge & Close Button */}
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  AI Phát hiện Action Item
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDismissAlert()}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Bỏ qua thông báo"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Success feedback toast inside card */}
+            {alertSuccessMsg ? (
+              <div className="my-3 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in zoom-in-95">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{alertSuccessMsg}</span>
+              </div>
+            ) : (
+              <>
+                {/* Transcript quote attribution */}
+                {realtimeTaskAlert.evidence_quote && (
+                  <div className="mt-2.5 p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-300 italic flex items-start gap-1.5">
+                    <span className="text-blue-400 font-semibold shrink-0 not-italic">
+                      {realtimeTaskAlert.speaker_name || 'Phát biểu'}:
+                    </span>
+                    <span className="line-clamp-2">"{realtimeTaskAlert.evidence_quote}"</span>
+                  </div>
+                )}
+
+                {!isAlertEditing ? (
+                  /* ── MODE 1: Quick View & Host Actions ── */
+                  <div className="mt-2.5 space-y-2.5">
+                    <div
+                      className="text-sm font-bold text-white leading-snug line-clamp-2"
+                      title={realtimeTaskAlert.title}
+                    >
+                      {realtimeTaskAlert.title}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <div
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-200 max-w-[200px] truncate"
+                        title={realtimeTaskAlert.assignee_name || 'Chưa phân công'}
+                      >
+                        <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <span className="truncate">
+                          {realtimeTaskAlert.assignee_name || 'Chưa phân công'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-200">
+                        <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>
+                          {realtimeTaskAlert.deadline
+                            ? new Date(realtimeTaskAlert.deadline).toLocaleDateString('vi-VN')
+                            : 'Chưa có hạn'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDismissAlert()}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+                      >
+                        Bỏ qua
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsAlertEditing(true)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Chỉnh sửa</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleConfirmAlertTask}
+                          disabled={isSavingAlert}
+                          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingAlert ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>Xác nhận</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── MODE 2: Inline Host Quick Editor ── */
+                  <div className="mt-2.5 space-y-2.5">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        Tiêu đề nhiệm vụ
+                      </label>
+                      <input
+                        type="text"
+                        value={alertForm.title}
+                        onChange={(e) =>
+                          setAlertForm((prev) => ({ ...prev, title: e.target.value }))
+                        }
+                        className="mt-1 w-full text-xs p-2 bg-slate-950 border border-blue-500/60 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        placeholder="Nội dung task..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                          Người phụ trách
+                        </label>
+                        <select
+                          value={alertForm.assignee_id}
+                          onChange={(e) =>
+                            setAlertForm((prev) => ({ ...prev, assignee_id: e.target.value }))
+                          }
+                          className="mt-1 w-full text-xs p-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500 truncate"
+                        >
+                          <option value="">-- Chưa gán --</option>
+                          {meetingMembers.map((m) => (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.user_name || m.user_email || 'Thành viên'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                          Hạn hoàn thành
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={alertForm.deadline}
+                          onChange={(e) =>
+                            setAlertForm((prev) => ({ ...prev, deadline: e.target.value }))
+                          }
+                          className="mt-1 w-full text-xs p-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAlertEditing(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveAlertEdit}
+                        disabled={isSavingAlert || !alertForm.title.trim()}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingAlert ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>Lưu & Xác nhận</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

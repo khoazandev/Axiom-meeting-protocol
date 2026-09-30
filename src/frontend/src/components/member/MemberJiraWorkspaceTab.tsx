@@ -107,8 +107,8 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
   const { user, activeOrganization } = useAuthStore();
   const resolvedOrgId =
     activeOrganization?.id ||
-    (user as any)?.organization_id ||
-    '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    (user as { organization_id?: string } | null)?.organization_id ||
+    null;
 
   const isManagerOrAdmin =
     user?.role === 'MANAGER' || user?.role === 'OWNER' || user?.role === 'ADMIN';
@@ -309,6 +309,12 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
   const loadKanbanData = async (showLoading = true) => {
     if (draggedTaskIdRef.current) return;
     if (showLoading) setIsLoading(true);
+    if (!resolvedOrgId) {
+      setIsLoading(false);
+      setDeptMembers([]);
+      setTasks([]);
+      return;
+    }
     try {
       const membersRes = await organizationAdminApi.getMembers(resolvedOrgId);
       const members = Array.isArray(membersRes) ? membersRes : [];
@@ -316,7 +322,7 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
       const myDeptId =
         user?.department_id ||
         members.find((m) => m.user_id === user?.id || m.email === user?.email)?.department_id ||
-        'f985a4ed-2f43-4659-8ce2-adc81b0fc5e5';
+        null;
 
       const effectiveMembers = members.filter((m) => {
         if (myDeptId) {
@@ -334,7 +340,9 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
 
       let proj: JiraProject | null = null;
       if (projects && projects.length > 0) {
-        proj = projects.find((p) => p.key === 'SMA') || projects[0];
+        proj =
+          projects.find((p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA') ||
+          projects[0];
       }
 
       setActiveProject(proj);

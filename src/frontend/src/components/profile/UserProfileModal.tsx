@@ -112,7 +112,11 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
 
   // Sync state whenever user or modal opens
   useEffect(() => {
-    if (user && isOpen) {
+    if (!user || !isOpen) return;
+    let ignore = false;
+    void (async () => {
+      await Promise.resolve();
+      if (ignore) return;
       const currentName = user.full_name || '';
       setFullName(currentName);
       setEmail(user.email || '');
@@ -128,16 +132,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
           // ignore error
         }
       } else {
-        if (user.email === 'admin@axiom.com') {
-          setBio('Toàn quyền kiểm soát và điều hành hệ thống Axiom DX-OS.');
-          setPhone('0908 888 999 (Ext: 001)');
-        } else if (user.email === 'manager.khoa@axiom.com') {
-          setBio('Quản trị phòng ban, phân bổ task & điều phối sprint dự án.');
-          setPhone('0918 234 567 (Ext: 102)');
-        } else {
-          setBio('Chuyên trách Whisper STT & LLM Meeting Protocol Pipeline.');
-          setPhone('0912 345 678 (Ext: 104)');
-        }
+        setBio('');
+        setPhone('');
       }
 
       // If user already has a custom uploaded avatar (data URL image or external non-svg image)
@@ -149,7 +145,10 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
         setAvatarUrl(generateInitialsAvatar(currentName));
         setIsCustomUpload(false);
       }
-    }
+    })();
+    return () => {
+      ignore = true;
+    };
   }, [user, isOpen]);
 
   // Handle Full Name change: If auto-avatar is active, update avatar initials in real time
@@ -274,12 +273,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
 
   if (!isOpen) return null;
 
-  const roleLabel =
-    user?.email === 'admin@axiom.com'
-      ? 'OWNER'
-      : user?.email === 'manager.khoa@axiom.com'
-        ? 'MANAGER'
-        : 'MEMBER';
+  const roleLabel = (user?.role || 'MEMBER').toUpperCase();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -430,7 +424,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                   value={email}
                   required
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@axiom.com"
+                  placeholder="user@example.com"
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">

@@ -26,11 +26,11 @@ export function UserNav() {
     router.push('/login');
   };
 
-  const name = user?.full_name || 'Axiom User';
-  const email = user?.email || 'user@axiom.ai';
-  const role = user?.role;
-  const isOwner = email === 'admin@axiom.com' || email === 'alex@axiom.com' || role === 'OWNER';
-  const isManager = email === 'manager.khoa@axiom.com' || role === 'ADMIN';
+  const name = user?.full_name || 'Người dùng Axiom';
+  const email = user?.email || '';
+  const roleUpper = (user?.role || '').toUpperCase();
+  const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
+  const isManager = roleUpper === 'MANAGER';
   const isMember = !isOwner && !isManager;
 
   const initials = (
