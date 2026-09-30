@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { AxiomSelect } from '@/components/ui/AxiomSelect';
+import { InterviewScorecardModal } from '@/components/meetings/InterviewScorecardModal';
+import { InterviewSessionsPanel } from '@/components/recruitment/InterviewSessionsPanel';
 import {
   recruitmentApi,
   RecruitmentApplication,
@@ -46,6 +48,9 @@ export function ManagerRecruitmentTab({
 
   // Selected application
   const [selectedApp, setSelectedApp] = useState<RecruitmentApplication | null>(null);
+
+  // Scorecard modal state
+  const [scorecardInterviewId, setScorecardInterviewId] = useState<string | null>(null);
 
   // Review Form States
   const [decision, setDecision] = useState<'HIRE' | 'NO_HIRE' | 'NEEDS_MORE_EVIDENCE'>('HIRE');
@@ -274,6 +279,12 @@ export function ManagerRecruitmentTab({
                 </div>
               </div>
 
+              {/* Interview Sessions & Rubric Scorecard Section */}
+              <InterviewSessionsPanel
+                sessions={selectedApp.interview_sessions || []}
+                onOpenScorecard={(sessionId) => setScorecardInterviewId(sessionId)}
+              />
+
               {/* AI Evaluation Report (If Available) */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mb-2">
@@ -428,6 +439,24 @@ export function ManagerRecruitmentTab({
           )}
         </div>
       </div>
+
+      {/* Interview Scorecard Modal */}
+      {scorecardInterviewId && (
+        <InterviewScorecardModal
+          isOpen={true}
+          onClose={() => setScorecardInterviewId(null)}
+          orgId={organizationId}
+          sessionId={scorecardInterviewId}
+          candidateName={selectedApp?.candidate?.full_name}
+          jobTitle={selectedApp?.opening?.title}
+          onNotify={onNotify}
+          onArchiveSuccess={(meetingId) => {
+            onNotify?.('Đã chuyển biên bản phỏng vấn vào Kho Lưu Trữ Tài Liệu thành công!');
+            setScorecardInterviewId(null);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -45,6 +45,7 @@ import {
   RagQueryResponse,
 } from '@/lib/api';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { getErrorMessage } from '@/lib/errors';
 
 export interface MeetingArchiveRepositoryProps {
   userRole: 'OWNER' | 'MANAGER' | 'MEMBER';
@@ -78,6 +79,7 @@ export function MeetingArchiveRepository({
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
+  const [meetingTypeFilter, setMeetingTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERVIEW'>('ALL');
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
 
   // Selected Meeting Details State
@@ -150,11 +152,13 @@ export function MeetingArchiveRepository({
       }
       onNotify?.('Đã xóa cuộc họp khỏi kho lưu trữ thành công.');
       setMeetingToDelete(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete archived meeting:', err);
-      alert(
-        err?.message ||
+      onNotify?.(
+        getErrorMessage(
+          err,
           'Không thể xóa cuộc họp khỏi kho lưu trữ. Vui lòng kiểm tra quyền hạn của bạn.'
+        )
       );
     } finally {
       setIsDeleting(false);
@@ -309,13 +313,21 @@ export function MeetingArchiveRepository({
       const s = (m.status || '').toUpperCase();
       if (s !== 'ENDED' && s !== 'COMPLETED') return false;
 
+      // Meeting Type Filter (ALL vs OFFICIAL vs INTERVIEW)
+      if (meetingTypeFilter === 'INTERVIEW') {
+        if (m.meeting_type !== 'INTERVIEW') return false;
+      } else if (meetingTypeFilter === 'OFFICIAL') {
+        if (m.meeting_type === 'INTERVIEW') return false;
+      }
+
       // Department Filter: OWNER can filter by dropdown; MANAGER & MEMBER see own department and attended executive meetings
       if (userRole === 'OWNER') {
         if (selectedDeptFilter !== 'ALL' && m.department_id !== selectedDeptFilter) return false;
       } else {
         const isOwnDept = !departmentId || m.department_id === departmentId;
         const isExecutive = m.meeting_type === 'EXECUTIVE' || !m.department_id;
-        if (!isOwnDept && !isExecutive) return false;
+        const isInterview = m.meeting_type === 'INTERVIEW';
+        if (!isOwnDept && !isExecutive && !isInterview) return false;
       }
 
       // Search Query
@@ -341,7 +353,20 @@ export function MeetingArchiveRepository({
       ).getTime();
       return sortOrder === 'NEWEST' ? timeB - timeA : timeA - timeB;
     });
-  }, [meetings, selectedDeptFilter, searchQuery, userRole, sortOrder]);
+  }, [meetings, selectedDeptFilter, meetingTypeFilter, searchQuery, userRole, departmentId, sortOrder]);
+
+  const meetingTypeCounts = useMemo(() => {
+    let official = 0;
+    let interview = 0;
+    meetings.forEach((m) => {
+      if (m.meeting_type === 'INTERVIEW') {
+        interview += 1;
+      } else {
+        official += 1;
+      }
+    });
+    return { all: meetings.length, official, interview };
+  }, [meetings]);
 
   // Filtered Transcripts
   const filteredTranscripts = useMemo(() => {
@@ -414,6 +439,31 @@ export function MeetingArchiveRepository({
     );
   };
 
+  const renderTypeBadge = (meetingType?: string) => {
+    if (meetingType === 'INTERVIEW') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-black bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-300/50 shadow-2xs">
+          <Users size={11} className="text-purple-600 dark:text-purple-400" />
+          PHỎNG VẤN ỨNG VIÊN
+        </span>
+      );
+    }
+    if (meetingType === 'EXECUTIVE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/50">
+          <ShieldCheck size={11} className="text-amber-600" />
+          HỌP BAN ĐIỀU HÀNH
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
+        <Building2 size={11} className="text-blue-600" />
+        HỌP NỘI BỘ KHỐI
+      </span>
+    );
+  };
+
   // =========================================================================
   // VIEW 2: DETAILED MEETING INSPECTOR & AI COPILOT
   // =========================================================================
@@ -435,6 +485,7 @@ export function MeetingArchiveRepository({
               </button>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                  {renderTypeBadge(selectedMeeting.meeting_type)}
                   <span className="px-2 py-0.2 rounded-md text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60">
                     {selectedMeeting.department_name || 'Khối Doanh Nghiệp'}
                   </span>
@@ -506,7 +557,11 @@ export function MeetingArchiveRepository({
                   }`}
                 >
                   <FileText size={14} />
-                  <span>Biên Bản & Nhiệm Vụ</span>
+                  <span>
+                    {selectedMeeting.meeting_type === 'INTERVIEW'
+                      ? 'Thang Điểm & Kịch Bản Phỏng Vấn'
+                      : 'Biên Bản & Nhiệm Vụ'}
+                  </span>
                 </button>
 
                 <button
@@ -519,7 +574,11 @@ export function MeetingArchiveRepository({
                   }`}
                 >
                   <Sparkles size={14} className="text-indigo-500" />
-                  <span>Trợ Lý AI Cuộc Họp</span>
+                  <span>
+                    {selectedMeeting.meeting_type === 'INTERVIEW'
+                      ? 'Trợ Lý AI Phỏng Vấn'
+                      : 'Trợ Lý AI Cuộc Họp'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -642,28 +701,30 @@ export function MeetingArchiveRepository({
                       </div>
                       <div>
                         <h2 className="text-xs font-bold text-slate-900 dark:text-white">
-                          Tóm Tắt & Nghị Quyết Cuộc Họp
+                          {selectedMeeting.meeting_type === 'INTERVIEW'
+                            ? 'Biên Bản Đánh Giá Phỏng Vấn & Thang Điểm Năng Lực'
+                            : 'Tóm Tắt & Nghị Quyết Cuộc Họp'}
                         </h2>
                         <p className="text-[10.5px] text-slate-400 dark:text-slate-500">
-                          Bản tin điều hành MoM tổng hợp từ Agenda và Biên bản hội thoại
+                          {selectedMeeting.meeting_type === 'INTERVIEW'
+                            ? 'Bản phân tích kịch bản đối thoại, độ trễ phản xạ và chấm điểm 4 trụ cột AI'
+                            : 'Bản tin điều hành MoM tổng hợp từ Agenda và Biên bản hội thoại'}
                         </p>
                       </div>
                     </div>
 
                     {/* Summary content */}
                     <div className="space-y-2.5">
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/80">
-                        <h3 className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                          <Quote size={11} className="text-blue-500" />
-                          Tóm Tắt Tổng Quan
-                        </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-                          {summaryData?.summary ||
-                            selectedMeeting.summary ||
-                            selectedMeeting.description ||
-                            selectedMeeting.agenda ||
-                            'Biên bản cuộc họp đã được ghi nhận và lưu trữ toàn vẹn trên hệ thống Axiom DX-OS.'}
-                        </p>
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/80">
+                        <div className="prose prose-xs dark:prose-invert max-w-none break-words text-xs leading-relaxed font-sans">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {summaryData?.summary ||
+                              selectedMeeting.summary ||
+                              selectedMeeting.description ||
+                              selectedMeeting.agenda ||
+                              'Biên bản cuộc họp đã được ghi nhận và lưu trữ toàn vẹn trên hệ thống Axiom DX-OS.'}
+                          </ReactMarkdown>
+                        </div>
                       </div>
 
                       {/* Decisions */}
@@ -1026,8 +1087,65 @@ export function MeetingArchiveRepository({
           </div>
         </div>
 
+        {/* Meeting Type Category Tabs (ALL vs OFFICIAL vs INTERVIEW) */}
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMeetingTypeFilter('ALL')}
+            title="Tất cả biên bản cuộc họp"
+            className={`shrink-0 w-40 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+              meetingTypeFilter === 'ALL'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <span className="truncate">Tất cả</span>
+            <span className="shrink-0 w-7 text-center tabular-nums text-[10px] py-0.5 rounded-full bg-black/10 dark:bg-white/10">
+              {meetingTypeCounts.all}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMeetingTypeFilter('OFFICIAL')}
+            title="Biên bản họp điều hành & khối"
+            className={`shrink-0 w-44 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+              meetingTypeFilter === 'OFFICIAL'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Building2 size={13} className="shrink-0" />
+              <span className="truncate">Cuộc họp</span>
+            </div>
+            <span className="shrink-0 w-7 text-center tabular-nums text-[10px] py-0.5 rounded-full bg-black/10 dark:bg-white/10">
+              {meetingTypeCounts.official}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMeetingTypeFilter('INTERVIEW')}
+            title="Biên bản phỏng vấn tuyển dụng"
+            className={`shrink-0 w-44 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+              meetingTypeFilter === 'INTERVIEW'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Users size={13} className="shrink-0" />
+              <span className="truncate">Phỏng vấn</span>
+            </div>
+            <span className="shrink-0 w-7 text-center tabular-nums text-[10px] py-0.5 rounded-full bg-black/10 dark:bg-white/10">
+              {meetingTypeCounts.interview}
+            </span>
+          </button>
+        </div>
+
         {/* Filter & Search Bar */}
-        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center gap-3">
+        <div className="mt-3 flex flex-col md:flex-row md:items-center gap-3">
           {/* Search Box */}
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1095,11 +1213,27 @@ export function MeetingArchiveRepository({
 
       {/* Grid of Meeting Cards */}
       {isLoadingMeetings ? (
-        <div className="py-20 text-center flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-          <p className="text-xs font-semibold text-slate-500">
-            Đang đồng bộ dữ liệu kho cuộc họp...
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs animate-pulse space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-28" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-full w-20" />
+              </div>
+              <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-md w-3/4" />
+              <div className="space-y-2">
+                <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded-md w-full" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded-md w-5/6" />
+              </div>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-24" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-16" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredMeetings.length === 0 ? (
         <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
@@ -1129,12 +1263,15 @@ export function MeetingArchiveRepository({
                 <div>
                   {/* Top Badges */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span
-                      className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60 truncate max-w-[170px]"
-                      title={meeting.department_name || 'Khối Doanh Nghiệp'}
-                    >
-                      {meeting.department_name || 'Khối Doanh Nghiệp'}
-                    </span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      {renderTypeBadge(meeting.meeting_type)}
+                      <span
+                        className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/60 truncate max-w-[130px]"
+                        title={meeting.department_name || 'Khối Doanh Nghiệp'}
+                      >
+                        {meeting.department_name || 'Khối Doanh Nghiệp'}
+                      </span>
+                    </div>
                     {renderStatusBadge(meeting.status)}
                   </div>
 
