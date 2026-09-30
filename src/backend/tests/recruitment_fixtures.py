@@ -76,6 +76,15 @@ def recruitment_org(db_session: Session) -> SimpleNamespace:
     db_session.add(selected_member)
     db_session.flush()
 
+    assert review_perm is not None
+    db_session.add(
+        models.OrganizationMemberPermission(
+            member_id=selected_member.id,
+            permission_id=review_perm.id,
+            granted_by_id=owner_user.id,
+        )
+    )
+
     dept_member = models.DepartmentMember(
         department_id=eng_dept.id,
         user_id=selected_mgr_user.id,
