@@ -182,7 +182,7 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
                 "original_text": text,
                 "language": "vi",
                 "is_final": True,
-                "is_mock": True
+                "source": "manual",
             }
             req = SendDataRequest(
                 room=f"meeting-{meeting_id}",
@@ -191,7 +191,7 @@ async def _broadcast_to_livekit(meeting_id: str, participant_identity: str, text
                 topic="records"
             )
             await api.room.send_data(req)
-            logger.info(f"Broadcasted mock transcript to {meeting_id}")
+            logger.info("Broadcasted transcript to %s", meeting_id)
     except Exception as e:
         logger.error(f"Failed to broadcast mock transcript to LiveKit: {e}")
 
@@ -657,49 +657,6 @@ async def trigger_task_extraction(
                     source=FollowUpTaskSourceEnum.AI_REALTIME,
                 )
 
-    # If still no tasks exist in DB, synthesize contextual tasks for demo/quick meetings
-    current_count = db.query(FollowUpTask).filter(FollowUpTask.meeting_id == meeting_id).count()
-    if current_count == 0:
-        members = (
-            db.query(MeetingMember)
-            .filter(MeetingMember.meeting_id == meeting_id)
-            .all()
-        )
-        assignee_user = None
-        for m in members:
-            u = db.query(User).filter(User.id == m.user_id).first()
-            if u and m.role not in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST):
-                assignee_user = u
-                break
-        if not assignee_user and members:
-            assignee_user = db.query(User).filter(User.id == members[0].user_id).first()
-        if not assignee_user:
-            assignee_user = db.query(User).filter(User.email == "member@axiom.com").first()
-
-        default_deadline = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=5)
-        m_title = meeting.title or "Cuộc họp nội bộ"
-        host_name = host_user.full_name if host_user else "Trần Minh Khoa"
-        synth_tasks = [
-            {
-                "task": f"Triển khai giải pháp kỹ thuật theo kết luận cuộc họp: {m_title}",
-                "speaker": host_name,
-                "assignee": assignee_user.full_name if assignee_user else "Thành Viên Mẫu",
-                "deadline": default_deadline.strftime("%Y-%m-%d"),
-                "status": "NOT_CONFIRMED",
-            },
-            {
-                "task": "Kiểm thử tích hợp, tối ưu hiệu năng và cập nhật tài liệu kỹ thuật",
-                "speaker": host_name,
-                "assignee": None,
-                "deadline": None,
-                "status": "NOT_CONFIRMED",
-            }
-        ]
-        sync_extracted_tasks(
-            db, meeting_id, synth_tasks,
-            source=FollowUpTaskSourceEnum.AI_REALTIME
-        )
-
     # Return all tasks for this meeting
     all_tasks = (
         db.query(FollowUpTask)
@@ -723,8 +680,8 @@ async def trigger_task_extraction(
             spk = t.evidence_quote.strip()
         elif t.description and "Người giao:" in t.description:
             spk = t.description.split("Người giao:")[1].split("|")[0].strip()
-        if not spk:
-            spk = host_user.full_name if host_user else "Trần Minh Khoa"
+        if not spk and host_user:
+            spk = host_user.full_name
 
         item = FollowUpTaskResponse.model_validate(t)
         item.speaker_name = spk
@@ -1034,102 +991,7 @@ def _capture_correction(
     )
 
 
-# ---------------------------------------------------------------------------
-# AI Task Extraction
-# ---------------------------------------------------------------------------
-@router.post("/extract-tasks", response_model=list[FollowUpTaskResponse])
-async def extract_tasks_endpoint(
-    meeting_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
-):
-    """
-    On-demand AI task extraction from meeting transcripts.
-    Collects full transcript, calls task extractor, and returns updated tasks.
-    """
-    _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
 
-    from sqlalchemy.orm import joinedload
-    from src.backend.services.punctuation_restorer import PunctuationRestorer
-    from src.backend.services.task_extractor import (
-        task_extractor_service, sync_extracted_tasks, query_pending_tasks,
-    )
-    from src.backend.models import FollowUpTaskSourceEnum, MeetingMember, MeetingMemberRoleEnum
-    from src.backend.services.meeting_events import meeting_events_manager
-
-    # Get host and manager names for authority checking
-    meeting_members = (
-        db.query(MeetingMember)
-        .options(joinedload(MeetingMember.user))
-        .filter(MeetingMember.meeting_id == meeting_id)
-        .all()
-    )
-    host_manager_names = [
-        m.user.full_name for m in meeting_members 
-        if m.user and m.role in (MeetingMemberRoleEnum.HOST, MeetingMemberRoleEnum.CO_HOST)
-    ]
-
-    segments = (
-        db.query(TranscriptSegment)
-        .options(joinedload(TranscriptSegment.speaker))
-        .filter(TranscriptSegment.meeting_id == meeting_id)
-        .order_by(TranscriptSegment.sequence.asc())
-        .all()
-    )
-    if segments:
-        restorer = PunctuationRestorer()
-        text = restorer.restore(segments)
-        if text:
-            pending = query_pending_tasks(db, meeting_id)
-            extracted = task_extractor_service.extract(text, pending, host_manager_names=host_manager_names)
-            if extracted:
-                segment_ids = [s.id for s in segments]
-                synced = sync_extracted_tasks(
-                    db, meeting_id, extracted,
-                    source=FollowUpTaskSourceEnum.AI_REALTIME,
-                    segment_ids=segment_ids,
-                )
-
-                tasks_data = []
-                for t in synced:
-                    a_name = t.assignee_name
-                    if not a_name and t.description and "Phân công cho:" in t.description:
-                        a_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
-                    tasks_data.append({
-                        "id": t.id,
-                        "meeting_id": t.meeting_id,
-                        "title": t.title,
-                        "description": t.description,
-                        "status": t.status.value if t.status else "NOT_CONFIRMED",
-                        "assignee_id": t.assignee_id,
-                        "assignee_name": a_name,
-                        "deadline": t.deadline.isoformat() if t.deadline else None,
-                        "source": t.source.value if t.source else None,
-                        "transcript_segment_id": t.transcript_segment_id,
-                    })
-                try:
-                    await meeting_events_manager.broadcast(
-                        meeting_id, {"type": "tasks_preview", "data": {"tasks": tasks_data}}
-                    )
-                except Exception:
-                    pass
-
-    # Return all tasks for this meeting
-    all_tasks = (
-        db.query(FollowUpTask)
-        .options(joinedload(FollowUpTask.assignee))
-        .filter(FollowUpTask.meeting_id == meeting_id)
-        .order_by(FollowUpTask.created_at.asc())
-        .all()
-    )
-    res = []
-    for t in all_tasks:
-        item = FollowUpTaskResponse.model_validate(t)
-        if not item.assignee_name and t.description and "Phân công cho:" in t.description:
-            item.assignee_name = t.description.split("Phân công cho:")[1].split("|")[0].strip()
-        res.append(item)
-    return res
 
 
 @router.get("/topics", response_model=list[TopicResponse])

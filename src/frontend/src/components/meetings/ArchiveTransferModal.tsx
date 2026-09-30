@@ -32,12 +32,31 @@ export interface ActionItemDraft {
   isAiGenerated?: boolean;
 }
 
+export interface ArchiveTaskInput {
+  id?: string;
+  title?: string;
+  task?: string;
+  assignee_id?: string | null;
+  assignee_name?: string | null;
+  speaker_name?: string | null;
+  deadline?: string | null;
+}
+
+export interface ArchiveMeetingMember {
+  id?: string;
+  user_id?: string;
+  user_name?: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
+}
+
 interface ArchiveTransferModalProps {
   isOpen: boolean;
   onClose: () => void;
   meeting: Meeting;
-  initialTasks?: any[];
-  meetingMembers?: any[];
+  initialTasks?: ArchiveTaskInput[];
+  meetingMembers?: ArchiveMeetingMember[];
   onConfirmArchive: (data: {
     meetingId: string;
     tasks: ActionItemDraft[];
@@ -57,96 +76,107 @@ export function ArchiveTransferModal({
 }: ArchiveTransferModalProps) {
   const { user, activeOrganization } = useAuthStore();
 
-  // All available assignees (meeting participants + department colleagues)
-  const [allAssignees, setAllAssignees] = useState<
-    Array<{ id: string; name: string; email?: string; role?: string; isAttendee?: boolean }>
+  const [colleagues, setColleagues] = useState<
+    Array<{ id: string; name: string; email?: string; role?: string }>
   >([]);
 
   // AI Extraction state
   const [isExtracting, setIsExtracting] = useState(false);
 
-  // Load all assignees: attendees + department colleagues
+  // Load organization / department members so colleagues can be assigned
   useEffect(() => {
+    const orgId = activeOrganization?.id;
+    if (!orgId) {
+      return;
+    }
+    let ignore = false;
+    organizationAdminApi
+      .getMembers(orgId)
+      .then((res) => {
+        if (ignore) return;
+        const mems = Array.isArray(res) ? res : [];
+        setColleagues(
+          mems
+            .filter((m) => Boolean(m.user_id))
+            .map((m) => ({
+              id: m.user_id,
+              name: m.full_name,
+              email: m.email,
+              role: m.role || 'Thành viên',
+            }))
+        );
+      })
+      .catch(() => {
+        if (!ignore) {
+          setColleagues([]);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [activeOrganization?.id]);
+
+  // Derived organization error if activeOrganization is absent
+  const orgError = !activeOrganization?.id
+    ? 'Không tìm thấy thông tin tổ chức. Chỉ hiển thị thành viên đã tham gia cuộc họp.'
+    : null;
+
+  // Split assignees into attendees present in room vs other colleagues
+  const meetingAttendees = useMemo(() => {
     const list: Array<{
       id: string;
       name: string;
       email?: string;
       role?: string;
-      isAttendee?: boolean;
+      isAttendee: true;
     }> = [];
     const seen = new Set<string>();
 
-    // 1. First prioritize meeting attendees
-    meetingMembers.forEach((m: any) => {
+    meetingMembers.forEach((m) => {
       const uid = m.user_id || m.id;
       if (uid && !seen.has(uid)) {
         seen.add(uid);
         list.push({
           id: uid,
-          name: m.user_name || m.name || m.full_name || 'Người tham gia',
-          email: m.user_email || m.email,
+          name: m.user_name || m.full_name || 'Người tham gia',
+          email: m.email,
           role: m.role || 'Người họp',
           isAttendee: true,
         });
       }
     });
-
-    // 2. Also load organization / department members so all colleagues can be assigned
-    const orgId =
-      activeOrganization?.id ||
-      (user as any)?.organization_id ||
-      '2846981f-7028-4ef4-9cad-d2c3719703c4';
-
-    organizationAdminApi
-      .getMembers(orgId)
-      .then((res) => {
-        const mems = Array.isArray(res) ? res : [];
-        mems.forEach((m) => {
-          if (m.user_id && !seen.has(m.user_id)) {
-            seen.add(m.user_id);
-            list.push({
-              id: m.user_id,
-              name: m.full_name,
-              email: m.email,
-              role: m.role || 'Thành viên',
-              isAttendee: false,
-            });
-          }
-        });
-        setAllAssignees([...list]);
-      })
-      .catch(() => {
-        setAllAssignees([...list]);
-      });
-  }, [meetingMembers, activeOrganization?.id, user]);
-
-  // Split assignees into attendees present in room vs other colleagues
-  const meetingAttendees = useMemo(() => {
-    const attendeeUserIds = new Set(meetingMembers.map((m: any) => m.user_id || m.id));
-    return allAssignees.filter((a) => a.isAttendee || attendeeUserIds.has(a.id));
-  }, [allAssignees, meetingMembers]);
+    return list;
+  }, [meetingMembers]);
 
   const otherColleagues = useMemo(() => {
-    const attendeeUserIds = new Set(meetingMembers.map((m: any) => m.user_id || m.id));
-    return allAssignees.filter((a) => !a.isAttendee && !attendeeUserIds.has(a.id));
-  }, [allAssignees, meetingMembers]);
+    const attendeeUserIds = new Set(meetingAttendees.map((a) => a.id));
+    return colleagues
+      .filter((c) => !attendeeUserIds.has(c.id))
+      .map((c) => ({
+        ...c,
+        isAttendee: false as const,
+      }));
+  }, [colleagues, meetingAttendees]);
+
+  const allAssignees = useMemo(() => {
+    return [...meetingAttendees, ...otherColleagues];
+  }, [meetingAttendees, otherColleagues]);
 
   // Resolve Host/Manager display name
   const hostMemberName = useMemo(() => {
     return (
-      (meeting as any).host_name ||
-      (meeting as any).created_by_name ||
+      meeting.host_name ||
       meetingAttendees.find(
         (a) =>
-          a.email?.includes('admin') ||
-          a.email?.includes('manager') ||
           a.role?.toLowerCase().includes('host') ||
-          a.role?.toLowerCase().includes('chủ tọa')
+          a.role?.toLowerCase().includes('chủ tọa') ||
+          a.role?.toUpperCase() === 'OWNER' ||
+          a.role?.toUpperCase() === 'ADMIN'
       )?.name ||
-      (user as any)?.full_name ||
-      'Trần Minh Khoa'
+      user?.full_name ||
+      'Chủ tọa cuộc họp'
     );
-  }, [meeting, meetingAttendees, user]);
+  }, [meeting.host_name, meetingAttendees, user?.full_name]);
 
   // Determine meeting category
   const meetingType: 'EXECUTIVE' | 'DEPARTMENT' | 'MEMBER' = useMemo(() => {
@@ -165,101 +195,63 @@ export function ArchiveTransferModal({
 
   // Tasks state
   const [tasks, setTasks] = useState<ActionItemDraft[]>([]);
+  const [prevSyncKey, setPrevSyncKey] = useState<string>('');
 
-  // Synchronize tasks when modal opens or initialTasks change
-  useEffect(() => {
-    if (!isOpen) return;
+  const syncKey = isOpen ? `${meeting.id}-${initialTasks.length}` : '';
+  if (syncKey !== prevSyncKey) {
+    setPrevSyncKey(syncKey);
+    if (isOpen && initialTasks.length > 0) {
+      setTasks(
+        initialTasks.map((t, idx) => {
+          let assignedId = t.assignee_id || '';
+          let assignedName = t.assignee_name || '';
 
-    if (initialTasks && initialTasks.length > 0) {
-      const mapped = initialTasks.map((t, idx) => {
-        let assignedId = t.assignee_id || '';
-        let assignedName = t.assignee_name || '';
-
-        // Auto-match assignee by name if missing id
-        if (!assignedId && assignedName) {
-          const found = allAssignees.find(
-            (a) =>
-              a.name.toLowerCase().includes(assignedName.toLowerCase()) ||
-              assignedName.toLowerCase().includes(a.name.toLowerCase())
-          );
-          if (found) {
-            assignedId = found.id;
-            assignedName = found.name;
+          if (!assignedId && assignedName) {
+            const found = allAssignees.find(
+              (a) =>
+                a.name.toLowerCase().includes(assignedName.toLowerCase()) ||
+                assignedName.toLowerCase().includes(a.name.toLowerCase())
+            );
+            if (found) {
+              assignedId = found.id;
+              assignedName = found.name;
+            }
           }
-        }
 
-        // Speaker resolution
-        let spk = t.speaker_name || '';
-        if (!spk && t.description && t.description.includes('Người giao:')) {
-          spk = t.description.split('Người giao:')[1].split('|')[0].trim();
-        }
-        if (!spk) {
-          spk = hostMemberName;
-        }
-
-        return {
-          id: t.id || `task-${idx + 1}`,
-          title: t.title || t.task || '',
-          speaker_name: spk,
-          assignee_id: assignedId,
-          assignee_name: assignedName,
-          deadline: t.deadline ? String(t.deadline).split('T')[0] : '',
-          isAiGenerated: true,
-        };
-      });
-      setTasks(mapped);
-    } else {
-      // Demo / contextual tasks
-      const sampleMember =
-        meetingAttendees.find(
-          (a) => !a.email?.startsWith('admin') && !a.email?.startsWith('manager')
-        ) || meetingAttendees[0];
-
-      setTasks([
-        {
-          id: 'task-1',
-          title: `Triển khai giải pháp kỹ thuật theo kết luận cuộc họp: ${meeting.title || 'Dự án AI'}`,
-          speaker_name: hostMemberName,
-          assignee_id: sampleMember ? sampleMember.id : '',
-          assignee_name: sampleMember ? sampleMember.name : '',
-          deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
-          isAiGenerated: true,
-        },
-        {
-          id: 'task-2',
-          title: 'Kiểm thử tích hợp, tối ưu hiệu năng và cập nhật tài liệu kỹ thuật',
-          speaker_name: hostMemberName,
-          assignee_id: '',
-          assignee_name: '',
-          deadline: '',
-          isAiGenerated: true,
-        },
-      ]);
+          return {
+            id: t.id || `task-${idx + 1}`,
+            title: t.title || t.task || '',
+            speaker_name: t.speaker_name || hostMemberName,
+            assignee_id: assignedId,
+            assignee_name: assignedName,
+            deadline: t.deadline ? String(t.deadline).split('T')[0] : '',
+            isAiGenerated: true,
+          };
+        })
+      );
+    } else if (!isOpen && tasks.length > 0) {
+      setTasks([]);
     }
-  }, [isOpen, initialTasks, allAssignees, meetingAttendees, hostMemberName, meeting.title]);
+  }
 
   // AI Re-Scan tasks directly in modal
   const handleAiExtractTasks = async () => {
     setIsExtracting(true);
     try {
       const res = await meetingsApi.extractTasks(meeting.id);
-      const list = Array.isArray(res) ? res : (res as any)?.items || [];
+      const list: ArchiveTaskInput[] = Array.isArray(res)
+        ? (res as ArchiveTaskInput[])
+        : ((res as { items?: ArchiveTaskInput[] })?.items || []);
       if (list && list.length > 0) {
-        const mapped = list.map((item: any, idx: number) => {
-          let assignedUser = allAssignees.find(
+        const mapped = list.map((item: ArchiveTaskInput, idx: number) => {
+          const assignedUser = allAssignees.find(
             (a) =>
               a.id === item.assignee_id ||
               (item.assignee_name &&
                 (a.name.toLowerCase().includes(item.assignee_name.toLowerCase()) ||
                   item.assignee_name.toLowerCase().includes(a.name.toLowerCase())))
           );
-          let spk = item.speaker_name || '';
-          if (!spk && item.description && item.description.includes('Người giao:')) {
-            spk = item.description.split('Người giao:')[1].split('|')[0].trim();
-          }
-          if (!spk) {
-            spk = hostMemberName;
-          }
+          const spk = item.speaker_name || hostMemberName;
           return {
             id: item.id || `extracted-${Date.now()}-${idx}`,
             title: item.title || item.task || '',
@@ -294,11 +286,15 @@ export function ArchiveTransferModal({
     ]);
   };
 
-  const handleUpdateTask = (idx: number, field: keyof ActionItemDraft, value: any) => {
+  const handleUpdateTask = (
+    idx: number,
+    field: keyof ActionItemDraft,
+    value: ActionItemDraft[keyof ActionItemDraft]
+  ) => {
     setTasks((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
-      if (field === 'assignee_id') {
+      if (field === 'assignee_id' && typeof value === 'string') {
         const found = allAssignees.find((m) => m.id === value);
         if (found) next[idx].assignee_name = found.name;
       }
@@ -320,10 +316,6 @@ export function ArchiveTransferModal({
 
   const handleSubmit = async () => {
     const validTasks = tasks.filter((t) => t.title.trim().length > 0);
-    if (validTasks.length === 0) {
-      alert('Vui lòng thêm ít nhất 1 nhiệm vụ trước khi kết thúc cuộc họp.');
-      return;
-    }
     await onConfirmArchive({
       meetingId: meeting.id,
       tasks: validTasks,
@@ -403,6 +395,12 @@ export function ArchiveTransferModal({
             </div>
           </div>
 
+          {orgError && (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+              {orgError}
+            </div>
+          )}
+
           {/* Action Items Allocation Section */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -451,7 +449,7 @@ export function ArchiveTransferModal({
                 <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                   <UserCheck className="w-6 h-6 mx-auto text-slate-300" />
                   <p>
-                    Chưa có nhiệm vụ nào. Bấm 'AI Quét Lại Task' hoặc '+ Thêm Task' để phân công cho
+                    Chưa có nhiệm vụ nào. Bấm &apos;AI Quét Lại Task&apos; hoặc &apos;+ Thêm Task&apos; để phân công cho
                     nhân viên trong phòng họp.
                   </p>
                 </div>
@@ -609,19 +607,20 @@ export function ArchiveTransferModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || tasks.length === 0}
+            disabled={isSubmitting}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Đang lưu trữ & phân bổ nhiệm vụ vào Mini Jira...</span>
+                <span>Đang lưu trữ & hoàn tất kết thúc...</span>
               </>
             ) : (
               <>
                 <span>
-                  Xác nhận kết thúc & Phân bổ nhiệm vụ vào Mini Jira (
-                  {tasks.filter((t) => t.title.trim()).length})
+                  {tasks.filter((t) => t.title.trim()).length > 0
+                    ? `Xác nhận kết thúc & Phân bổ nhiệm vụ (${tasks.filter((t) => t.title.trim()).length})`
+                    : 'Xác nhận kết thúc cuộc họp'}
                 </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
