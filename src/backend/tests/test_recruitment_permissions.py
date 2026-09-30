@@ -15,15 +15,6 @@ def test_direct_review_grant_applies_only_to_selected_manager(db_session, recrui
         recruitment_org.other_manager,
         recruitment_org.review_permission,
     )
-    db_session.add(
-        models.OrganizationMemberPermission(
-            member_id=selected.id,
-            permission_id=permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db_session.commit()
-
     assert has_effective_permission(db_session, selected, "recruitment.review") is True
     assert has_effective_permission(db_session, other, "recruitment.review") is False
 
@@ -75,15 +66,6 @@ def test_assert_recruitment_reviewer_for_assigned_manager_with_permission(
     db_session, recruitment_org
 ):
     selected = recruitment_org.selected_manager
-    db_session.add(
-        models.OrganizationMemberPermission(
-            member_id=selected.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db_session.commit()
-
     mock_app = SimpleNamespace(
         organization_id=recruitment_org.organization.id,
         opening=SimpleNamespace(department_id=recruitment_org.eng_department.id),
@@ -95,14 +77,14 @@ def test_assert_recruitment_reviewer_for_assigned_manager_with_permission(
 def test_assert_recruitment_reviewer_rejects_manager_without_permission(
     db_session, recruitment_org
 ):
-    selected = recruitment_org.selected_manager
+    ungranted = recruitment_org.other_manager
     mock_app = SimpleNamespace(
         organization_id=recruitment_org.organization.id,
         opening=SimpleNamespace(department_id=recruitment_org.eng_department.id),
-        assigned_hr_member_id=selected.id,
+        assigned_hr_member_id=ungranted.id,
     )
     with pytest.raises(ForbiddenException, match="recruitment.review"):
-        assert_recruitment_reviewer(db_session, selected, mock_app)
+        assert_recruitment_reviewer(db_session, ungranted, mock_app)
 
 
 def test_assert_recruitment_reviewer_rejects_manager_from_different_department(
@@ -131,15 +113,6 @@ def test_assert_recruitment_reviewer_rejects_unassigned_manager(
     db_session, recruitment_org
 ):
     selected = recruitment_org.selected_manager
-    db_session.add(
-        models.OrganizationMemberPermission(
-            member_id=selected.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db_session.commit()
-
     mock_app = SimpleNamespace(
         organization_id=recruitment_org.organization.id,
         opening=SimpleNamespace(department_id=recruitment_org.eng_department.id),
