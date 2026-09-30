@@ -1,13 +1,14 @@
 import datetime
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
 from src.backend.database import get_db
-from src.backend.models import KnowledgeDocument, Meeting, User, OrganizationMember
+from src.backend.models import KnowledgeDocument, Meeting, User, OrganizationMember, TranscriptSegment
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -26,8 +27,27 @@ class KnowledgeDocumentResponse(BaseModel):
     created_at: datetime.datetime
 
 
-class KnowledgeQueryRequest(BaseModel):
+class KnowledgeMatch(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    type: Literal["document", "transcript"]
+    id: str
+    meeting_id: str | None = None
+    title: str
+    snippet: str
+    source: str
+    speaker_name: str | None = None
+    created_at: datetime.datetime | None = None
+
+
+class KnowledgeSearchResponse(BaseModel):
     query: str
+    total_matches: int
+    matches: list[KnowledgeMatch]
+
+
+class KnowledgeQueryRequest(BaseModel):
+    query: str = Field(..., min_length=1)
 
 
 STORAGE_DIR = "storage/knowledge"
@@ -141,47 +161,115 @@ async def extract_text_from_file_util(file: UploadFile = File(...)):
 
 
 
-@router.post("/search")
+@router.post("/search", response_model=KnowledgeSearchResponse)
 def search_knowledge(
     req: KnowledgeQueryRequest,
     member: OrganizationMember = Depends(deps.get_current_org_member),
     db: Session = Depends(get_db),
 ):
-    query_lower = req.query.lower()
-    matches: List[Dict[str, Any]] = []
+    query_str = req.query.strip()
+    if not query_str:
+        return KnowledgeSearchResponse(query=req.query, total_matches=0, matches=[])
 
-    # 1. Search uploaded knowledge documents
-    docs = db.query(KnowledgeDocument).filter(KnowledgeDocument.organization_id == member.organization_id).all()
+    query_pattern = f"%{query_str}%"
+    matches: List[KnowledgeMatch] = []
+
+    # 1. Search uploaded knowledge documents for this organization
+    docs = (
+        db.query(KnowledgeDocument)
+        .filter(
+            KnowledgeDocument.organization_id == member.organization_id,
+            KnowledgeDocument.filename.ilike(query_pattern),
+        )
+        .order_by(KnowledgeDocument.created_at.desc())
+        .limit(20)
+        .all()
+    )
     for d in docs:
-        if query_lower in d.filename.lower():
-            matches.append({
-                "type": "document",
-                "id": d.id,
-                "title": d.filename,
-                "snippet": f"Matching document in Knowledge Base: {d.filename} ({d.file_size} bytes)",
-                "source": d.filename,
-            })
+        matches.append(
+            KnowledgeMatch(
+                type="document",
+                id=d.id,
+                meeting_id=d.meeting_id,
+                title=d.filename,
+                snippet=f"Document in Knowledge Base: {d.filename} ({d.file_size} bytes)",
+                source=d.filename,
+                speaker_name=None,
+                created_at=d.created_at,
+            )
+        )
 
-    # 2. Search meeting transcripts
-    meetings = db.query(Meeting).filter(Meeting.organization_id == member.organization_id).all()
-    for m in meetings:
-        # Note: In a real app we'd search the TranscriptSegment table, but this is a mock search for now.
-        if m.title and query_lower in m.title.lower():
-            matches.append({
-                "type": "transcript",
-                "id": str(m.id),
-                "title": m.title,
-                "snippet": f"Found transcript match in {m.title}",
-                "source": f"Meeting #{m.id}",
-            })
+    # 2. Search real transcript segments joined with Meeting
+    segments = (
+        db.query(TranscriptSegment)
+        .join(Meeting, TranscriptSegment.meeting_id == Meeting.id)
+        .filter(
+            Meeting.organization_id == member.organization_id,
+            or_(
+                TranscriptSegment.content.ilike(query_pattern),
+                Meeting.title.ilike(query_pattern),
+            ),
+        )
+        .order_by(TranscriptSegment.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    for seg in segments:
+        m_title = seg.meeting.title if seg.meeting else "Cuộc họp"
+        snippet = seg.content.strip()
+        if len(snippet) > 250:
+            snippet = snippet[:247] + "..."
+        matches.append(
+            KnowledgeMatch(
+                type="transcript",
+                id=str(seg.id),
+                meeting_id=str(seg.meeting_id),
+                title=m_title,
+                snippet=snippet,
+                source=m_title,
+                speaker_name=seg.speaker_name,
+                created_at=seg.created_at,
+            )
+        )
 
-    if not matches:
-        matches.append({
-            "type": "system",
-            "id": "overview",
-            "title": "Axiom Knowledge Index",
-            "snippet": f"Indexed semantic search result for '{req.query}' across knowledge base.",
-            "source": "Knowledge Hub Search Engine",
-        })
+    return KnowledgeSearchResponse(
+        query=req.query,
+        total_matches=len(matches),
+        matches=matches,
+    )
 
-    return {"query": req.query, "total_matches": len(matches), "matches": matches}
+
+@router.get("/transcripts/recent", response_model=List[KnowledgeMatch])
+def get_recent_transcripts(
+    limit: int = 20,
+    member: OrganizationMember = Depends(deps.get_current_org_member),
+    db: Session = Depends(get_db),
+):
+    clamped_limit = max(1, min(limit, 50))
+    segments = (
+        db.query(TranscriptSegment)
+        .join(Meeting, TranscriptSegment.meeting_id == Meeting.id)
+        .filter(Meeting.organization_id == member.organization_id)
+        .order_by(TranscriptSegment.created_at.desc())
+        .limit(clamped_limit)
+        .all()
+    )
+    results: List[KnowledgeMatch] = []
+    for seg in segments:
+        m_title = seg.meeting.title if seg.meeting else "Cuộc họp"
+        snippet = seg.content.strip()
+        if len(snippet) > 250:
+            snippet = snippet[:247] + "..."
+        results.append(
+            KnowledgeMatch(
+                type="transcript",
+                id=str(seg.id),
+                meeting_id=str(seg.meeting_id),
+                title=m_title,
+                snippet=snippet,
+                source=m_title,
+                speaker_name=seg.speaker_name,
+                created_at=seg.created_at,
+            )
+        )
+    return results

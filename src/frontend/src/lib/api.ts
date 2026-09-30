@@ -175,6 +175,23 @@ export interface MeetingEndResponse {
   follow_up_tasks: FollowUpTask[];
 }
 
+export interface KnowledgeMatch {
+  type: 'document' | 'transcript';
+  id: string;
+  meeting_id?: string | null;
+  title: string;
+  snippet: string;
+  source: string;
+  speaker_name?: string | null;
+  created_at?: string | null;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  total_matches: number;
+  matches: KnowledgeMatch[];
+}
+
 // ── Error Class ──────────────────────────────────────────
 
 export class ApiRequestError extends Error {
@@ -233,10 +250,18 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err: unknown) {
+    if (err instanceof ApiRequestError) throw err;
+    const msg =
+      err instanceof Error ? err.message : 'Không thể kết nối đến máy chủ API (Network Error)';
+    throw new ApiRequestError(0, 'NETWORK_ERROR', msg);
+  }
 
   if (!response.ok) {
     if (
@@ -299,6 +324,7 @@ export const authApi = {
       department_id?: string;
       invite_token?: string;
       organization_name?: string;
+      is_candidate?: boolean;
     }
   ): Promise<User> {
     return apiFetch<User>('/api/v1/auth/register', {
@@ -312,6 +338,7 @@ export const authApi = {
         department_id: options?.department_id,
         invite_token: options?.invite_token,
         organization_name: options?.organization_name,
+        is_candidate: options?.is_candidate,
       }),
     });
   },
@@ -614,8 +641,8 @@ export const meetingsApi = {
   },
 
   /** @deprecated Use getFollowUpTasks instead */
-  getActionItems(meetingId: number | string): Promise<any[]> {
-    return apiFetch<any[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
+  getActionItems(meetingId: number | string): Promise<ActionItemResponse[]> {
+    return apiFetch<ActionItemResponse[]>(`/api/v1/meetings/${meetingId}/follow-up-tasks`);
   },
 
   /** Get transcripts for a meeting. */
@@ -787,11 +814,10 @@ export interface Department {
 
 export const departmentApi = {
   list: async (orgId?: string): Promise<Department[]> => {
-    const resolvedOrgId =
-      orgId ||
-      useAuthStore.getState().activeOrganization?.id ||
-      (useAuthStore.getState().user as any)?.organization_id ||
-      '2846981f-7028-4ef4-9cad-d2c3719703c4';
+    const resolvedOrgId = orgId || useAuthStore.getState().activeOrganization?.id;
+    if (!resolvedOrgId) {
+      return [];
+    }
     return apiFetch<Department[]>(`/api/v1/organizations/${resolvedOrgId}/departments`);
   },
   create: async (
@@ -1031,6 +1057,8 @@ export interface OrgMemberDetail {
   joined_at: string;
   meetings_count: number;
   tasks_count: number;
+  job_title?: string | null;
+  phone?: string | null;
 }
 
 export interface DepartmentProgressItem {
@@ -1134,15 +1162,15 @@ export const organizationAdminApi = {
 
 // Extend departmentApi with list, create, update, delete, progress
 export const departmentAdminApi = {
-  list(orgId: string): Promise<any[]> {
-    return apiFetch<any[]>(`/api/v1/organizations/${orgId}/departments`);
+  list(orgId: string): Promise<Department[]> {
+    return apiFetch<Department[]>(`/api/v1/organizations/${orgId}/departments`);
   },
 
   create(
     orgId: string,
     data: { name: string; description?: string; parent_id?: string | null }
-  ): Promise<any> {
-    return apiFetch<any>(`/api/v1/organizations/${orgId}/departments`, {
+  ): Promise<Department> {
+    return apiFetch<Department>(`/api/v1/organizations/${orgId}/departments`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -1152,8 +1180,8 @@ export const departmentAdminApi = {
     orgId: string,
     deptId: string,
     data: { name: string; description?: string; parent_id?: string | null }
-  ): Promise<any> {
-    return apiFetch<any>(`/api/v1/organizations/${orgId}/departments/${deptId}`, {
+  ): Promise<Department> {
+    return apiFetch<Department>(`/api/v1/organizations/${orgId}/departments/${deptId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -1274,4 +1302,15 @@ export const invitationApi = {
       }
     );
   },
+};
+
+export const knowledgeApi = {
+  search: (query: string, signal?: AbortSignal) =>
+    apiFetch<KnowledgeSearchResponse>('/api/v1/knowledge/search', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+      signal,
+    }),
+  recentTranscripts: (limit = 20, signal?: AbortSignal) =>
+    apiFetch<KnowledgeMatch[]>(`/api/v1/knowledge/transcripts/recent?limit=${limit}`, { signal }),
 };
