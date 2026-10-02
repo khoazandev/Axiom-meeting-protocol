@@ -4,7 +4,17 @@ import React from 'react';
 import { CVData } from '@/types/cv';
 import { EditableInlineText } from '../canva/EditableInlineText';
 import { CanvaBoundingBox } from '../canva/CanvaBoundingBox';
-import { Network, Database, CheckSquare, Layers, FileSpreadsheet, MapPin, Mail, Phone, Award } from 'lucide-react';
+import {
+  Network,
+  Database,
+  CheckSquare,
+  Layers,
+  FileSpreadsheet,
+  MapPin,
+  Mail,
+  Phone,
+  Award,
+} from 'lucide-react';
 
 interface TemplateProps {
   data: CVData;
@@ -72,14 +82,25 @@ export function CVBATemplate({
               />
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 pt-1 font-medium">
-              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-teal-600" />{personalInfo.location}</span>
-              <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-teal-600" />{personalInfo.phone}</span>
-              <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-teal-600" />{personalInfo.email}</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-teal-600" />
+                {personalInfo.location}
+              </span>
+              <span className="flex items-center gap-1">
+                <Phone className="w-3 h-3 text-teal-600" />
+                {personalInfo.phone}
+              </span>
+              <span className="flex items-center gap-1">
+                <Mail className="w-3 h-3 text-teal-600" />
+                {personalInfo.email}
+              </span>
             </div>
           </div>
 
           <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center min-w-[120px]">
-            <div className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">METHODOLOGY</div>
+            <div className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">
+              METHODOLOGY
+            </div>
             <div className="text-sm font-black text-teal-900 mt-0.5">BABOK & Agile</div>
             <div className="text-[9px] text-teal-600 font-medium">CBAP / CSPO Certified</div>
           </div>
@@ -126,7 +147,10 @@ export function CVBATemplate({
 
               <div className="space-y-3.5 pt-1">
                 {experience.map((exp) => (
-                  <div key={exp.id} className="relative pl-3 border-l-2 border-teal-500/30 space-y-1">
+                  <div
+                    key={exp.id}
+                    className="relative pl-3 border-l-2 border-teal-500/30 space-y-1"
+                  >
                     <div className="flex justify-between items-baseline">
                       <div className="text-xs font-bold text-slate-900">
                         <EditableInlineText
@@ -207,8 +231,12 @@ export function CVBATemplate({
                 {education.map((edu) => (
                   <div key={edu.id} className="text-[10.5px]">
                     <div className="font-bold text-slate-800">{edu.school}</div>
-                    <div className="text-slate-600">{edu.degree} - {edu.field}</div>
-                    <div className="text-[9.5px] text-slate-400">{edu.startDate} - {edu.endDate}</div>
+                    <div className="text-slate-600">
+                      {edu.degree} - {edu.field}
+                    </div>
+                    <div className="text-[9.5px] text-slate-400">
+                      {edu.startDate} - {edu.endDate}
+                    </div>
                   </div>
                 ))}
               </div>

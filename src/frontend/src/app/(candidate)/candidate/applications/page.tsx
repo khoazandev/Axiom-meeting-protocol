@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { candidateApi, RecruitmentApplication } from '@/lib/recruitment-api';
 import { useCandidateStore } from '@/lib/store/useCandidateStore';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import {
   FileText,
   Video,
@@ -51,6 +52,7 @@ function getStageStepIndex(stage: string): number {
 export default function CandidateApplicationPage() {
   const router = useRouter();
   const { token, clearCandidateSession } = useCandidateStore();
+  const authToken = useAuthStore((s) => s.token);
 
   const [application, setApplication] = useState<RecruitmentApplication | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,16 +60,59 @@ export default function CandidateApplicationPage() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
 
+  // Safe Token Resolution with hydration fallback
+  const resolvedToken = useMemo(() => {
+    if (token) return token;
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('axiom-candidate-session');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.state?.token) return parsed.state.token as string;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [token]);
+
+  const resolvedAuthToken = useMemo(() => {
+    if (authToken) return authToken;
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('axiom-auth-storage');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.state?.token) return parsed.state.token as string;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [authToken]);
+
   useEffect(() => {
     let ignore = false;
 
-    if (!token) {
-      router.replace('/login');
+    if (resolvedAuthToken) {
+      router.replace('/candidate/discovery?tab=applications');
       return;
     }
 
+    if (!resolvedToken) {
+      const t = setTimeout(() => {
+        if (!ignore && !resolvedToken && !resolvedAuthToken) {
+          router.replace('/login');
+        }
+      }, 600);
+      return () => {
+        ignore = true;
+        clearTimeout(t);
+      };
+    }
+
     candidateApi
-      .getMe(token)
+      .getMe(resolvedToken)
       .then((data) => {
         if (!ignore) {
           setApplication(data);
@@ -145,7 +190,7 @@ export default function CandidateApplicationPage() {
           <div>
             <div className="flex items-center gap-2 text-blue-100 text-xs font-medium">
               <Briefcase size={14} />
-              <span>{opening?.department?.name || 'Khối Kỹ Thuật'}</span>
+              <span>{opening?.department?.name || 'Bộ Phận Tuyển Dụng'}</span>
               <span>•</span>
               <span className="font-mono">ID: {application.id.slice(0, 8)}</span>
             </div>
@@ -233,7 +278,7 @@ export default function CandidateApplicationPage() {
       {/* ── 3. Active Action Callouts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Assessment Card */}
-        {application.stage === 'ASSESSMENT_PENDING' && activeAttempt && (
+        {application.stage === 'ASSESSMENT_PENDING' && (
           <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border-2 border-blue-500/80 shadow-md flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">
@@ -251,7 +296,7 @@ export default function CandidateApplicationPage() {
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs text-slate-500 font-medium">Trạng thái: Chưa nộp</span>
               <Link
-                href={`/candidate/assessments/${activeAttempt.id}`}
+                href={`/candidate/assessments/${activeAttempt?.id || application.id}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow transition-all"
               >
                 <span>Bắt Đầu Làm Bài</span>

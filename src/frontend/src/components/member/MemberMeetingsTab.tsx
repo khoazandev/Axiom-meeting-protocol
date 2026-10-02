@@ -45,11 +45,24 @@ export function MemberMeetingsTab({ onNotify }: MemberMeetingsTabProps) {
     title: string;
   } | null>(null);
 
+  const isHighLevelMeeting = (m: Meeting) => {
+    if (!m.department_id) return true;
+    const typeUpper = ((m as any).meeting_type || '').toUpperCase();
+    if (typeUpper === 'EXECUTIVE' || typeUpper === 'BOARD') return true;
+    const titleLower = (m.title || '').toLowerCase();
+    return (
+      titleLower.includes('cấp cao') ||
+      titleLower.includes('ban điều hành') ||
+      titleLower.includes('hội nghị ban')
+    );
+  };
+
   const loadMeetings = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
       const data = await meetingsApi.list();
-      setMeetings(data);
+      const memberMeetings = (data || []).filter((m) => !isHighLevelMeeting(m));
+      setMeetings(memberMeetings);
     } catch (err) {
       console.error('Failed to load meetings for member:', err);
     } finally {

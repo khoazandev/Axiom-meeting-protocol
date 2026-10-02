@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MaterialIcon } from '@/components/ui/MaterialIcon';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 export default function Anamorphic3DMeeting() {
+  const { t } = useLanguageStore();
   const [activeTab, setActiveTab] = useState<'webrtc' | 'agenda' | 'mom' | 'security'>('webrtc');
   const [elapsedSeconds, setElapsedSeconds] = useState(872); // 14:32
 
@@ -46,10 +48,10 @@ export default function Anamorphic3DMeeting() {
           initial={{ opacity: 0, y: -16, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/95 border border-[#4F7BF7]/25 shadow-[0_2px_12px_rgba(79,123,247,0.12)] text-[#4F7BF7] text-[11px] sm:text-[12px] font-bold tracking-wide mb-2 backdrop-blur-md"
+          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/95 dark:bg-neutral-900/90 border border-[#4F7BF7]/25 shadow-[0_2px_12px_rgba(79,123,247,0.12)] text-[#4F7BF7] dark:text-blue-400 text-[11px] sm:text-[12px] font-bold tracking-wide mb-2 backdrop-blur-md"
         >
-          <MaterialIcon name="auto_awesome" className="w-3.5 h-3.5 text-[#4F7BF7] animate-pulse" />
-          <span>Chào mừng đến với Axiom DX-OS • Protocol v2.5</span>
+          <MaterialIcon name="auto_awesome" className="w-3.5 h-3.5 text-[#4F7BF7] dark:text-blue-400 animate-pulse" />
+          <span>{t.landing.anamorphicWelcome}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
         </motion.div>
 
@@ -57,19 +59,18 @@ export default function Anamorphic3DMeeting() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[25px] sm:text-[32px] md:text-[36px] font-black text-slate-900 tracking-tight leading-tight"
+          className="text-[25px] sm:text-[32px] md:text-[36px] font-black text-slate-900 dark:text-white tracking-tight leading-tight"
         >
-          Hệ Điều Hành Nghi Thức Cuộc Họp Số
+          {t.landing.anamorphicTitle}
         </motion.h2>
 
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[12px] sm:text-[13.5px] text-slate-500 max-w-2xl mx-auto mt-1 leading-relaxed font-medium"
+          className="text-[12px] sm:text-[13.5px] text-slate-500 dark:text-neutral-400 max-w-2xl mx-auto mt-1 leading-relaxed font-medium"
         >
-          Chuẩn hóa kỷ luật hội nghị WebRTC on-premise, nhận diện giọng nói VAD thời gian thực và tự
-          động trích xuất biên bản MoM & vé Kanban bằng AI cục bộ.
+          {t.landing.anamorphicDesc}
         </motion.p>
       </div>
 
@@ -78,7 +79,7 @@ export default function Anamorphic3DMeeting() {
         initial={{ opacity: 0, scale: 0.95, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.65, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-[940px] bg-white/95 backdrop-blur-2xl rounded-[28px] border border-white shadow-[0_20px_50px_rgba(15,23,42,0.09),0_1px_3px_rgba(0,0,0,0.05)] p-3 sm:p-5 flex flex-col z-20 shrink-0"
+        className="relative w-full max-w-[940px] bg-white/95 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-[28px] border border-white dark:border-neutral-800 shadow-[0_20px_50px_rgba(15,23,42,0.09),0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-3 sm:p-5 flex flex-col z-20 shrink-0"
       >
         {/* Specular border light sweep animation on mount */}
         <motion.div
@@ -138,11 +139,11 @@ export default function Anamorphic3DMeeting() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold transition-all shrink-0 ${
               activeTab === 'webrtc'
                 ? 'bg-[#4F7BF7] text-white shadow-[0_4px_14px_rgba(79,123,247,0.35)]'
-                : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70'
+                : 'bg-slate-100/80 dark:bg-neutral-800 text-slate-600 dark:text-neutral-300 hover:bg-slate-200/70 dark:hover:bg-neutral-700'
             }`}
           >
             <MaterialIcon name="graphic_eq" className="w-3.5 h-3.5" />
-            <span>WebRTC & VAD Realtime</span>
+            <span>{t.landing.tabWebRTC}</span>
           </button>
 
           <button
@@ -150,11 +151,11 @@ export default function Anamorphic3DMeeting() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold transition-all shrink-0 ${
               activeTab === 'agenda'
                 ? 'bg-[#4F7BF7] text-white shadow-[0_4px_14px_rgba(79,123,247,0.35)]'
-                : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70'
+                : 'bg-slate-100/80 dark:bg-neutral-800 text-slate-600 dark:text-neutral-300 hover:bg-slate-200/70 dark:hover:bg-neutral-700'
             }`}
           >
             <MaterialIcon name="fact_check" className="w-3.5 h-3.5" />
-            <span>Agenda Gate Kỷ Luật</span>
+            <span>{t.landing.tabAgenda}</span>
           </button>
 
           <button
@@ -162,11 +163,11 @@ export default function Anamorphic3DMeeting() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold transition-all shrink-0 ${
               activeTab === 'mom'
                 ? 'bg-[#4F7BF7] text-white shadow-[0_4px_14px_rgba(79,123,247,0.35)]'
-                : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70'
+                : 'bg-slate-100/80 dark:bg-neutral-800 text-slate-600 dark:text-neutral-300 hover:bg-slate-200/70 dark:hover:bg-neutral-700'
             }`}
           >
             <MaterialIcon name="smart_toy" className="w-3.5 h-3.5" />
-            <span>Auto MoM & Mini Jira</span>
+            <span>{t.landing.tabMoM}</span>
           </button>
 
           <button
@@ -174,11 +175,11 @@ export default function Anamorphic3DMeeting() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold transition-all shrink-0 ${
               activeTab === 'security'
                 ? 'bg-[#4F7BF7] text-white shadow-[0_4px_14px_rgba(79,123,247,0.35)]'
-                : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70'
+                : 'bg-slate-100/80 dark:bg-neutral-800 text-slate-600 dark:text-neutral-300 hover:bg-slate-200/70 dark:hover:bg-neutral-700'
             }`}
           >
             <MaterialIcon name="lan" className="w-3.5 h-3.5" />
-            <span>Chủ Quyền Dữ Liệu</span>
+            <span>{t.landing.tabSecurity}</span>
           </button>
         </div>
 
@@ -551,7 +552,7 @@ export default function Anamorphic3DMeeting() {
                         </span>
                         <p className="text-slate-500 text-[9.5px] leading-relaxed">
                           Vận hành hoàn toàn không cần kết nối internet công cộng. Thích hợp cho
-                          khối cơ quan, ngân hàng và quốc phòng.
+                          các cơ quan ban ngành, ngân hàng và quốc phòng.
                         </p>
                       </div>
 
@@ -616,17 +617,17 @@ export default function Anamorphic3DMeeting() {
           <div className="flex items-center gap-2">
             <Link
               href="/docs"
-              className="px-3 py-1.5 rounded-xl text-[11.5px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-xl text-[11.5px] font-semibold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1.5"
             >
-              <MaterialIcon name="description" className="w-3.5 h-3.5 text-slate-500" />
-              <span>Xem Tài Liệu</span>
+              <MaterialIcon name="description" className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+              <span>{t.landing.viewDocs}</span>
             </Link>
 
             <Link
               href="/member"
               className="px-4 py-1.5 rounded-xl text-[11.5px] font-bold text-white bg-gradient-to-r from-[#4F7BF7] to-indigo-600 shadow-[0_4px_16px_rgba(79,123,247,0.35)] hover:brightness-105 active:scale-98 transition-all flex items-center gap-1.5"
             >
-              <span>Vào Bàn Làm Việc Ngay</span>
+              <span>{t.landing.openWorkspace}</span>
               <MaterialIcon name="arrow_forward" className="w-3.5 h-3.5 text-white" />
             </Link>
           </div>

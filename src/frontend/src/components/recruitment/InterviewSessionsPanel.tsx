@@ -9,10 +9,7 @@ export interface InterviewSessionsPanelProps {
   onOpenScorecard: (sessionId: string) => void;
 }
 
-export function InterviewSessionsPanel({
-  sessions,
-  onOpenScorecard,
-}: InterviewSessionsPanelProps) {
+export function InterviewSessionsPanel({ sessions, onOpenScorecard }: InterviewSessionsPanelProps) {
   if (!sessions || sessions.length === 0) {
     return null;
   }
@@ -24,9 +21,7 @@ export function InterviewSessionsPanel({
           <Video className="w-4 h-4 text-blue-600 shrink-0" />
           <span>Phiên Phỏng Vấn Trực Tuyến & Bảng Điểm Dialogue</span>
         </span>
-        <span className="text-[11px] font-semibold text-slate-500">
-          {sessions.length} phiên
-        </span>
+        <span className="text-[11px] font-semibold text-slate-500">{sessions.length} phiên</span>
       </div>
 
       <div className="space-y-2">
@@ -49,11 +44,15 @@ export function InterviewSessionsPanel({
                       isCompleted
                         ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                         : isInProgress
-                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                        : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                     }`}
                     title={
-                      isCompleted ? 'Trạng thái: Hoàn tất' : isInProgress ? 'Trạng thái: Đang diễn ra' : 'Trạng thái: Đã lên lịch'
+                      isCompleted
+                        ? 'Trạng thái: Hoàn tất'
+                        : isInProgress
+                          ? 'Trạng thái: Đang diễn ra'
+                          : 'Trạng thái: Đã lên lịch'
                     }
                   >
                     {isCompleted ? 'Hoàn tất' : isInProgress ? 'Đang diễn ra' : 'Đã lên lịch'}
@@ -63,7 +62,12 @@ export function InterviewSessionsPanel({
                   <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                   <span>Lịch: {new Date(sess.scheduled_at).toLocaleString('vi-VN')}</span>
                   <span>•</span>
-                  <span>Meeting: <span className="font-mono text-[10px] text-slate-600 dark:text-slate-400">{sess.meeting_id.slice(0, 8)}...</span></span>
+                  <span>
+                    Meeting:{' '}
+                    <span className="font-mono text-[10px] text-slate-600 dark:text-slate-400">
+                      {sess.meeting_id.slice(0, 8)}...
+                    </span>
+                  </span>
                 </p>
               </div>
 

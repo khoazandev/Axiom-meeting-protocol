@@ -12,9 +12,31 @@ class OrganizationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
 
 
+class OrganizationUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    tagline: str | None = None
+    logo_url: str | None = None
+    banner_url: str | None = None
+    industry: str | None = None
+    size: str | None = None
+    website: str | None = None
+    headquarters: str | None = None
+    description: str | None = None
+    tax_id: str | None = None
+
+
 class OrganizationResponse(BaseModel):
     id: str
     name: str
+    tagline: str | None = None
+    logo_url: str | None = None
+    banner_url: str | None = None
+    industry: str | None = None
+    size: str | None = None
+    website: str | None = None
+    headquarters: str | None = None
+    description: str | None = None
+    tax_id: str | None = None
     created_by_id: str
     created_at: datetime
     updated_at: datetime
@@ -47,6 +69,8 @@ class MemberDetailResponse(BaseModel):
     joined_at: datetime
     meetings_count: int = 0
     tasks_count: int = 0
+    job_title: str | None = None
+    phone: str | None = None
 
     model_config = {"from_attributes": True}
 

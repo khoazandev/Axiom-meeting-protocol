@@ -52,9 +52,7 @@ export function CVMinimalistTemplate({ data }: CVTemplateProps) {
             <div className="col-span-3 text-xs font-bold uppercase tracking-wider text-zinc-400">
               Về Bản Thân
             </div>
-            <div className="col-span-9 text-xs text-zinc-700 leading-relaxed">
-              {summary}
-            </div>
+            <div className="col-span-9 text-xs text-zinc-700 leading-relaxed">{summary}</div>
           </div>
         )}
 
@@ -106,9 +104,7 @@ export function CVMinimalistTemplate({ data }: CVTemplateProps) {
                   </div>
                   <p className="text-[11px] text-zinc-600 leading-relaxed">{p.description}</p>
                   {p.technologies && (
-                    <div className="text-[10px] text-zinc-400">
-                      {p.technologies.join(' · ')}
-                    </div>
+                    <div className="text-[10px] text-zinc-400">{p.technologies.join(' · ')}</div>
                   )}
                 </div>
               ))}

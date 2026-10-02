@@ -137,7 +137,7 @@ def list_audit_logs(
         initial_events = [
             ("LOGIN_SUCCESS", "auth:session", "Đăng nhập thành công qua Token JWT", "192.168.1.105"),
             ("CREATE_MEETING", "meeting:exec-01", "Tạo cuộc họp Ban Giám Đốc quý III", "192.168.1.105"),
-            ("UPDATE_MEMBER_ROLE", "user:mgr-02", "Bổ nhiệm Trưởng Khối Kỹ Thuật", "192.168.1.105"),
+            ("UPDATE_MEMBER_ROLE", "user:mgr-02", "Bổ nhiệm Trưởng Bộ Phận Kỹ Thuật", "192.168.1.105"),
             ("POLICY_ENFORCE", "agenda_gate", "Kích hoạt Agenda Gate bảo mật chuẩn ISO DX-OS", "127.0.0.1"),
             ("BACKUP_ENCRYPTED", "database:storage", "Sao lưu dữ liệu mã hóa On-Premise E2EE", "127.0.0.1"),
         ]

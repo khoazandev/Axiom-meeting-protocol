@@ -4,7 +4,17 @@ import React from 'react';
 import { CVData } from '@/types/cv';
 import { EditableInlineText } from '../canva/EditableInlineText';
 import { CanvaBoundingBox } from '../canva/CanvaBoundingBox';
-import { Terminal, Code2, GitBranch, Cpu, FolderGit2, Mail, Phone, MapPin, Globe } from 'lucide-react';
+import {
+  Terminal,
+  Code2,
+  GitBranch,
+  Cpu,
+  FolderGit2,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+} from 'lucide-react';
 
 interface TemplateProps {
   data: CVData;
@@ -50,7 +60,9 @@ export function CVAestheticDevTemplate({
           <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-          <span className="ml-2 text-slate-400 font-semibold">user@{personalInfo.fullName?.toLowerCase().replace(/\s+/g, '') || 'dev'}: ~/profile</span>
+          <span className="ml-2 text-slate-400 font-semibold">
+            user@{personalInfo.fullName?.toLowerCase().replace(/\s+/g, '') || 'dev'}: ~/profile
+          </span>
         </div>
         <div className="flex items-center gap-1.5 text-cyan-400">
           <Terminal className="w-3.5 h-3.5" />
@@ -145,7 +157,8 @@ export function CVAestheticDevTemplate({
                   key={s.id}
                   className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 font-medium"
                 >
-                  <span className="text-cyan-600 font-bold">#</span>{s.name}
+                  <span className="text-cyan-600 font-bold">#</span>
+                  {s.name}
                 </span>
               ))}
             </div>
@@ -221,12 +234,20 @@ export function CVAestheticDevTemplate({
 
               <div className="grid grid-cols-2 gap-3">
                 {projects.map((p) => (
-                  <div key={p.id} className="p-2.5 bg-white rounded border border-slate-200 text-[10.5px] space-y-1">
-                    <div className="font-mono font-bold text-slate-900 text-xs text-cyan-700">{p.name}</div>
+                  <div
+                    key={p.id}
+                    className="p-2.5 bg-white rounded border border-slate-200 text-[10.5px] space-y-1"
+                  >
+                    <div className="font-mono font-bold text-slate-900 text-xs text-cyan-700">
+                      {p.name}
+                    </div>
                     <div className="text-slate-600 line-clamp-2">{p.description}</div>
                     <div className="flex flex-wrap gap-1 pt-1">
                       {p.technologies?.map((tech, idx) => (
-                        <span key={idx} className="font-mono text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-600">
+                        <span
+                          key={idx}
+                          className="font-mono text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-600"
+                        >
                           {tech}
                         </span>
                       ))}

@@ -88,16 +88,28 @@ export function MemberCalendarTab({ onNotify }: MemberCalendarTabProps) {
     };
   }, []);
 
+  const isHighLevelMeeting = (m: Meeting) => {
+    if (!m.department_id) return true;
+    const typeUpper = ((m as any).meeting_type || '').toUpperCase();
+    if (typeUpper === 'EXECUTIVE' || typeUpper === 'BOARD') return true;
+    const titleLower = (m.title || '').toLowerCase();
+    return (
+      titleLower.includes('cấp cao') ||
+      titleLower.includes('ban điều hành') ||
+      titleLower.includes('hội nghị ban')
+    );
+  };
+
   // Fetch live meetings for member
   const loadCalendarMeetings = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
     try {
       const data = await meetingApi.listWithFilters();
       if (data && Array.isArray(data)) {
-        setMeetings(data);
+        setMeetings(data.filter((m) => !isHighLevelMeeting(m)));
       } else {
         const fallback = await meetingsApi.list(0, 100);
-        setMeetings(fallback);
+        setMeetings((fallback || []).filter((m) => !isHighLevelMeeting(m)));
       }
     } catch (err) {
       console.error('Failed to load meetings for member calendar:', err);

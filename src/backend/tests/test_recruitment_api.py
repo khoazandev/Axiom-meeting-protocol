@@ -23,16 +23,7 @@ def test_assigned_hr_can_only_submit_review_for_current_stage(
     # Application is in INVITED stage, not HR_REVIEW_PENDING!
     app = make_application(db, recruitment_org, stage="INVITED", version=1)
 
-    # Grant review to selected manager
-    db.add(
-        models.OrganizationMemberPermission(
-            member_id=recruitment_org.selected_manager.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db.commit()
-
+    # Selected manager already has review permission from recruitment_org fixture
     auth_headers = auth_as(recruitment_org.selected_manager_user)
     response = client.post(
         f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/applications/{app.id}/hr-review",
@@ -71,16 +62,6 @@ def test_owner_can_create_opening_and_list_openings(client, auth_as, recruitment
 
 
 def test_recruitment_me_endpoint(client, auth_as, recruitment_org):
-    db = recruitment_org.selected_manager._sa_instance_state.session
-    db.add(
-        models.OrganizationMemberPermission(
-            member_id=recruitment_org.selected_manager.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db.commit()
-
     auth_headers = auth_as(recruitment_org.selected_manager_user)
     res = client.get(
         f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/me",
@@ -105,6 +86,14 @@ def test_review_grant_toggle_by_owner(client, auth_as, recruitment_org):
     )
     assert res1.status_code == 200
     assert res1.json()["enabled"] is True
+
+    # 1.1 Verify GET /managers/review-grants lists the enabled grant
+    list_res = client.get(
+        f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/managers/review-grants",
+        headers={"X-Organization-ID": recruitment_org.organization.id, **auth_headers},
+    )
+    assert list_res.status_code == 200
+    assert any(g["member_id"] == mgr_id and g["enabled"] is True for g in list_res.json())
 
     # 2. Disable review grant
     res2 = client.put(
@@ -141,16 +130,7 @@ def test_hr_review_advances_stage_and_is_idempotent(client, auth_as, recruitment
     db = recruitment_org.selected_manager._sa_instance_state.session
     app = make_application(db, recruitment_org, stage="HR_REVIEW_PENDING", version=1)
 
-    # Grant review to selected manager
-    db.add(
-        models.OrganizationMemberPermission(
-            member_id=recruitment_org.selected_manager.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db.commit()
-
+    # Selected manager already has review permission from recruitment_org fixture
     auth_headers = auth_as(recruitment_org.selected_manager_user)
     # 1. Submit HR review
     res = client.post(
@@ -222,14 +202,7 @@ def test_disable_review_grant_rejected_when_active_application_assigned(client, 
     # Manager has active application assigned
     app = make_application(db, recruitment_org, stage="INVITED", version=1)
 
-    # Enable review grant
-    grant = models.OrganizationMemberPermission(
-        member_id=recruitment_org.selected_manager.id,
-        permission_id=recruitment_org.review_permission.id,
-        granted_by_id=recruitment_org.owner.user_id,
-    )
-    db.add(grant)
-    db.commit()
+    # Manager already has review grant enabled from fixture
 
     # Try to disable review grant while manager still owns active application
     auth_headers = auth_as(recruitment_org.owner_user)
@@ -268,16 +241,7 @@ def test_assign_application_hr(client, auth_as, recruitment_org):
     db = recruitment_org.selected_manager._sa_instance_state.session
     app = make_application(db, recruitment_org, stage="INVITED", version=1)
 
-    # Grant review to selected manager
-    db.add(
-        models.OrganizationMemberPermission(
-            member_id=recruitment_org.selected_manager.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db.commit()
-
+    # Selected manager already has review permission from recruitment_org fixture
     owner_headers = auth_as(recruitment_org.owner_user)
     res = client.put(
         f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/applications/{app.id}/assign-hr",
@@ -286,3 +250,29 @@ def test_assign_application_hr(client, auth_as, recruitment_org):
     )
     assert res.status_code == 200
     assert res.json()["assigned_hr_member_id"] == recruitment_org.selected_manager.id
+
+
+def test_move_application_stage(client, auth_as, recruitment_org):
+    db = recruitment_org.selected_manager._sa_instance_state.session
+    app = make_application(db, recruitment_org, stage="INVITED", version=1)
+
+    owner_headers = auth_as(recruitment_org.owner_user)
+
+    # 1. Move to ASSESSMENT_PENDING (drag to test column)
+    res = client.post(
+        f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/applications/{app.id}/move-stage",
+        headers={"X-Organization-ID": recruitment_org.organization.id, **owner_headers},
+        json={"target_stage": "ASSESSMENT_PENDING", "reason": "Kéo thả Kanban sang cột test"},
+    )
+    assert res.status_code == 200
+    assert res.json()["stage"] == "ASSESSMENT_PENDING"
+
+    # 2. Move to INTERVIEW_SCHEDULED
+    res2 = client.post(
+        f"/api/v1/organizations/{recruitment_org.organization.id}/recruitment/applications/{app.id}/move-stage",
+        headers={"X-Organization-ID": recruitment_org.organization.id, **owner_headers},
+        json={"target_stage": "INTERVIEW_SCHEDULED", "reason": "Kéo thả Kanban sang cột phỏng vấn"},
+    )
+    assert res2.status_code == 200
+    assert res2.json()["stage"] == "INTERVIEW_SCHEDULED"
+

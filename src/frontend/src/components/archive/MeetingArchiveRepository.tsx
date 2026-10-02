@@ -79,7 +79,9 @@ export function MeetingArchiveRepository({
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
-  const [meetingTypeFilter, setMeetingTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERVIEW'>('ALL');
+  const [meetingTypeFilter, setMeetingTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERVIEW'>(
+    'ALL'
+  );
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
 
   // Selected Meeting Details State
@@ -353,7 +355,15 @@ export function MeetingArchiveRepository({
       ).getTime();
       return sortOrder === 'NEWEST' ? timeB - timeA : timeA - timeB;
     });
-  }, [meetings, selectedDeptFilter, meetingTypeFilter, searchQuery, userRole, departmentId, sortOrder]);
+  }, [
+    meetings,
+    selectedDeptFilter,
+    meetingTypeFilter,
+    searchQuery,
+    userRole,
+    departmentId,
+    sortOrder,
+  ]);
 
   const meetingTypeCounts = useMemo(() => {
     let official = 0;
@@ -459,7 +469,7 @@ export function MeetingArchiveRepository({
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
         <Building2 size={11} className="text-blue-600" />
-        HỌP NỘI BỘ KHỐI
+        HỌP NỘI BỘ BỘ PHẬN
       </span>
     );
   };
@@ -487,7 +497,7 @@ export function MeetingArchiveRepository({
                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
                   {renderTypeBadge(selectedMeeting.meeting_type)}
                   <span className="px-2 py-0.2 rounded-md text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60">
-                    {selectedMeeting.department_name || 'Khối Doanh Nghiệp'}
+                    {selectedMeeting.department_name || 'Bộ Phận Doanh Nghiệp'}
                   </span>
                   {renderStatusBadge(selectedMeeting.status)}
                   <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
@@ -1108,7 +1118,7 @@ export function MeetingArchiveRepository({
           <button
             type="button"
             onClick={() => setMeetingTypeFilter('OFFICIAL')}
-            title="Biên bản họp điều hành & khối"
+            title="Biên bản họp điều hành & bộ phận"
             className={`shrink-0 w-44 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
               meetingTypeFilter === 'OFFICIAL'
                 ? 'bg-blue-600 text-white shadow-xs'
@@ -1267,9 +1277,9 @@ export function MeetingArchiveRepository({
                       {renderTypeBadge(meeting.meeting_type)}
                       <span
                         className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/60 truncate max-w-[130px]"
-                        title={meeting.department_name || 'Khối Doanh Nghiệp'}
+                        title={meeting.department_name || 'Bộ Phận Doanh Nghiệp'}
                       >
-                        {meeting.department_name || 'Khối Doanh Nghiệp'}
+                        {meeting.department_name || 'Bộ Phận Doanh Nghiệp'}
                       </span>
                     </div>
                     {renderStatusBadge(meeting.status)}

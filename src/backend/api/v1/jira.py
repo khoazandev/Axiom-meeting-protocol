@@ -6,12 +6,14 @@ from datetime import datetime, timezone
 import re
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
 from src.backend.core.exceptions import NotFoundException, ValidationException
 from src.backend.database import get_db
 from src.backend.models import (
+    DepartmentMember,
     DurationEnum,
     FollowUpTask,
     Issue,
@@ -22,6 +24,8 @@ from src.backend.models import (
     JiraProject,
     Meeting,
     MeetingMember,
+    OrganizationMember,
+    OrgMemberStatusEnum,
     Sprint,
     SprintStatusEnum,
     TranscriptSegment,
@@ -78,11 +82,40 @@ def _get_project_by_id_or_key(identifier: str, db: Session) -> JiraProject:
 # ── Projects ─────────────────────────────────────────
 @router.get("/projects", response_model=List[JiraProjectResponse])
 def list_jira_projects(
+    organization_id: Optional[str] = None,
+    department_id: Optional[str] = None,
     current_user: User = Depends(deps.get_current_user),
     db: Session = Depends(get_db),
 ):
     """List all Jira Projects accessible to user."""
-    return db.query(JiraProject).order_by(JiraProject.created_at.desc()).all()
+    user_memberships = (
+        db.query(OrganizationMember)
+        .filter(
+            OrganizationMember.user_id == current_user.id,
+            OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
+        )
+        .all()
+    )
+    user_org_ids = [m.organization_id for m in user_memberships]
+    if not user_org_ids:
+        return []
+
+    query = db.query(JiraProject)
+    if organization_id:
+        if organization_id not in user_org_ids:
+            return []
+        query = query.filter(JiraProject.organization_id == organization_id)
+    else:
+        query = query.filter(JiraProject.organization_id.in_(user_org_ids))
+
+    if department_id:
+        query = query.filter(
+            or_(
+                JiraProject.department_id == department_id,
+                JiraProject.department_id.is_(None),
+            )
+        )
+    return query.order_by(JiraProject.created_at.desc()).all()
 
 
 @router.post("/projects", response_model=JiraProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -272,6 +305,18 @@ def list_project_issues(
 ):
     """List issues in a project with comprehensive filtering."""
     project = _get_project_by_id_or_key(project_id_or_key, db)
+    user_memberships = (
+        db.query(OrganizationMember)
+        .filter(
+            OrganizationMember.user_id == current_user.id,
+            OrganizationMember.status == OrgMemberStatusEnum.ACTIVE,
+        )
+        .all()
+    )
+    user_org_ids = [m.organization_id for m in user_memberships]
+    if project.organization_id and project.organization_id not in user_org_ids:
+        return []
+
     query = db.query(Issue).filter(Issue.project_id == project.id)
 
     if sprint_id == "backlog":
@@ -316,6 +361,18 @@ def create_issue(
     )
     new_sprint_pos = (highest_pos[0] + 1000) if highest_pos else 1000
 
+    target_dept_id = getattr(payload, "department_id", None)
+    if not target_dept_id and payload.assignee_id:
+        dm = db.query(DepartmentMember).filter(DepartmentMember.user_id == payload.assignee_id).first()
+        if dm:
+            target_dept_id = dm.department_id
+    if not target_dept_id and project.department_id:
+        target_dept_id = project.department_id
+    if not target_dept_id:
+        dm_reporter = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+        if dm_reporter:
+            target_dept_id = dm_reporter.department_id
+
     issue = Issue(
         project_id=project.id,
         key=issue_key,
@@ -332,6 +389,7 @@ def create_issue(
         board_position=new_sprint_pos,
         reporter_id=current_user.id,
         assignee_id=payload.assignee_id,
+        department_id=target_dept_id,
         due_date=payload.due_date,
         meeting_id=payload.meeting_id,
         transcript_segment_id=payload.transcript_segment_id,

@@ -76,13 +76,31 @@ import {
   PieChart,
   Calendar,
   ClipboardList,
-  LayoutGrid,
+  Bell,
+  BellOff,
   BellRing,
   BellDot,
+  XCircle,
+  FileQuestion,
+  MapPin,
+  Briefcase,
+  ListChecks,
+  AlignLeft,
+  Gift,
+  GitFork,
+  Coins,
+  MessageSquareText,
+  Award,
+  Star,
+  GraduationCap,
+  Mail,
+  CircleDot,
+  CheckCheck,
   Filter,
   Layers,
   Phone,
   Wifi,
+  LayoutGrid,
   LucideProps,
 } from 'lucide-react';
 
@@ -287,6 +305,10 @@ export function MatIcon({
       return <EyeOff size={numSize} className={className} color={color} {...props} />;
     case 'drag_indicator':
       return <GripVertical size={numSize} className={className} color={color} {...props} />;
+    case 'notifications':
+      return <Bell size={numSize} className={className} color={color} {...props} />;
+    case 'notifications_off':
+      return <BellOff size={numSize} className={className} color={color} {...props} />;
     case 'notifications_active':
       return <BellRing size={numSize} className={className} color={color} {...props} />;
     case 'notification_important':
@@ -309,8 +331,61 @@ export function MatIcon({
     case 'description':
       return <FileText size={numSize} className={className} color={color} {...props} />;
 
+    // Status, Recruitment & Workflow Semantics
+    case 'cancel':
+    case 'cancel_outlined':
+      return <XCircle size={numSize} className={className} color={color} {...props} />;
+    case 'quiz':
+    case 'help':
+    case 'help_outline':
+      return <FileQuestion size={numSize} className={className} color={color} {...props} />;
+    case 'work':
+    case 'work_outline':
+    case 'business_center':
+      return <Briefcase size={numSize} className={className} color={color} {...props} />;
+    case 'location_on':
+    case 'location':
+    case 'place':
+    case 'pin_drop':
+      return <MapPin size={numSize} className={className} color={color} {...props} />;
+    case 'checklist':
+    case 'check_list':
+      return <ListChecks size={numSize} className={className} color={color} {...props} />;
+    case 'subject':
+      return <AlignLeft size={numSize} className={className} color={color} {...props} />;
+    case 'card_giftcard':
+    case 'redeem':
+      return <Gift size={numSize} className={className} color={color} {...props} />;
+    case 'schema':
+    case 'alt_route':
+      return <GitFork size={numSize} className={className} color={color} {...props} />;
+    case 'payments':
+    case 'paid':
+    case 'monetization_on':
+      return <Coins size={numSize} className={className} color={color} {...props} />;
+    case 'chat':
+    case 'chat_bubble':
+    case 'forum':
+    case 'question_answer':
+      return <MessageSquareText size={numSize} className={className} color={color} {...props} />;
+    case 'military_tech':
+      return <Award size={numSize} className={className} color={color} {...props} />;
+    case 'star':
+    case 'star_rate':
+      return <Star size={numSize} className={className} color={color} {...props} />;
+    case 'school':
+      return <GraduationCap size={numSize} className={className} color={color} {...props} />;
+    case 'mail':
+    case 'email':
+    case 'mark_email_read':
+      return <Mail size={numSize} className={className} color={color} {...props} />;
+    case 'apartment':
+      return <Building size={numSize} className={className} color={color} {...props} />;
+    case 'done_all':
+      return <CheckCheck size={numSize} className={className} color={color} {...props} />;
+
     default:
-      return <Sparkles size={numSize} className={className} color={color} {...props} />;
+      return <CircleDot size={numSize} className={className} color={color} {...props} />;
   }
 }
 

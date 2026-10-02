@@ -361,14 +361,15 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       let proj: JiraProject | null = null;
       if (projects && projects.length > 0) {
         proj =
-          projects.find((p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA') ||
-          projects[0];
+          projects.find(
+            (p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA'
+          ) || projects[0];
       } else {
         // Auto-create initial project for this department
         try {
           proj = await jiraApi.createProject({
             key: 'ENG',
-            name: user?.department_name || 'Khối Kỹ Thuật',
+            name: user?.department_name || 'Bộ Phận Kỹ Thuật',
             description: 'Dự án quản lý công việc và phân bổ nhiệm vụ sau cuộc họp',
             department_id: user?.department_id || undefined,
             organization_id: resolvedOrgId,

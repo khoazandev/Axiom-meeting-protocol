@@ -341,8 +341,9 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
       let proj: JiraProject | null = null;
       if (projects && projects.length > 0) {
         proj =
-          projects.find((p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA') ||
-          projects[0];
+          projects.find(
+            (p) => p.department_id === myDeptId || p.key === 'ENG' || p.key === 'SMA'
+          ) || projects[0];
       }
 
       setActiveProject(proj);

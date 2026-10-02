@@ -58,7 +58,7 @@ export function OverviewPulseTab({
     'Hội Nghị Ban Điều Hành Cấp Cao — Định Hướng Chiến Lược Qwen DX-OS'
   );
   const [execAgenda, setExecAgenda] = useState(
-    'Chương trình làm việc: 1. Đánh giá chỉ số thực thi quý; 2. Thống nhất cơ chế bảo mật On-Premise; 3. Giao chỉ tiêu cho các khối phòng ban.'
+    'Chương trình làm việc: 1. Đánh giá chỉ số thực thi quý; 2. Thống nhất cơ chế bảo mật On-Premise; 3. Giao chỉ tiêu cho các bộ phận phòng ban.'
   );
   const [execSchedule, setExecSchedule] = useState(() => {
     const d = new Date();
@@ -173,7 +173,7 @@ export function OverviewPulseTab({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <h2 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Trung tâm Chỉ huy Doanh nghiệp
+              Tổng Quan Vận Hành
             </h2>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono">
               Live Pulse
@@ -365,7 +365,7 @@ export function OverviewPulseTab({
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-mono">
-                          {m.department_name || 'Khối Chung'}
+                          {m.department_name || 'Bộ Phận Chung'}
                         </span>
                         <span className="text-[11px] text-slate-500 dark:text-slate-400">
                           Đề xuất bởi:{' '}
@@ -449,7 +449,7 @@ export function OverviewPulseTab({
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Trung tâm điều hành cuộc họp
+                    Danh Sách Phiên Họp
                   </h3>
                 </div>
               </div>
@@ -622,7 +622,7 @@ export function OverviewPulseTab({
                       <div className="space-y-1.5 min-w-0">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
-                            {meeting.department_name || 'Khối Doanh Nghiệp'}
+                            {meeting.department_name || 'Bộ Phận Doanh Nghiệp'}
                           </span>
 
                           {/* Dynamic State Badge (SẮP, ĐANG, KẾT THÚC) */}
@@ -835,112 +835,6 @@ export function OverviewPulseTab({
           onClose={() => setSelectedMeetingForDetails(null)}
         />
       )}
-
-      {/* ── LOWER STRATEGIC DECK: KỶ LUẬT PROTOCOL & SỨC KHỎE HẠ TẦNG ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Protocol Discipline Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs p-5 space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <MatIcon name="gavel" className="text-amber-500 text-[18px]" />
-              <span>Quy chế kỷ luật cuộc họp (DX-OS Protocol)</span>
-            </h3>
-            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded font-mono">
-              100% Tuân thủ
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Đảm bảo tính chặt chẽ trong từng phiên họp: Agenda bắt buộc, AI ghi biên bản tự động và
-            mã hóa độc lập.
-          </p>
-
-          <div className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-2">
-                <MatIcon name="check_circle" className="text-emerald-500 text-[16px]" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  Cổng Agenda bắt buộc (≥ 20 ký tự)
-                </span>
-              </div>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">Đang bật</span>
-            </div>
-
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-2">
-                <MatIcon name="check_circle" className="text-emerald-500 text-[16px]" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  Trợ lý Ghi chép MoM Qwen AI
-                </span>
-              </div>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                Tự động trích xuất
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-2">
-                <MatIcon name="shield" className="text-blue-500 text-[16px]" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  Lưu trữ On-Premise Sovereign
-                </span>
-              </div>
-              <span className="font-bold text-blue-600 dark:text-blue-400">AES-256 E2EE</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Infrastructure Health Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs p-5 space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <MatIcon name="dns" className="text-blue-500 text-[18px]" />
-              <span>Sẵn sàng hạ tầng trực tuyến</span>
-            </h3>
-            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded font-mono">
-              99.98% SLA
-            </span>
-          </div>
-
-          <div className="space-y-2.5 text-xs">
-            <div>
-              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
-                <span>LiveKit WebRTC Server</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  Port 7880 • Sẵn sàng
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full w-[98%]" />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
-                <span>PostgreSQL Core Database</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                  Port 5433 • Đã kết nối
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-blue-500 h-full w-[100%]" />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mb-1">
-                <span>Ollama LLM Engine (Extraction Model)</span>
-                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                  Port 11434 • GPU Active
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-purple-500 h-full w-[88%]" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* ── Modal Tạo Cuộc Họp Cấp Cao (Executive Meeting Modal) ── */}
       {isExecModalOpen && (

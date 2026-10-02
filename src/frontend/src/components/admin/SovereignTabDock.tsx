@@ -22,9 +22,6 @@ const TABS: TabItem[] = [
     label: 'Tổng quan',
     sublabel: 'Giám sát điều hành',
     icon: 'speed',
-    badge: '3 Đang họp',
-    badgeColor:
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300/50',
     isLive: true,
   },
   {
@@ -32,45 +29,30 @@ const TABS: TabItem[] = [
     label: 'Nhân sự & RBAC',
     sublabel: 'Phân quyền & Tài khoản',
     icon: 'manage_accounts',
-    badge: '10 người',
-    badgeColor:
-      'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/50',
   },
   {
     id: 'departments',
-    label: 'Cơ cấu Phòng ban',
-    sublabel: 'Sơ đồ & Sức khỏe họp',
+    label: 'Quản lý công việc',
+    sublabel: 'Sơ đồ & Tiến độ',
     icon: 'account_tree',
-    badge: '5 khối',
-    badgeColor:
-      'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300/50',
   },
   {
     id: 'policies',
-    label: 'Kỷ luật Cuộc họp',
-    sublabel: 'Agenda Gate & Qwen AI',
+    label: 'Cổng kiểm soát',
+    sublabel: 'Agenda Gate & Quy chế',
     icon: 'gavel',
-    badge: '6 chính sách',
-    badgeColor:
-      'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300/50',
   },
   {
     id: 'audit',
-    label: 'Kiểm toán An ninh',
+    label: 'Kiểm toán an ninh',
     sublabel: 'Nhật ký & Rủi ro',
     icon: 'security',
-    badge: 'ISO/IEC',
-    badgeColor:
-      'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300/50',
   },
   {
     id: 'webhooks',
     label: 'Tích hợp & API',
     sublabel: 'Webhooks & Simulator',
     icon: 'webhook',
-    badge: '3 Endpoints',
-    badgeColor:
-      'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300 border-cyan-300/50',
   },
 ];
 
@@ -112,21 +94,6 @@ export function SovereignTabDock({ activeTab, onTabChange }: SovereignTabDockPro
 
                 {/* Tab Label */}
                 <span className="tracking-tight whitespace-nowrap text-xs">{tab.label}</span>
-
-                {/* Live Pulse or Count Badge */}
-                {tab.badge && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${tab.badgeColor}`}
-                  >
-                    {tab.isLive && (
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                      </span>
-                    )}
-                    {tab.badge}
-                  </span>
-                )}
 
                 {/* Active Indicator Underline */}
                 {isActive && (

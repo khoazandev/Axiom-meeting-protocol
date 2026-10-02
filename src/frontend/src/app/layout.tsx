@@ -1,40 +1,49 @@
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans, Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { Toaster } from '@/components/ui/sonner';
 import { GlobalErrorListener } from '@/components/shared/global-error-listener';
 
+const beVietnam = Be_Vietnam_Pro({
+  variable: '--font-be-vietnam',
+  subsets: ['latin', 'vietnamese'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+});
+
 const plusJakarta = Plus_Jakarta_Sans({
   variable: '--font-sans',
-  subsets: ['latin'],
+  subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Axiom - Intelligent Meetings',
+  title: 'Axiom - Digital Enterprise OS',
   description:
-    'On-premise video conferencing with native AI intelligence. Enforce agendas, transcribe securely, and capture structural data.',
+    'Hệ điều hành doanh nghiệp số bảo mật On-Premise: Hội nghị WebRTC bảo mật, bóc tách công việc tự động với AI cục bộ, quản trị phòng ban và quy trình số.',
   manifest: '/manifest.json',
   keywords: [
+    'doanh nghiệp số',
+    'digital enterprise',
     'họp trực tuyến',
-    'video conferencing',
     'AI ghi chú',
     'biên bản họp',
     'LiveKit',
     'WebRTC',
   ],
   openGraph: {
-    title: 'Axiom - Intelligent Meetings',
-    description: 'On-premise video conferencing with native AI intelligence.',
+    title: 'Axiom - Digital Enterprise OS',
+    description: 'Nền tảng hệ điều hành doanh nghiệp số bảo mật on-premise với AI cục bộ.',
     type: 'website',
-    locale: 'en_US',
+    locale: 'vi_VN',
     siteName: 'Axiom',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Axiom - Intelligent Meetings',
-    description: 'On-premise video conferencing with native AI intelligence.',
+    title: 'Axiom - Digital Enterprise OS',
+    description: 'Nền tảng hệ điều hành doanh nghiệp số bảo mật on-premise với AI cục bộ.',
   },
   robots: {
     index: true,
@@ -50,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} h-full antialiased`}
+      className={`${beVietnam.variable} ${plusJakarta.variable} h-full antialiased font-sans bg-background text-foreground`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
@@ -62,7 +71,7 @@ export default function RootLayout({
         {/* Anti-FOUC: set theme class before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('axiom_theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light'||!t)document.documentElement.classList.remove('dark');else if(t==='system'){if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}})();`,
+            __html: `(function(){try{var raw=localStorage.getItem('axiom_theme');var theme='dark';if(raw){if(raw.indexOf('{')===0){var data=JSON.parse(raw);theme=(data&&data.state&&data.state.theme)||'dark';}else{theme=raw;}}var isDark=theme==='dark'||(theme==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(isDark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){document.documentElement.classList.add('dark');}})();`,
           }}
         />
       </head>

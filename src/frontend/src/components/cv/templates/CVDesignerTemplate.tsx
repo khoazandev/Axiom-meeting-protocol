@@ -73,7 +73,11 @@ export function CVDesignerTemplate({
 
           {personalInfo.avatarUrl ? (
             <div className="w-20 h-20 rounded-3xl overflow-hidden ring-4 ring-purple-100 shadow-md shrink-0">
-              <img src={personalInfo.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              <img
+                src={personalInfo.avatarUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
             </div>
           ) : (
             <div className="w-18 h-18 rounded-3xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-black text-2xl shadow-md shrink-0">

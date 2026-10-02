@@ -11,7 +11,9 @@ import {
   TrendingUp,
   Zap,
   AlignLeft,
+  Loader2,
 } from 'lucide-react';
+import { candidatePortalApi } from '@/lib/recruitment-api';
 
 interface CanvaMagicWriteModalProps {
   isOpen: boolean;
@@ -33,37 +35,43 @@ export function CanvaMagicWriteModal({
 
   if (!isOpen) return null;
 
-  const handleGenerate = (type: 'professional' | 'metrics' | 'concise' | 'grammar') => {
+  const handleGenerate = async (type: 'professional' | 'metrics' | 'concise' | 'grammar') => {
     setIsGenerating(true);
-    setTimeout(() => {
-      let results: string[] = [];
-      const base = inputText.trim() || 'Kỹ sư phần mềm phát triển hệ thống và tối ưu cơ sở dữ liệu cho doanh nghiệp.';
+    const base =
+      inputText.trim() ||
+      'Kỹ sư phần mềm phát triển hệ thống và tối ưu cơ sở dữ liệu cho doanh nghiệp.';
 
-      if (type === 'professional') {
-        results = [
-          `Thiết kế và triển khai kiến trúc phần mềm hiệu năng cao, tối ưu hóa các quy trình cốt lõi và đảm bảo tính sẵn sàng 99.9% cho toàn bộ hệ thống.`,
-          `Chủ trì nghiên cứu và xây dựng giải pháp công nghệ quy mô lớn, trực tiếp định hướng chiến lược kỹ thuật và dẫn dắt đội ngũ kỹ sư Agile đạt mục tiêu kinh doanh.`,
-        ];
-      } else if (type === 'metrics') {
-        results = [
-          `Tối ưu hóa thông lượng xử lý của hệ thống backend, giảm 45% thời gian phản hồi API và tiết kiệm $15,000 chi phí hạ tầng điện toán đám mây mỗi quý.`,
-          `Nâng cấp pipeline phân tán xử lý hơn 120,000 giao dịch/ngày, nâng tỷ lệ hoàn thành tác vụ lên 98.6% và giảm thiểu 60% lỗi gián đoạn dịch vụ.`,
-        ];
-      } else if (type === 'concise') {
-        results = [
-          `Kiến trúc sư hệ thống phần mềm hiệu năng cao, chuyên sâu microservices và tối ưu cơ sở dữ liệu lớn.`,
-          `Kỹ sư chuyên phát triển giải pháp SaaS mở rộng quy mô, giảm 40% độ trễ và tăng tốc độ xử lý tác vụ.`,
-        ];
-      } else {
-        results = [
-          base.replace(/\s+/g, ' ').trim() + ' — Đã chuẩn hóa chính tả và thuật ngữ chuyên ngành công nghệ.',
-        ];
+    try {
+      const res = await candidatePortalApi.magicWrite({
+        text: base,
+        action_type: type,
+      });
+      if (res.generated_options && res.generated_options.length > 0) {
+        setGeneratedOptions(res.generated_options);
+        setSelectedOptionIdx(0);
       }
-
-      setGeneratedOptions(results);
+    } catch {
+      // Fallback
+      if (type === 'metrics') {
+        setGeneratedOptions([
+          `Tối ưu hóa thông lượng xử lý của hệ thống backend, giảm 45% thời gian phản hồi API và tiết kiệm chi phí hạ tầng điện toán đám mây.`,
+          `Nâng cấp pipeline phân tán xử lý hơn 120,000 giao dịch/ngày, nâng tỷ lệ hoàn thành tác vụ lên 98.6%.`,
+        ]);
+      } else if (type === 'concise') {
+        setGeneratedOptions([
+          `Kiến trúc sư hệ thống phần mềm hiệu năng cao, chuyên sâu microservices và tối ưu cơ sở dữ liệu lớn.`,
+          `Kỹ sư chuyên phát triển giải pháp mở rộng quy mô, giảm 40% độ trễ và tăng tốc độ xử lý tác vụ.`,
+        ]);
+      } else {
+        setGeneratedOptions([
+          `Thiết kế và triển khai kiến trúc phần mềm hiệu năng cao, tối ưu hóa các quy trình cốt lõi và đảm bảo tính sẵn sàng 99.9% cho toàn bộ hệ thống.`,
+          `Chủ trì nghiên cứu và xây dựng giải pháp công nghệ quy mô lớn, trực tiếp định hướng chiến lược kỹ thuật và dẫn dắt đội ngũ kỹ sư đạt mục tiêu kinh doanh.`,
+        ]);
+      }
       setSelectedOptionIdx(0);
+    } finally {
       setIsGenerating(false);
-    }, 600);
+    }
   };
 
   const handleApply = () => {

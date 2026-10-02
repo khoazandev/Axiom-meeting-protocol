@@ -7,6 +7,7 @@ import uuid
 from datetime import timezone
 
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.backend.api import deps
@@ -85,6 +86,10 @@ def create_invitation(
         if not role_obj:
             role_obj = db.query(Role).filter(Role.name == "MEMBER").first()
 
+    if role_obj and role_obj.name == "OWNER":
+        from src.backend.core.exceptions import ValidationException
+        raise ValidationException("Mỗi doanh nghiệp chỉ có duy nhất 1 Chủ sở hữu (Owner). Không thể phát hành thư mời cho vai trò Owner.")
+
     resolved_role_id = role_obj.id if role_obj else role_id
 
     # Resolve Department if provided
@@ -155,6 +160,22 @@ def create_invitation(
     )
 
     email_status = "SENT_SMTP" if email_result.get("sent") else "DISPATCHED_DEV"
+
+    # If recipient user is already registered in system, send an in-app notification to their bell icon
+    existing_user = db.query(User).filter(func.lower(User.email) == func.lower(invitation.email)).first()
+    if existing_user:
+        try:
+            from src.backend.api.v1.notifications import send_user_notification
+            send_user_notification(
+                db=db,
+                user_id=existing_user.id,
+                title=f"Thư mời gia nhập {org.name}",
+                content=f"Bạn nhận được lời mời gia nhập {org.name} với chức danh {payload.job_title or 'Thành viên'}. Mã lời mời: {invitation.invite_code}",
+                type="INVITATION",
+                link=register_url,
+            )
+        except Exception:
+            pass
 
     return OrgInvitationResponse(
         id=invitation.id,

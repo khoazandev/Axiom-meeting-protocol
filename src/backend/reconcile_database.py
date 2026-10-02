@@ -176,7 +176,7 @@ def reconcile():
 
         # Map department name -> (Manager email, [Members emails])
         dept_structure = {
-            "Khối Kỹ Thuật & Công Nghệ": {
+            "Bộ Phận Kỹ Thuật & Công Nghệ": {
                 "manager": "manager.khoa@axiom.com",
                 "members": [
                     "long.le@axiom.internal",
@@ -189,7 +189,7 @@ def reconcile():
                     "nguyenvana.test@gmail.com",
                 ],
             },
-            "Khối Sản Phẩm & Thiết Kế": {
+            "Bộ Phận Sản Phẩm & Thiết Kế": {
                 "manager": "phuong.nguyen@axiom.internal",
                 "members": [
                     "ha.dang@axiom.internal",
@@ -198,7 +198,7 @@ def reconcile():
                     "triet.pham@axiom.internal",
                 ],
             },
-            "Khối Kinh Doanh & Tiếp Thị": {
+            "Bộ Phận Kinh Doanh & Tiếp Thị": {
                 "manager": "hung.do@axiom.internal",
                 "members": [
                     "nhi.hoang@axiom.internal",
@@ -208,7 +208,7 @@ def reconcile():
                     "ngul4914@gmail.com",
                 ],
             },
-            "Khối Vận Hành & Nhân Sự": {
+            "Bộ Phận Vận Hành & Nhân Sự": {
                 "manager": "trang.vu@axiom.internal",
                 "members": [
                     "thang.bui@axiom.internal",
@@ -218,7 +218,7 @@ def reconcile():
                     "son.phan@axiom.internal",
                 ],
             },
-            "Khối Tài Chính & Pháp Chế": {
+            "Bộ Phận Tài Chính & Pháp Chế": {
                 "manager": "khoa.pham@axiom.internal",
                 "members": [
                     "mai.do@axiom.internal",

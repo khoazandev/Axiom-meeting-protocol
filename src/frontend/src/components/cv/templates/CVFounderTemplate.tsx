@@ -83,19 +83,27 @@ export function CVFounderTemplate({
         <div className="mb-6 grid grid-cols-4 gap-3 text-center">
           <div className="p-3 rounded-2xl bg-orange-50/60 border border-orange-200">
             <div className="text-lg font-black text-orange-600">50,000+</div>
-            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">Người Dùng Hoạt Động</div>
+            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">
+              Người Dùng Hoạt Động
+            </div>
           </div>
           <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="text-lg font-black text-slate-900">42%</div>
-            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">Tối Ưu Hiệu Năng</div>
+            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">
+              Tối Ưu Hiệu Năng
+            </div>
           </div>
           <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200">
             <div className="text-lg font-black text-emerald-600">$500K</div>
-            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">Seed Fund Raised</div>
+            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">
+              Seed Fund Raised
+            </div>
           </div>
           <div className="p-3 rounded-2xl bg-blue-50/60 border border-blue-200">
             <div className="text-lg font-black text-blue-600">99.9%</div>
-            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">SLA Uptime System</div>
+            <div className="text-[9.5px] font-bold text-slate-600 uppercase mt-0.5">
+              SLA Uptime System
+            </div>
           </div>
         </div>
       </CanvaBoundingBox>

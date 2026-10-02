@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 interface MemberNavbarProps {
   searchQuery: string;
@@ -98,6 +99,9 @@ export function MemberNavbar({
           </button>
         </div>
 
+        {/* Theme Toggle Button */}
+        <ThemeToggle />
+
         <div className="h-5 w-px bg-slate-200 dark:bg-slate-800" />
 
         {/* Member Profile Avatar with Dropdown */}
@@ -143,7 +147,7 @@ export function MemberNavbar({
                 <div className="py-1">
                   <div className="px-3.5 py-1.5 text-[11px] text-slate-500">
                     Phòng ban:{' '}
-                    <strong className="text-slate-700 dark:text-slate-300">Khối Kỹ Thuật</strong>
+                    <strong className="text-slate-700 dark:text-slate-300">Bộ Phận Kỹ Thuật</strong>
                   </div>
                 </div>
 

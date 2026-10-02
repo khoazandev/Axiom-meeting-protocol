@@ -94,7 +94,11 @@ export function EditableInlineText({
           ? 'outline-2 outline-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 rounded px-1 min-w-[20px] inline-block shadow-xs'
           : 'hover:outline-1 hover:outline-dashed hover:outline-indigo-400/70 hover:bg-indigo-50/20 cursor-text'
       } ${className}`}
-      title={isEditing ? 'Nhấn Enter hoặc click ra ngoài để lưu' : 'Nhấp đúp chuột để sửa trực tiếp (Canva Style)'}
+      title={
+        isEditing
+          ? 'Nhấn Enter hoặc click ra ngoài để lưu'
+          : 'Nhấp đúp chuột để sửa trực tiếp (Canva Style)'
+      }
     >
       {value || placeholder}
     </Tag>

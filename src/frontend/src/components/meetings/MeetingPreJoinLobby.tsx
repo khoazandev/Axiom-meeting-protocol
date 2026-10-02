@@ -86,6 +86,7 @@ interface MeetingPreJoinLobbyProps {
   meetingAgenda?: string | null;
   user: User | null;
   participantName: string;
+  onParticipantNameChange?: (name: string) => void;
   selectedLanguage?: string;
   onLanguageChange?: (lang: string) => void;
   isJoining: boolean;
@@ -104,6 +105,7 @@ export function MeetingPreJoinLobby({
   meetingAgenda,
   user,
   participantName,
+  onParticipantNameChange,
   selectedLanguage = 'vi',
   isJoining,
   onJoin,
@@ -642,10 +644,25 @@ export function MeetingPreJoinLobby({
                   {participantName ? participantName.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-slate-400">Tham gia với tư cách</p>
-                  <p className="text-xs font-bold text-slate-800 truncate">
-                    {participantName || 'Thành viên'}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-slate-400 font-medium">Tên hiển thị tham gia cuộc họp</p>
+                    {onParticipantNameChange && (
+                      <span className="text-[10px] text-blue-600 font-semibold">Tùy chỉnh</span>
+                    )}
+                  </div>
+                  {onParticipantNameChange ? (
+                    <input
+                      type="text"
+                      value={participantName}
+                      onChange={(e) => onParticipantNameChange(e.target.value)}
+                      placeholder="Nhập họ và tên hiển thị..."
+                      className="w-full mt-1 px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
+                    />
+                  ) : (
+                    <p className="text-xs font-bold text-slate-800 truncate">
+                      {participantName || 'Thành viên'}
+                    </p>
+                  )}
                 </div>
               </div>
 

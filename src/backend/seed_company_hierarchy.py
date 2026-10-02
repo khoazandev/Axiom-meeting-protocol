@@ -65,7 +65,7 @@ def seed():
                     email=o_data["email"],
                     full_name=o_data["full_name"],
                     avatar_url=o_data["avatar_url"],
-                    password_hash=hash_password("Axiom@123456"),
+                    password_hash=hash_password("password123"),
                     is_active=True,
                 )
                 db.add(u)
@@ -96,7 +96,7 @@ def seed():
         departments_spec = [
             {
                 "code": "ENG",
-                "name": "Khối Kỹ Thuật & Công Nghệ",
+                "name": "Bộ Phận Kỹ Thuật & Công Nghệ",
                 "description": "[icon:code] Nghiên cứu phát triển AI Protocol, WebRTC realtime và tối ưu hóa hạ tầng On-Premise",
                 "color": "#3B82F6",
                 "manager": {
@@ -141,7 +141,7 @@ def seed():
             },
             {
                 "code": "PROD",
-                "name": "Khối Sản Phẩm & Thiết Kế",
+                "name": "Bộ Phận Sản Phẩm & Thiết Kế",
                 "description": "[icon:palette] Định hình chiến lược sản phẩm, trải nghiệm người dùng UI/UX và chuẩn hóa quy trình",
                 "color": "#8B5CF6",
                 "manager": {
@@ -181,7 +181,7 @@ def seed():
             },
             {
                 "code": "BIZ",
-                "name": "Khối Kinh Doanh & Tiếp Thị",
+                "name": "Bộ Phận Kinh Doanh & Tiếp Thị",
                 "description": "[icon:trending_up] Mở rộng quan hệ đối tác chiến lược, tư vấn chuyển đổi số doanh nghiệp và phát triển thương hiệu",
                 "color": "#EC4899",
                 "manager": {
@@ -216,12 +216,12 @@ def seed():
                     ("Tổ chức hội thảo DX-OS Security Protocol quý III", -5, 12, "IN_PROGRESS", 5, "HIGH", 1),
                     ("Phát động chiến dịch Marketing giải pháp On-Premise Meeting", 3, 20, "TODO", 5, "MEDIUM", 2),
                     ("Khảo sát nhu cầu tích hợp Jira & Slack từ 50 doanh nghiệp đối tác", 10, 30, "TODO", 8, "LOW", 3),
-                    ("Ký kết thỏa thuận bảo mật dữ liệu khách hàng khối Ngân hàng", 22, 45, "TODO", 5, "HIGH", 4),
+                    ("Ký kết thỏa thuận bảo mật dữ liệu khách hàng nhóm Ngân hàng", 22, 45, "TODO", 5, "HIGH", 4),
                 ],
             },
             {
                 "code": "OPS",
-                "name": "Khối Vận Hành & Nhân Sự",
+                "name": "Bộ Phận Vận Hành & Nhân Sự",
                 "description": "[icon:precision_manufacturing] Tuyển dụng nhân tài, xây dựng văn hóa doanh nghiệp và giám sát quy chế kỷ luật cuộc họp",
                 "color": "#10B981",
                 "manager": {
@@ -261,7 +261,7 @@ def seed():
             },
             {
                 "code": "FIN",
-                "name": "Khối Tài Chính & Pháp Chế",
+                "name": "Bộ Phận Tài Chính & Pháp Chế",
                 "description": "[icon:account_balance] Quản trị dòng tiền, thẩm định ngân sách dự án và rà soát pháp lý hợp đồng bảo mật",
                 "color": "#F59E0B",
                 "manager": {
@@ -308,7 +308,7 @@ def seed():
                 organization_id=org.id,
                 name="Axiom Enterprise Project",
                 key="AXM",
-                lead_id=u.id,
+                created_by_id=u.id,
             )
             db.add(jira_project)
             db.commit()
@@ -346,7 +346,7 @@ def seed():
                     email=m_data["email"],
                     full_name=m_data["full_name"],
                     avatar_url=m_data["avatar_url"],
-                    password_hash=hash_password("Axiom@123456"),
+                    password_hash=hash_password("password123"),
                     is_active=True,
                 )
                 db.add(mgr_user)
@@ -399,7 +399,7 @@ def seed():
                         email=mem_data["email"],
                         full_name=mem_data["full_name"],
                         avatar_url=mem_data["avatar_url"],
-                        password_hash=hash_password("Axiom@123456"),
+                        password_hash=hash_password("password123"),
                         is_active=True,
                     )
                     db.add(mem_user)

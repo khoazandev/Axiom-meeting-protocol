@@ -2,7 +2,7 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   /* ── Axiom Design Tokens ── */
@@ -51,7 +51,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-be-vietnam), var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-be-vietnam), Georgia, Cambria, 'Times New Roman', Times, serif;
   --font-mono: var(--font-geist-mono);
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -463,4 +464,35 @@
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined', sans-serif;
+}
+
+/* ── Light Pull Cord Swinging Pendulum Animation ── */
+@keyframes pendulumSwing {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(11deg);
+  }
+  40% {
+    transform: rotate(-9deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+  80% {
+    transform: rotate(-2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-pendulum {
+  transform-origin: top center;
+  animation: pendulumSwing 4.2s ease-in-out infinite;
+}
+
+.animate-pendulum:hover {
+  animation: pendulumSwing 1.8s ease-in-out infinite;
 }

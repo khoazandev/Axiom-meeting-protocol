@@ -2,14 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import {
-  BookOpen,
-  Search,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  ChevronRight,
-} from 'lucide-react';
+import { BookOpen, Search, Loader2, AlertCircle, RefreshCw, ChevronRight } from 'lucide-react';
 import { knowledgeApi, KnowledgeMatch } from '@/lib/api';
 import { getErrorMessage } from '@/lib/errors';
 
@@ -253,14 +246,17 @@ export function MemberKnowledgeTab({ onNotify }: MemberKnowledgeTabProps) {
 
                 <div className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
                   {item.speaker_name && (
-                    <strong className="text-slate-900 dark:text-white">{item.speaker_name}: </strong>
+                    <strong className="text-slate-900 dark:text-white">
+                      {item.speaker_name}:{' '}
+                    </strong>
                   )}
                   &ldquo;{item.snippet}&rdquo;
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-[11px] text-slate-400">
                   <span className="truncate max-w-[60%]">
-                    Nguồn: <strong className="text-slate-600 dark:text-slate-400">{item.source}</strong>
+                    Nguồn:{' '}
+                    <strong className="text-slate-600 dark:text-slate-400">{item.source}</strong>
                   </span>
                   {item.meeting_id && (
                     <Link

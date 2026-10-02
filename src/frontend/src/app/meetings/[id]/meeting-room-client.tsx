@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Loader2,
@@ -22,6 +22,7 @@ import {
   PhoneOff,
   Globe,
   User,
+  Users,
   Pencil,
   Check,
   X,
@@ -41,6 +42,7 @@ import {
   ArrowRight,
   CheckCircle2,
   UserCheck,
+  Monitor,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -57,6 +59,7 @@ import {
   useChat,
   useRoomContext,
   useDataChannel,
+  useParticipants,
 } from '@livekit/components-react';
 import { Track, ConnectionState, RoomEvent } from 'livekit-client';
 import '@livekit/components-styles';
@@ -373,73 +376,79 @@ function RecordsListener({
   const lastProcessedRef = useRef<string>('');
   const lastProcessedTimeRef = useRef<number>(0);
 
-  const processIncomingMessage = useCallback((topic: string, text: string) => {
-    const now = Date.now();
-    if (text === lastProcessedRef.current && now - lastProcessedTimeRef.current < 500) {
-      return; // Deduplicate rapid twin events within 500ms
-    }
-    lastProcessedRef.current = text;
-    lastProcessedTimeRef.current = now;
-
-    try {
-      const data = JSON.parse(text);
-      const timeStr = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-
-      // Filter out self-broadcast messages (local participant already handled their own transcripts in WebSpeechPublisher)
-      if (room?.localParticipant?.identity && data.participant_identity === room.localParticipant.identity) {
-        return;
+  const processIncomingMessage = useCallback(
+    (topic: string, text: string) => {
+      const now = Date.now();
+      if (text === lastProcessedRef.current && now - lastProcessedTimeRef.current < 500) {
+        return; // Deduplicate rapid twin events within 500ms
       }
+      lastProcessedRef.current = text;
+      lastProcessedTimeRef.current = now;
 
-      if (data.type === 'task_realtime_detected') {
-        callbacksRef.current.onRealtimeTaskDetected?.(data.task || data);
-      } else if (data.type === 'original_transcript') {
-        const entry: RecordEntry = {
-          timestamp: timeStr,
-          participant_identity: data.participant_identity,
-          participant_name: data.participant_name,
-          original_text: data.original_text,
-          language: data.language || 'vi',
-          is_final: !!data.is_final,
-        };
-
-        callbacksRef.current.onLiveSubtitleUpdate?.({
-          ...entry,
-          text: data.original_text,
-          to_language: (data.language === 'en' ? 'vi' : 'en').toUpperCase(),
+      try {
+        const data = JSON.parse(text);
+        const timeStr = new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
         });
 
-        callbacksRef.current.onNewRecord(entry);
-        // Note: No onTranscriptFinalized here. Only the speaker's own browser saves their speech to DB.
-      } else if (data.type === 'translation_record' || data.type === 'translation') {
-        const fromLang = data.from_language || 'vi';
-        const toLang = data.to_language || (fromLang === 'en' ? 'vi' : 'en');
-        const entry: RecordEntry = {
-          timestamp: timeStr,
-          participant_identity: data.participant_identity,
-          participant_name: data.participant_name,
-          original_text: data.original_text,
-          translated_text: data.translated_text,
-          language: fromLang,
-          to_language: toLang,
-          is_final: true,
-        };
+        // Filter out self-broadcast messages (local participant already handled their own transcripts in WebSpeechPublisher)
+        if (
+          room?.localParticipant?.identity &&
+          data.participant_identity === room.localParticipant.identity
+        ) {
+          return;
+        }
 
-        callbacksRef.current.onLiveSubtitleUpdate?.({
-          ...entry,
-          text: data.original_text,
-          to_language: toLang.toUpperCase(),
-        });
+        if (data.type === 'task_realtime_detected') {
+          callbacksRef.current.onRealtimeTaskDetected?.(data.task || data);
+        } else if (data.type === 'original_transcript') {
+          const entry: RecordEntry = {
+            timestamp: timeStr,
+            participant_identity: data.participant_identity,
+            participant_name: data.participant_name,
+            original_text: data.original_text,
+            language: data.language || 'vi',
+            is_final: !!data.is_final,
+          };
 
-        callbacksRef.current.onNewRecord(entry);
+          callbacksRef.current.onLiveSubtitleUpdate?.({
+            ...entry,
+            text: data.original_text,
+            to_language: (data.language === 'en' ? 'vi' : 'en').toUpperCase(),
+          });
+
+          callbacksRef.current.onNewRecord(entry);
+          // Note: No onTranscriptFinalized here. Only the speaker's own browser saves their speech to DB.
+        } else if (data.type === 'translation_record' || data.type === 'translation') {
+          const fromLang = data.from_language || 'vi';
+          const toLang = data.to_language || (fromLang === 'en' ? 'vi' : 'en');
+          const entry: RecordEntry = {
+            timestamp: timeStr,
+            participant_identity: data.participant_identity,
+            participant_name: data.participant_name,
+            original_text: data.original_text,
+            translated_text: data.translated_text,
+            language: fromLang,
+            to_language: toLang,
+            is_final: true,
+          };
+
+          callbacksRef.current.onLiveSubtitleUpdate?.({
+            ...entry,
+            text: data.original_text,
+            to_language: toLang.toUpperCase(),
+          });
+
+          callbacksRef.current.onNewRecord(entry);
+        }
+      } catch (e) {
+        console.warn(`Failed to parse data message for topic ${topic}`, e);
       }
-    } catch (e) {
-      console.warn(`Failed to parse data message for topic ${topic}`, e);
-    }
-  }, [room]);
+    },
+    [room]
+  );
 
   // Single authoritative listener: RoomEvent.DataReceived
   useEffect(() => {
@@ -696,6 +705,11 @@ function LiveKitContent({
   const micVolume = useTrackVolume((microphoneTrack?.track as any) || undefined);
   const [isControlBarVisible, setIsControlBarVisible] = useState(true);
 
+  // LiveKit real-time participant roster
+  const participants = useParticipants();
+  const humanParticipants = participants.filter((p) => !p.identity.startsWith('agent-'));
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+
   // Activate translation audio muting hook
   useTranslationAudioMuting();
 
@@ -708,11 +722,14 @@ function LiveKitContent({
   );
 
   const tracks = allTracks.filter((t) => !t.participant.identity.startsWith('agent-'));
+  const screenShareTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
+  const cameraTracks = tracks.filter((t) => t.source === Track.Source.Camera);
+  const isPresenting = screenShareTracks.length > 0;
 
   return (
     <div className="w-full h-full flex flex-col p-3 bg-slate-50 gap-3">
       {/* Camera Frame */}
-      <div className="relative flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-[#181d28] border border-slate-200 shadow-sm">
+      <div className="relative flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-[#181d28] border border-slate-200 shadow-sm flex flex-col">
         {/* Virtual Background overlay if active */}
         {selectedBackground?.url && (
           <div
@@ -720,6 +737,7 @@ function LiveKitContent({
             style={{ backgroundImage: `url(${selectedBackground.url})` }}
           />
         )}
+
         {/* Live Audio Volume Visualizer when Mic is ON */}
         {isMicrophoneEnabled && (
           <div className="absolute top-4 left-4 z-40 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-emerald-300 text-xs font-medium flex items-center gap-2">
@@ -742,15 +760,136 @@ function LiveKitContent({
           </div>
         )}
 
-        {/* Dynamic Video Grid */}
+        {/* Active Participant Counter & Roster Dropdown */}
+        <div className="absolute top-4 right-4 z-40">
+          <button
+            type="button"
+            onClick={() => setShowParticipantsModal((prev) => !prev)}
+            className="px-3 py-1.5 rounded-xl bg-slate-900/85 hover:bg-slate-900 text-white backdrop-blur-md border border-white/15 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg hover:border-blue-400 group"
+            title="Nhấp để xem danh sách người đang tham gia cuộc họp"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <Users className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
+            <span>{humanParticipants.length} người đang tham gia</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {/* Participant Roster Popover */}
+          {showParticipantsModal && (
+            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-white/15 shadow-2xl p-3 text-white space-y-2 animate-in fade-in zoom-in-95 duration-150 z-50">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <span className="text-xs font-bold text-slate-200">
+                  Thành viên trong phòng ({humanParticipants.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowParticipantsModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-1.5 divide-y divide-white/5">
+                {humanParticipants.map((p) => {
+                  const isMe = p.identity === localParticipant?.identity;
+                  return (
+                    <div
+                      key={p.identity}
+                      className="pt-1.5 flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                          {(p.name || p.identity || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span
+                          className="truncate font-medium text-slate-200"
+                          title={p.name || p.identity}
+                        >
+                          {p.name || p.identity} {isMe && '(Bạn)'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+                        {p.isSpeaking && (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
+                            title="Đang nói"
+                          />
+                        )}
+                        {p.isMicrophoneEnabled ? (
+                          <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <MicOff className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                        {p.isCameraEnabled ? (
+                          <Video className="w-3.5 h-3.5 text-blue-400" />
+                        ) : (
+                          <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Screen Share Presentation Banner */}
+        {isPresenting && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-1.5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-blue-500/40 text-white text-xs font-bold flex items-center gap-2.5 shadow-xl animate-in fade-in slide-in-from-top-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping shrink-0" />
+            <span className="flex items-center gap-1.5 text-blue-300">
+              <Monitor className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>Đang trình bày:</span>
+            </span>
+            <span className="text-white max-w-[200px] truncate">
+              {screenShareTracks[0]?.participant?.name ||
+                screenShareTracks[0]?.participant?.identity ||
+                'Thành viên'}
+            </span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-mono">
+              Trình Chiếu
+            </span>
+          </div>
+        )}
+
+        {/* Dynamic Video Grid or Presentation Mode */}
         <LiveKitTileErrorBoundary>
-          <div className="w-full h-full p-2">
+          <div className="w-full h-full p-2 flex-1 min-h-0">
             {tracks.length === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2">
                 <Video className="w-8 h-8 opacity-40 animate-pulse" />
                 <span className="text-xs">Đang đồng bộ luồng truyền video...</span>
               </div>
+            ) : isPresenting ? (
+              /* Presentation Layout: Central Stage + Filmstrip */
+              <div className="w-full h-full flex flex-col md:flex-row gap-2.5">
+                {/* Main Screen Share Stage */}
+                <div className="relative flex-1 min-h-0 min-w-0 rounded-2xl overflow-hidden bg-black/95 flex items-center justify-center border border-white/10 shadow-2xl">
+                  <ParticipantTile
+                    trackRef={screenShareTracks[0]}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Webcam Filmstrip Sidebar */}
+                {cameraTracks.length > 0 && (
+                  <div className="w-full md:w-56 h-28 md:h-full flex md:flex-col gap-2 overflow-auto p-1 shrink-0">
+                    {cameraTracks.map((cam) => (
+                      <div
+                        key={cam.publication?.trackSid || cam.participant.identity}
+                        className="w-40 md:w-full h-full md:h-36 rounded-xl overflow-hidden shrink-0 border border-white/15 bg-slate-900 shadow-md relative"
+                      >
+                        <ParticipantTile trackRef={cam} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
+              /* Standard Multi-Tile Grid */
               <GridLayout
                 tracks={tracks}
                 className="w-full h-full grid gap-2"
@@ -894,6 +1033,9 @@ function LiveKitContent({
 export function MeetingRoomClient() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const guestNameParam = searchParams.get('guestName') || '';
+  const tokenParam = searchParams.get('token') || searchParams.get('auth_token') || '';
   const meetingId = params.id as string;
 
   // Suppress harmless LiveKit internal tile-sorting console errors and transient WS reconnect notices
@@ -1182,6 +1324,10 @@ export function MeetingRoomClient() {
   const user = useAuthStore((state) => state.user);
 
   const handleExitMeeting = useCallback(() => {
+    if (!user) {
+      router.push('/careers');
+      return;
+    }
     const roleUpper = (user?.role || '').toUpperCase();
     const isOwner = roleUpper === 'OWNER' || roleUpper === 'ADMIN';
     const isManager = roleUpper === 'MANAGER';
@@ -1193,18 +1339,39 @@ export function MeetingRoomClient() {
     } else if (roleUpper === 'MEMBER') {
       router.push('/member');
     } else {
-      router.push('/candidate/discovery');
+      router.push('/careers');
     }
   }, [user, router]);
+
+  // Handle direct magic token authentication from email invitation link
+  useEffect(() => {
+    if (tokenParam) {
+      try {
+        localStorage.setItem('axiom_auth_token', tokenParam);
+        localStorage.setItem('token', tokenParam);
+        document.cookie = `axiom_auth_token=${tokenParam}; path=/; max-age=604800; SameSite=Lax`;
+        useAuthStore.setState({ token: tokenParam });
+        authApi
+          .me()
+          .then((u) => {
+            if (u) {
+              useAuthStore.setState({ user: u, token: tokenParam });
+              if (!guestNameParam && u.full_name) {
+                setParticipantName(u.full_name);
+              }
+            }
+          })
+          .catch(() => {});
+      } catch (err) {
+        console.warn('Failed to parse URL authentication token:', err);
+      }
+    }
+  }, [tokenParam, guestNameParam]);
 
   const isHost = useMemo(() => {
     if (!user || !meeting) return false;
     const roleUpper = (user?.role || '').toUpperCase();
-    return (
-      user.id === meeting.created_by_id ||
-      roleUpper === 'OWNER' ||
-      roleUpper === 'ADMIN'
-    );
+    return user.id === meeting.created_by_id || roleUpper === 'OWNER' || roleUpper === 'ADMIN';
   }, [user, meeting]);
 
   // Poll for meeting status, action items, transcripts, members
@@ -1505,10 +1672,14 @@ export function MeetingRoomClient() {
   // AI loading state
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const [participantName, setParticipantName] = useState(() => user?.full_name || '');
+  const [participantName, setParticipantName] = useState(
+    () => guestNameParam || user?.full_name || ''
+  );
 
   useEffect(() => {
-    if (user?.full_name) {
+    if (guestNameParam) {
+      setParticipantName(guestNameParam);
+    } else if (user?.full_name) {
       setParticipantName(user.full_name);
     } else {
       authApi
@@ -1525,7 +1696,7 @@ export function MeetingRoomClient() {
           setParticipantName('Người tham gia');
         });
     }
-  }, [user]);
+  }, [user, guestNameParam]);
 
   // Meeting Paused state (When host temporarily leaves)
   const [isMeetingPaused, setIsMeetingPaused] = useState(false);
@@ -1534,6 +1705,7 @@ export function MeetingRoomClient() {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isArchivingMeeting, setIsArchivingMeeting] = useState(false);
   const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);
+  const [interviewAppId, setInterviewAppId] = useState<string | null>(null);
   const [isInterviewScorecardOpen, setIsInterviewScorecardOpen] = useState(false);
 
   // Sync initial paused state from meeting
@@ -1624,6 +1796,9 @@ export function MeetingRoomClient() {
       try {
         const interview = await interviewEvaluationApi.getByMeeting(orgId, meetingId);
         setInterviewSessionId(interview.id);
+        if (interview.application_id) {
+          setInterviewAppId(interview.application_id);
+        }
         setIsInterviewScorecardOpen(true);
       } catch (err) {
         console.error('Failed to find interview session for meeting:', err);
@@ -1636,7 +1811,10 @@ export function MeetingRoomClient() {
 
   const handleHostEndFromDialog = useCallback(() => {
     setHostLeaveConfirmOpen(false);
-    if (meeting?.meeting_type === 'INTERVIEW') {
+    if (
+      meeting?.meeting_type === 'INTERVIEW' ||
+      meeting?.meeting_type === 'RECRUITMENT_INTERVIEW'
+    ) {
       handleOpenInterviewScorecard();
     } else {
       setIsArchiveModalOpen(true);
@@ -2075,6 +2253,7 @@ export function MeetingRoomClient() {
         meetingAgenda={meeting.agenda || meeting.description || null}
         user={user}
         participantName={participantName}
+        onParticipantNameChange={(val) => setParticipantName(val)}
         selectedLanguage={selectedLanguage}
         onLanguageChange={(lang) => setSelectedLanguage(lang)}
         isJoining={isJoining}
@@ -2182,7 +2361,10 @@ export function MeetingRoomClient() {
             <button
               type="button"
               onClick={() => {
-                if (meeting?.meeting_type === 'INTERVIEW') {
+                if (
+                  meeting?.meeting_type === 'INTERVIEW' ||
+                  meeting?.meeting_type === 'RECRUITMENT_INTERVIEW'
+                ) {
                   handleOpenInterviewScorecard();
                 } else {
                   setIsArchiveModalOpen(true);
@@ -2197,7 +2379,8 @@ export function MeetingRoomClient() {
           )}
 
           {/* Quick Scorecard Action for Interview meetings */}
-          {meeting?.meeting_type === 'INTERVIEW' && (
+          {(meeting?.meeting_type === 'INTERVIEW' ||
+            meeting?.meeting_type === 'RECRUITMENT_INTERVIEW') && (
             <button
               type="button"
               onClick={handleOpenInterviewScorecard}
@@ -2249,7 +2432,8 @@ export function MeetingRoomClient() {
                       for (let i = newArr.length - 1; i >= 0; i--) {
                         if (
                           newArr[i].participant_identity === r.participant_identity &&
-                          (newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase() ||
+                          (newArr[i].original_text.trim().toLowerCase() ===
+                            r.original_text.trim().toLowerCase() ||
                             !newArr[i].translated_text)
                         ) {
                           newArr[i] = {
@@ -2268,7 +2452,9 @@ export function MeetingRoomClient() {
                     for (let i = newArr.length - 1; i >= 0; i--) {
                       if (
                         newArr[i].participant_identity === r.participant_identity &&
-                        (!newArr[i].is_final || newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase())
+                        (!newArr[i].is_final ||
+                          newArr[i].original_text.trim().toLowerCase() ===
+                            r.original_text.trim().toLowerCase())
                       ) {
                         newArr[i] = {
                           ...newArr[i],
@@ -2299,7 +2485,9 @@ export function MeetingRoomClient() {
                     for (let i = newArr.length - 1; i >= 0; i--) {
                       if (
                         newArr[i].participant_identity === r.participant_identity &&
-                        (!newArr[i].is_final || newArr[i].original_text.trim().toLowerCase() === r.original_text.trim().toLowerCase())
+                        (!newArr[i].is_final ||
+                          newArr[i].original_text.trim().toLowerCase() ===
+                            r.original_text.trim().toLowerCase())
                       ) {
                         newArr[i] = {
                           ...newArr[i],
@@ -3184,6 +3372,7 @@ export function MeetingRoomClient() {
           onClose={() => setIsInterviewScorecardOpen(false)}
           orgId={meeting?.organization_id || ''}
           sessionId={interviewSessionId || ''}
+          applicationId={interviewAppId}
           jobTitle={meeting?.title}
           onArchiveSuccess={() => {
             setIsInterviewScorecardOpen(false);

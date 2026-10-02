@@ -38,18 +38,32 @@ TERMINAL_STAGES = {
 
 TRANSITIONS = {
     (RecruitmentStageEnum.INVITED, "START_ASSESSMENT"): RecruitmentStageEnum.ASSESSMENT_PENDING,
+    (RecruitmentStageEnum.INVITED, "SUBMIT_ASSESSMENT"): RecruitmentStageEnum.ASSESSMENT_SUBMITTED,
     (RecruitmentStageEnum.INVITED, "SCHEDULE_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
+    (RecruitmentStageEnum.INVITED, "APPROVE_CV"): RecruitmentStageEnum.ASSESSMENT_PENDING,
+    (RecruitmentStageEnum.INVITED, "APPROVE_CV_NO_TEST"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
+    (RecruitmentStageEnum.INVITED, "REJECT_CV"): RecruitmentStageEnum.REJECTED,
+    (RecruitmentStageEnum.INVITED, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.ASSESSMENT_PENDING, "SUBMIT_ASSESSMENT"): RecruitmentStageEnum.ASSESSMENT_SUBMITTED,
+    (RecruitmentStageEnum.ASSESSMENT_PENDING, "SCHEDULE_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
+    (RecruitmentStageEnum.ASSESSMENT_PENDING, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.ASSESSMENT_SUBMITTED, "SCHEDULE_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
+    (RecruitmentStageEnum.ASSESSMENT_SUBMITTED, "REJECT"): RecruitmentStageEnum.REJECTED,
+    (RecruitmentStageEnum.INTERVIEW_SCHEDULED, "SCHEDULE_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
     (RecruitmentStageEnum.INTERVIEW_SCHEDULED, "COMPLETE_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_COMPLETED,
+    (RecruitmentStageEnum.INTERVIEW_SCHEDULED, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.INTERVIEW_COMPLETED, "QUEUE_HR_REVIEW"): RecruitmentStageEnum.HR_REVIEW_PENDING,
+    (RecruitmentStageEnum.INTERVIEW_COMPLETED, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.HR_REVIEW_PENDING, "HR_HIRE"): RecruitmentStageEnum.OWNER_APPROVAL_PENDING,
     (RecruitmentStageEnum.HR_REVIEW_PENDING, "HR_NO_HIRE"): RecruitmentStageEnum.REJECTED,
+    (RecruitmentStageEnum.HR_REVIEW_PENDING, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.HR_REVIEW_PENDING, "REQUEST_ASSESSMENT"): RecruitmentStageEnum.ASSESSMENT_PENDING,
     (RecruitmentStageEnum.HR_REVIEW_PENDING, "REQUEST_INTERVIEW"): RecruitmentStageEnum.INTERVIEW_SCHEDULED,
     (RecruitmentStageEnum.OWNER_APPROVAL_PENDING, "OWNER_APPROVE"): RecruitmentStageEnum.APPROVED,
     (RecruitmentStageEnum.OWNER_APPROVAL_PENDING, "OWNER_REJECT"): RecruitmentStageEnum.REJECTED,
+    (RecruitmentStageEnum.OWNER_APPROVAL_PENDING, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.APPROVED, "ISSUE_ONBOARDING"): RecruitmentStageEnum.ONBOARDING_INVITED,
+    (RecruitmentStageEnum.APPROVED, "REJECT"): RecruitmentStageEnum.REJECTED,
     (RecruitmentStageEnum.ONBOARDING_INVITED, "COMPLETE_ONBOARDING"): RecruitmentStageEnum.HIRED,
 }
 
@@ -109,7 +123,15 @@ class RecruitmentWorkflow:
 
         # 2. Authorization check
         action = command.action
-        if action in ("HR_HIRE", "HR_NO_HIRE", "REQUEST_ASSESSMENT", "REQUEST_INTERVIEW"):
+        if action in (
+            "HR_HIRE",
+            "HR_NO_HIRE",
+            "REQUEST_ASSESSMENT",
+            "REQUEST_INTERVIEW",
+            "APPROVE_CV",
+            "APPROVE_CV_NO_TEST",
+            "REJECT_CV",
+        ):
             if actor_member:
                 assert_recruitment_reviewer(self.db, actor_member, application)
         elif action in ("OWNER_APPROVE", "OWNER_REJECT", "CANCEL"):

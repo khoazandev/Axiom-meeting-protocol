@@ -118,9 +118,7 @@ export function CVHarvardTemplate({
                       {exp.location ? ` | ${exp.location}` : ''}
                     </span>
                   </div>
-                  <div className="italic text-neutral-700 font-medium mb-1">
-                    {exp.position}
-                  </div>
+                  <div className="italic text-neutral-700 font-medium mb-1">{exp.position}</div>
                   {exp.description && (
                     <div className="text-neutral-800 leading-relaxed whitespace-pre-line pl-1 space-y-0.5">
                       {exp.description.split('\n').map((line, idx) => (
@@ -154,9 +152,7 @@ export function CVHarvardTemplate({
                       <span className="font-bold text-neutral-950 font-sans text-xs">
                         {proj.name}
                       </span>
-                      {proj.role && (
-                        <span className="text-neutral-600 italic">({proj.role})</span>
-                      )}
+                      {proj.role && <span className="text-neutral-600 italic">({proj.role})</span>}
                     </div>
                     {proj.startDate && (
                       <span className="text-[10px] text-neutral-600 font-sans">
@@ -164,9 +160,7 @@ export function CVHarvardTemplate({
                       </span>
                     )}
                   </div>
-                  <p className="text-neutral-800 leading-relaxed mt-0.5 pl-1">
-                    {proj.description}
-                  </p>
+                  <p className="text-neutral-800 leading-relaxed mt-0.5 pl-1">{proj.description}</p>
                   {proj.technologies && proj.technologies.length > 0 && (
                     <div className="text-[10px] text-neutral-600 mt-0.5 pl-1 font-sans">
                       <span className="font-semibold text-neutral-800">Công nghệ:</span>{' '}
@@ -208,9 +202,7 @@ export function CVHarvardTemplate({
                     {edu.degree} – {edu.field}
                   </div>
                   {edu.description && (
-                    <p className="text-neutral-700 text-[10.5px] mt-0.5 pl-1">
-                      {edu.description}
-                    </p>
+                    <p className="text-neutral-700 text-[10.5px] mt-0.5 pl-1">{edu.description}</p>
                   )}
                 </div>
               ))}
@@ -232,14 +224,22 @@ export function CVHarvardTemplate({
             <div className="text-[11px] font-serif space-y-1">
               {techSkills.length > 0 && (
                 <div>
-                  <span className="font-bold font-sans text-neutral-900">Kỹ thuật & Công nghệ:</span>{' '}
-                  <span className="text-neutral-800">{techSkills.map((s) => s.name).join(' • ')}</span>
+                  <span className="font-bold font-sans text-neutral-900">
+                    Kỹ thuật & Công nghệ:
+                  </span>{' '}
+                  <span className="text-neutral-800">
+                    {techSkills.map((s) => s.name).join(' • ')}
+                  </span>
                 </div>
               )}
               {softSkills.length > 0 && (
                 <div>
-                  <span className="font-bold font-sans text-neutral-900">Quản lý & Kỹ năng mềm:</span>{' '}
-                  <span className="text-neutral-800">{softSkills.map((s) => s.name).join(' • ')}</span>
+                  <span className="font-bold font-sans text-neutral-900">
+                    Quản lý & Kỹ năng mềm:
+                  </span>{' '}
+                  <span className="text-neutral-800">
+                    {softSkills.map((s) => s.name).join(' • ')}
+                  </span>
                 </div>
               )}
             </div>
@@ -259,7 +259,8 @@ export function CVHarvardTemplate({
               {certifications.map((c) => (
                 <div key={c.id} className="flex justify-between items-baseline">
                   <span>
-                    <strong className="font-sans font-semibold text-neutral-900">{c.name}</strong> – {c.issuer}
+                    <strong className="font-sans font-semibold text-neutral-900">{c.name}</strong> –{' '}
+                    {c.issuer}
                   </span>
                   <span className="text-[10px] text-neutral-600 font-sans">{c.date}</span>
                 </div>
@@ -280,7 +281,8 @@ export function CVHarvardTemplate({
             <div className="text-[11px] font-serif flex flex-wrap gap-x-4 gap-y-1 text-neutral-800">
               {languages.map((l) => (
                 <div key={l.id}>
-                  <strong className="font-sans font-semibold text-neutral-900">{l.name}:</strong> {l.level}
+                  <strong className="font-sans font-semibold text-neutral-900">{l.name}:</strong>{' '}
+                  {l.level}
                 </div>
               ))}
             </div>
@@ -295,7 +297,15 @@ export function CVHarvardTemplate({
   const orderedSections =
     sectionOrder && sectionOrder.length > 0
       ? sectionOrder
-      : (['summary', 'experience', 'projects', 'education', 'skills', 'certifications', 'languages'] as CVSection[]);
+      : ([
+          'summary',
+          'experience',
+          'projects',
+          'education',
+          'skills',
+          'certifications',
+          'languages',
+        ] as CVSection[]);
 
   const headerNode = (
     <header className="text-center border-b-2 border-neutral-900 pb-3 mb-4">
@@ -342,9 +352,7 @@ export function CVHarvardTemplate({
         {personalInfo.socials?.map((social) => (
           <React.Fragment key={social.id}>
             <span className="text-neutral-400">•</span>
-            <span className="hover:underline font-medium text-neutral-800">
-              {social.url}
-            </span>
+            <span className="hover:underline font-medium text-neutral-800">{social.url}</span>
           </React.Fragment>
         ))}
       </div>
@@ -372,9 +380,7 @@ export function CVHarvardTemplate({
 
       {/* Body Sections Ordered by user preference */}
       <div className="space-y-1">
-        {orderedSections
-          .filter((sec) => sec !== 'personal')
-          .map((secKey) => renderSection(secKey))}
+        {orderedSections.filter((sec) => sec !== 'personal').map((secKey) => renderSection(secKey))}
       </div>
     </div>
   );

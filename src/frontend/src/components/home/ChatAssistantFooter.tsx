@@ -5,46 +5,64 @@ import { Send } from 'lucide-react';
 import clsx from 'clsx';
 import LottiePlayer from '@/components/LottiePlayer';
 import animHiHola from '@/public/images/Hi Hola.json';
-
-const SUGGESTIONS = [
-  'Axiom DX-OS đảm bảo chủ quyền dữ liệu (Data Sovereignty) như thế nào?',
-  'Cơ chế Agenda Gate kiểm soát kỷ luật cuộc họp ra sao?',
-  'Làm thế nào để đồng bộ Action Items từ cuộc họp sang Mini Jira?',
-];
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
+import { candidatePortalApi } from '@/lib/recruitment-api';
 
 export function ChatAssistantFooter() {
+  const { t } = useLanguageStore();
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
+  const SUGGESTIONS = [
+    t.landing.chatQuestion1,
+    t.landing.chatQuestion2,
+    t.landing.chatQuestion3,
+  ];
+
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  const handleSend = (text: string) => {
-    if (!text.trim()) return;
-    setMessages((prev) => [...prev, { role: 'user', content: text }]);
+  const handleSend = async (text: string) => {
+    if (!text.trim() || isTyping) return;
+    const userMsg = { role: 'user', content: text };
+    const nextHistory = [...messages, userMsg];
+    setMessages(nextHistory);
     setInput('');
     setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
+
+    try {
+      const res = await candidatePortalApi.assistantChat({
+        message: text,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
+      });
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content:
-            'Axiom DX-OS vận hành 100% on-premise với LiveKit WebRTC, Faster-Whisper large-v3 và Qwen LLM. Dữ liệu cuộc họp không bao giờ rời khỏi hạ tầng của doanh nghiệp. Bạn cần tìm hiểu thêm về tính năng nào?',
+          content: res.reply || t.landing.chatDefaultReply,
         },
       ]);
-    }, 1200);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: t.landing.chatDefaultReply,
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
-    <footer className="bg-white pt-24 pb-0">
+    <footer className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 pt-24 pb-0 transition-colors">
       <div className="container mx-auto px-6 max-w-[850px]">
         {/* Hello Banner */}
-        <div className="bg-[#f6f8fa] rounded-[32px] px-10 py-6 flex flex-col md:flex-row items-center justify-center gap-8 mb-6 mt-16">
+        <div className="bg-[#f6f8fa] dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800 rounded-[32px] px-10 py-6 flex flex-col md:flex-row items-center justify-center gap-8 mb-6 mt-16">
           {/* Avatar Lottie Animation */}
           <div className="w-[180px] shrink-0 flex justify-center pointer-events-none">
             <div className="w-[160px] h-[160px] flex items-center justify-center">
@@ -57,19 +75,18 @@ export function ChatAssistantFooter() {
           </div>
           {/* Text Content */}
           <div className="flex-1 text-center md:text-left">
-            <h2 className="text-[44px] font-bold text-[#18181a] mb-2 tracking-tight">Xin chào!</h2>
-            <p className="text-[18px] text-[#757f9c]">
-              Axiom AI Assistant có thể hỗ trợ gì cho bạn?
+            <h2 className="text-[44px] font-bold text-[#18181a] dark:text-white mb-2 tracking-tight">{t.landing.chatHello}</h2>
+            <p className="text-[18px] text-[#757f9c] dark:text-neutral-400">
+              {t.landing.chatGreeting}
             </p>
           </div>
         </div>
 
         {/* Profile Card */}
-        <div className="bg-[#f6f8fa] rounded-[32px] p-8 md:p-10 flex flex-col md:flex-row gap-10 mb-8">
+        <div className="bg-[#f6f8fa] dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800 rounded-[32px] p-8 md:p-10 flex flex-col md:flex-row gap-10 mb-8">
           <div className="flex-1">
-            <p className="text-[14px] text-[#757f9c] leading-relaxed mb-6">
-              # Vai trò: Trợ lý tư vấn giải pháp Axiom DX-OS — Hỗ trợ tìm hiểu về kiến trúc H-P-D-I,
-              nghi thức cuộc họp kỷ luật, LiveKit WebRTC và tự động hóa biên bản hành động.
+            <p className="text-[14px] text-[#757f9c] dark:text-neutral-400 leading-relaxed mb-6">
+              {t.landing.chatRole}
             </p>
             <div className="flex flex-col gap-3 items-start">
               {[
@@ -80,7 +97,7 @@ export function ChatAssistantFooter() {
               ].map((t) => (
                 <span
                   key={t}
-                  className="px-5 py-2.5 rounded-full border border-[#e3e7f1] text-[13px] font-medium text-[#757f9c] bg-transparent"
+                  className="px-5 py-2.5 rounded-full border border-[#e3e7f1] dark:border-neutral-800 text-[13px] font-medium text-[#757f9c] dark:text-neutral-400 bg-transparent"
                 >
                   {t}
                 </span>
@@ -88,7 +105,7 @@ export function ChatAssistantFooter() {
             </div>
           </div>
           <div className="shrink-0 flex items-center justify-center">
-            <div className="flex bg-transparent border border-[#e3e7f1] rounded-2xl overflow-hidden self-center">
+            <div className="flex bg-transparent border border-[#e3e7f1] dark:border-neutral-800 rounded-2xl overflow-hidden self-center">
               {[
                 { n: '100%', l: 'On-Premise' },
                 { n: '4', l: 'Lớp H-P-D-I' },
@@ -96,10 +113,10 @@ export function ChatAssistantFooter() {
               ].map((s, i) => (
                 <div
                   key={s.l}
-                  className={`px-6 py-5 text-center min-w-[80px] bg-[#f6f8fa] ${i > 0 ? 'border-l border-[#e3e7f1]' : ''}`}
+                  className={`px-6 py-5 text-center min-w-[80px] bg-[#f6f8fa] dark:bg-neutral-900 ${i > 0 ? 'border-l border-[#e3e7f1] dark:border-neutral-800' : ''}`}
                 >
-                  <div className="text-[22px] font-bold text-[#18181a] mb-1">{s.n}</div>
-                  <div className="text-[11px] text-[#757f9c]">{s.l}</div>
+                  <div className="text-[22px] font-bold text-[#18181a] dark:text-white mb-1">{s.n}</div>
+                  <div className="text-[11px] text-[#757f9c] dark:text-neutral-400">{s.l}</div>
                 </div>
               ))}
             </div>
@@ -112,7 +129,7 @@ export function ChatAssistantFooter() {
             <button
               key={s}
               onClick={() => handleSend(s)}
-              className="px-6 py-3 rounded-full border border-[#e3e7f1] text-[13px] font-medium text-[#757f9c] bg-white hover:border-[#cbd3e6] hover:text-[#18181a] transition-all max-w-[95%] text-center"
+              className="px-6 py-3 rounded-full border border-[#e3e7f1] dark:border-neutral-800 text-[13px] font-medium text-[#757f9c] dark:text-neutral-300 bg-white dark:bg-neutral-900 hover:border-[#cbd3e6] dark:hover:border-neutral-700 hover:text-[#18181a] dark:hover:text-white transition-all max-w-[95%] text-center shadow-2xs cursor-pointer"
             >
               {s}
             </button>
@@ -123,7 +140,7 @@ export function ChatAssistantFooter() {
         {messages.length > 0 && (
           <div
             ref={chatRef}
-            className="bg-white rounded-[16px] border border-[#e3e7f1] p-6 max-h-[300px] overflow-y-auto mb-6 flex flex-col gap-4"
+            className="bg-white dark:bg-neutral-900 rounded-[16px] border border-[#e3e7f1] dark:border-neutral-800 p-6 max-h-[300px] overflow-y-auto mb-6 flex flex-col gap-4"
           >
             {messages.map((msg, idx) => (
               <div
@@ -131,15 +148,15 @@ export function ChatAssistantFooter() {
                 className={clsx(
                   'max-w-[85%] rounded-2xl px-5 py-3 text-[14px] leading-relaxed',
                   msg.role === 'user'
-                    ? 'bg-[#18181a] text-white self-end rounded-br-sm'
-                    : 'bg-[#f6f8fc] text-[#18181a] self-start rounded-bl-sm border border-[#e3e7f1]'
+                    ? 'bg-[#18181a] dark:bg-white text-white dark:text-neutral-950 self-end rounded-br-sm'
+                    : 'bg-[#f6f8fc] dark:bg-neutral-800 text-[#18181a] dark:text-neutral-100 self-start rounded-bl-sm border border-[#e3e7f1] dark:border-neutral-700'
                 )}
               >
                 {msg.content}
               </div>
             ))}
             {isTyping && (
-              <div className="bg-[#f6f8fc] text-[#757f9c] self-start rounded-2xl rounded-bl-sm px-5 py-3 flex gap-1.5 items-center border border-[#e3e7f1]">
+              <div className="bg-[#f6f8fc] dark:bg-neutral-800 text-[#757f9c] dark:text-neutral-400 self-start rounded-2xl rounded-bl-sm px-5 py-3 flex gap-1.5 items-center border border-[#e3e7f1] dark:border-neutral-700">
                 <div className="w-2 h-2 bg-[#b0b8cc] rounded-full animate-bounce" />
                 <div
                   className="w-2 h-2 bg-[#b0b8cc] rounded-full animate-bounce"
@@ -166,14 +183,14 @@ export function ChatAssistantFooter() {
                   handleSend(input);
                 }
               }}
-              placeholder="Nhập câu hỏi của bạn..."
+              placeholder={t.landing.chatInputPlaceholder}
               rows={3}
-              className="w-full pl-6 pr-16 py-4 rounded-[16px] border border-[#e3e7f1] bg-white text-[14px] text-[#18181a] resize-none focus:outline-none focus:ring-2 focus:ring-[#4F7BF7]/20 focus:border-[#4F7BF7] transition-all placeholder:text-[#b0b8cc]"
+              className="w-full pl-6 pr-16 py-4 rounded-[16px] border border-[#e3e7f1] dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[14px] text-[#18181a] dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-neutral-400/20 dark:focus:ring-white/20 transition-all placeholder:text-[#b0b8cc] dark:placeholder:text-neutral-500"
             />
             <button
               onClick={() => handleSend(input)}
               disabled={!input.trim()}
-              className="absolute right-4 bottom-4 w-10 h-10 rounded-xl bg-[#18181a] text-white flex items-center justify-center hover:bg-black transition-colors disabled:opacity-30"
+              className="absolute right-4 bottom-4 w-10 h-10 rounded-xl bg-[#18181a] hover:bg-black dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>

@@ -72,7 +72,10 @@ export function CanvaFormatToolbar({
       {/* Left Formatting Group */}
       <div className="flex items-center flex-wrap gap-1.5">
         {/* Active element indicator */}
-        <div className="px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] uppercase border border-indigo-200/50 max-w-[130px] truncate" title={selectedElementLabel || 'Toàn bộ trang'}>
+        <div
+          className="px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] uppercase border border-indigo-200/50 max-w-[130px] truncate"
+          title={selectedElementLabel || 'Toàn bộ trang'}
+        >
           {selectedElementLabel || 'Trang A4'}
         </div>
 
@@ -122,7 +125,9 @@ export function CanvaFormatToolbar({
                 onClick={() => onTextColorChange(c)}
                 style={{ backgroundColor: c }}
                 className={`w-4 h-4 rounded-full transition-transform cursor-pointer ${
-                  textColor === c ? 'scale-125 ring-2 ring-indigo-500' : 'hover:scale-110 opacity-80 hover:opacity-100'
+                  textColor === c
+                    ? 'scale-125 ring-2 ring-indigo-500'
+                    : 'hover:scale-110 opacity-80 hover:opacity-100'
                 }`}
                 title={`Màu chữ ${c}`}
               />
@@ -168,7 +173,9 @@ export function CanvaFormatToolbar({
             type="button"
             onClick={() => onTextAlignChange('left')}
             className={`p-1.5 rounded-md cursor-pointer ${
-              textAlign === 'left' ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600' : 'text-slate-600 dark:text-slate-400'
+              textAlign === 'left'
+                ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600'
+                : 'text-slate-600 dark:text-slate-400'
             }`}
             title="Căn Trái"
           >
@@ -178,7 +185,9 @@ export function CanvaFormatToolbar({
             type="button"
             onClick={() => onTextAlignChange('center')}
             className={`p-1.5 rounded-md cursor-pointer ${
-              textAlign === 'center' ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600' : 'text-slate-600 dark:text-slate-400'
+              textAlign === 'center'
+                ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600'
+                : 'text-slate-600 dark:text-slate-400'
             }`}
             title="Căn Giữa"
           >
@@ -188,7 +197,9 @@ export function CanvaFormatToolbar({
             type="button"
             onClick={() => onTextAlignChange('right')}
             className={`p-1.5 rounded-md cursor-pointer ${
-              textAlign === 'right' ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600' : 'text-slate-600 dark:text-slate-400'
+              textAlign === 'right'
+                ? 'bg-white dark:bg-slate-700 shadow-xs text-indigo-600'
+                : 'text-slate-600 dark:text-slate-400'
             }`}
             title="Căn Phải"
           >

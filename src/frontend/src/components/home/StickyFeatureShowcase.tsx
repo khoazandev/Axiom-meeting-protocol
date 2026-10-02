@@ -9,98 +9,9 @@ import Anamorphic3DMeeting from './Anamorphic3DMeeting';
 import animDataAdv1 from '@/public/images/Person writing credentials.json';
 import animDataAdv2 from '@/public/images/Person2.json';
 import animDataAdv3 from '@/public/images/Champion.json';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 const ADV_ANIMATIONS = [null, animDataAdv1, animDataAdv2, animDataAdv3];
-
-const SIDEBAR_ICONS = [
-  {
-    id: 0,
-    label: 'Tổng quan',
-    color: 'from-[#4F7BF7] to-[#2563eb]',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: 1,
-    label: 'Nhận diện',
-    color: 'from-[#ec4899] to-[#be185d]',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: 2,
-    label: 'Tự động',
-    color: 'from-[#06b6d4] to-[#0369a1]',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M13 10V3L4 14h7v7l9-11h-7z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: 3,
-    label: 'Ngữ cảnh',
-    color: 'from-[#f59e0b] to-[#b45309]',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-        />
-      </svg>
-    ),
-  },
-];
-
-const ADVANTAGES = [
-  {
-    prefix: 'Lớp năng lực 1',
-    title: 'Chủ quyền dữ liệu On-Premise tuyệt đối',
-    description:
-      'Không phụ thuộc vào bên thứ ba. Toàn bộ hình ảnh, âm thanh và biên bản cuộc họp được truyền tải qua hạ tầng WebRTC LiveKit và lưu trữ trực tiếp trong cơ sở dữ liệu nội bộ của doanh nghiệp, đảm bảo Zero Data Leakage.',
-    tag: 'Data Sovereignty',
-    tagColor: 'bg-blue-100 text-blue-600 border-blue-200',
-  },
-  {
-    prefix: 'Lớp năng lực 2',
-    title: 'Tự động hóa chuỗi giá trị cuộc họp',
-    description:
-      'Khép kín từ đầu đến cuối: Faster-Whisper ghi nhận lời thoại và dịch song ngữ thời gian thực, thuật toán khôi phục dấu câu tự động, AI tổng hợp Minutes of Meeting và đẩy 1-click sang Mini Jira.',
-    tag: 'Zero-touch Pipeline',
-    tagColor: 'bg-cyan-100 text-cyan-600 border-cyan-200',
-  },
-  {
-    prefix: 'Lớp năng lực 3',
-    title: 'Kỷ luật quy trình & Trí tuệ ngữ cảnh',
-    description:
-      'Cơ chế Process Gate yêu cầu nghị trình rõ ràng trước khi khởi tạo cuộc họp. Mô hình AI cục bộ trích xuất công việc chính xác: người thực hiện, thời hạn và độ ưu tiên — như một thư ký mẫn cán.',
-    tag: 'Process Gate & Local AI',
-    tagColor: 'bg-amber-100 text-amber-600 border-amber-200',
-  },
-];
 
 // Scatter & Assemble animation variants
 const scatterVariants = {
@@ -139,8 +50,33 @@ const scatterVariants = {
 };
 
 export function StickyFeatureShowcase() {
+  const { t } = useLanguageStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const ADVANTAGES = [
+    {
+      prefix: t.landing.layer1Title,
+      title: t.landing.layer1Title,
+      description: t.landing.layer1Desc,
+      tag: 'Data Sovereignty',
+      tagColor: 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900',
+    },
+    {
+      prefix: t.landing.layer2Title,
+      title: t.landing.layer2Title,
+      description: t.landing.layer2Desc,
+      tag: 'Zero-touch Pipeline',
+      tagColor: 'bg-cyan-100 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-900',
+    },
+    {
+      prefix: t.landing.layer3Title,
+      title: t.landing.layer3Title,
+      description: t.landing.layer3Desc,
+      tag: 'Process Gate & Local AI',
+      tagColor: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900',
+    },
+  ];
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -155,13 +91,13 @@ export function StickyFeatureShowcase() {
   });
 
   return (
-    <section ref={containerRef} className="relative h-[380vh] bg-[#f0f2f5] overflow-clip">
+    <section ref={containerRef} className="relative h-[380vh] bg-[#f0f2f5] dark:bg-black overflow-clip transition-colors">
       <div className="sticky top-0 h-screen w-full flex items-center justify-center p-6 z-10 overflow-hidden">
         {/* Static Ambient Background Blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-indigo-300/30 to-purple-300/30 blur-[80px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[700px] h-[700px] bg-gradient-to-br from-blue-300/30 to-cyan-300/30 blur-[80px] rounded-full" />
-          <div className="absolute top-[20%] left-[40%] w-[400px] h-[400px] bg-gradient-to-br from-pink-200/20 to-orange-200/20 blur-[80px] rounded-full" />
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-indigo-300/30 to-purple-300/30 dark:from-indigo-900/20 dark:to-purple-900/20 blur-[80px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[700px] h-[700px] bg-gradient-to-br from-blue-300/30 to-cyan-300/30 dark:from-blue-900/20 dark:to-cyan-900/20 blur-[80px] rounded-full" />
+          <div className="absolute top-[20%] left-[40%] w-[400px] h-[400px] bg-gradient-to-br from-pink-200/20 to-orange-200/20 dark:from-pink-900/10 dark:to-orange-900/10 blur-[80px] rounded-full" />
         </div>
 
         <div className="container mx-auto w-full max-w-[1060px] h-full max-h-[620px] flex relative z-10">
@@ -201,11 +137,11 @@ export function StickyFeatureShowcase() {
                     exit="exit"
                     className="absolute top-10 left-1/2 -translate-x-1/2 text-center w-full px-10"
                   >
-                    <h2 className="text-[38px] md:text-[46px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#18181a] to-[#4F7BF7] tracking-tight leading-tight mb-2">
-                      Nghi thức cuộc họp doanh nghiệp số
+                    <h2 className="text-[38px] md:text-[46px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#18181a] to-[#4F7BF7] dark:from-white dark:to-blue-400 tracking-tight leading-tight mb-2">
+                      {t.landing.protocolSectionTitle}
                     </h2>
-                    <p className="text-[16px] text-[#757f9c] max-w-2xl mx-auto font-medium">
-                      Axiom DX-OS nâng tầm kỷ luật, bảo mật và hiệu suất vận hành của tổ chức.
+                    <p className="text-[16px] text-[#757f9c] dark:text-neutral-400 max-w-2xl mx-auto font-medium">
+                      {t.landing.protocolSectionSubtitle}
                     </p>
                   </motion.div>
 
@@ -219,8 +155,8 @@ export function StickyFeatureShowcase() {
                       exit="exit"
                       className="w-full md:w-1/2 relative flex items-center justify-center"
                     >
-                      <div className="absolute inset-0 bg-white/40 backdrop-blur-2xl rounded-[40px] border border-white/60 shadow-2xl rotate-3 scale-105"></div>
-                      <div className="relative z-10 w-full bg-white/80 backdrop-blur-3xl rounded-[40px] border border-white p-10 flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+                      <div className="absolute inset-0 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-2xl rounded-[40px] border border-white/60 dark:border-neutral-700/60 shadow-2xl rotate-3 scale-105"></div>
+                      <div className="relative z-10 w-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-3xl rounded-[40px] border border-white dark:border-neutral-700 p-10 flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
                         <div className="w-[300px] h-[300px] flex items-center justify-center">
                           <LottiePlayer
                             animationData={ADV_ANIMATIONS[activeIndex]}
@@ -249,16 +185,16 @@ export function StickyFeatureShowcase() {
                         {ADVANTAGES[activeIndex - 1].tag}
                       </motion.div>
 
-                      <h3 className="text-[36px] font-bold text-[#18181a] mb-6 leading-[1.1]">
+                      <h3 className="text-[36px] font-bold text-[#18181a] dark:text-white mb-6 leading-[1.1]">
                         {ADVANTAGES[activeIndex - 1].title}
                       </h3>
 
-                      <p className="text-[16px] text-[#757f9c] leading-relaxed mb-8">
+                      <p className="text-[16px] text-[#757f9c] dark:text-neutral-400 leading-relaxed mb-8">
                         {ADVANTAGES[activeIndex - 1].description}
                       </p>
 
                       <div className="flex gap-4 items-center">
-                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md border border-[#e3e7f1] text-[#4F7BF7]">
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center shadow-md border border-[#e3e7f1] dark:border-neutral-700 text-[#4F7BF7] dark:text-blue-400">
                           <svg
                             className="w-6 h-6"
                             fill="none"
@@ -273,7 +209,7 @@ export function StickyFeatureShowcase() {
                             />
                           </svg>
                         </div>
-                        <span className="font-semibold text-[#18181a]">Hoạt động ổn định 24/7</span>
+                        <span className="font-semibold text-[#18181a] dark:text-white">{t.landing.uptimeBadge}</span>
                       </div>
                     </motion.div>
                   </div>

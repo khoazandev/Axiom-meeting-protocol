@@ -20,7 +20,8 @@ import { useAuthStore } from '@/lib/store/useAuthStore';
 import { authApi } from '@/lib/api';
 import { recruitmentApi } from '@/lib/recruitment-api';
 import Logo from '@/components/Logo';
-import { Video, Bell, CheckCircle2, Search, Briefcase } from 'lucide-react';
+import { Video, Bell, CheckCircle2, Search, Briefcase, Building2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 export default function ManagerWorkspacePage() {
   const router = useRouter();
@@ -89,20 +90,17 @@ export default function ManagerWorkspacePage() {
   }, [orgId]);
 
   const navSections: ManagerNavSectionItem[] = React.useMemo(() => {
-    if (!canReviewRecruitment) return MANAGER_NAV_SECTIONS;
     return [
       ...MANAGER_NAV_SECTIONS,
       {
         id: 'recruitment',
-        label: 'Đánh Giá Tuyển Dụng',
-        sublabel: 'HR Review & Phỏng Vấn',
+        label: 'Đánh Giá',
+        sublabel: 'Tuyển dụng & Pipeline',
         icon: Briefcase,
-        badge: 'Tuyển dụng',
-        badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
         shortcut: '⌘6',
       },
     ];
-  }, [canReviewRecruitment]);
+  }, []);
 
   const currentSection =
     navSections.find((s) => s.id === activeTab) || navSections[0];
@@ -125,13 +123,20 @@ export default function ManagerWorkspacePage() {
       {/* ── 2. Top Executive Sovereign Header (Synchronized with Owner & Member) ── */}
       <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Left: Brand Identity */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Left: Brand Identity & Company */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <Link href="/manager" className="flex items-center gap-2 group">
               <Logo size={32} showText={true} subtitle="DX-OS" />
             </Link>
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200/70 dark:border-blue-800/60 text-[10.5px] font-extrabold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[200px]"
+              title={`Doanh nghiệp: ${activeOrganization?.name || 'Axiom Enterprise'}`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold tracking-tight shrink-0">
               MANAGER
             </div>
           </div>
@@ -194,28 +199,41 @@ export default function ManagerWorkspacePage() {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
             </button>
 
+            {/* Theme Toggle Button */}
+            <ThemeToggle />
+
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
 
             {/* Manager Profile Trigger (Click to open UserProfileModal) */}
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 pl-1 group cursor-pointer"
-              title="Xem & Chỉnh sửa hồ sơ cá nhân"
+              className="flex items-center gap-2.5 group cursor-pointer p-1 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
+              title={`Hồ sơ: ${user?.full_name || 'Trần Minh Khoa'} • Thuộc ${activeOrganization?.name || 'Axiom Enterprise'}`}
             >
-              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all shrink-0">
                 <img
                   src={currentAvatar}
                   alt={user?.full_name || 'Trần Minh Khoa'}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
               </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate max-w-[120px]">
-                  {user?.full_name || 'Trần Minh Khoa'}
+              <div className="hidden sm:block text-left max-w-[170px]">
+                <div
+                  className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate"
+                  title={user?.full_name || 'Quản lý phòng ban'}
+                >
+                  {user?.full_name || 'Quản lý phòng ban'}
                 </div>
-                <div className="text-[9.5px] font-extrabold text-blue-600 dark:text-blue-400 uppercase">
-                  MANAGER
+                <div
+                  className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate"
+                  title={`${activeOrganization?.name || 'Axiom Enterprise'} • ${user?.department_name || 'Bộ Phận'}`}
+                >
+                  <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+                  <span>•</span>
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400 shrink-0">
+                    MANAGER
+                  </span>
                 </div>
               </div>
             </button>
@@ -236,13 +254,6 @@ export default function ManagerWorkspacePage() {
                 <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                   {currentSection.label}
                 </h1>
-                {currentSection.badge && (
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${currentSection.badgeColor}`}
-                  >
-                    {currentSection.badge}
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {currentSection.sublabel} • Phím tắt chuyển nhanh:{' '}
@@ -270,7 +281,7 @@ export default function ManagerWorkspacePage() {
                   }`}
                 >
                   <Icon size={14} />
-                  <span>{sec.label.split(' ')[0]}</span>
+                  <span>{sec.id === 'recruitment' ? 'Đánh Giá' : sec.label.split(' ')[0]}</span>
                 </button>
               );
             })}
@@ -291,7 +302,7 @@ export default function ManagerWorkspacePage() {
             <MeetingArchiveRepository
               userRole="MANAGER"
               departmentId={user?.department_id}
-              departmentName={user?.department_name || 'Khối Kỹ Thuật'}
+              departmentName={user?.department_name || undefined}
               onNotify={showToast}
             />
           )}

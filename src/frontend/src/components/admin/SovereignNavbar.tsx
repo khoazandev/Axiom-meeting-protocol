@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MatIcon } from '@/components/ui/MatIcon';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 interface SovereignNavbarProps {
   onOpenInviteModal?: () => void;
@@ -123,6 +124,9 @@ export function SovereignNavbar({
               <span>Mời nhân sự</span>
             </button>
           )}
+
+          {/* Theme Toggle Button */}
+          <ThemeToggle />
 
           {/* User Profile Avatar with Dropdown */}
           <div className="relative">

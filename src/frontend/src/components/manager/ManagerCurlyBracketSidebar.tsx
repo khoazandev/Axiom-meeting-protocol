@@ -17,7 +17,8 @@ import {
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
-export type ManagerNavKey = 'meetings' | 'kanban' | 'calendar' | 'team' | 'archives' | 'recruitment';
+export type ManagerNavKey =
+  'meetings' | 'kanban' | 'calendar' | 'team' | 'archives' | 'recruitment';
 
 export interface ManagerNavSectionItem {
   id: ManagerNavKey;
@@ -35,8 +36,6 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
     label: 'Cuộc Họp Phòng Ban',
     sublabel: 'Điều hành phòng họp',
     icon: Video,
-    badge: '1 Live',
-    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     shortcut: '⌘1',
   },
   {
@@ -44,8 +43,6 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
     label: 'Bảng Nhiệm Vụ AI',
     sublabel: 'Quản trị task & phân bổ sprint',
     icon: Kanban,
-    badge: '6 Tasks',
-    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
     shortcut: '⌘2',
   },
   {
@@ -58,10 +55,8 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
   {
     id: 'team',
     label: 'Nhân Sự Phòng Ban',
-    sublabel: '12 thành viên & phân công việc',
+    sublabel: 'Phân công việc & Thành viên',
     icon: Users,
-    badge: '12 TV',
-    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
     shortcut: '⌘4',
   },
   {
@@ -69,8 +64,6 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSectionItem[] = [
     label: 'Kho Tài Liệu',
     sublabel: 'Biên bản & Tri thức phòng ban',
     icon: FolderArchive,
-    badge: 'Phòng ban',
-    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
     shortcut: '⌘5',
   },
 ];
@@ -243,13 +236,6 @@ export function ManagerCurlyBracketSidebar({
                             <span className="text-xs font-bold text-slate-900 dark:text-white">
                               {section.label}
                             </span>
-                            {section.badge && (
-                              <span
-                                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border ${section.badgeColor}`}
-                              >
-                                {section.badge}
-                              </span>
-                            )}
                           </div>
                           <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {section.sublabel}

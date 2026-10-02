@@ -229,11 +229,11 @@ def get_departments_progress(
 
     # Code mapping and palette of distinct colors for departments
     code_map = {
-        "Khối Kỹ Thuật & Công Nghệ": ("ENG", "#3B82F6"),
-        "Khối Sản Phẩm & Thiết Kế": ("PROD", "#8B5CF6"),
-        "Khối Kinh Doanh & Tiếp Thị": ("BIZ", "#EC4899"),
-        "Khối Vận Hành & Nhân Sự": ("OPS", "#10B981"),
-        "Khối Tài Chính & Pháp Chế": ("FIN", "#F59E0B"),
+        "Bộ Phận Kỹ Thuật & Công Nghệ": ("ENG", "#3B82F6"),
+        "Bộ Phận Sản Phẩm & Thiết Kế": ("PROD", "#8B5CF6"),
+        "Bộ Phận Kinh Doanh & Tiếp Thị": ("BIZ", "#EC4899"),
+        "Bộ Phận Vận Hành & Nhân Sự": ("OPS", "#10B981"),
+        "Bộ Phận Tài Chính & Pháp Chế": ("FIN", "#F59E0B"),
     }
     fallback_colors = ["#3B82F6", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#0891b2", "#4f46e5"]
 

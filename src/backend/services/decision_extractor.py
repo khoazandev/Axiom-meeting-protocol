@@ -117,7 +117,10 @@ class DecisionExtractorService:
                 len(pending_decisions) if pending_decisions else 0,
             )
             
-            raw_response = await generate_json([settings.decision_extractor_model], user_content)
+            raw_response = await generate_json(
+                [settings.decision_extractor_model, "qwen2.5:3b", "qwen2.5:1.5b", "qwen2.5:0.5b"],
+                user_content,
+            )
 
             if raw_response and isinstance(raw_response, list):
                 return self._validate_items(raw_response)

@@ -72,7 +72,7 @@ class InterviewService:
             title=f"Phỏng vấn ứng viên: {application.candidate.full_name} - {application.opening.title if application.opening else ''}",
             description=f"Recruitment interview for application {application.id}",
             scheduled_at=scheduled_at,
-            meeting_type="RECRUITMENT_INTERVIEW",
+            meeting_type="INTERVIEW",
             status=MeetingStatusEnum.SCHEDULED,
         )
         self.db.add(meeting)
@@ -98,20 +98,42 @@ class InterviewService:
                     )
                 )
 
-        # Create InterviewSession
-        session = InterviewSession(
-            application_id=application.id,
-            meeting_id=meeting.id,
-            scheduled_at=scheduled_at,
-            interviewer_member_ids_json=json.dumps(interviewer_member_ids),
-            status=InterviewStatusEnum.SCHEDULED,
+        # Create or update InterviewSession
+        now = datetime.now(timezone.utc)
+        session = (
+            self.db.query(InterviewSession)
+            .filter_by(application_id=application.id)
+            .first()
         )
-        self.db.add(session)
+        if not session:
+            session = InterviewSession(
+                application_id=application.id,
+                meeting_id=meeting.id,
+                scheduled_at=scheduled_at,
+                interviewer_member_ids_json=json.dumps(interviewer_member_ids),
+                status=InterviewStatusEnum.SCHEDULED,
+                consent_recording=True,
+                consent_transcription=True,
+                consent_ai_evaluation=True,
+                consented_at=now,
+            )
+            self.db.add(session)
+        else:
+            session.meeting_id = meeting.id
+            session.scheduled_at = scheduled_at
+            session.interviewer_member_ids_json = json.dumps(interviewer_member_ids)
+            session.status = InterviewStatusEnum.SCHEDULED
+            session.consent_recording = True
+            session.consent_transcription = True
+            session.consent_ai_evaluation = True
+            session.consented_at = now
 
         # Advance workflow stage
         if application.stage in (
             RecruitmentStageEnum.INVITED,
+            RecruitmentStageEnum.ASSESSMENT_PENDING,
             RecruitmentStageEnum.ASSESSMENT_SUBMITTED,
+            RecruitmentStageEnum.INTERVIEW_SCHEDULED,
         ):
             workflow = RecruitmentWorkflow(self.db)
             workflow.advance(
@@ -126,6 +148,47 @@ class InterviewService:
 
         self.db.commit()
         self.db.refresh(session)
+
+        # Dispatch Realtime Notifications
+        try:
+            from src.backend.api.v1.notifications import send_user_notification
+            candidate_user = (
+                self.db.query(models.User)
+                .filter(models.User.email == application.candidate.email)
+                .first()
+                if application.candidate
+                else None
+            )
+            opening_title = application.opening.title if application.opening else "Vị trí ứng tuyển"
+            formatted_time = scheduled_at.strftime("%H:%M ngày %d/%m/%Y")
+
+            # 1. Realtime notification to Candidate with direct meeting link
+            if candidate_user:
+                send_user_notification(
+                    db=self.db,
+                    user_id=candidate_user.id,
+                    title="Lịch phỏng vấn trực tuyến đã sẵn sàng! 🎥",
+                    content=f"Bạn có lịch phỏng vấn cho vị trí '{opening_title}' vào lúc {formatted_time}. Nhấn vào đây để sẵn sàng tham gia phòng họp.",
+                    type="INTERVIEW_SCHEDULED",
+                    link=f"/meetings/{meeting.id}",
+                )
+
+            # 2. Realtime notification to Host and Interviewers
+            notified_user_ids = set()
+            for m in interviewer_members:
+                if m.user_id not in notified_user_ids:
+                    notified_user_ids.add(m.user_id)
+                    send_user_notification(
+                        db=self.db,
+                        user_id=m.user_id,
+                        title="Lịch phỏng vấn ứng viên mới 📅",
+                        content=f"Bạn được chỉ định tham gia hội đồng phỏng vấn ứng viên {application.candidate.full_name if application.candidate else ''} ({opening_title}) lúc {formatted_time}.",
+                        type="INTERVIEW_SCHEDULED",
+                        link=f"/meetings/{meeting.id}",
+                    )
+        except Exception as notif_err:
+            logger.warning(f"Could not send interview notifications: {notif_err}")
+
         return session
 
     def record_consent(

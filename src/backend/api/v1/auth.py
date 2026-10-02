@@ -1,7 +1,9 @@
 import datetime
 import hashlib
 from datetime import timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.backend.api.deps import get_current_user
@@ -9,6 +11,7 @@ from src.backend.core.exceptions import AuthenticationException, ValidationExcep
 from src.backend.core.security import (
     create_access_token,
     create_refresh_token,
+    decode_token,
     hash_password,
     verify_password,
 )
@@ -207,6 +210,31 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise AuthenticationException("Invalid email or password")
+
+    access_token = create_access_token({"sub": user.id})
+    refresh_token = create_refresh_token({"sub": user.id})
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+class MagicLoginPayload(BaseModel):
+    token: str
+    email: Optional[str] = None
+
+
+@router.post("/magic-login", response_model=TokenResponse)
+def magic_login(payload: MagicLoginPayload, db: Session = Depends(get_db)):
+    """Authenticate employee directly via 1-click magic link sent to their Gmail upon hiring."""
+    decoded = decode_token(payload.token)
+    if not decoded:
+        raise AuthenticationException("Liên kết đăng nhập không hợp lệ hoặc đã hết hạn.")
+
+    user_id = decoded.get("sub")
+    if not user_id:
+        raise AuthenticationException("Mã truy cập không hợp lệ.")
+
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not user:
+        raise AuthenticationException("Tài khoản nhân viên không tồn tại hoặc đã bị khóa.")
 
     access_token = create_access_token({"sub": user.id})
     refresh_token = create_refresh_token({"sub": user.id})

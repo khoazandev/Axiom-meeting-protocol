@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     default_model: str = "qwen2.5:3b"
     task_extractor_model: str = "task-extractor"
     decision_extractor_model: str = "decision-extractor"
-    ollama_base_url: str = "http://host.docker.internal:11434"
+    ollama_base_url: str = "http://localhost:11434"
     ollama_timeout: int = 30
     task_extractor_timeout: int = 30
 
@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     trans_en_vi_model: str = "Helsinki-NLP/opus-mt-en-vi"
 
     # AI Extractor Settings
+    extraction_model: str = "task-extractor"
     extraction_timeout: int = 900
     extraction_max_transcript_chars: int = 6000
     
@@ -103,9 +104,10 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     model_config = {
-        "env_file": ".env",
+        "env_file": (".env", "src/backend/.env"),
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
+        "extra": "ignore",
     }
 
 
@@ -113,3 +115,7 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Cached singleton for application settings."""
     return Settings()
+
+
+settings = get_settings()
+

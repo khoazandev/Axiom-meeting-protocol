@@ -681,7 +681,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                     alt={selectedMeeting.host_name || 'Host'}
                     className="w-6 h-6 rounded-full object-cover"
                   />
-                  <span>{selectedMeeting.host_name || 'Trưởng Khối Kỹ Thuật'}</span>
+                  <span>{selectedMeeting.host_name || 'Trưởng Bộ Phận Kỹ Thuật'}</span>
                 </div>
               </div>
 

@@ -71,9 +71,8 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
   const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
 
   // Member Detailed View Modal State
-  const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<EnrichedTeamMember | null>(
-    null
-  );
+  const [selectedMemberForDetails, setSelectedMemberForDetails] =
+    useState<EnrichedTeamMember | null>(null);
   const [allDepartmentIssues, setAllDepartmentIssues] = useState<Issue[]>([]);
 
   // Load Real Members and Tasks
@@ -116,7 +115,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       const myDeptName =
         user?.department_name ||
         rawMembers.find((m) => m.department_id === myDeptId)?.department_name ||
-        'Khối Kỹ Thuật & Công Nghệ';
+        'Bộ Phận Kỹ Thuật & Công Nghệ';
 
       // Keep AuthStore synchronized if department was unset
       if (myDeptId && (!user?.department_id || !user?.department_name)) {
@@ -250,7 +249,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       await loadTeamData();
     } catch (err: unknown) {
       console.error('Failed to invite department member:', err);
-      alert((err as Error)?.message || 'Không thể gửi lời mời. Vui lòng kiểm tra lại địa chỉ email.');
+      alert(
+        (err as Error)?.message || 'Không thể gửi lời mời. Vui lòng kiểm tra lại địa chỉ email.'
+      );
     } finally {
       setIsSubmittingInvite(false);
     }
@@ -274,16 +275,13 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       });
       let targetProj =
         projects?.find(
-          (p) =>
-            p.department_id === user?.department_id ||
-            p.key === 'ENG' ||
-            p.key === 'SMA'
+          (p) => p.department_id === user?.department_id || p.key === 'ENG' || p.key === 'SMA'
         ) || (projects && projects[0] ? projects[0] : null);
 
       if (!targetProj) {
         targetProj = await jiraApi.createProject({
           key: 'ENG',
-          name: user?.department_name || 'Khối Kỹ Thuật & Công Nghệ',
+          name: user?.department_name || 'Bộ Phận Kỹ Thuật & Công Nghệ',
           description: 'Dự án quản lý công việc và phân bổ nhiệm vụ của phòng ban',
           department_id: user?.department_id || undefined,
           organization_id: resolvedOrgId,
@@ -332,7 +330,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
               <span>ĐIỀU PHỐI NĂNG LỰC & TẢI NHÂN SỰ</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Đội Ngũ {user?.department_name || 'Khối Kỹ Thuật'}</span>
+              <span>Đội Ngũ {user?.department_name || 'Bộ Phận Kỹ Thuật'}</span>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl mt-1 leading-relaxed">
               Giám sát khối lượng công việc thực tế của từng nhân viên sau các cuộc họp, nhận diện
@@ -506,15 +504,29 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
                       />
                       <div className="truncate">
-                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate" title={mem.full_name}>
+                        <h3
+                          className="text-sm font-extrabold text-slate-900 dark:text-white truncate"
+                          title={mem.full_name}
+                        >
                           {mem.full_name}
                         </h3>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold truncate" title={mem.job_title || 'Kỹ sư Kỹ thuật (Software Engineer)'}>
-                          {mem.job_title || (mem.role === 'MEMBER' ? 'Kỹ sư Kỹ thuật (Software Engineer)' : mem.role)}
+                        <p
+                          className="text-xs text-blue-600 dark:text-blue-400 font-semibold truncate"
+                          title={mem.job_title || 'Kỹ sư Kỹ thuật (Software Engineer)'}
+                        >
+                          {mem.job_title ||
+                            (mem.role === 'MEMBER'
+                              ? 'Kỹ sư Kỹ thuật (Software Engineer)'
+                              : mem.role)}
                         </p>
-                        <p className="text-[11px] text-slate-400 truncate" title={mem.email}>{mem.email}</p>
+                        <p className="text-[11px] text-slate-400 truncate" title={mem.email}>
+                          {mem.email}
+                        </p>
                         {mem.phone && (
-                          <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5" title={mem.phone}>
+                          <p
+                            className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5"
+                            title={mem.phone}
+                          >
                             <Phone size={10} className="text-slate-400" />
                             <span>{mem.phone}</span>
                           </p>
@@ -659,8 +671,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                     {selectedMemberForDetails.full_name}
                   </h3>
                   <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                    {selectedMemberForDetails.job_title ||
-                      'Kỹ sư Kỹ thuật (Software Engineer)'}
+                    {selectedMemberForDetails.job_title || 'Kỹ sư Kỹ thuật (Software Engineer)'}
                   </p>
                   <p className="text-xs text-slate-400">{selectedMemberForDetails.email}</p>
                   {selectedMemberForDetails.phone && (
@@ -723,9 +734,8 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                 </button>
               </div>
 
-              {allDepartmentIssues.filter(
-                (i) => i.assignee_id === selectedMemberForDetails.user_id
-              ).length === 0 ? (
+              {allDepartmentIssues.filter((i) => i.assignee_id === selectedMemberForDetails.user_id)
+                .length === 0 ? (
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400 italic">
                   Nhân sự này hiện chưa có nhiệm vụ nào được phân bổ.
                 </div>
@@ -785,7 +795,10 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                   Giao Nhiệm Vụ Cho Nhân Sự
                 </h3>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold truncate max-w-xs" title={selectedMemberForAssign.email}>
+                <p
+                  className="text-xs text-blue-600 dark:text-blue-400 font-bold truncate max-w-xs"
+                  title={selectedMemberForAssign.email}
+                >
                   {selectedMemberForAssign.full_name} ({selectedMemberForAssign.email})
                 </p>
               </div>

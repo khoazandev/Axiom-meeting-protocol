@@ -4,7 +4,8 @@ import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { useLanguageStore } from '@/lib/store/useLanguageStore';
-import { Search, Bell, Plus, User, LogOut, ShieldCheck, Globe } from 'lucide-react';
+import { Search, Bell, Plus, User, LogOut, ShieldCheck } from 'lucide-react';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 const emptySubscribe = () => () => {};
 function useMounted() {
@@ -17,7 +18,7 @@ function useMounted() {
 
 export function AppHeader() {
   const { user, activeOrganization, logout } = useAuthStore();
-  const { language, setLanguage, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const mounted = useMounted();
@@ -41,15 +42,8 @@ export function AppHeader() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* Language Switcher Toggle */}
-        <button
-          onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all shadow-sm cursor-pointer"
-          title="Switch Language (VN / EN)"
-        >
-          <Globe className="w-3.5 h-3.5 text-primary" />
-          <span>{language === 'vi' ? '🇻🇳 VN' : '🇺🇸 EN'}</span>
-        </button>
+        {/* Theme Toggle Button */}
+        <ThemeToggle />
 
         {/* Workspace Badge */}
         {mounted && activeOrganization && (

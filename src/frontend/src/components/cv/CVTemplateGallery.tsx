@@ -35,10 +35,7 @@ const CATEGORIES = [
   'Modern Sales',
 ];
 
-export function CVTemplateGallery({
-  onSelectTemplate,
-  activeTemplateId,
-}: CVTemplateGalleryProps) {
+export function CVTemplateGallery({ onSelectTemplate, activeTemplateId }: CVTemplateGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [previewTemplate, setPreviewTemplate] = useState<TemplateCatalogItem | null>(null);
@@ -46,7 +43,9 @@ export function CVTemplateGallery({
   const filteredTemplates = useMemo(() => {
     return CV_TEMPLATES_CATALOG.filter((item) => {
       const matchesCategory =
-        selectedCategory === 'Tất cả' || item.category === selectedCategory || item.tags.includes(selectedCategory);
+        selectedCategory === 'Tất cả' ||
+        item.category === selectedCategory ||
+        item.tags.includes(selectedCategory);
       const matchesSearch =
         searchQuery.trim() === '' ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -59,7 +58,7 @@ export function CVTemplateGallery({
   return (
     <div className="w-full space-y-8 animate-fadeIn">
       {/* Hero Banner Canva Style */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-800 dark:from-indigo-950 dark:via-purple-950 dark:to-slate-950 p-8 text-white shadow-lg border border-indigo-500/20">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -73,15 +72,18 @@ export function CVTemplateGallery({
             Bộ Sưu Tập Mẫu CV Chuẩn Thực Tế
           </h1>
           <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
-            Xem trực tiếp hình ảnh thiết kế thực tế của từng mẫu trước khi chọn. Được tối ưu theo chuẩn Reactive Resume & Canva với thuật toán quét ATS và số liệu định lượng STAR.
+            Xem trực tiếp hình ảnh thiết kế thực tế của từng mẫu trước khi chọn. Được tối ưu theo
+            chuẩn Reactive Resume & Canva với thuật toán quét ATS và số liệu định lượng STAR.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-300 font-medium">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Xem ảnh thiết kế chuẩn A4 trước khi chọn
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Xem ảnh thiết kế chuẩn A4 trước
+              khi chọn
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Nhấp đúp sửa chữ trực tiếp trên trang giấy
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Nhấp đúp sửa chữ trực tiếp trên
+              trang giấy
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Tương thích 100% phần mềm ATS
@@ -107,7 +109,9 @@ export function CVTemplateGallery({
 
           {/* Quick Count Badge */}
           <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <span>Hiển thị <strong>{filteredTemplates.length + 1}</strong> lựa chọn mẫu</span>
+            <span>
+              Hiển thị <strong>{filteredTemplates.length + 1}</strong> lựa chọn mẫu
+            </span>
           </div>
         </div>
 
@@ -146,7 +150,9 @@ export function CVTemplateGallery({
                 <Sparkles className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                 BLANK CANVAS
               </span>
-              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">TỰ DO 100%</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                TỰ DO 100%
+              </span>
             </div>
 
             {/* Visual Miniature A4 Sheet with gridlines */}
@@ -222,7 +228,9 @@ export function CVTemplateGallery({
 
                   {/* Top Badges */}
                   <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10 pointer-events-none">
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shadow-xs backdrop-blur-md ${template.badgeColor}`}>
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shadow-xs backdrop-blur-md ${template.badgeColor}`}
+                    >
                       {template.badge}
                     </span>
 
@@ -347,7 +355,9 @@ export function CVTemplateGallery({
             <div className="md:w-2/5 p-6 flex flex-col justify-between space-y-6 overflow-y-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${previewTemplate.badgeColor}`}>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${previewTemplate.badgeColor}`}
+                  >
                     {previewTemplate.badge}
                   </span>
                   <button
@@ -381,7 +391,8 @@ export function CVTemplateGallery({
                       Tối Ưu Quét ATS Tuyệt Đối
                     </div>
                     <div className="text-[11px] text-emerald-800/80 dark:text-emerald-300">
-                      Cấu trúc định dạng đã kiểm định tương thích 100% với hệ thống tuyển dụng tự động.
+                      Cấu trúc định dạng đã kiểm định tương thích 100% với hệ thống tuyển dụng tự
+                      động.
                     </div>
                   </div>
                 </div>

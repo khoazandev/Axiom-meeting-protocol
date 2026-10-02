@@ -146,6 +146,15 @@ class Organization(database.Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     name = Column(String, nullable=False)
+    tagline = Column(String, nullable=True)
+    logo_url = Column(Text, nullable=True)
+    banner_url = Column(Text, nullable=True)
+    industry = Column(String, nullable=True)
+    size = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    headquarters = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    tax_id = Column(String, nullable=True)
     created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     updated_at = Column(
@@ -985,6 +994,11 @@ class JobOpening(database.Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     requirements = Column(Text, nullable=True)
+    salary_range = Column(String, nullable=True)
+    level = Column(String, nullable=True)
+    work_type = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    benefits = Column(Text, nullable=True)
     status = Column(Enum(JobOpeningStatusEnum), default=JobOpeningStatusEnum.ACTIVE, nullable=False)
     created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
     assigned_hr_member_id = Column(String, ForeignKey("organization_members.id"), nullable=True)
@@ -1086,6 +1100,18 @@ class RecruitmentApplication(database.Base):
     @property
     def candidate_email(self) -> str:
         return self.candidate.email if self.candidate else ""
+
+    @property
+    def candidate_phone(self) -> str | None:
+        return self.candidate.phone if self.candidate else None
+
+    @property
+    def candidate_cv_url(self) -> str | None:
+        return self.candidate.cv_url if self.candidate else None
+
+    @property
+    def candidate_notes(self) -> str | None:
+        return self.candidate.notes if self.candidate else None
 
     @property
     def assigned_hr_name(self) -> str | None:
@@ -1254,4 +1280,38 @@ class OwnerApproval(database.Base):
     application = relationship("RecruitmentApplication", back_populates="owner_approval")
     approver_user = relationship("User", foreign_keys=[approver_user_id])
 
+
+class UserResume(database.Base):
+    __tablename__ = "user_resumes"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False, default="Bản CV chuyên nghiệp")
+    template_id = Column(String, default="harvard", nullable=False)
+    cv_data_json = Column(Text, nullable=False)
+    is_primary = Column(Boolean, default=False, nullable=False)
+    ats_score = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    user = relationship("User")
+
+
+class Notification(database.Base):
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    type = Column(String(50), default="SYSTEM", index=True)
+    link = Column(String(500), nullable=True)
+    is_read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc), index=True)
+
+    user = relationship("User")
 

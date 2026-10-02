@@ -4,13 +4,14 @@ import datetime
 import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 from src.backend.api import deps
 from src.backend.api.v1.meetings_v2 import _get_meeting_or_404, _require_meeting_member
-from src.backend.core.exceptions import ForbiddenException, NotFoundException
+from src.backend.core.exceptions import AuthenticationException, ForbiddenException, NotFoundException
 from src.backend.database import get_db
 from src.backend.models import (
     CorrectionTypeEnum,
@@ -203,10 +204,30 @@ def add_transcript_segment(
     payload: TranscriptSegmentCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
-    _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+        from src.backend import models
+        interview_session = (
+            db.query(models.InterviewSession)
+            .filter(models.InterviewSession.meeting_id == meeting.id)
+            .first()
+        )
+        cand_user = None
+        if interview_session and interview_session.application and interview_session.application.candidate:
+            cand_email = interview_session.application.candidate.email
+            cand_user = db.query(models.User).filter(func.lower(models.User.email) == func.lower(cand_email)).first()
+        speaker_id = cand_user.id if cand_user else None
+        speaker_name = cand_user.full_name if cand_user else "Ứng viên"
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
+        speaker_id = current_user.id
+        speaker_name = current_user.full_name or current_user.email or "Thành viên"
 
     from src.backend.models import Topic, TopicStatusEnum
     current_topic = db.query(Topic).filter(
@@ -214,7 +235,6 @@ def add_transcript_segment(
         Topic.status == TopicStatusEnum.IN_PROGRESS
     ).first()
 
-    speaker_name = current_user.full_name or current_user.email or "Thành viên"
     clean_content = payload.content.strip()
     if not clean_content:
         from fastapi import HTTPException
@@ -225,7 +245,7 @@ def add_transcript_segment(
         db.query(TranscriptSegment)
         .filter(
             TranscriptSegment.meeting_id == meeting_id,
-            TranscriptSegment.speaker_id == current_user.id,
+            TranscriptSegment.speaker_id == speaker_id,
             TranscriptSegment.content == clean_content,
         )
         .order_by(TranscriptSegment.created_at.desc())
@@ -245,7 +265,7 @@ def add_transcript_segment(
     seg = TranscriptSegment(
         meeting_id=meeting_id,
         topic_id=current_topic.id if current_topic else None,
-        speaker_id=current_user.id,
+        speaker_id=speaker_id,
         content=clean_content,
         start_time=payload.start_time,
         end_time=payload.end_time,
@@ -466,10 +486,16 @@ def add_transcript_segment(
 def list_transcript_segments(
     meeting_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
-    _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     return (
@@ -718,10 +744,16 @@ async def trigger_task_extraction(
 def list_follow_up_tasks(
     meeting_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
     meeting = _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     tasks = (

@@ -36,10 +36,6 @@ def cleanup_overrides():
 def setup_db():
     database.Base.metadata.create_all(bind=engine)
     yield
-    try:
-        database.Base.metadata.drop_all(bind=engine, checkfirst=True)
-    except Exception:
-        pass
 
 
 @pytest.fixture

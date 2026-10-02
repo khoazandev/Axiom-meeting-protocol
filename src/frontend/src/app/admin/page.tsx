@@ -20,6 +20,8 @@ import { useAuthStore } from '@/lib/store/useAuthStore';
 import { MatIcon } from '@/components/ui/MatIcon';
 import Logo from '@/components/Logo';
 import { getErrorMessage } from '@/lib/errors';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 
 import {
   adminApi,
@@ -57,6 +59,8 @@ const EMPTY_ORG_ANALYTICS: OrgAnalytics = {
 export default function StandaloneAdminCenterPage() {
   const router = useRouter();
   const { user, activeOrganization, logout } = useAuthStore();
+  const isOwner = user?.role === 'OWNER' || Boolean(activeOrganization?.created_by_id && activeOrganization.created_by_id === user?.id);
+  const userRole = isOwner ? 'OWNER' : (user?.role || 'ADMIN');
 
   const handleLogout = () => {
     logout();
@@ -123,7 +127,8 @@ export default function StandaloneAdminCenterPage() {
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
-    let resolvedOrgId = activeOrganization?.id || (user as { organization_id?: string })?.organization_id;
+    let resolvedOrgId =
+      activeOrganization?.id || (user as { organization_id?: string })?.organization_id;
 
     if (!resolvedOrgId) {
       try {
@@ -204,7 +209,7 @@ export default function StandaloneAdminCenterPage() {
             id: d.id,
             name: d.name,
             code: d.name.slice(0, 3).toUpperCase(),
-            description: d.description || 'Khối phòng ban chức năng Axiom',
+            description: d.description || 'Bộ phận chức năng Axiom',
             managerName: manager?.full_name || 'Chưa bổ nhiệm',
             managerEmail: manager?.email || null,
             memberCount: departmentMembers.length,
@@ -370,7 +375,7 @@ export default function StandaloneAdminCenterPage() {
         )
       );
       showToast(
-        `Đã điều chuyển nhân sự sang ${targetDept?.name || 'Khối Không Phân Bổ'} thành công!`
+        `Đã điều chuyển nhân sự sang ${targetDept?.name || 'Bộ Phận Chưa Phân Bổ'} thành công!`
       );
       fetchAllData();
     } catch (err: unknown) {
@@ -391,7 +396,7 @@ export default function StandaloneAdminCenterPage() {
         name: newDept.name,
         description: newDept.description,
       });
-      showToast(`Đã thành lập khối phòng ban mới: ${newDept.name} (${newDept.code})`);
+      showToast(`Đã thành lập bộ phận mới: ${newDept.name} (${newDept.code})`);
       fetchAllData();
     } catch (err: unknown) {
       showToast(`Lỗi tạo phòng ban: ${(err as Error)?.message || 'Vui lòng thử lại'}`);
@@ -405,7 +410,7 @@ export default function StandaloneAdminCenterPage() {
     }
     try {
       await departmentAdminApi.create(activeOrgId, { name, description });
-      showToast(`Đã thành lập khối phòng ban mới: ${name}`);
+      showToast(`Đã thành lập bộ phận mới: ${name}`);
       fetchAllData();
     } catch (err: unknown) {
       showToast(`Lỗi tạo phòng ban: ${(err as Error)?.message || 'Vui lòng thử lại'}`);
@@ -517,11 +522,22 @@ export default function StandaloneAdminCenterPage() {
               </Link>
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {activeOrganization?.name || 'Axiom Enterprise'}
-                </span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono tracking-tight">
-                  OWNER
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[200px]"
+                  title={`Doanh nghiệp: ${activeOrganization?.name || 'Axiom Enterprise'}`}
+                >
+                  <MatIcon name="apartment" size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+                </div>
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full font-mono tracking-tight shrink-0 border ${
+                    isOwner
+                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                      : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                  }`}
+                  title={isOwner ? 'Chủ sở hữu duy nhất của doanh nghiệp' : 'Quản trị viên hệ thống'}
+                >
+                  {userRole}
                 </span>
               </div>
             </div>
@@ -572,14 +588,20 @@ export default function StandaloneAdminCenterPage() {
                 />
               </button>
 
+              {/* Notification Bell */}
+              <NotificationBell />
+
+              {/* Theme Toggle Button */}
+              <ThemeToggle />
+
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
 
               {/* User Profile Trigger */}
               <button
                 type="button"
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 group cursor-pointer"
-                title="Xem & Chỉnh sửa hồ sơ cá nhân / avatar"
+                className="flex items-center gap-2.5 group cursor-pointer p-1 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
+                title={`Hồ sơ: ${user?.full_name || 'System Admin'} • Thuộc ${activeOrganization?.name || 'Axiom Enterprise'}`}
               >
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all shrink-0">
                   <img
@@ -588,12 +610,22 @@ export default function StandaloneAdminCenterPage() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate max-w-[120px]">
+                <div className="hidden sm:block text-left max-w-[170px]">
+                  <div
+                    className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate"
+                    title={user?.full_name || 'System Admin'}
+                  >
                     {user?.full_name || 'System Admin'}
                   </div>
-                  <div className="text-[9.5px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-tight">
-                    OWNER
+                  <div
+                    className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate"
+                    title={`${activeOrganization?.name || 'Axiom Enterprise'} • ${user?.department_name || (isOwner ? 'Ban Lãnh Đạo' : 'Ban Điều Hành')}`}
+                  >
+                    <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+                    <span>•</span>
+                    <span className={`font-extrabold shrink-0 ${isOwner ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                      {userRole}
+                    </span>
                   </div>
                 </div>
               </button>
@@ -601,17 +633,19 @@ export default function StandaloneAdminCenterPage() {
           </div>
         </div>
 
-        {/* Tier 2: Domain Navigation Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center">
-          {/* 6 Primary Navigation Tabs */}
-          <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+        {/* Tier 2: Domain Navigation Tabs (Centered, Clean & Minimal) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-center">
+          <nav
+            className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-none py-1 max-w-full"
+            aria-label="Admin Navigation Tabs"
+          >
             {NAV_SECTIONS.map((s) => {
               const isActive = activeSection === s.id;
               return (
                 <button
                   key={s.id}
                   onClick={() => handleSelectSection(s.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 font-bold border border-blue-200/80 dark:border-blue-800/60 shadow-2xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
@@ -620,13 +654,6 @@ export default function StandaloneAdminCenterPage() {
                 >
                   <MatIcon name={s.icon} size={16} />
                   <span>{s.label}</span>
-                  {s.badge && (
-                    <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-full border ${s.badgeColor}`}
-                    >
-                      {s.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -662,7 +689,8 @@ export default function StandaloneAdminCenterPage() {
                 Chưa tìm thấy thông tin tổ chức
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                Tài khoản chưa được gán vào tổ chức nào hoặc tổ chức chưa sẵn sàng. Vui lòng liên hệ quản trị viên hoặc kiểm tra lại lời mời.
+                Tài khoản chưa được gán vào tổ chức nào hoặc tổ chức chưa sẵn sàng. Vui lòng liên hệ
+                quản trị viên hoặc kiểm tra lại lời mời.
               </p>
             </div>
             <button
@@ -675,7 +703,10 @@ export default function StandaloneAdminCenterPage() {
             </button>
           </div>
         ) : (
-          <div key={activeSection} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div
+            key={activeSection}
+            className="animate-in fade-in slide-in-from-bottom-2 duration-200"
+          >
             {/* TAB 1: OVERVIEW PULSE (Zero Mock Data, Real Metrics, Join, Approvals, Executive Meeting) */}
             {activeSection === 'overview' && (
               <OverviewPulseTab
@@ -723,9 +754,7 @@ export default function StandaloneAdminCenterPage() {
             )}
 
             {/* TAB 4: PROTOCOL POLICIES */}
-            {activeSection === 'policies' && (
-              <ProtocolPoliciesTab onNotify={showToast} />
-            )}
+            {activeSection === 'policies' && <ProtocolPoliciesTab onNotify={showToast} />}
 
             {/* TAB 5: SOC SECURITY OPERATIONS CENTER (7-day Trend, Severity Donut, Tamper-proof) */}
             {activeSection === 'audit' && (
@@ -746,7 +775,11 @@ export default function StandaloneAdminCenterPage() {
             {activeSection === 'recruitment' && (
               <RecruitmentTab
                 organizationId={activeOrganization?.id || activeOrgId || ''}
-                managers={members.filter((m) => m.role === 'MANAGER' || m.role === 'ADMIN')}
+                managers={
+                  members.filter((m) => ['MANAGER', 'ADMIN', 'OWNER'].includes(m.role)).length > 0
+                    ? members.filter((m) => ['MANAGER', 'ADMIN', 'OWNER'].includes(m.role))
+                    : members
+                }
                 departments={departments}
                 onNotify={showToast}
               />

@@ -2,7 +2,9 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, status, File, UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from src.backend.api.v1.notifications import send_user_notification
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +126,36 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
     if role in ("OWNER", "ADMIN"):
         return True
 
+    # 1.5 Direct invited member of this meeting (including Candidates in interview sessions)
+    is_meeting_member = (
+        db.query(MeetingMember)
+        .filter(
+            MeetingMember.meeting_id == meeting.id,
+            MeetingMember.user_id == user.id,
+        )
+        .first()
+    )
+    if is_meeting_member:
+        return True
+
+    # 1.6 Check if this meeting is linked to an interview session for this candidate
+    try:
+        from src.backend import models
+        interview_session = (
+            db.query(models.InterviewSession)
+            .join(models.RecruitmentApplication, models.RecruitmentApplication.id == models.InterviewSession.application_id)
+            .join(models.Candidate, models.Candidate.id == models.RecruitmentApplication.candidate_id)
+            .filter(
+                models.InterviewSession.meeting_id == meeting.id,
+                func.lower(models.Candidate.email) == func.lower(user.email),
+            )
+            .first()
+        )
+        if interview_session:
+            return True
+    except Exception:
+        pass
+
     is_high_level = _is_high_level_meeting(meeting)
 
     # 2. High-level meetings: ONLY OWNER, ADMIN, and MANAGER can see / access
@@ -140,18 +172,6 @@ def _can_user_access_meeting(db: Session, meeting: Meeting, user: User) -> bool:
 
     # Department access: If meeting belongs to user's department
     if user_dept_id and meeting.department_id == user_dept_id:
-        return True
-
-    # Direct invited member of this regular meeting
-    is_meeting_member = (
-        db.query(MeetingMember)
-        .filter(
-            MeetingMember.meeting_id == meeting.id,
-            MeetingMember.user_id == user.id,
-        )
-        .first()
-    )
-    if is_meeting_member:
         return True
 
     return False
@@ -241,7 +261,7 @@ def _enrich_meeting(m: Meeting, db: Session) -> dict:
         "agenda": m.description,
         "organization_id": m.organization_id,
         "department_id": m.department_id,
-        "department_name": dept.name if dept else "Khối Doanh Nghiệp",
+        "department_name": dept.name if dept else "Bộ Phận Doanh Nghiệp",
         "created_by_id": m.created_by_id,
         "host_name": host_user.full_name if host_user else "Ban Tổ Chức",
         "host_avatar": host_user.avatar_url if host_user else None,
@@ -296,6 +316,23 @@ def create_meeting(
             dept_id = user_dept.department_id
 
     sched_at = payload.scheduled_at or getattr(payload, "scheduled_start_time", None)
+    now_utc = datetime.now(timezone.utc)
+    is_immediate = False
+    if not sched_at:
+        sched_at = now_utc
+        is_immediate = True
+    else:
+        try:
+            if isinstance(sched_at, str):
+                parsed_sched = datetime.fromisoformat(sched_at.replace("Z", "+00:00"))
+            else:
+                parsed_sched = sched_at
+            if parsed_sched.tzinfo is None:
+                parsed_sched = parsed_sched.replace(tzinfo=timezone.utc)
+            if (parsed_sched - now_utc).total_seconds() <= 120:
+                is_immediate = True
+        except Exception:
+            is_immediate = True
 
     meeting = Meeting(
         title=payload.title,
@@ -304,7 +341,8 @@ def create_meeting(
         department_id=dept_id,
         created_by_id=current_user.id,
         scheduled_at=sched_at,
-        status=MeetingStatusEnum.SCHEDULED,
+        started_at=now_utc if is_immediate else None,
+        status=MeetingStatusEnum.IN_PROGRESS if is_immediate else MeetingStatusEnum.SCHEDULED,
         approval_status=approval_st,
         meeting_type=m_type,
     )
@@ -335,13 +373,46 @@ def create_meeting(
                 )
                 db.add(member)
 
+    # Dispatch in-app notifications to participants / members
+    try:
+        target_notify_ids = set()
+        if payload.participant_ids:
+            target_notify_ids.update(payload.participant_ids)
+        if dept_id:
+            for dm in db.query(DepartmentMember.user_id).filter(DepartmentMember.department_id == dept_id).all():
+                target_notify_ids.add(dm[0])
+        elif org_id:
+            for om in db.query(OrganizationMember.user_id).filter(OrganizationMember.organization_id == org_id, OrganizationMember.status == OrgMemberStatusEnum.ACTIVE).all():
+                target_notify_ids.add(om[0])
+        
+        target_notify_ids.discard(current_user.id)
+
+        notif_title = "Cuộc họp đã bắt đầu ngay lập tức!" if is_immediate else "Lịch họp mới được thiết lập"
+        notif_content = (
+            f"Cuộc họp '{meeting.title}' đã bắt đầu ngay bây giờ. Bấm để tham gia phòng họp!"
+            if is_immediate
+            else f"Bạn có lịch tham gia cuộc họp '{meeting.title}'."
+        )
+        notif_type = "MEETING_STARTED" if is_immediate else "MEETING_SCHEDULED"
+        for uid in target_notify_ids:
+            send_user_notification(
+                db=db,
+                user_id=uid,
+                title=notif_title,
+                content=notif_content,
+                type=notif_type,
+                link=f"/meetings/{meeting.id}",
+            )
+    except Exception as notif_err:
+        logger.warning(f"Failed to dispatch meeting notifications: {notif_err}")
+
     # Audit log
     audit = AuditLog(
         organization_id=org_id,
         user_id=current_user.id,
         action="CREATE_MEETING",
         resource=f"meeting:{meeting.id}",
-        details=f"Tạo cuộc họp '{meeting.title}' (loại: {m_type}, duyệt: {approval_st})",
+        details=f"Tạo cuộc họp '{meeting.title}' (loại: {m_type}, duyệt: {approval_st}, bắt đầu ngay: {is_immediate})",
     )
     db.add(audit)
 
@@ -427,10 +498,17 @@ def update_meeting_approval(
 def get_meeting(
     meeting_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
-    """Get meeting details. User must be a member."""
+    """Get meeting details. User must be a member or interview participant."""
     meeting = _get_meeting_or_404(db, meeting_id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if is_interview:
+            return _enrich_meeting(meeting, db)
+        raise AuthenticationException("Could not validate credentials")
+
     _require_meeting_member(db, meeting_id, current_user.id)
     return _enrich_meeting(meeting, db)
 
@@ -493,6 +571,36 @@ def start_meeting_early(
     meeting.status = MeetingStatusEnum.IN_PROGRESS
     if not meeting.started_at:
         meeting.started_at = datetime.now(timezone.utc)
+
+    # Notify candidate if this is an interview session, and notify meeting members
+    try:
+        from src.backend import models
+        interview = db.query(models.InterviewSession).filter_by(meeting_id=meeting.id).first()
+        if interview and interview.application and interview.application.candidate:
+            cand = interview.application.candidate
+            cand_user = db.query(User).filter(func.lower(User.email) == cand.email.strip().lower()).first()
+            if cand_user:
+                send_user_notification(
+                    db=db,
+                    user_id=cand_user.id,
+                    title="Buổi phỏng vấn đã bắt đầu sớm!",
+                    content=f"Buổi phỏng vấn '{meeting.title}' đã bắt đầu sớm hơn dự kiến. Bạn có thể tham gia ngay bây giờ!",
+                    type="INTERVIEW_READY",
+                    link=f"/meetings/{meeting.id}",
+                )
+        other_members = db.query(MeetingMember).filter(MeetingMember.meeting_id == meeting.id, MeetingMember.user_id != current_user.id).all()
+        for m in other_members:
+            send_user_notification(
+                db=db,
+                user_id=m.user_id,
+                title="Cuộc họp đã bắt đầu sớm!",
+                content=f"Cuộc họp '{meeting.title}' đã được bắt đầu sớm hơn lịch hẹn.",
+                type="MEETING_STARTED",
+                link=f"/meetings/{meeting.id}",
+            )
+    except Exception as notif_err:
+        logger.warning(f"Failed to dispatch early start notification: {notif_err}")
+
     db.commit()
     db.refresh(meeting)
     return _enrich_meeting(meeting, db)
@@ -674,11 +782,17 @@ async def parse_agenda_file(
 def list_meeting_members(
     meeting_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
     """List all members of a meeting."""
-    _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    meeting = _get_meeting_or_404(db, meeting_id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
 
     from sqlalchemy.orm import joinedload
     return (
@@ -794,11 +908,33 @@ def get_meeting_token(
     participant_name: str,
     language: str = "vi",
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
     """Generate a LiveKit access token for a meeting room."""
     meeting = _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+
+        from src.backend import models
+        interview_session = (
+            db.query(models.InterviewSession)
+            .filter(models.InterviewSession.meeting_id == meeting.id)
+            .first()
+        )
+        cand_user = None
+        if interview_session and interview_session.application and interview_session.application.candidate:
+            cand_email = interview_session.application.candidate.email
+            cand_user = db.query(models.User).filter(func.lower(models.User.email) == func.lower(cand_email)).first()
+            if not participant_name:
+                participant_name = interview_session.application.candidate.full_name
+
+        user_id_for_identity = cand_user.id if cand_user else f"cand_guest_{uuid.uuid4().hex[:8]}"
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
+        user_id_for_identity = current_user.id
 
     # Auto-start meeting if still scheduled and not yet ended
     if (meeting.status == MeetingStatusEnum.SCHEDULED or not meeting.started_at) and not meeting.ended_at and meeting.status not in (MeetingStatusEnum.COMPLETED, MeetingStatusEnum.CANCELLED):
@@ -810,9 +946,8 @@ def get_meeting_token(
 
     settings = get_settings()
     token = livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    import uuid
     session_suffix = uuid.uuid4().hex[:6]
-    unique_identity = f"user_{current_user.id}___{session_suffix}"
+    unique_identity = f"user_{user_id_for_identity}___{session_suffix}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
     token.with_metadata(json.dumps({"target_lang": language}))
@@ -877,11 +1012,17 @@ async def rag_query(
     meeting_id: str,
     payload: RagQueryRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User | None = Depends(deps.get_optional_current_user),
 ):
     """In-meeting RAG chatbot query: provides comprehensive answer using Agenda, Transcripts, and Notes."""
     meeting = _get_meeting_or_404(db, meeting_id)
-    _require_meeting_member(db, meeting_id, current_user.id)
+    is_interview = str(getattr(meeting, "meeting_type", "") or "").upper() in ("INTERVIEW", "RECRUITMENT_INTERVIEW")
+
+    if current_user is None:
+        if not is_interview:
+            raise AuthenticationException("Could not validate credentials")
+    else:
+        _require_meeting_member(db, meeting_id, current_user.id)
 
     sources = []
 

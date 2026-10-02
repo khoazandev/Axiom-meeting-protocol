@@ -61,7 +61,8 @@ def assert_recruitment_reviewer(db: Session, member: models.OrganizationMember, 
        - Belong to the department of the job opening.
        - Be assigned as the reviewer of the application.
     """
-    if getattr(member.role, "name", None) == "OWNER" or (
+    role_name = getattr(member.role, "name", None)
+    if role_name in ["OWNER", "ADMIN"] or (
         member.organization and member.organization.created_by_id == member.user_id
     ):
         return
@@ -88,7 +89,21 @@ def assert_recruitment_reviewer(db: Session, member: models.OrganizationMember, 
             .first()
         )
         if not is_dept_member:
-            raise ForbiddenException("Reviewer does not belong to the target department")
+            # Check if reviewer belongs to HR/Recruitment department
+            hr_dept = (
+                db.query(models.Department)
+                .join(models.DepartmentMember, models.DepartmentMember.department_id == models.Department.id)
+                .filter(
+                    models.Department.organization_id == member.organization_id,
+                    models.DepartmentMember.user_id == member.user_id,
+                    models.Department.name.ilike("%nhân sự%")
+                    | models.Department.name.ilike("%hr%")
+                    | models.Department.name.ilike("%tuyển dụng%"),
+                )
+                .first()
+            )
+            if not hr_dept:
+                raise ForbiddenException("Reviewer does not belong to the target department")
 
     # Check 3: Assignment match
     assigned_hr_id = getattr(application, "assigned_hr_member_id", None)

@@ -66,11 +66,20 @@ class OnboardingService:
         if idempotency_key:
             existing = (
                 self.db.query(models.OrganizationInvitation)
-                .filter_by(idempotency_key=idempotency_key)
+                .filter_by(
+                    idempotency_key=idempotency_key,
+                    recruitment_application_id=application.id,
+                )
                 .first()
             )
             if existing:
-                return IssuedInvitation(invitation=existing, raw_token="", register_url="")
+                raw_token = str(uuid.uuid4())
+                token_hash = hashlib.sha256(raw_token.strip().encode("utf-8")).hexdigest()
+                existing.token_hash = token_hash
+                existing.expires_at = datetime.datetime.now(timezone.utc) + datetime.timedelta(days=7)
+                self.db.commit()
+                register_url = f"{get_settings().FRONTEND_URL}/register?invite_token={raw_token}"
+                return IssuedInvitation(invitation=existing, raw_token=raw_token, register_url=register_url)
 
         existing_by_app = (
             self.db.query(models.OrganizationInvitation)
@@ -78,7 +87,13 @@ class OnboardingService:
             .first()
         )
         if existing_by_app:
-            return IssuedInvitation(invitation=existing_by_app, raw_token="", register_url="")
+            raw_token = str(uuid.uuid4())
+            token_hash = hashlib.sha256(raw_token.strip().encode("utf-8")).hexdigest()
+            existing_by_app.token_hash = token_hash
+            existing_by_app.expires_at = datetime.datetime.now(timezone.utc) + datetime.timedelta(days=7)
+            self.db.commit()
+            register_url = f"{get_settings().FRONTEND_URL}/register?invite_token={raw_token}"
+            return IssuedInvitation(invitation=existing_by_app, raw_token=raw_token, register_url=register_url)
 
         # 4. Validate candidate email
         candidate = application.candidate

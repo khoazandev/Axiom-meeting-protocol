@@ -20,18 +20,33 @@ export const DEPARTMENT_ICONS: DepartmentIconOption[] = [
 ];
 
 export function getDepartmentIcon(dept: { name?: string; description?: string | null }): string {
-  if (dept.description) {
-    const match = dept.description.match(/\[icon:([a-z_]+)\]/i);
-    if (match && match[1]) return match[1];
-  }
   const name = (dept.name || '').toLowerCase();
+
+  // Bộ Phận Kỹ Thuật & Công Nghệ luôn được ưu tiên icon 'code' hoặc các icon tech chuyên biệt
   if (
     name.includes('kỹ thuật') ||
     name.includes('eng') ||
     name.includes('tech') ||
-    name.includes('công nghệ')
+    name.includes('công nghệ') ||
+    name.includes('phần mềm') ||
+    name.includes('lập trình')
   ) {
+    if (dept.description) {
+      const match = dept.description.match(/\[icon:([a-z_]+)\]/i);
+      if (
+        match &&
+        match[1] &&
+        ['code', 'terminal', 'developer_board', 'memory', 'laptop_mac'].includes(match[1])
+      ) {
+        return match[1];
+      }
+    }
     return 'code';
+  }
+
+  if (dept.description) {
+    const match = dept.description.match(/\[icon:([a-z_]+)\]/i);
+    if (match && match[1]) return match[1];
   }
   if (
     name.includes('sản phẩm') ||

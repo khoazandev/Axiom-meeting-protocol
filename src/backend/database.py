@@ -5,6 +5,8 @@ from src.backend.core.config import get_settings
 
 settings = get_settings()
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", settings.database_url)
+if SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)

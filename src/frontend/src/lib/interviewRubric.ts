@@ -33,6 +33,7 @@ export interface DialogueTurnAnalysis {
 
 export interface InterviewScorecard {
   session_id: string;
+  application_id?: string | null;
   candidate_name: string;
   job_title: string;
   overall_score: number;

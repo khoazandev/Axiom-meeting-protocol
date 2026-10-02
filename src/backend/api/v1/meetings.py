@@ -68,6 +68,66 @@ def create_meeting(
             )
             db.add(topic)
 
+    # Dispatch notification to organization/department members (and candidate if interview)
+    try:
+        from src.backend.api.v1.notifications import send_user_notification
+        import datetime
+        from datetime import timezone
+        
+        is_immediate = False
+        now_utc = datetime.datetime.now(timezone.utc)
+        if not db_meeting.scheduled_at:
+            db_meeting.scheduled_at = now_utc
+            is_immediate = True
+        else:
+            sched = db_meeting.scheduled_at
+            if sched.tzinfo is None:
+                sched = sched.replace(tzinfo=timezone.utc)
+            if (sched - now_utc).total_seconds() <= 120:
+                is_immediate = True
+
+        # Send notification to department or organization members
+        target_users = []
+        if db_meeting.department_id:
+            dept_members = db.query(models.DepartmentMember).filter_by(department_id=db_meeting.department_id).all()
+            target_users = [dm.user_id for dm in dept_members if dm.user_id != db_meeting.created_by_id]
+        elif db_meeting.organization_id:
+            org_members = db.query(models.OrganizationMember).filter_by(
+                organization_id=db_meeting.organization_id,
+                status=models.OrgMemberStatusEnum.ACTIVE
+            ).all()
+            target_users = [om.user_id for om in org_members if om.user_id != db_meeting.created_by_id]
+
+        notif_title = "Cuộc họp đã bắt đầu ngay lập tức!" if is_immediate else "Lịch họp mới được thiết lập"
+        notif_content = f"Cuộc họp '{db_meeting.title}' đã bắt đầu ngay bây giờ. Bấm để tham gia phòng họp!" if is_immediate else f"Bạn có lịch tham gia cuộc họp '{db_meeting.title}'."
+        for u_id in target_users:
+            send_user_notification(
+                db=db,
+                user_id=u_id,
+                title=notif_title,
+                content=notif_content,
+                type="MEETING_STARTED" if is_immediate else "MEETING_SCHEDULED",
+                link=f"/meetings/{db_meeting.id}",
+            )
+
+        # If this meeting is an interview session, notify the candidate
+        interview = db.query(models.InterviewSession).filter_by(meeting_id=db_meeting.id).first()
+        if interview and interview.application and interview.application.candidate:
+            cand = interview.application.candidate
+            cand_user = db.query(models.User).filter(func.lower(models.User.email) == cand.email.strip().lower()).first()
+            if cand_user:
+                send_user_notification(
+                    db=db,
+                    user_id=cand_user.id,
+                    title="Phòng phỏng vấn đã được mở!",
+                    content=f"Buổi phỏng vấn '{db_meeting.title}' đã sẵn sàng. Bạn có thể tham gia ngay bây giờ!",
+                    type="INTERVIEW_READY",
+                    link=f"/meetings/{db_meeting.id}",
+                )
+    except Exception as notif_err:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to dispatch meeting notifications: {notif_err}")
+
     db.commit()
     db.refresh(db_meeting)
     return db_meeting
@@ -167,7 +227,9 @@ def get_meeting_token(
 
     settings = get_settings()
     token = api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-    unique_identity = f"user_{current_user.id}"
+    import uuid
+    session_suffix = uuid.uuid4().hex[:6]
+    unique_identity = f"user_{current_user.id}___{session_suffix}"
     token.with_identity(unique_identity)
     token.with_name(participant_name)
     token.with_metadata(json.dumps({"target_lang": language}))

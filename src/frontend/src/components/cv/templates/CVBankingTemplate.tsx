@@ -134,10 +134,16 @@ export function CVBankingTemplate({
             <div key={edu.id} className="text-xs font-serif">
               <div className="flex justify-between items-baseline font-bold text-slate-900">
                 <span>{edu.school}</span>
-                <span className="text-[10px] text-slate-500 font-sans">{edu.startDate} – {edu.endDate}</span>
+                <span className="text-[10px] text-slate-500 font-sans">
+                  {edu.startDate} – {edu.endDate}
+                </span>
               </div>
-              <div className="italic text-slate-700">{edu.degree} trong {edu.field}</div>
-              {edu.description && <div className="text-[10.5px] text-slate-600">{edu.description}</div>}
+              <div className="italic text-slate-700">
+                {edu.degree} trong {edu.field}
+              </div>
+              {edu.description && (
+                <div className="text-[10.5px] text-slate-600">{edu.description}</div>
+              )}
             </div>
           ))}
         </section>

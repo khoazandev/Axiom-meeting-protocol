@@ -26,6 +26,7 @@ from src.backend.models import (
 from src.backend.schemas.organization import (
     MemberDetailResponse,
     OrganizationCreate,
+    OrganizationUpdate,
     OrganizationResponse,
     OrgAnalyticsResponse,
     UpdateMemberDepartmentRequest,
@@ -113,6 +114,47 @@ def get_organization(
     return org
 
 
+@router.put("/{org_id}", response_model=OrganizationResponse)
+def update_organization(
+    org_id: str,
+    payload: OrganizationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Update organization profile. Only OWNER or ADMIN can perform this action."""
+    from src.backend.core.exceptions import ForbiddenException, NotFoundException
+
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise NotFoundException("Organization")
+
+    membership = (
+        db.query(OrganizationMember)
+        .filter(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not membership:
+        raise ForbiddenException("Not a member of this organization")
+
+    role_name = getattr(membership.role, "name", None) if membership.role else ""
+    is_owner = role_name == "OWNER" or org.created_by_id == current_user.id
+    is_admin = role_name in ["OWNER", "ADMIN"]
+
+    if not is_admin:
+        raise ForbiddenException("Only Organization OWNER or ADMIN can update company profile")
+
+    update_dict = payload.model_dump(exclude_unset=True)
+    for field, val in update_dict.items():
+        setattr(org, field, val)
+
+    db.commit()
+    db.refresh(org)
+    return org
+
+
 @router.get("/{org_id}/members", response_model=list[MemberDetailResponse])
 def list_organization_members(
     org_id: str,
@@ -195,6 +237,8 @@ def list_organization_members(
             "joined_at": m.joined_at or m.created_at,
             "meetings_count": m_count,
             "tasks_count": t_count,
+            "job_title": user.job_title,
+            "phone": user.phone,
         })
 
     return results
@@ -236,6 +280,27 @@ def update_member_role(
     )
     if not target_membership:
         raise NotFoundException("Member not found in organization")
+
+    target_role = db.query(Role).filter(Role.id == target_membership.role_id).first()
+    target_is_owner = target_role and target_role.name == "OWNER"
+
+    # 1 Cong ty chi co 1 Owner duy nhat
+    if target_is_owner and payload.role != "OWNER":
+        raise ForbiddenException("Mỗi doanh nghiệp bắt buộc có 1 Owner duy nhất. Không thể hạ cấp Owner trực tiếp (hãy dùng chuyển nhượng quyền sở hữu).")
+
+    if payload.role == "OWNER":
+        if my_role.name != "OWNER":
+            raise ForbiddenException("Chỉ Owner hiện tại mới có quyền chuyển giao quyền sở hữu doanh nghiệp.")
+        if target_membership.user_id != current_user.id:
+            # Chuyen giao quyen Owner: Owner cu chuyen ve ADMIN, Target tro thanh OWNER
+            admin_role = db.query(Role).filter(Role.name == "ADMIN", Role.is_system == True).first()
+            if not admin_role:
+                admin_role = db.query(Role).filter(Role.name == "ADMIN").first()
+            if admin_role:
+                my_membership.role_id = admin_role.id
+            org = db.query(Organization).filter(Organization.id == org_id).first()
+            if org:
+                org.created_by_id = user_id
 
     # Find or create role
     new_role = db.query(Role).filter(Role.name == payload.role, Role.is_system == True).first()
@@ -287,6 +352,8 @@ def update_member_role(
         "joined_at": target_membership.joined_at or target_membership.created_at,
         "meetings_count": 0,
         "tasks_count": 0,
+        "job_title": user.job_title,
+        "phone": user.phone,
     }
 
 
@@ -379,6 +446,8 @@ def update_member_department(
         "joined_at": target_membership.joined_at or target_membership.created_at,
         "meetings_count": 0,
         "tasks_count": 0,
+        "job_title": target_user.job_title,
+        "phone": target_user.phone,
     }
 
 

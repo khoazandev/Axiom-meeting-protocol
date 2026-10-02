@@ -101,7 +101,7 @@ export default function DocsPage() {
           {HPDI_PILLARS.map((p) => (
             <div
               key={p.letter}
-              className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl bg-slate-50/80 dark:bg-neutral-900/90 border border-slate-200/80 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2.5">
@@ -111,14 +111,14 @@ export default function DocsPage() {
                     >
                       {p.letter}
                     </span>
-                    <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                       {p.tag}
                     </span>
                   </div>
-                  <MaterialIcon name={p.icon} className="w-4 h-4 text-slate-400" />
+                  <MaterialIcon name={p.icon} className="w-4 h-4 text-slate-400 dark:text-neutral-500" />
                 </div>
-                <h3 className="text-[15px] font-bold text-slate-900 mb-1">{p.title}</h3>
-                <p className="text-[13px] text-slate-600 leading-relaxed mb-0">{p.desc}</p>
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">{p.title}</h3>
+                <p className="text-[13px] text-slate-600 dark:text-neutral-400 leading-relaxed mb-0">{p.desc}</p>
               </div>
             </div>
           ))}
@@ -183,18 +183,18 @@ export default function DocsPage() {
           {QUICK_STEPS.map((st) => (
             <div
               key={st.num}
-              className="p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 hover:border-blue-300 dark:hover:border-neutral-700 hover:shadow-xs transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="text-[12px] font-black text-[#2563EB] mb-1 font-mono">
+                <div className="text-[12px] font-black text-[#2563EB] dark:text-blue-400 mb-1 font-mono">
                   BƯỚC {st.num}
                 </div>
-                <h4 className="text-[14px] font-bold text-slate-900 mb-1">{st.title}</h4>
-                <p className="text-[12.5px] text-slate-600 leading-relaxed mb-3">{st.desc}</p>
+                <h4 className="text-[14px] font-bold text-slate-900 dark:text-white mb-1">{st.title}</h4>
+                <p className="text-[12.5px] text-slate-600 dark:text-neutral-400 leading-relaxed mb-3">{st.desc}</p>
               </div>
               <Link
                 href={st.href}
-                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#2563EB] hover:underline"
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#2563EB] dark:text-blue-400 hover:underline"
               >
                 <span>{st.linkText}</span>
                 <MaterialIcon name="arrow_forward" className="w-3 h-3" />
@@ -205,7 +205,7 @@ export default function DocsPage() {
 
         <Alert type="success">
           Hệ thống đã sẵn sàng! Bạn có thể xem thêm phần{' '}
-          <Link href="/docs/installation" className="font-semibold text-emerald-800 underline">
+          <Link href="/docs/installation" className="font-semibold text-emerald-800 dark:text-emerald-300 underline">
             Cài đặt & Tích hợp
           </Link>{' '}
           để nắm rõ hướng dẫn triển khai Docker Compose.
@@ -213,21 +213,21 @@ export default function DocsPage() {
       </DocSection>
 
       {/* Next Chapter Pagination Footer */}
-      <div className="mt-12 pt-6 border-t border-slate-200 flex items-center justify-between">
-        <div className="text-xs text-slate-400">Cập nhật lần cuối: Tháng 9, 2026</div>
+      <div className="mt-12 pt-6 border-t border-slate-200 dark:border-neutral-800 flex items-center justify-between">
+        <div className="text-xs text-slate-400 dark:text-neutral-500">Cập nhật lần cuối: Tháng 9, 2026</div>
         <Link
           href="/docs/installation"
-          className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition-all text-right"
+          className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 hover:bg-blue-50 dark:hover:bg-neutral-800 border border-slate-200 dark:border-neutral-800 hover:border-blue-200 dark:hover:border-neutral-700 transition-all text-right"
         >
           <div>
-            <div className="text-[11px] font-medium text-slate-500">Chương tiếp theo</div>
-            <div className="text-[13px] font-bold text-slate-900 group-hover:text-[#2563EB]">
+            <div className="text-[11px] font-medium text-slate-500 dark:text-neutral-400">Chương tiếp theo</div>
+            <div className="text-[13px] font-bold text-slate-900 dark:text-white group-hover:text-[#2563EB] dark:group-hover:text-blue-400">
               Cài đặt & Triển khai
             </div>
           </div>
           <MaterialIcon
             name="arrow_forward"
-            className="w-4 h-4 text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-1 transition-transform"
+            className="w-4 h-4 text-slate-400 group-hover:text-[#2563EB] dark:group-hover:text-blue-400 group-hover:translate-x-1 transition-transform"
           />
         </Link>
       </div>

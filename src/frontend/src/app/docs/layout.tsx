@@ -4,7 +4,7 @@ import DocToc from '@/components/docs/DocToc';
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-blue-500/15 selection:text-blue-900">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-neutral-950 flex flex-col selection:bg-blue-500/15 selection:text-blue-900 transition-colors">
       <HomeNavbar />
 
       {/* Main 3-column container */}
@@ -13,7 +13,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         <Sidebar />
 
         {/* 2. Center Content: Main Document (Nội dung tài liệu) */}
-        <main className="flex-1 min-w-0 bg-white border-r border-[#E2E8F0] min-h-[calc(100vh-4rem)] flex flex-col">
+        <main className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border-r border-[#E2E8F0] dark:border-neutral-800 min-h-[calc(100vh-4rem)] flex flex-col transition-colors">
           <div className="w-full max-w-4xl px-6 sm:px-10 lg:px-12 py-8 lg:py-10 flex-1">
             {children}
           </div>

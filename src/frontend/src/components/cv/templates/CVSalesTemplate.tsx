@@ -4,7 +4,17 @@ import React from 'react';
 import { CVData } from '@/types/cv';
 import { EditableInlineText } from '../canva/EditableInlineText';
 import { CanvaBoundingBox } from '../canva/CanvaBoundingBox';
-import { TrendingUp, Target, DollarSign, Award, Briefcase, GraduationCap, Phone, Mail, MapPin } from 'lucide-react';
+import {
+  TrendingUp,
+  Target,
+  DollarSign,
+  Award,
+  Briefcase,
+  GraduationCap,
+  Phone,
+  Mail,
+  MapPin,
+} from 'lucide-react';
 
 interface TemplateProps {
   data: CVData;
@@ -89,7 +99,9 @@ export function CVSalesTemplate({
 
           {/* Quick Metrics Badge */}
           <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-xl shadow-md text-center min-w-[130px]">
-            <div className="text-[10px] font-semibold uppercase tracking-wider opacity-90">KPI ĐẠT ĐƯỢC</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider opacity-90">
+              KPI ĐẠT ĐƯỢC
+            </div>
             <div className="text-xl font-black mt-0.5">145%</div>
             <div className="text-[9px] text-emerald-100 font-medium">Target Doanh Thu 2023</div>
           </div>
@@ -220,8 +232,12 @@ export function CVSalesTemplate({
                 {education.map((edu) => (
                   <div key={edu.id} className="text-[10.5px]">
                     <div className="font-bold text-slate-800">{edu.school}</div>
-                    <div className="text-slate-600">{edu.degree} - {edu.field}</div>
-                    <div className="text-[9.5px] text-slate-400">{edu.startDate} - {edu.endDate}</div>
+                    <div className="text-slate-600">
+                      {edu.degree} - {edu.field}
+                    </div>
+                    <div className="text-[9.5px] text-slate-400">
+                      {edu.startDate} - {edu.endDate}
+                    </div>
                   </div>
                 ))}
               </div>

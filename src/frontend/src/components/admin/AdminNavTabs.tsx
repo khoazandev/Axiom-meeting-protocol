@@ -25,40 +25,32 @@ interface TabDef {
   badgeColor?: string;
 }
 
-export function AdminNavTabs({ activeTab, onChangeTab, badgeCounts }: AdminNavTabsProps) {
+export function AdminNavTabs({ activeTab, onChangeTab }: AdminNavTabsProps) {
   const tabs: TabDef[] = [
     {
       key: 'pulse',
       label: 'Tổng Quan',
       icon: 'speed',
-      badge: badgeCounts?.liveMeetings ? `${badgeCounts.liveMeetings} Đang họp` : undefined,
-      badgeColor: 'bg-emerald-100 text-emerald-700 animate-pulse',
     },
     {
       key: 'members',
       label: 'Nhân Sự & RBAC',
       icon: 'groups',
-      badge: badgeCounts?.totalMembers,
-      badgeColor: 'bg-slate-100 text-slate-700',
     },
     {
       key: 'departments',
-      label: 'Cơ Cấu Phòng Ban',
-      icon: 'hub',
-      badge: badgeCounts?.departments,
-      badgeColor: 'bg-blue-100 text-blue-700',
+      label: 'Quản Lý Công Việc',
+      icon: 'task_alt',
     },
     {
       key: 'policies',
-      label: 'Kỷ Luật Họp DX-OS',
+      label: 'Cổng Kiểm Soát',
       icon: 'gavel',
     },
     {
       key: 'security',
       label: 'Kiểm Toán & An Ninh',
       icon: 'security',
-      badge: badgeCounts?.securityAlerts ? `${badgeCounts.securityAlerts}` : undefined,
-      badgeColor: 'bg-amber-100 text-amber-800',
     },
     {
       key: 'webhooks',
@@ -68,7 +60,7 @@ export function AdminNavTabs({ activeTab, onChangeTab, badgeCounts }: AdminNavTa
   ];
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-200/80 mb-6">
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-200/80 dark:border-slate-800 mb-6">
       {tabs.map((t) => {
         const isActive = activeTab === t.key;
         return (
@@ -78,26 +70,15 @@ export function AdminNavTabs({ activeTab, onChangeTab, badgeCounts }: AdminNavTa
             onClick={() => onChangeTab(t.key)}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               isActive
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-100/80 text-slate-600 hover:text-slate-900 border border-slate-200/70'
+                ? 'bg-slate-900 dark:bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 hover:bg-slate-100/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/70 dark:border-slate-800'
             }`}
           >
             <MaterialIcon
               name={t.icon}
-              className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
+              className={`w-4 h-4 ${isActive ? 'text-blue-400 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}
             />
             <span>{t.label}</span>
-            {t.badge && (
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : t.badgeColor || 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {t.badge}
-              </span>
-            )}
           </button>
         );
       })}

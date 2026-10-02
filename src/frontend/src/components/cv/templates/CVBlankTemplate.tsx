@@ -36,7 +36,8 @@ export function CVBlankTemplate({
     const newBlock: CustomBlock = {
       id: `block-${Date.now()}`,
       title: 'Tiêu Đề Khối Mới',
-      content: 'Nhấp đúp chuột vào đây để soạn thảo nội dung của bạn. Bạn có thể định dạng, di chuyển hoặc căn chỉnh vị trí tùy ý như trên Canva.',
+      content:
+        'Nhấp đúp chuột vào đây để soạn thảo nội dung của bạn. Bạn có thể định dạng, di chuyển hoặc căn chỉnh vị trí tùy ý như trên Canva.',
     };
     onUpdate({
       ...data,
@@ -71,7 +72,8 @@ export function CVBlankTemplate({
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>
-            <strong>Bản Vẽ Trắng Canva:</strong> Nhấp đúp vào bất kỳ dòng chữ nào để chỉnh sửa trực tiếp. Dùng nút bên dưới để thêm khối văn bản tự do.
+            <strong>Bản Vẽ Trắng Canva:</strong> Nhấp đúp vào bất kỳ dòng chữ nào để chỉnh sửa trực
+            tiếp. Dùng nút bên dưới để thêm khối văn bản tự do.
           </span>
         </div>
         <button
@@ -124,10 +126,15 @@ export function CVBlankTemplate({
         onSelect={onSelectElement}
       >
         <section className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Giới Thiệu Bản Thân</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Giới Thiệu Bản Thân
+          </h2>
           <div className="text-sm leading-relaxed text-slate-800">
             <EditableInlineText
-              value={summary || 'Nhấp đúp vào đây để viết lời giới thiệu ấn tượng về bản thân, định hướng công việc và kinh nghiệm cốt lõi của bạn...'}
+              value={
+                summary ||
+                'Nhấp đúp vào đây để viết lời giới thiệu ấn tượng về bản thân, định hướng công việc và kinh nghiệm cốt lõi của bạn...'
+              }
               onChange={updateSummary}
               multiline
               placeholder="Nhấp đúp để nhập tóm tắt hồ sơ..."
@@ -187,13 +194,17 @@ export function CVBlankTemplate({
           onSelect={onSelectElement}
         >
           <section className="mb-6 pt-4 border-t border-slate-200">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Kinh Nghiệm Làm Việc</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+              Kinh Nghiệm Làm Việc
+            </h2>
             <div className="space-y-3">
               {experience.map((e) => (
                 <div key={e.id} className="text-xs space-y-0.5">
                   <div className="font-bold text-slate-900 flex justify-between">
                     <span>{e.position}</span>
-                    <span className="text-slate-500">{e.startDate} - {e.endDate}</span>
+                    <span className="text-slate-500">
+                      {e.startDate} - {e.endDate}
+                    </span>
                   </div>
                   <div className="text-slate-600 font-medium">{e.company}</div>
                   <div className="text-slate-600 whitespace-pre-line">{e.description}</div>
@@ -213,10 +224,15 @@ export function CVBlankTemplate({
           onSelect={onSelectElement}
         >
           <section className="mb-6 pt-4 border-t border-slate-200">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Kỹ Năng Nổi Bật</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              Kỹ Năng Nổi Bật
+            </h2>
             <div className="flex flex-wrap gap-2">
               {skills.map((s) => (
-                <span key={s.id} className="text-xs px-2.5 py-1 bg-slate-100 rounded-md font-medium text-slate-800">
+                <span
+                  key={s.id}
+                  className="text-xs px-2.5 py-1 bg-slate-100 rounded-md font-medium text-slate-800"
+                >
                   {s.name}
                 </span>
               ))}
@@ -230,7 +246,8 @@ export function CVBlankTemplate({
         <Layers className="w-8 h-8 text-indigo-400 mb-2" />
         <h4 className="text-sm font-semibold text-slate-800">Bố cục tự do chuẩn Canva</h4>
         <p className="text-xs text-slate-500 max-w-sm mt-1 mb-3">
-          Nhấp để thêm khối nội dung mới, sau đó bạn có thể kéo thả, định vị hoặc gõ bất cứ thông tin nào.
+          Nhấp để thêm khối nội dung mới, sau đó bạn có thể kéo thả, định vị hoặc gõ bất cứ thông
+          tin nào.
         </p>
         <button
           type="button"

@@ -118,6 +118,7 @@ class IssueCreate(BaseModel):
     due_date: Optional[datetime] = None
     meeting_id: Optional[str] = None
     transcript_segment_id: Optional[str] = None
+    department_id: Optional[str] = None
 
 
 class IssueUpdate(BaseModel):
@@ -132,6 +133,7 @@ class IssueUpdate(BaseModel):
     sprint_id: Optional[str] = None
     assignee_id: Optional[str] = None
     due_date: Optional[datetime] = None
+    department_id: Optional[str] = None
     sprint_position: Optional[int] = None
     board_position: Optional[int] = None
 
@@ -161,6 +163,7 @@ class IssueResponse(BaseModel):
     reporter_name: Optional[str] = None
     assignee_id: Optional[str] = None
     assignee_name: Optional[str] = None
+    department_id: Optional[str] = None
     due_date: Optional[datetime] = None
     meeting_id: Optional[str] = None
     transcript_segment_id: Optional[str] = None

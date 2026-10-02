@@ -282,7 +282,7 @@ export function DepartmentCalendarView({
 
   const deptSelectOptions = useMemo(() => {
     return [
-      { value: 'ALL', label: 'Tất cả khối' },
+      { value: 'ALL', label: 'Tất cả bộ phận' },
       ...departments.map((d) => ({ value: d.id, label: d.name })),
     ];
   }, [departments]);
@@ -408,7 +408,7 @@ export function DepartmentCalendarView({
       <div className="bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
           <MatIcon name="label" className="text-[16px] text-slate-400" />
-          <span className="font-semibold text-slate-700 dark:text-slate-300">Khối ban:</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">Bộ phận:</span>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {deptLegends.map((d) => (
@@ -664,7 +664,7 @@ export function DepartmentCalendarView({
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] text-slate-400">
-                <span>Phần đã làm (Màu khối)</span>
+                <span>Phần đã làm (Màu bộ phận)</span>
                 <span>Phần chưa xong (Màu xám)</span>
               </div>
             </div>
@@ -673,7 +673,7 @@ export function DepartmentCalendarView({
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                  Khối phòng ban
+                  Bộ phận
                 </span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   {selectedTaskForModal.department_name}

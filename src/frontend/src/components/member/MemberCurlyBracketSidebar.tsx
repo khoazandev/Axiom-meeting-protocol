@@ -33,8 +33,6 @@ export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
     label: 'Phòng Họp & Ghi Âm',
     sublabel: 'Tham gia cuộc họp',
     icon: Video,
-    badge: '1 Live',
-    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     shortcut: '⌘1',
   },
   {
@@ -42,8 +40,6 @@ export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
     label: 'Không Gian MiniJira Workspace',
     sublabel: 'Bảng Agile Sprint Kanban 4 cột',
     icon: Kanban,
-    badge: 'SMA',
-    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
     shortcut: '⌘3',
   },
   {
@@ -58,8 +54,6 @@ export const MEMBER_NAV_SECTIONS: MemberNavSectionItem[] = [
     label: 'Kho Tài Liệu & AI',
     sublabel: 'Biên bản phòng ban & Chatbot',
     icon: BookOpen,
-    badge: 'Phòng ban',
-    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
     shortcut: '⌘5',
   },
   {
@@ -238,13 +232,6 @@ export function MemberCurlyBracketSidebar({
                             <span className="text-xs font-bold text-slate-900 dark:text-white">
                               {section.label}
                             </span>
-                            {section.badge && (
-                              <span
-                                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border ${section.badgeColor}`}
-                              >
-                                {section.badge}
-                              </span>
-                            )}
                           </div>
                           <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {section.sublabel}

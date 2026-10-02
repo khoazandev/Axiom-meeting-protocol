@@ -340,7 +340,7 @@ export function DepartmentGanttTimeline({
             <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850/80 text-[11px] font-bold text-slate-500">
               {/* Left Column Label */}
               <div className="w-72 p-3 border-r border-slate-200 dark:border-slate-800 shrink-0 font-bold uppercase tracking-wider">
-                Khối Phòng Ban & Nhiệm Vụ
+                Bộ Phận & Nhiệm Vụ
               </div>
 
               {/* Day Columns */}

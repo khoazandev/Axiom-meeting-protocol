@@ -71,7 +71,12 @@ export function CanvaBoundingBox({
   const [isResizing, setIsResizing] = useState(false);
   const [activeHandle, setActiveHandle] = useState<string | null>(null);
 
-  const [dimensions, setDimensions] = useState<{ width: number; height: number; left: number; top: number }>({
+  const [dimensions, setDimensions] = useState<{
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+  }>({
     width: 0,
     height: 0,
     left: 0,
@@ -107,7 +112,9 @@ export function CanvaBoundingBox({
       setDimensions({
         width: Math.round(rect.width / scale),
         height: Math.round(rect.height / scale),
-        left: parent ? Math.round((rect.left - parent.left) / scale) : Math.round(rect.left / scale),
+        left: parent
+          ? Math.round((rect.left - parent.left) / scale)
+          : Math.round(rect.left / scale),
         top: parent ? Math.round((rect.top - parent.top) / scale) : Math.round(rect.top / scale),
       });
     }
@@ -187,8 +194,10 @@ export function CanvaBoundingBox({
       const startMouseY = e.clientY;
 
       const currentRect = containerRef.current?.getBoundingClientRect();
-      const startWidth = customSize.width || (currentRect ? Math.round(currentRect.width / scale) : 200);
-      const startHeight = customSize.height || (currentRect ? Math.round(currentRect.height / scale) : 100);
+      const startWidth =
+        customSize.width || (currentRect ? Math.round(currentRect.width / scale) : 200);
+      const startHeight =
+        customSize.height || (currentRect ? Math.round(currentRect.height / scale) : 100);
       const startOffsetX = offset.x;
       const startOffsetY = offset.y;
 
@@ -315,15 +324,15 @@ export function CanvaBoundingBox({
       }}
       className={`relative group select-none transition-shadow ${
         isSelected
-          ? 'ring-2 ring-[#7d2ae8] bg-[#7d2ae8]/5 z-20 rounded-xs'
-          : 'hover:ring-1 hover:ring-[#7d2ae8]/50'
+          ? 'ring-2 ring-indigo-600 bg-indigo-500/5 z-20 rounded-xs'
+          : 'hover:ring-1 hover:ring-indigo-400/50'
       } ${isDragging ? 'opacity-90 shadow-2xl cursor-grabbing' : ''}`}
     >
       {/* ── CANVA SMART GUIDES (Magenta center alignment lines across canvas) ── */}
       {(isSelected || isDragging) && (
         <>
-          <div className="absolute -left-[500px] -right-[500px] top-1/2 h-[1px] border-b border-dashed border-[#e0007b]/60 pointer-events-none z-10" />
-          <div className="absolute -top-[500px] -bottom-[500px] left-1/2 w-[1px] border-r border-dashed border-[#e0007b]/60 pointer-events-none z-10" />
+          <div className="absolute -left-[500px] -right-[500px] top-1/2 h-[1px] border-b border-dashed border-indigo-400/60 pointer-events-none z-10" />
+          <div className="absolute -top-[500px] -bottom-[500px] left-1/2 w-[1px] border-r border-dashed border-indigo-400/60 pointer-events-none z-10" />
         </>
       )}
 
@@ -332,22 +341,22 @@ export function CanvaBoundingBox({
         <>
           <div
             onMouseDown={startDrag}
-            className="absolute -top-1 left-3 right-3 h-2 cursor-move z-25 hover:bg-[#7d2ae8]/20 transition-colors"
+            className="absolute -top-1 left-3 right-3 h-2 cursor-move z-20 hover:bg-indigo-500/20 transition-colors"
             title="Nắm kéo để di chuyển vị trí"
           />
           <div
             onMouseDown={startDrag}
-            className="absolute -bottom-1 left-3 right-3 h-2 cursor-move z-25 hover:bg-[#7d2ae8]/20 transition-colors"
+            className="absolute -bottom-1 left-3 right-3 h-2 cursor-move z-20 hover:bg-indigo-500/20 transition-colors"
             title="Nắm kéo để di chuyển vị trí"
           />
           <div
             onMouseDown={startDrag}
-            className="absolute top-3 bottom-3 -left-1 w-2 cursor-move z-25 hover:bg-[#7d2ae8]/20 transition-colors"
+            className="absolute top-3 bottom-3 -left-1 w-2 cursor-move z-20 hover:bg-indigo-500/20 transition-colors"
             title="Nắm kéo để di chuyển vị trí"
           />
           <div
             onMouseDown={startDrag}
-            className="absolute top-3 bottom-3 -right-1 w-2 cursor-move z-25 hover:bg-[#7d2ae8]/20 transition-colors"
+            className="absolute top-3 bottom-3 -right-1 w-2 cursor-move z-20 hover:bg-indigo-500/20 transition-colors"
             title="Nắm kéo để di chuyển vị trí"
           />
         </>
@@ -359,44 +368,44 @@ export function CanvaBoundingBox({
           {/* 4 Corner Round Handles */}
           <div
             onMouseDown={(e) => startResize(e, 'nw')}
-            className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-[#7d2ae8] rounded-full shadow-md z-30 cursor-nwse-resize hover:scale-125 transition-transform"
+            className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-indigo-600 rounded-full shadow-md z-20 cursor-nwse-resize hover:scale-125 transition-transform"
             title="Kéo co giãn góc trên - trái"
           />
           <div
             onMouseDown={(e) => startResize(e, 'ne')}
-            className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-[#7d2ae8] rounded-full shadow-md z-30 cursor-nesw-resize hover:scale-125 transition-transform"
+            className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-indigo-600 rounded-full shadow-md z-20 cursor-nesw-resize hover:scale-125 transition-transform"
             title="Kéo co giãn góc trên - phải"
           />
           <div
             onMouseDown={(e) => startResize(e, 'sw')}
-            className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-[#7d2ae8] rounded-full shadow-md z-30 cursor-nesw-resize hover:scale-125 transition-transform"
+            className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-indigo-600 rounded-full shadow-md z-20 cursor-nesw-resize hover:scale-125 transition-transform"
             title="Kéo co giãn góc dưới - trái"
           />
           <div
             onMouseDown={(e) => startResize(e, 'se')}
-            className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-[#7d2ae8] rounded-full shadow-md z-30 cursor-nwse-resize hover:scale-125 transition-transform"
+            className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-indigo-600 rounded-full shadow-md z-20 cursor-nwse-resize hover:scale-125 transition-transform"
             title="Kéo co giãn góc dưới - phải"
           />
 
           {/* 4 Edge Pill Handles */}
           <div
             onMouseDown={(e) => startResize(e, 'w')}
-            className="absolute top-1/2 -left-1 -translate-y-1/2 w-1.5 h-5 bg-white border border-[#7d2ae8] rounded-full shadow-xs z-30 cursor-ew-resize hover:scale-125 transition-transform"
+            className="absolute top-1/2 -left-1 -translate-y-1/2 w-1.5 h-5 bg-white border border-indigo-600 rounded-full shadow-xs z-20 cursor-ew-resize hover:scale-125 transition-transform"
             title="Kéo co giãn bề rộng trái"
           />
           <div
             onMouseDown={(e) => startResize(e, 'e')}
-            className="absolute top-1/2 -right-1 -translate-y-1/2 w-1.5 h-5 bg-white border border-[#7d2ae8] rounded-full shadow-xs z-30 cursor-ew-resize hover:scale-125 transition-transform"
+            className="absolute top-1/2 -right-1 -translate-y-1/2 w-1.5 h-5 bg-white border border-indigo-600 rounded-full shadow-xs z-20 cursor-ew-resize hover:scale-125 transition-transform"
             title="Kéo co giãn bề rộng phải"
           />
           <div
             onMouseDown={(e) => startResize(e, 'n')}
-            className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-1.5 bg-white border border-[#7d2ae8] rounded-full shadow-xs z-30 cursor-ns-resize hover:scale-125 transition-transform"
+            className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-1.5 bg-white border border-indigo-600 rounded-full shadow-xs z-20 cursor-ns-resize hover:scale-125 transition-transform"
             title="Kéo co giãn chiều cao trên"
           />
           <div
             onMouseDown={(e) => startResize(e, 's')}
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-1.5 bg-white border border-[#7d2ae8] rounded-full shadow-xs z-30 cursor-ns-resize hover:scale-125 transition-transform"
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-1.5 bg-white border border-indigo-600 rounded-full shadow-xs z-20 cursor-ns-resize hover:scale-125 transition-transform"
             title="Kéo co giãn chiều cao dưới"
           />
         </>
@@ -406,14 +415,14 @@ export function CanvaBoundingBox({
       {isSelected && (
         <>
           <div
-            className="absolute -top-11 left-1/2 -translate-x-1/2 z-40 bg-white text-slate-800 rounded-full px-2.5 py-1 shadow-xl flex items-center gap-1.5 text-[11px] font-semibold border border-slate-200 animate-in fade-in zoom-in-95 duration-100 whitespace-nowrap select-none"
+            className="absolute -top-11 left-1/2 -translate-x-1/2 z-20 bg-white text-slate-800 rounded-full px-2.5 py-1 shadow-xl flex items-center gap-1.5 text-[11px] font-semibold border border-slate-200 animate-in fade-in zoom-in-95 duration-100 whitespace-nowrap select-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Primary Drag Pill: Grab here to move freely */}
             {draggable && (
               <div
                 onMouseDown={startDrag}
-                className="px-2 py-0.5 rounded-full bg-[#7d2ae8] hover:bg-[#6821c4] text-white flex items-center gap-1 cursor-grab active:cursor-grabbing text-[10px] font-bold shadow-xs transition-colors"
+                className="px-2 py-0.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1 cursor-grab active:cursor-grabbing text-[10px] font-bold shadow-xs transition-colors"
                 title="Nắm và kéo để di chuyển vị trí tự do (X, Y)"
               >
                 <Move className="w-3 h-3" />
@@ -422,7 +431,7 @@ export function CanvaBoundingBox({
             )}
 
             {label && (
-              <span className="text-[10px] uppercase font-bold text-[#7d2ae8] px-1 border-r border-slate-200 truncate max-w-[110px]">
+              <span className="text-[10px] uppercase font-bold text-indigo-600 px-1 border-r border-slate-200 truncate max-w-[110px]">
                 {label}
               </span>
             )}
@@ -500,11 +509,17 @@ export function CanvaBoundingBox({
           {/* ── BOTTOM POSITION & DIMENSIONS BADGE (Clean Light Theme) ───── */}
           <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-30 bg-white text-slate-700 border border-slate-200 text-[9px] font-mono font-bold px-2.5 py-0.5 rounded-full shadow-md whitespace-nowrap pointer-events-none flex items-center gap-2">
             <span className="text-[#7d2ae8] font-bold">
-              W: {customSize.width || dimensions.width}px × H: {customSize.height || dimensions.height}px
+              W: {customSize.width || dimensions.width}px × H:{' '}
+              {customSize.height || dimensions.height}px
             </span>
             <span className="text-slate-300">|</span>
-            <span className={offset.x !== 0 || offset.y !== 0 ? 'text-amber-600 font-bold' : 'text-slate-500'}>
-              X: {dimensions.left + offset.x} (Δ{offset.x >= 0 ? `+${offset.x}` : offset.x}) Y: {dimensions.top + offset.y} (Δ{offset.y >= 0 ? `+${offset.y}` : offset.y})
+            <span
+              className={
+                offset.x !== 0 || offset.y !== 0 ? 'text-amber-600 font-bold' : 'text-slate-500'
+              }
+            >
+              X: {dimensions.left + offset.x} (Δ{offset.x >= 0 ? `+${offset.x}` : offset.x}) Y:{' '}
+              {dimensions.top + offset.y} (Δ{offset.y >= 0 ? `+${offset.y}` : offset.y})
             </span>
           </div>
         </>

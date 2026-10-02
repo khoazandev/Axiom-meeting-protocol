@@ -221,7 +221,7 @@ export default function AxiomLogo({
               variant === 'white' ? 'text-slate-300' : 'text-[#757f9c] dark:text-slate-400'
             )}
           >
-            Meeting Protocol
+            Digital Enterprise
           </span>
         </div>
       )}

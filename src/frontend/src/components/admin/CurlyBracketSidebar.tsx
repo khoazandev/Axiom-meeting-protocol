@@ -7,7 +7,7 @@ import { Pin, PinOff, ChevronRight, LogOut } from 'lucide-react';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
 
 export type AdminSectionKey =
-  | 'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'archives' | 'recruitment';
+  'overview' | 'members' | 'departments' | 'policies' | 'audit' | 'archives' | 'recruitment';
 
 export interface NavSectionItem {
   id: AdminSectionKey;
@@ -25,35 +25,27 @@ export const NAV_SECTIONS: NavSectionItem[] = [
     label: 'Tổng quan',
     sublabel: 'Giám sát điều hành',
     icon: 'speed',
-    badge: '3 Trực tiếp',
-    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     shortcut: '⌘1',
   },
   {
     id: 'members',
     label: 'Nhân sự & RBAC',
-    sublabel: '10 Thành viên & Phân quyền',
+    sublabel: 'Thành viên & Phân quyền',
     icon: 'manage_accounts',
-    badge: '10 người',
-    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
     shortcut: '⌘2',
   },
   {
     id: 'departments',
-    label: 'Cơ cấu Phòng ban',
-    sublabel: '5 Khối & Sức khỏe Cuộc họp',
-    icon: 'account_tree',
-    badge: '5 khối',
-    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    label: 'Quản lý công việc',
+    sublabel: 'Tiến độ, Dự án & Phân bổ nhiệm vụ',
+    icon: 'task_alt',
     shortcut: '⌘3',
   },
   {
     id: 'policies',
-    label: 'Kỷ luật Cuộc họp',
-    sublabel: 'Agenda Gate & MoM AI Pipeline',
+    label: 'Cổng kiểm soát',
+    sublabel: 'Kiểm soát Agenda, Tắt/Bật Quy chế & Báo cáo',
     icon: 'gavel',
-    badge: '6 quy chế',
-    badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
     shortcut: '⌘4',
   },
   {
@@ -61,26 +53,20 @@ export const NAV_SECTIONS: NavSectionItem[] = [
     label: 'Kiểm toán & An ninh',
     sublabel: 'SOC Posture & Tamper-Proof Trail',
     icon: 'security',
-    badge: '100% OK',
-    badgeColor: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
     shortcut: '⌘5',
   },
   {
     id: 'archives',
     label: 'Kho tài liệu',
     sublabel: 'Biên bản & Tri thức Cuộc họp',
-    icon: 'inventory_2',
-    badge: 'Toàn công ty',
-    badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+    icon: 'library_books',
     shortcut: '⌘6',
   },
   {
     id: 'recruitment',
-    label: 'Tuyển dụng',
-    sublabel: 'Pipeline & Duyệt Onboarding',
-    icon: 'badge',
-    badge: 'Pipeline',
-    badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    label: 'Công ty & Tuyển dụng',
+    sublabel: 'Hồ sơ, Tin tuyển, Kho CV & Pipeline',
+    icon: 'domain',
     shortcut: '⌘7',
   },
 ];
@@ -251,13 +237,6 @@ export function CurlyBracketSidebar({
                             <span className="text-xs font-bold text-slate-900 dark:text-white">
                               {section.label}
                             </span>
-                            {section.badge && (
-                              <span
-                                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border ${section.badgeColor}`}
-                              >
-                                {section.badge}
-                              </span>
-                            )}
                           </div>
                           <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {section.sublabel}

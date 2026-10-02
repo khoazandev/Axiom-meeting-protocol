@@ -8,35 +8,35 @@ interface ThemeState {
   setTheme: (theme: Theme) => void;
 }
 
+export function applyThemeToDOM(theme: Theme) {
+  if (typeof window === 'undefined') return;
+  const root = document.documentElement;
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  if (isDark) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
       theme: 'dark',
       setTheme: (theme: Theme) => {
-        if (typeof window === 'undefined') return;
-
-        const root = document.documentElement;
-        if (theme === 'light') {
-          root.classList.remove('dark');
-        } else if (theme === 'dark') {
-          root.classList.add('dark');
-        } else {
-          // system preference
-          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            root.classList.add('dark');
-          } else {
-            root.classList.remove('dark');
-          }
-        }
-
-        localStorage.setItem('axiom_theme', theme);
+        applyThemeToDOM(theme);
         set({ theme });
       },
     }),
     {
       name: 'axiom_theme',
-      onRehydrateStorage: () => () => {
-        // Don't re-apply class on rehydrate — anti-FOUC inline script already handles it
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          applyThemeToDOM(state.theme);
+        }
       },
     }
   )

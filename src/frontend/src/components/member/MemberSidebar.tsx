@@ -35,8 +35,6 @@ export const MEMBER_NAV_ITEMS: MemberNavItem[] = [
     label: 'Cuộc Họp',
     sublabel: 'Vào họp nhanh',
     icon: Video,
-    badge: '1 Live',
-    badgeColor: 'bg-emerald-500 text-white animate-pulse',
     shortcut: '⌘1',
   },
   {
@@ -44,8 +42,6 @@ export const MEMBER_NAV_ITEMS: MemberNavItem[] = [
     label: 'Nhiệm Vụ AI Của Tôi',
     sublabel: 'Action items bóc tách sau họp',
     icon: CheckSquare,
-    badge: '3 Tasks',
-    badgeColor: 'bg-blue-500 text-white',
     shortcut: '⌘2',
   },
   {
@@ -53,8 +49,6 @@ export const MEMBER_NAV_ITEMS: MemberNavItem[] = [
     label: 'Mini Jira Workspace',
     sublabel: 'Bảng Agile Sprint Kanban',
     icon: Kanban,
-    badge: 'SMA',
-    badgeColor: 'bg-purple-500 text-white',
     shortcut: '⌘3',
   },
   {
@@ -69,8 +63,6 @@ export const MEMBER_NAV_ITEMS: MemberNavItem[] = [
     label: 'Kho Tri Thức AI (RAG)',
     sublabel: 'Tra cứu biên bản & nghị quyết',
     icon: BookOpen,
-    badge: 'AI Search',
-    badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30',
     shortcut: '⌘5',
   },
   {
@@ -159,7 +151,7 @@ export function MemberSidebar({ activeSection, onSelectSection, onLogout }: Memb
               </div>
 
               <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between text-[10.5px] text-slate-500 dark:text-slate-400">
-                <span className="truncate">Khối Kỹ Thuật (Engineering)</span>
+                <span className="truncate">Bộ Phận Kỹ Thuật (Engineering)</span>
                 <span className="font-mono text-[9.5px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded">
                   Online
                 </span>
@@ -227,15 +219,6 @@ export function MemberSidebar({ activeSection, onSelectSection, onLogout }: Memb
 
                 {!collapsed && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {item.badge && (
-                      <span
-                        className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full ${
-                          isActive ? 'bg-white/20 text-white' : item.badgeColor
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
                     <kbd
                       className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
                         isActive

@@ -106,14 +106,14 @@ export function UserHoverCard({
           badgeClass:
             'bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300/80',
           ringClass: 'ring-blue-500',
-          note: `Quản lý điều phối ${member.department_name || 'khối chuyên môn'}`,
+          note: `Quản lý điều phối ${member.department_name || 'bộ phận chuyên môn'}`,
         }
       : {
           label: 'MEMBER',
           badgeClass:
             'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
           ringClass: 'ring-emerald-500',
-          note: `Chuyên viên trực thuộc ${member.department_name || 'khối chuyên môn'}`,
+          note: `Chuyên viên trực thuộc ${member.department_name || 'bộ phận chuyên môn'}`,
         };
 
   const phoneFormatted = '+84 908 888 999';

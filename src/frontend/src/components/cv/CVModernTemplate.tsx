@@ -2,7 +2,19 @@
 
 import React from 'react';
 import { CVData, CVSection } from '@/types/cv';
-import { Mail, Phone, MapPin, Globe, ExternalLink, Calendar, GraduationCap, Award, Briefcase, Code, Sparkles } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  ExternalLink,
+  Calendar,
+  GraduationCap,
+  Award,
+  Briefcase,
+  Code,
+  Sparkles,
+} from 'lucide-react';
 
 interface CVTemplateProps {
   data: CVData;
@@ -94,10 +106,16 @@ export function CVModernTemplate({ data }: CVTemplateProps) {
               {education.map((edu) => (
                 <div key={edu.id} className="text-[11px] space-y-0.5">
                   <div className="font-bold text-white leading-tight">{edu.school}</div>
-                  <div className="text-indigo-300 text-[10.5px] font-medium">{edu.degree} - {edu.field}</div>
-                  <div className="text-[10px] text-slate-400">{edu.startDate} – {edu.endDate}</div>
+                  <div className="text-indigo-300 text-[10.5px] font-medium">
+                    {edu.degree} - {edu.field}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {edu.startDate} – {edu.endDate}
+                  </div>
                   {edu.description && (
-                    <p className="text-[10px] text-slate-400 leading-snug pt-0.5">{edu.description}</p>
+                    <p className="text-[10px] text-slate-400 leading-snug pt-0.5">
+                      {edu.description}
+                    </p>
                   )}
                 </div>
               ))}
@@ -149,7 +167,10 @@ export function CVModernTemplate({ data }: CVTemplateProps) {
                 Ngoại Ngữ
               </h3>
               {languages.map((l) => (
-                <div key={l.id} className="text-[11px] flex justify-between items-center text-slate-300">
+                <div
+                  key={l.id}
+                  className="text-[11px] flex justify-between items-center text-slate-300"
+                >
                   <span className="font-semibold text-white">{l.name}</span>
                   <span className="text-[10px] text-indigo-300">{l.level}</span>
                 </div>
@@ -187,9 +208,7 @@ export function CVModernTemplate({ data }: CVTemplateProps) {
               <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
               <span>Tóm Tắt Mục Tiêu & Năng Lực</span>
             </h2>
-            <p className="text-[11px] text-slate-600 leading-relaxed text-justify">
-              {summary}
-            </p>
+            <p className="text-[11px] text-slate-600 leading-relaxed text-justify">{summary}</p>
           </section>
         )}
 
@@ -238,11 +257,18 @@ export function CVModernTemplate({ data }: CVTemplateProps) {
             </h2>
             <div className="grid grid-cols-1 gap-2.5">
               {projects.map((proj) => (
-                <div key={proj.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div
+                  key={proj.id}
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1"
+                >
                   <div className="flex justify-between items-baseline">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-slate-900">{proj.name}</span>
-                      {proj.role && <span className="text-[10px] text-indigo-600 font-medium">({proj.role})</span>}
+                      {proj.role && (
+                        <span className="text-[10px] text-indigo-600 font-medium">
+                          ({proj.role})
+                        </span>
+                      )}
                     </div>
                     {proj.startDate && (
                       <span className="text-[10px] text-slate-400 font-medium">
@@ -250,13 +276,14 @@ export function CVModernTemplate({ data }: CVTemplateProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-[10.5px] text-slate-600 leading-relaxed">
-                    {proj.description}
-                  </p>
+                  <p className="text-[10.5px] text-slate-600 leading-relaxed">{proj.description}</p>
                   {proj.technologies && proj.technologies.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
                       {proj.technologies.map((t, idx) => (
-                        <span key={idx} className="text-[9.5px] font-semibold px-1.5 py-0.5 bg-white border border-slate-200 text-slate-700 rounded">
+                        <span
+                          key={idx}
+                          className="text-[9.5px] font-semibold px-1.5 py-0.5 bg-white border border-slate-200 text-slate-700 rounded"
+                        >
                           {t}
                         </span>
                       ))}

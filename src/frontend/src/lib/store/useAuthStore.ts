@@ -21,6 +21,15 @@ export interface Organization {
   created_by_id: string;
   created_at: string;
   updated_at: string;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  tagline?: string | null;
+  tax_id?: string | null;
+  industry?: string | null;
+  website?: string | null;
+  size?: string | null;
+  description?: string | null;
+  headquarters?: string | null;
 }
 
 interface AuthState {
@@ -32,9 +41,10 @@ interface AuthState {
     user: User,
     token: string,
     organizations: Organization[],
-    activeOrganization?: Organization
+    activeOrganization?: Organization | null
   ) => void;
   setActiveOrganization: (organization: Organization) => void;
+  updateOrganization: (partialOrg: Partial<Organization>) => void;
   setOrganizations: (organizations: Organization[]) => void;
   updateUser: (partialUser: Partial<User>) => void;
   logout: () => void;
@@ -58,6 +68,16 @@ export const useAuthStore = create<AuthState>()(
       },
       setActiveOrganization: (organization) => {
         set({ activeOrganization: organization });
+      },
+      updateOrganization: (partialOrg) => {
+        set((state) => {
+          if (!state.activeOrganization) return {};
+          const updated = { ...state.activeOrganization, ...partialOrg };
+          const updatedList = state.organizations.map((org) =>
+            org.id === updated.id ? updated : org
+          );
+          return { activeOrganization: updated, organizations: updatedList };
+        });
       },
       setOrganizations: (organizations) => set({ organizations }),
       updateUser: (partialUser) => {

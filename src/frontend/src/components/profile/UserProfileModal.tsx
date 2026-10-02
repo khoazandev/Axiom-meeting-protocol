@@ -86,21 +86,27 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
 
   // Official Enterprise Role & Department - Managed exclusively by OWNER
   const resolvedRole = (user?.role || 'MEMBER').toUpperCase();
+  const isUnjoined = resolvedRole === 'GUEST' || resolvedRole === 'CANDIDATE' || (!user?.department_id && !user?.department_name);
+
   const officialDepartment =
     user?.department_name ||
     (resolvedRole === 'OWNER'
       ? 'Hội Đồng Quản Trị & Ban Lãnh Đạo Toàn Quyền'
       : user?.department_id
-        ? 'Khối Phòng Ban Được Chỉ Định'
-        : 'Khối Kỹ Thuật & Công Nghệ');
+        ? 'Bộ Phận Được Chỉ Định'
+        : isUnjoined
+          ? 'Chưa thuộc phòng ban'
+          : 'Chưa phân bổ phòng ban');
 
   const officialTitle =
     user?.job_title ||
     (resolvedRole === 'OWNER'
       ? 'Chủ Tịch & Tổng Giám Đốc Điều Hành (OWNER)'
       : resolvedRole === 'MANAGER'
-        ? `Trưởng Khối Quản Lý Phòng Ban (${officialDepartment})`
-        : `Chuyên Viên / Kỹ Sư Thành Viên (${officialDepartment})`);
+        ? `Trưởng Bộ Phận Quản Lý (${officialDepartment})`
+        : isUnjoined
+          ? 'Thành viên tự do (Chưa gia nhập)'
+          : `Chuyên Viên / Thành Viên (${officialDepartment})`);
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -454,7 +460,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Building2 size={13} className="text-purple-500" />
-                    <span>Khối Phòng Ban</span>
+                    <span>Bộ Phận</span>
                   </span>
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-[10px] font-bold text-purple-700 dark:text-purple-300">
                     <Lock size={9} />

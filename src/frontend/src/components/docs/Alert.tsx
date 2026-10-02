@@ -14,9 +14,9 @@ export default function Alert({
   children: ReactNode;
 }) {
   const styles = {
-    info: 'bg-blue-50/70 border-blue-200 text-blue-950',
-    warning: 'bg-amber-50/70 border-amber-200 text-amber-950',
-    success: 'bg-emerald-50/70 border-emerald-200 text-emerald-950',
+    info: 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-950 dark:text-blue-200',
+    warning: 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200',
+    success: 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200',
   };
 
   const iconColors = {
@@ -43,7 +43,7 @@ export default function Alert({
       </div>
       <div className="flex-1 min-w-0">
         {title && <div className="font-bold text-[13px] mb-1">{title}</div>}
-        <div className="opacity-90 [&_code]:text-inherit [&_code]:bg-black/5 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[12px]">
+        <div className="opacity-90 [&_code]:text-inherit [&_code]:bg-black/10 dark:[&_code]:bg-white/15 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[12px]">
           {children}
         </div>
       </div>

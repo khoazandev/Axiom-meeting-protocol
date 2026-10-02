@@ -128,7 +128,11 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
               s === 'COMPLETED' ||
               !m.department_id ||
               (m as any).meeting_type === 'EXECUTIVE' ||
-              Boolean(m.title && (m.title.toLowerCase().includes('cấp cao') || m.title.toLowerCase().includes('ban điều hành')))
+              Boolean(
+                m.title &&
+                (m.title.toLowerCase().includes('cấp cao') ||
+                  m.title.toLowerCase().includes('ban điều hành'))
+              )
             );
           })
           .sort((a, b) => {
@@ -147,9 +151,15 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
           });
         setExecutiveMeetings(executiveList);
       } else {
-        // Fallback to basic list
-        const fallback = await meetingsApi.list(0, 50);
-        setMeetings(fallback);
+        // Fallback to basic list with graceful error handling
+        try {
+          const fallback = await meetingsApi.list(0, 50);
+          if (Array.isArray(fallback)) {
+            setMeetings(fallback);
+          }
+        } catch (fbErr) {
+          console.warn('Could not load meetings fallback gracefully:', fbErr);
+        }
       }
 
       // 3. Department Members - Strictly isolate to this manager's department only
@@ -231,7 +241,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
     }
 
     if (tasks.length > 0) {
-      compiled += `### 2. ĐẦU VIỆC GIAO CHO KHỐI THỰC THI:\n`;
+      compiled += `### 2. ĐẦU VIỆC GIAO CHO BỘ PHẬN THỰC THI:\n`;
       tasks.forEach((t, idx) => {
         compiled += `${idx + 1}. ${t}\n`;
       });
@@ -516,7 +526,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
         <div className="space-y-1.5 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
-              {meeting.department_name || user?.department_name || 'Khối Kỹ Thuật'}
+              {meeting.department_name || user?.department_name || 'Bộ Phận Kỹ Thuật'}
             </span>
 
             {/* Dynamic State Badge (SẮP, ĐANG, KẾT THÚC) */}
@@ -709,7 +719,7 @@ export function ManagerMeetingsTab({ onNotify }: ManagerMeetingsTabProps) {
               Điều Hành Cuộc Họp Phòng Ban
             </h2>
             <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-              {user?.department_name || 'Khối Kỹ Thuật'}
+              {user?.department_name || 'Bộ Phận Kỹ Thuật'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">

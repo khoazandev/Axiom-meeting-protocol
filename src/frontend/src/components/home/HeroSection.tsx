@@ -6,6 +6,8 @@ import LottiePlayer from '@/components/LottiePlayer';
 import animationData from '@/public/images/Monday Ahed.json';
 import { AxiomIcon } from '@/components/AxiomLogo';
 import { MaterialIcon } from '@/components/ui/MaterialIcon';
+import { FlagLanguageSwitcher } from './FlagLanguageSwitcher';
+import { useLanguageStore } from '@/lib/store/useLanguageStore';
 
 /* ── Inline SVG Floating Icons (3D-like rounded squares with shadow, matching StaffDeck) ── */
 function FloatingIcon({
@@ -31,22 +33,33 @@ function FloatingIcon({
 }
 
 export function HeroSection() {
+  const { t } = useLanguageStore();
+
   return (
     <section
-      className="relative pt-24 pb-0 overflow-visible"
-      style={{ background: 'linear-gradient(180deg, #f7f9fc 0%, #ffffff 100%)' }}
+      className="relative pt-24 pb-0 overflow-visible bg-gradient-to-b from-[#f7f9fc] to-[#ffffff] dark:from-black dark:to-neutral-950 transition-colors"
     >
       <div className="container mx-auto px-6 relative z-10 flex flex-col items-center max-w-5xl">
+        {/* Language Selection on Landing Page (2 Flags: 🇻🇳 & 🇬🇧) */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-5 flex items-center justify-center"
+        >
+          <FlagLanguageSwitcher />
+        </motion.div>
+
         {/* Title */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center text-[42px] md:text-[54px] font-semibold text-[#18181a] leading-[1.15] tracking-tight mb-5"
+          className="text-center text-[42px] md:text-[54px] font-semibold text-[#18181a] dark:text-white leading-[1.15] tracking-tight mb-5"
         >
-          Axiom DX-OS
+          {t.landing.heroTitle1}
           <br />
-          Enterprise Meeting Protocol
+          {t.landing.heroTitle2}
         </motion.h1>
 
         {/* Description */}
@@ -54,11 +67,9 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-center text-[15px] text-[#757f9c] max-w-[800px] mb-8 leading-relaxed"
+          className="text-center text-[15px] text-[#757f9c] dark:text-neutral-400 max-w-[800px] mb-8 leading-relaxed"
         >
-          Hệ điều hành nghi thức cuộc họp số bảo mật cao: WebRTC on-premise không rò rỉ dữ liệu,
-          kiểm duyệt kỷ luật chương trình họp (Agenda Gate), phiên dịch đa ngữ thời gian thực và tự
-          động hóa biên bản hành động với AI cục bộ.
+          {t.landing.heroDescription}
         </motion.p>
 
         {/* CTA Buttons */}
@@ -72,26 +83,26 @@ export function HeroSection() {
             href="https://github.com/khoazandev/Axiom-meeting-protocol"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 h-11 px-5 rounded-[12px] border border-[#e3e7f1] text-[14px] font-medium text-[#18181a] bg-white hover:border-[#cbd3e6] transition-all"
+            className="flex items-center gap-2 h-11 px-5 rounded-[12px] border border-[#e3e7f1] dark:border-neutral-800 text-[14px] font-medium text-[#18181a] dark:text-white bg-white dark:bg-neutral-900 hover:border-[#cbd3e6] dark:hover:border-neutral-700 transition-all shadow-2xs"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
             </svg>
-            GitHub Repo
+            {t.landing.githubBtn}
           </a>
           <Link
             href="/docs"
-            className="flex items-center gap-2 h-11 px-5 rounded-[12px] border border-[#e3e7f1] text-[14px] font-medium text-[#18181a] bg-white hover:border-[#cbd3e6] transition-all"
+            className="flex items-center gap-2 h-11 px-5 rounded-[12px] border border-[#e3e7f1] dark:border-neutral-800 text-[14px] font-medium text-[#18181a] dark:text-white bg-white dark:bg-neutral-900 hover:border-[#cbd3e6] dark:hover:border-neutral-700 transition-all shadow-2xs"
           >
-            <MaterialIcon name="description" className="w-4 h-4 text-[#757f9c]" />
-            Tài liệu & Hướng dẫn
+            <MaterialIcon name="description" className="w-4 h-4 text-[#757f9c] dark:text-neutral-400" />
+            {t.landing.docsBtn}
           </Link>
           <Link
             href="/member"
-            className="flex items-center gap-2 h-11 px-6 rounded-[12px] bg-[#18181a] text-white text-[14px] font-medium shadow-lg shadow-black/5 hover:bg-black transition-all"
+            className="flex items-center gap-2 h-11 px-6 rounded-[12px] bg-[#18181a] hover:bg-black dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-950 text-[14px] font-medium shadow-lg transition-all"
           >
-            <MaterialIcon name="graphic_eq" className="w-4 h-4 text-emerald-400" />
-            Vào phòng họp ngay
+            <MaterialIcon name="graphic_eq" className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+            {t.landing.enterRoomBtn}
             <MaterialIcon name="arrow_forward" className="w-3.5 h-3.5 ml-1 opacity-80" />
           </Link>
         </motion.div>
@@ -173,19 +184,19 @@ export function HeroSection() {
 
       {/* ── Dashboard Mockup (overlapping bottom) ── */}
       <div className="relative z-20 mx-auto max-w-[1100px] -mt-12 px-6">
-        <div className="bg-white rounded-t-[24px] shadow-[0_-15px_50px_rgba(0,0,0,0.04)] border border-[#e3e7f1] overflow-hidden min-h-[400px]">
+        <div className="bg-white dark:bg-neutral-900 rounded-t-[24px] shadow-[0_-15px_50px_rgba(0,0,0,0.04)] dark:shadow-[0_-15px_50px_rgba(0,0,0,0.5)] border border-[#e3e7f1] dark:border-neutral-800 overflow-hidden min-h-[400px]">
           {/* Mockup header */}
-          <div className="flex items-center border-b border-gray-50 h-16">
-            <div className="w-[240px] px-6 h-full flex items-center border-r border-gray-50">
+          <div className="flex items-center border-b border-gray-100 dark:border-neutral-800 h-16">
+            <div className="w-[240px] px-6 h-full flex items-center border-r border-gray-100 dark:border-neutral-800">
               <div className="flex items-center gap-2">
                 <AxiomIcon size={20} />
-                <span className="font-bold text-[15px] text-[#18181a]">Axiom DX-OS</span>
+                <span className="font-bold text-[15px] text-[#18181a] dark:text-white">Axiom DX-OS</span>
               </div>
             </div>
             <div className="flex-1 px-6 flex items-center justify-between">
-              <div className="h-10 bg-[#f8f9fc] rounded-full border border-[#f0f2f6] flex items-center px-4 w-[600px] gap-2">
+              <div className="h-10 bg-[#f8f9fc] dark:bg-neutral-800 rounded-full border border-[#f0f2f6] dark:border-neutral-700 flex items-center px-4 w-[600px] gap-2">
                 <svg
-                  className="w-4 h-4 text-[#b0b8cc]"
+                  className="w-4 h-4 text-[#b0b8cc] dark:text-neutral-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -197,9 +208,9 @@ export function HeroSection() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                <span className="text-[13px] text-[#b0b8cc]">Tìm kiếm nội dung cuộc họp...</span>
+                <span className="text-[13px] text-[#b0b8cc] dark:text-neutral-400">{t.landing.searchMeetingMockup}</span>
               </div>
-              <div className="flex items-center gap-4 text-[#757f9c]">
+              <div className="flex items-center gap-4 text-[#757f9c] dark:text-neutral-400">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
@@ -228,10 +239,10 @@ export function HeroSection() {
           {/* Mockup body */}
           <div className="flex h-[336px]">
             {/* Sidebar */}
-            <div className="w-[240px] border-r border-gray-50 flex flex-col p-4 gap-2">
-              <div className="flex items-center gap-3 px-4 py-3 bg-[#f6f8fc] rounded-xl text-[13px] font-semibold text-[#18181a]">
+            <div className="w-[240px] border-r border-gray-100 dark:border-neutral-800 flex flex-col p-4 gap-2">
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#f6f8fc] dark:bg-neutral-800 rounded-xl text-[13px] font-semibold text-[#18181a] dark:text-white">
                 <svg
-                  className="w-4 h-4 text-[#757f9c]"
+                  className="w-4 h-4 text-[#757f9c] dark:text-neutral-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -243,55 +254,55 @@ export function HeroSection() {
                     d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
                   />
                 </svg>
-                Quản lý cuộc họp
+                {t.landing.manageMeetingsMockup}
               </div>
-              <div className="flex items-center justify-between px-4 py-2 mt-4 text-[12px] text-[#b0b8cc] font-medium">
-                Tất cả cuộc họp
-                <span className="bg-[#f0f2f6] text-[#757f9c] px-2 py-0.5 rounded-full text-[10px]">
+              <div className="flex items-center justify-between px-4 py-2 mt-4 text-[12px] text-[#b0b8cc] dark:text-neutral-400 font-medium">
+                {t.landing.allMeetingsMockup}
+                <span className="bg-[#f0f2f6] dark:bg-neutral-800 text-[#757f9c] dark:text-neutral-300 px-2 py-0.5 rounded-full text-[10px]">
                   12
                 </span>
               </div>
             </div>
             {/* Content area */}
-            <div className="flex-1 p-8 bg-[#fafbfc]">
-              <div className="flex gap-10 text-[14px] pb-5 border-b border-gray-100">
-                <span className="text-[#757f9c] font-medium cursor-pointer">Tất cả cuộc họp</span>
-                <span className="text-[#18181a] font-bold border-b-[3px] border-[#18181a] pb-5 -mb-[21px] cursor-pointer">
-                  Cuộc họp của tôi
+            <div className="flex-1 p-8 bg-[#fafbfc] dark:bg-neutral-950">
+              <div className="flex gap-10 text-[14px] pb-5 border-b border-gray-100 dark:border-neutral-800">
+                <span className="text-[#757f9c] dark:text-neutral-400 font-medium cursor-pointer">{t.landing.allMeetingsMockup}</span>
+                <span className="text-[#18181a] dark:text-white font-bold border-b-[3px] border-[#18181a] dark:border-white pb-5 -mb-[21px] cursor-pointer">
+                  {t.landing.myMeetingsMockup}
                 </span>
-                <span className="text-[#757f9c] font-medium cursor-pointer">
-                  Không gian làm việc
+                <span className="text-[#757f9c] dark:text-neutral-400 font-medium cursor-pointer">
+                  {t.landing.workspacesMockup}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-6 mt-8">
                 {/* Skeleton Cards */}
-                <div className="h-[200px] bg-white border border-[#e3e7f1] rounded-2xl p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+                <div className="h-[200px] bg-white dark:bg-neutral-900 border border-[#e3e7f1] dark:border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 bg-[#f0f2f6] rounded-full"></div>
+                    <div className="w-12 h-12 bg-[#f0f2f6] dark:bg-neutral-800 rounded-full"></div>
                     <div className="w-8 h-8 flex gap-1 items-center justify-center">
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-4 bg-[#f0f2f6] rounded w-24"></div>
-                    <div className="h-3 bg-[#f0f2f6] rounded w-16"></div>
+                    <div className="h-4 bg-[#f0f2f6] dark:bg-neutral-800 rounded w-24"></div>
+                    <div className="h-3 bg-[#f0f2f6] dark:bg-neutral-800 rounded w-16"></div>
                   </div>
                 </div>
-                <div className="h-[200px] bg-white border border-[#e3e7f1] rounded-2xl p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+                <div className="h-[200px] bg-white dark:bg-neutral-900 border border-[#e3e7f1] dark:border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 bg-[#f0f2f6] rounded-full"></div>
+                    <div className="w-12 h-12 bg-[#f0f2f6] dark:bg-neutral-800 rounded-full"></div>
                     <div className="w-8 h-8 flex gap-1 items-center justify-center">
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
+                      <div className="w-1 h-1 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-4 bg-[#f0f2f6] rounded w-24"></div>
-                    <div className="h-3 bg-[#f0f2f6] rounded w-16"></div>
+                    <div className="h-4 bg-[#f0f2f6] dark:bg-neutral-800 rounded w-24"></div>
+                    <div className="h-3 bg-[#f0f2f6] dark:bg-neutral-800 rounded w-16"></div>
                   </div>
                 </div>
               </div>

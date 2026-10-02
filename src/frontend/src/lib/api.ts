@@ -65,6 +65,15 @@ export interface User {
 export interface Organization {
   id: string;
   name: string;
+  tagline?: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  industry?: string | null;
+  size?: string | null;
+  website?: string | null;
+  headquarters?: string | null;
+  description?: string | null;
+  tax_id?: string | null;
   created_by_id: string;
   created_at: string;
   updated_at: string;
@@ -217,7 +226,10 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token;
+    let token = useAuthStore.getState().token;
+    if (!token) {
+      token = localStorage.getItem('axiom_auth_token') || localStorage.getItem('token') || null;
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -239,7 +251,10 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 
   // Inject token and active organization header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
-    const token = useAuthStore.getState().token;
+    let token = useAuthStore.getState().token;
+    if (!token) {
+      token = localStorage.getItem('axiom_auth_token') || localStorage.getItem('token') || null;
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -350,6 +365,13 @@ export const authApi = {
     });
   },
 
+  magicLogin(token: string, email?: string): Promise<AuthTokens> {
+    return apiFetch<AuthTokens>('/api/v1/auth/magic-login', {
+      method: 'POST',
+      body: JSON.stringify({ token, email }),
+    });
+  },
+
   me(): Promise<User> {
     return apiFetch<User>('/api/v1/auth/me');
   },
@@ -413,6 +435,13 @@ export const organizationApi = {
 
   get(organizationId: string): Promise<Organization> {
     return apiFetch<Organization>(`/api/v1/organizations/${organizationId}`);
+  },
+
+  update(organizationId: string, data: Partial<Organization>): Promise<Organization> {
+    return apiFetch<Organization>(`/api/v1/organizations/${organizationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 };
 

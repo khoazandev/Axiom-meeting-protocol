@@ -22,14 +22,6 @@ def test_stale_version_returns_conflict(db_session, recruitment_org):
 
 def test_hr_hire_moves_to_owner_queue_and_writes_audit(db_session, recruitment_org):
     application = make_application(db_session, recruitment_org, stage="HR_REVIEW_PENDING")
-    db_session.add(
-        models.OrganizationMemberPermission(
-            member_id=recruitment_org.selected_manager.id,
-            permission_id=recruitment_org.review_permission.id,
-            granted_by_id=recruitment_org.owner.user_id,
-        )
-    )
-    db_session.commit()
 
     updated = RecruitmentWorkflow(db_session).advance(
         application.id,

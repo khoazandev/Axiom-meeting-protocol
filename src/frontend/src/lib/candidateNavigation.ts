@@ -1,5 +1,8 @@
-export type CandidateTab = 'cv' | 'jobs' | 'applications';
+export type CandidateTab = 'jobs' | 'cv' | 'vault' | 'applications';
 
 export function resolveCandidateTab(tab: string | null): CandidateTab {
-  return tab === 'jobs' || tab === 'applications' ? tab : 'cv';
+  if (tab === 'jobs' || tab === 'cv' || tab === 'vault' || tab === 'applications') {
+    return tab;
+  }
+  return 'jobs';
 }

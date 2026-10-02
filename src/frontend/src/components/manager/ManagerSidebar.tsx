@@ -28,7 +28,7 @@ interface ManagerSidebarProps {
 export function ManagerSidebar({
   activeTab,
   onSelectTab,
-  departmentName = 'Khối Kỹ Thuật (Engineering)',
+  departmentName = 'Bộ Phận Kỹ Thuật (Engineering)',
   activeMeetingsCount = 1,
   pendingTasksCount = 6,
 }: ManagerSidebarProps) {

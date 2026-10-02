@@ -241,7 +241,7 @@ export function ArchiveTransferModal({
       const res = await meetingsApi.extractTasks(meeting.id);
       const list: ArchiveTaskInput[] = Array.isArray(res)
         ? (res as ArchiveTaskInput[])
-        : ((res as { items?: ArchiveTaskInput[] })?.items || []);
+        : (res as { items?: ArchiveTaskInput[] })?.items || [];
       if (list && list.length > 0) {
         const mapped = list.map((item: ArchiveTaskInput, idx: number) => {
           const assignedUser = allAssignees.find(
@@ -367,7 +367,7 @@ export function ArchiveTransferModal({
               </div>
               <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wide flex items-center gap-1">
                 <Layers className="w-3 h-3" />
-                <span>{meeting.department_name || 'Khối Kỹ Thuật & Công Nghệ'}</span>
+                <span>{meeting.department_name || 'Bộ Phận Kỹ Thuật & Công Nghệ'}</span>
               </span>
             </div>
 
@@ -449,8 +449,8 @@ export function ArchiveTransferModal({
                 <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                   <UserCheck className="w-6 h-6 mx-auto text-slate-300" />
                   <p>
-                    Chưa có nhiệm vụ nào. Bấm &apos;AI Quét Lại Task&apos; hoặc &apos;+ Thêm Task&apos; để phân công cho
-                    nhân viên trong phòng họp.
+                    Chưa có nhiệm vụ nào. Bấm &apos;AI Quét Lại Task&apos; hoặc &apos;+ Thêm
+                    Task&apos; để phân công cho nhân viên trong phòng họp.
                   </p>
                 </div>
               ) : (

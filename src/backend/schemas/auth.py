@@ -10,6 +10,7 @@ class UserRegister(BaseModel):
     department_id: str | None = None
     invite_token: str | None = None
     organization_name: str | None = None
+    is_candidate: bool = False
 
 
 class UserLogin(BaseModel):
