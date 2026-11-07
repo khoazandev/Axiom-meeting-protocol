@@ -20,18 +20,30 @@ def upgrade() -> None:
     # 1. Rename table
     op.rename_table('action_items', 'follow_up_tasks')
 
+    # Create enum types if not exists (Postgres)
+    source_enum = sa.Enum('AI_REALTIME', 'AI_FULL', 'MANUAL', name='followuptasksourceenum')
+    source_enum.create(op.get_bind(), checkfirst=True)
+    status_enum = sa.Enum('CONFIRMED', 'NOT_CONFIRMED', name='followuptaskstatusenum')
+    status_enum.create(op.get_bind(), checkfirst=True)
+
     # 2. Batch operations on the renamed table
+    inspector = sa.inspect(op.get_bind())
+    cols = [c['name'] for c in inspector.get_columns('follow_up_tasks')]
     with op.batch_alter_table('follow_up_tasks', schema=None) as batch_op:
         batch_op.add_column(sa.Column('deadline', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('source', sa.Enum('AI_REALTIME', 'AI_FULL', 'MANUAL', name='followuptasksourceenum'), server_default='AI_REALTIME', nullable=False))
-        batch_op.drop_column('due_at')
+        batch_op.add_column(sa.Column('source', source_enum, server_default='AI_REALTIME', nullable=False))
+        if 'due_at' in cols:
+            batch_op.drop_column('due_at')
         
-        # Modify status column enum
-        batch_op.alter_column('status',
-               existing_type=sa.VARCHAR(),
-               type_=sa.Enum('CONFIRMED', 'NOT_CONFIRMED', name='followuptaskstatusenum'),
-               existing_nullable=False,
-               server_default='NOT_CONFIRMED')
+        # Modify or add status column enum
+        if 'status' in cols:
+            batch_op.alter_column('status',
+                   existing_type=sa.VARCHAR(),
+                   type_=status_enum,
+                   existing_nullable=False,
+                   server_default='NOT_CONFIRMED')
+        else:
+            batch_op.add_column(sa.Column('status', status_enum, server_default='NOT_CONFIRMED', nullable=False))
 
 
 def downgrade() -> None:

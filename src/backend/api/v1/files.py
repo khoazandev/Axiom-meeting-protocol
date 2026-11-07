@@ -12,6 +12,13 @@ from src.backend.services.text_extractor import extract_text
 router = APIRouter(tags=["files"])
 
 
+@router.post("/utils/extract-text")
+async def extract_text_from_file_util(file: UploadFile = File(...)):
+    contents = await file.read()
+    extracted = extract_text(contents, file.filename, file.content_type or "")
+    return {"text": extracted}
+
+
 class MeetingFileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

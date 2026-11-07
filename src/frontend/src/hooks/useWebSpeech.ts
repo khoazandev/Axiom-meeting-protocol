@@ -33,6 +33,7 @@ interface ISpeechRecognition {
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 }
 
 type WindowWithSpeech = Window & {
@@ -40,75 +41,226 @@ type WindowWithSpeech = Window & {
   webkitSpeechRecognition?: new () => ISpeechRecognition;
 };
 
+export interface UseWebSpeechOptions {
+  enabled?: boolean;
+  lang?: string;
+  onFinalTranscript?: (text: string) => void;
+  onInterimTranscript?: (text: string) => void;
+}
+
 export function useWebSpeech(
-  onFinalTranscript: (text: string) => void,
-  onInterimTranscript?: (text: string) => void
+  optionsOrOnFinal: UseWebSpeechOptions | ((text: string) => void),
+  legacyOnInterim?: (text: string) => void
 ) {
-  const [isRecognizing, setIsRecognizing] = useState(false);
+  // Support both legacy signature and options object
+  const options: UseWebSpeechOptions =
+    typeof optionsOrOnFinal === 'function'
+      ? {
+          onFinalTranscript: optionsOrOnFinal,
+          onInterimTranscript: legacyOnInterim,
+          enabled: false,
+          lang: 'vi-VN',
+        }
+      : optionsOrOnFinal;
+
+  const { enabled = false, lang = 'vi-VN', onFinalTranscript, onInterimTranscript } = options;
+
+  const [isListening, setIsListening] = useState(false);
+  const [isSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const win = window as WindowWithSpeech;
+    return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
+  });
+
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const enabledRef = useRef(enabled);
+  const restartTimerRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<number | null>(null);
+  const latestInterimRef = useRef<string>('');
+  const lastFinalRef = useRef<string>('');
+  const lastFinalTimeRef = useRef<number>(0);
+  const callbacksRef = useRef({ onFinalTranscript, onInterimTranscript });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const win = window as WindowWithSpeech;
-    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn('Web Speech API is not supported in this browser.');
+    callbacksRef.current = { onFinalTranscript, onInterimTranscript };
+  }, [onFinalTranscript, onInterimTranscript]);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  const commitFinal = useCallback((text: string) => {
+    const clean = text.trim();
+    if (!clean) return;
+
+    const now = Date.now();
+    // Strong deduplication: exact match or recent repetition within 2.5s
+    if (
+      (clean === lastFinalRef.current || lastFinalRef.current.endsWith(clean)) &&
+      now - lastFinalTimeRef.current < 2500
+    ) {
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false; // We want to stop and get final results quickly
-    recognition.interimResults = true; // Enable interim results for realtime feedback
-    recognition.lang = 'vi-VN';
+    lastFinalRef.current = clean;
+    lastFinalTimeRef.current = now;
+    latestInterimRef.current = '';
 
-    recognition.onstart = () => setIsRecognizing(true);
-    recognition.onend = () => setIsRecognizing(false);
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) =>
-      console.error('Speech recognition error:', e.error);
+    if (silenceTimerRef.current) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+
+    callbacksRef.current.onFinalTranscript?.(clean);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupported || typeof window === 'undefined') return;
+
+    const win = window as WindowWithSpeech;
+    const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      return;
+    }
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = lang;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-restart if user still has mic enabled (continuous loop)
+      if (enabledRef.current) {
+        if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = window.setTimeout(() => {
+          if (enabledRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch {
+              // Already running or starting
+            }
+          }
+        }, 100);
+      }
+    };
+
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
+      // Benign errors in continuous speech recognition
+      if (e.error === 'no-speech' || e.error === 'aborted') {
+        return;
+      }
+      console.warn('[WebSpeech] Recognition notice:', e.error);
+    };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
+      let interim = '';
+      let finalized = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+        const result = event.results[i];
+        const text = result[0]?.transcript || '';
+        if (result.isFinal) {
+          finalized += text;
         } else {
-          interimTranscript += event.results[i][0].transcript;
+          interim += text;
         }
       }
 
-      if (finalTranscript.trim().length > 0) {
-        onFinalTranscript(finalTranscript.trim());
+      const cleanInterim = interim.trim();
+      const cleanFinal = finalized.trim();
+
+      if (cleanFinal) {
+        commitFinal(cleanFinal);
       }
 
-      if (interimTranscript.trim().length > 0 && onInterimTranscript) {
-        onInterimTranscript(interimTranscript.trim());
+      if (cleanInterim) {
+        latestInterimRef.current = cleanInterim;
+        callbacksRef.current.onInterimTranscript?.(cleanInterim);
+
+        // Natural pause fallback timer: commit if silence extends beyond 1.8s without native isFinal
+        if (silenceTimerRef.current) {
+          window.clearTimeout(silenceTimerRef.current);
+        }
+        silenceTimerRef.current = window.setTimeout(() => {
+          if (latestInterimRef.current && latestInterimRef.current === cleanInterim) {
+            commitFinal(latestInterimRef.current);
+          }
+        }, 1800);
       }
     };
 
     recognitionRef.current = recognition;
-  }, [onFinalTranscript, onInterimTranscript]);
+
+    if (enabledRef.current) {
+      try {
+        recognition.start();
+      } catch {
+        // Recognition may already be running or initializing
+      }
+    }
+
+    return () => {
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
+      try {
+        recognition.onend = null;
+        recognition.stop();
+      } catch {
+        // Ignored
+      }
+    };
+  }, [isSupported, lang, commitFinal]);
+
+  // Sync with enabled prop
+  useEffect(() => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
+    if (enabled) {
+      try {
+        recognition.start();
+      } catch {
+        // Recognition may already be running
+      }
+    } else {
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+      try {
+        recognition.stop();
+      } catch {
+        // Ignored
+      }
+    }
+  }, [enabled]);
 
   const startRecognition = useCallback(() => {
+    enabledRef.current = true;
     try {
-      if (!isRecognizing && recognitionRef.current) {
-        recognitionRef.current.start();
-      }
-    } catch (e) {
-      console.error(e);
+      recognitionRef.current?.start();
+    } catch {
+      // Ignored
     }
-  }, [isRecognizing]);
+  }, []);
 
   const stopRecognition = useCallback(() => {
+    enabledRef.current = false;
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     try {
-      if (isRecognizing && recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    } catch (e) {
-      console.error(e);
+      recognitionRef.current?.stop();
+    } catch {
+      // Ignored
     }
-  }, [isRecognizing]);
+  }, []);
 
-  return { startRecognition, stopRecognition, isRecognizing };
+  return {
+    isListening,
+    isSupported,
+    startRecognition,
+    stopRecognition,
+  };
 }

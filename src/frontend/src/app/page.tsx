@@ -1,29 +1,25 @@
-'use client';
+import { HomeNavbar } from '@/components/home/HomeNavbar';
+import { HeroSection } from '@/components/home/HeroSection';
+import { StickyFeatureShowcase } from '@/components/home/StickyFeatureShowcase';
+import { ChatAssistantFooter } from '@/components/home/ChatAssistantFooter';
+import { PageFlipWrapper } from '@/components/home/PageFlipWrapper';
+import { WholePageFlipWidget } from '@/components/home/WholePageFlipWidget';
 
-import {
-  Navbar,
-  HeroSection,
-  TrustedBySection,
-  FeaturesSection,
-  HowItWorksSection,
-  SecuritySection,
-  CtaSection,
-  Footer,
-} from './(marketing)/_sections';
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-accent/20 selection:text-foreground">
-      <Navbar />
-      <main className="flex-1">
-        <HeroSection />
-        <TrustedBySection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <SecuritySection />
-        <CtaSection />
-      </main>
-      <Footer />
-    </div>
+    <PageFlipWrapper pageType="home">
+      <div className="min-h-screen bg-[#f6f8fc] dark:bg-black text-neutral-900 dark:text-neutral-100 selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors">
+        <HomeNavbar />
+
+        {/* 3D Whole Page Flip widget on the right screen edge (hidden until hover) */}
+        <WholePageFlipWidget />
+
+        <main>
+          <HeroSection />
+          <StickyFeatureShowcase />
+        </main>
+        <ChatAssistantFooter />
+      </div>
+    </PageFlipWrapper>
   );
 }

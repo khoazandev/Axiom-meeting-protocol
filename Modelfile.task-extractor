@@ -1,5 +1,5 @@
 # Restore original task-extractor model with thinking template
-FROM C:\Users\lamphatdev\.ollama\models\blobs\sha256-3e4cb14174460404e7a233e531675303b2fbf7749c02f91864fe311ab6344e4f
+FROM qwen2.5:7b
 TEMPLATE """{{- $lastUserIdx := -1 -}}
 {{- range $idx, $msg := .Messages -}}
 {{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}

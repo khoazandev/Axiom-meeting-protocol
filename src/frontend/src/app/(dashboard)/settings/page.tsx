@@ -1,66 +1,33 @@
 'use client';
 
-import { useLanguageStore } from '@/lib/store/useLanguageStore';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import { Settings, Building, User } from 'lucide-react';
 
-export default function SettingsPage() {
-  const { t } = useLanguageStore();
-  const { user, activeOrganization } = useAuthStore();
+export default function SettingsRedirectPage() {
+  const router = useRouter();
+  const { user, token } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    const role = user?.role;
+    if (role === 'OWNER' || role === 'ADMIN') {
+      router.replace('/admin');
+    } else if (role === 'MANAGER') {
+      router.replace('/manager?tab=analytics');
+    } else {
+      router.replace('/member?tab=settings');
+    }
+  }, [user, token, router]);
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-2 border-b border-border pb-5">
-        <Settings className="w-5 h-5 text-accent" />
-        <h1 className="text-lg font-semibold text-text-primary">{t.settings.title}</h1>
-      </div>
-
-      <div className="space-y-6">
-        {/* User Settings */}
-        <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-text-primary border-b border-border pb-3">
-            <User className="w-4 h-4 text-accent" />
-            <span>{t.settings.profile}</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <label className="block text-text-secondary mb-1">{t.settings.name}</label>
-              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
-                {user?.full_name || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <label className="block text-text-secondary mb-1">{t.settings.email}</label>
-              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
-                {user?.email || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Workspace Settings */}
-        <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-text-primary border-b border-border pb-3">
-            <Building className="w-4 h-4 text-accent" />
-            <span>{t.settings.workspace}</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <label className="block text-text-secondary mb-1">{t.settings.workspaceName}</label>
-              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-medium">
-                {activeOrganization?.name || t.nav.defaultWorkspace}
-              </div>
-            </div>
-            <div>
-              <label className="block text-text-secondary mb-1">{t.settings.workspaceSlug}</label>
-              <div className="p-3 rounded-lg bg-bg-elevated border border-border text-text-primary font-mono text-accent">
-                {activeOrganization?.id || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F8FC] dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-500 font-medium">Đang chuyển tiếp tới cài đặt...</p>
       </div>
     </div>
   );

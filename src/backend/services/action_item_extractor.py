@@ -105,12 +105,13 @@ def _call_ollama_extraction(transcript_text: str) -> list[dict] | None:
         return None
 
     user_prompt = USER_PROMPT_TEMPLATE.format(transcript=transcript_text)
+    model_to_use = settings.extraction_model
 
     try:
         response = requests.post(
             f"{settings.ollama_base_url.rstrip('/')}/api/generate",
             json={
-                "model": settings.extraction_model,
+                "model": model_to_use,
                 "system": settings.extraction_system_prompt,
                 "prompt": user_prompt,
                 "stream": False,

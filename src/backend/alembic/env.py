@@ -19,9 +19,10 @@ from src.backend import models  # noqa: F401 — register all models
 # this is the Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url from application settings
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url from application settings or environment variable
+import os
+db_url = os.getenv("DATABASE_URL") or get_settings().database_url
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:

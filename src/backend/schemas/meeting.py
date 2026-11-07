@@ -8,29 +8,54 @@ from pydantic import BaseModel, Field
 class MeetingCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
+    agenda: str | None = None
     organization_id: str | None = None
     department_id: str | None = None
     scheduled_at: datetime | None = None
+    scheduled_start_time: datetime | None = None
+    agenda_text: str | None = None
+    approval_status: str | None = "APPROVED"
+    meeting_type: str | None = "OFFICIAL"
+    participant_ids: list[str] | None = None
 
 
 class MeetingUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    agenda: str | None = None
     scheduled_at: datetime | None = None
     status: str | None = None
+    approval_status: str | None = None
+    meeting_type: str | None = None
+
+
+class MeetingApprovalRequest(BaseModel):
+    approval_status: str = Field(..., pattern="^(APPROVED|REJECTED|PENDING)$")
+    reason: str | None = None
 
 
 class MeetingResponse(BaseModel):
     id: str
     title: str
     description: str | None = None
+    agenda: str | None = None
     organization_id: str | None = None
     department_id: str | None = None
+    department_name: str | None = None
     created_by_id: str
+    host_name: str | None = None
+    host_avatar: str | None = None
     status: str
+    approval_status: str = "APPROVED"
+    meeting_type: str = "OFFICIAL"
     scheduled_at: datetime | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    participant_count: int = 0
+    summary: str | None = None
+    key_points: str | None = None
+    decisions: str | None = None
+    task_count: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -50,9 +75,22 @@ class MeetingMemberResponse(BaseModel):
     status: str
     joined_at: datetime | None = None
     created_at: datetime
+    user_name: str | None = None
+    user_email: str | None = None
 
     model_config = {"from_attributes": True}
 
 
 class TokenResponse(BaseModel):
     token: str
+
+
+class PushToJiraTaskRequest(BaseModel):
+    id: str
+    title: str
+    assignee_id: str | None = None
+    deadline: datetime | None = None
+
+
+class PushToJiraRequest(BaseModel):
+    tasks: list[PushToJiraTaskRequest]

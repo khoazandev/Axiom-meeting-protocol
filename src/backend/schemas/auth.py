@@ -2,13 +2,19 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     password: str = Field(..., min_length=6)
     full_name: str = Field(..., min_length=1)
+    phone: str | None = None
+    job_title: str | None = None
+    department_id: str | None = None
+    invite_token: str | None = None
+    organization_name: str | None = None
+    is_candidate: bool = False
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -23,7 +29,20 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     avatar_url: str | None = None
+    role: str | None = None
+    phone: str | None = None
+    job_title: str | None = None
     provider: str
     is_active: bool
+    department_id: str | None = None
+    department_name: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    avatar_url: str | None = None
+    email: str | None = None
+    phone: str | None = None
+

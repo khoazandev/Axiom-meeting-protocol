@@ -44,7 +44,7 @@ def _env(key, default=""):
 BACKEND_URL = _env("BACKEND_URL", "http://localhost:8000")
 API = f"{BACKEND_URL}/api/v1"
 OLLAMA_BASE_URL = _env("OLLAMA_BASE_URL", "http://localhost:11434")
-TASK_EXTRACTOR_MODEL = _env("TASK_EXTRACTOR_MODEL", "task-extractor")
+TASK_EXTRACTOR_MODEL = _env("TASK_EXTRACTOR_MODEL", "lamphat03102004/task-extractor01")
 FRONTEND_URL = _env("FRONTEND_URL", "http://localhost:3000")
 E2E_TEST_PASSWORD = _env("E2E_TEST_PASSWORD", "") or f"e2e_pass_{uuid.uuid4().hex[:12]}"
 E2E_POLL_INTERVAL = int(_env("E2E_POLL_INTERVAL", "10"))
@@ -255,7 +255,7 @@ def check_backend():
 def check_ollama():
     """Check if Ollama is running with the required model."""
     try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=15)
         if resp.status_code != 200:
             return False, "Ollama không phản hồi"
         models = [m["name"] for m in resp.json().get("models", [])]

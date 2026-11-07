@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.models import Permission, Role, RolePermission, RoleScopeEnum
 
-ALL_PERMISSIONS = [
+BASE_PERMISSIONS = [
     ("organization.read", "View organization details"),
     ("organization.update", "Update organization settings"),
     ("user.invite", "Invite users to organization"),
@@ -20,16 +20,26 @@ ALL_PERMISSIONS = [
     ("meeting.manage_members", "Manage meeting participants"),
 ]
 
+RECRUITMENT_PERMISSIONS = [
+    ("recruitment.manage", "Create, edit, close job openings and invite candidates"),
+    ("recruitment.read_all", "View all recruitment records in the organization"),
+    ("recruitment.review", "Review and submit assessment/interview feedback for candidates"),
+    ("recruitment.approve", "Final approval or rejection of recruitment candidates"),
+]
+
+ALL_PERMISSIONS = BASE_PERMISSIONS + RECRUITMENT_PERMISSIONS
+
 ROLE_DEFINITIONS = {
     "OWNER": {
         "scope": RoleScopeEnum.ORGANIZATION,
         "description": "Organization owner with full access",
-        "permissions": [code for code, _ in ALL_PERMISSIONS],
+        "permissions": [code for code, _ in BASE_PERMISSIONS]
+        + ["recruitment.manage", "recruitment.read_all", "recruitment.approve"],
     },
     "ADMIN": {
         "scope": RoleScopeEnum.ORGANIZATION,
         "description": "Organization administrator",
-        "permissions": [code for code, _ in ALL_PERMISSIONS],
+        "permissions": [code for code, _ in BASE_PERMISSIONS],
     },
     "MANAGER": {
         "scope": RoleScopeEnum.DEPARTMENT,
@@ -60,35 +70,38 @@ ROLE_DEFINITIONS = {
 
 
 def seed_roles_and_permissions(db: Session) -> None:
-    """Insert system roles, permissions, and role-permission mappings.
+    """Insert or update system roles, permissions, and role-permission mappings.
 
-    Safe to call multiple times — skips if data already exists.
+    Safe to call multiple times — performs idempotent upserts.
     """
-    existing = db.query(Permission).count()
-    if existing > 0:
-        return
-
     perm_map: dict[str, Permission] = {}
     for code, description in ALL_PERMISSIONS:
-        perm = Permission(code=code, description=description)
-        db.add(perm)
+        perm = db.query(Permission).filter_by(code=code).first()
+        if not perm:
+            perm = Permission(code=code, description=description)
+            db.add(perm)
+            db.flush()
         perm_map[code] = perm
-    db.flush()
 
     for role_name, role_def in ROLE_DEFINITIONS.items():
-        role = Role(
-            name=role_name,
-            description=role_def["description"],
-            scope=role_def["scope"],
-            is_system=True,
-        )
-        db.add(role)
-        db.flush()
+        role = db.query(Role).filter_by(name=role_name, is_system=True).first()
+        if not role:
+            role = Role(
+                name=role_name,
+                description=role_def["description"],
+                scope=role_def["scope"],
+                is_system=True,
+            )
+            db.add(role)
+            db.flush()
 
         for perm_code in role_def["permissions"]:
-            rp = RolePermission(
-                role_id=role.id, permission_id=perm_map[perm_code].id
-            )
-            db.add(rp)
+            perm = perm_map.get(perm_code)
+            if not perm:
+                continue
+            rp = db.query(RolePermission).filter_by(role_id=role.id, permission_id=perm.id).first()
+            if not rp:
+                rp = RolePermission(role_id=role.id, permission_id=perm.id)
+                db.add(rp)
 
     db.commit()

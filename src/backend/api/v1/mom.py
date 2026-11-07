@@ -17,7 +17,7 @@ from src.backend.models import (
     User,
     WorkspaceMember,
 )
-from src.backend.services.ollama_service import build_rag_answer
+from src.backend.services.chat_service import build_rag_answer
 
 router = APIRouter(tags=["mom"])
 
@@ -258,7 +258,7 @@ def _extract_keywords(question: str) -> List[str]:
 
 
 @router.post("/meetings/{meeting_id}/rag/query", response_model=RagQueryResponse)
-def meeting_rag_query(
+async def meeting_rag_query(
     meeting_id: int,
     data: RagQueryRequest,
     current_user: User = Depends(deps.get_current_user),
@@ -494,7 +494,7 @@ def meeting_rag_query(
         history_list = [{"sender": item.sender, "text": item.text, "isAi": item.isAi} for item in data.chat_history]
 
     # 6. Generate answer via Ollama/Qwen3.5 with Live Transcript, System State, & Chat History support
-    answer = build_rag_answer(
+    answer = await build_rag_answer(
         data.question,
         sources,
         live_transcript=data.live_transcript,

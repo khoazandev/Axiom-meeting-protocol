@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài liệu thuyết minh sản phẩm - Axiom DX-OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --primary-dark: #1e3a8a;
+      --secondary: #0f172a;
+      --accent: #2563eb;
+      --accent-subtle: #eff6ff;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --bg-card: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-focus: #93c5fd;
+      --success: #16a34a;
+      --warning: #d97706;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      background-color: #f1f5f9;
+      line-height: 1.65;
+      font-size: 14.5px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Print action bar */
+    .action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .action-bar .brand {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.02em;
+    }
+    .action-bar .brand span {
+      color: #60a5fa;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-print:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Document Container */
+    .document-page {
+      max-width: 900px;
+      margin: 28px auto 50px auto;
+      background: #ffffff;
+      padding: 48px 56px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Header Banner */
+    .doc-header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .doc-badge {
+      display: inline-block;
+      background: var(--accent-subtle);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid #bfdbfe;
+      margin-bottom: 12px;
+    }
+    .doc-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--secondary);
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .doc-subtitle {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 24px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 13px;
+    }
+    .metadata-item strong {
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    /* Typography & Sections */
+    h2 {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--secondary);
+      border-left: 4px solid var(--accent);
+      padding-left: 12px;
+      margin: 32px 0 16px 0;
+      letter-spacing: -0.02em;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin: 20px 0 10px 0;
+      page-break-after: avoid;
+    }
+    p {
+      margin-bottom: 12px;
+      text-align: justify;
+      color: #334155;
+    }
+    ul, ol {
+      margin: 8px 0 14px 22px;
+      color: #334155;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 20px 0;
+      font-size: 13px;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 9px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: var(--secondary);
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    /* Cards & Grids */
+    .hpdi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin: 18px 0;
+      page-break-inside: avoid;
+    }
+    .hpdi-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: #fafafa;
+    }
+    .hpdi-card.human { border-top: 3px solid #3b82f6; }
+    .hpdi-card.process { border-top: 3px solid #f59e0b; }
+    .hpdi-card.data { border-top: 3px solid #10b981; }
+    .hpdi-card.intel { border-top: 3px solid #8b5cf6; }
+
+    .hpdi-tag {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .hpdi-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--secondary);
+      margin-bottom: 6px;
+    }
+    .hpdi-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Code & Terminal block */
+    .pipeline-diagram {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 11.5px;
+      line-height: 1.55;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 16px 0;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+    .pipeline-diagram .hl-accent { color: #60a5fa; font-weight: 600; }
+    .pipeline-diagram .hl-green { color: #4ade80; }
+    .pipeline-diagram .hl-yellow { color: #fde047; }
+    .pipeline-diagram .hl-purple { color: #c084fc; }
+
+    /* Footer link box */
+    .github-box {
+      margin-top: 36px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 1.5px solid #bfdbfe;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      page-break-inside: avoid;
+    }
+    .github-box strong {
+      font-size: 15px;
+      color: var(--primary-dark);
+    }
+    .github-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1d4ed8;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background-color: #ffffff;
+        font-size: 11.5pt;
+        line-height: 1.5;
+      }
+      .action-bar {
+        display: none !important;
+      }
+      .document-page {
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        max-width: 100%;
+        border-radius: 0;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 16mm 14mm 16mm 14mm;
+      }
+      h2 {
+        page-break-after: avoid;
+        margin-top: 22px;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .pipeline-diagram {
+        background: #1e293b !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      th {
+        background-color: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .doc-badge, .hpdi-card, .github-box {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar for Web Viewers -->
+  <div class="action-bar">
+    <div class="brand">
+      <span>⚡ AXIOM DX-OS</span> | Tài Liệu Thuyết Minh Sản Phẩm
+    </div>
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+        <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+      </svg>
+      In / Xuất file PDF (Ctrl + P)
+    </button>
+  </div>
+
+  <div class="document-page">
+    
+    <!-- HEADER SECTION -->
+    <div class="doc-header">
+      <div class="doc-badge">Tài liệu thuyết minh sản phẩm chính thức</div>
+      <h1 class="doc-title">HỆ ĐIỀU HÀNH NGHI THỨC CUỘC HỌP SỐ DOANH NGHIỆP</h1>
+      <div class="doc-subtitle">Axiom: Enterprise Meeting Protocol (Axiom DX-OS)</div>
+      
+      <div class="metadata-grid">
+        <div class="metadata-item"><strong>Lĩnh vực:</strong> Công nghệ thông tin – Chuyển đổi số doanh nghiệp</div>
+        <div class="metadata-item"><strong>Mô hình kiến trúc:</strong> H-P-D-I (Human - Process - Data - Intelligence)</div>
+        <div class="metadata-item"><strong>Môi trường vận hành:</strong> 100% On-Premise / Private Cloud (Chủ quyền dữ liệu)</div>
+        <div class="metadata-item"><strong>Giấy phép bản quyền:</strong> MIT License (Mã nguồn mở)</div>
+      </div>
+    </div>
+
+    <!-- PHẦN 1: BÀI TOÁN & VẤN ĐỀ THỰC TẾ -->
+    <h2>1. BÀI TOÁN / VẤN ĐỀ THỰC TẾ CẦN GIẢI QUYẾT</h2>
+    <p>
+      Trong môi trường làm việc kết hợp (Hybrid Work) và chuyển đổi số hiện đại, hội nghị trực tuyến là công cụ thiết yếu của mọi tổ chức. Tuy nhiên, các doanh nghiệp đang phải đối mặt với <strong>5 thách thức lớn</strong> gây tổn thất nghiêm trọng về hiệu suất và an ninh:
+    </p>
+
+    <p>
+      <strong>1.1. Vấn nạn "Họp rác" và sự suy kiệt kỷ luật tổ chức:</strong><br>
+      Theo nghiên cứu từ <em>Harvard Business Review</em>, hơn <strong>67% số cuộc họp bị đánh giá là lãng phí</strong>. Nguyên nhân xuất phát từ việc khởi tạo cuộc họp quá dễ dàng mà không có mục tiêu cụ thể, hoàn toàn <em>thiếu một bản nghị trình (Agenda) được chuẩn bị kỹ lưỡng</em>. Thành viên tham gia thụ động, nội dung thảo luận lan man và kết thúc mà không mang lại kết quả cụ thể.
+    </p>
+
+    <p>
+      <strong>1.2. Mất chủ quyền dữ liệu và rủi ro rò rỉ bí mật kinh doanh:</strong><br>
+      Doanh nghiệp buộc phải sử dụng các nền tảng SaaS công cộng của nước ngoài (Zoom, Google Meet, Teams). Các thảo luận mang tính sống còn về chiến lược, tài chính, nhân sự, bí mật công nghệ đều đi qua máy chủ đám mây của bên thứ ba, tiềm ẩn nguy cơ rò rỉ và không đáp ứng được các chuẩn an toàn thông tin nội địa cũng như quốc tế (ISO 27001, GDPR, tuân thủ On-Premise trong ngành Tài chính - Ngân hàng, Y tế và Cơ quan Nhà nước).
+    </p>
+
+    <p>
+      <strong>1.3. Đứt gãy luồng công việc hậu cuộc họp (Post-Meeting Disconnect & Task Leakage):</strong><br>
+      Biên bản cuộc họp (MoM) thường được thư ký ghi chép thủ công, mất từ vài giờ đến hàng ngày để tổng hợp, dễ bỏ sót hoặc hiểu sai lệch ý của người phát biểu. Sau cuộc họp, các cam kết và đầu việc cần làm (Action Items) bị trôi vào nhóm chat hoặc nằm yên trên giấy tờ, không ai chịu trách nhiệm giám sát tiến độ thực thi.
+    </p>
+
+    <p>
+      <strong>1.4. Rào cản ngôn ngữ và dịch sai thuật ngữ chuyên sâu:</strong><br>
+      Trong các phiên thảo luận song ngữ Anh - Việt, các công cụ dịch thông thường không nhận diện đúng ngữ cảnh, dịch sai lệch các thuật ngữ kỹ thuật, tài chính, quản trị cốt lõi.
+    </p>
+
+    <p>
+      <strong>1.5. Phỏng vấn tuyển dụng thiếu khách quan và minh bạch:</strong><br>
+      Quy trình phỏng vấn nhân sự trực tuyến thường mang tính cảm tính của người chấm, thiếu cơ chế đối soát tự động giữa năng lực thực tế với bản mô tả công việc (JD) và thiếu quy trình phê duyệt hai tầng chặt chẽ giữa Quản lý chuyên môn và Ban Lãnh đạo.
+    </p>
+
+    <!-- PHẦN 2: GIẢI PHÁP VÀ CHỨC NĂNG CHÍNH -->
+    <h2>2. GIẢI PHÁP VÀ CÁC CHỨC NĂNG CHÍNH CỦA SẢN PHẨM</h2>
+    <p>
+      <strong>Axiom</strong> ra đời như một <strong>Hệ điều hành nghi thức cuộc họp số (Digital Enterprise Operating System - DX-OS)</strong>, giải quyết toàn diện các vấn đề trên thông qua triết lý kiến trúc 4 tầng <strong>H-P-D-I</strong>:
+    </p>
+
+    <div class="hpdi-grid">
+      <div class="hpdi-card human">
+        <div class="hpdi-tag" style="color: #2563eb;">H — HUMAN (CON NGƯỜI)</div>
+        <div class="hpdi-title">Trải nghiệm họp không phân tâm</div>
+        <div class="hpdi-desc">Giao diện Focus Mode chuẩn B2B SaaS, kết nối trực tiếp qua WebRTC LiveKit độ trễ < 200ms, phụ đề thời gian thực.</div>
+      </div>
+      <div class="hpdi-card process">
+        <div class="hpdi-tag" style="color: #d97706;">P — PROCESS (QUY TRÌNH)</div>
+        <div class="hpdi-title">Kỷ luật cổng Agenda Gate</div>
+        <div class="hpdi-desc">Kiểm soát logic nghiêm ngặt: Bắt buộc có nghị trình chi tiết ≥ 20 ký tự mới được cấp quyền tạo phòng, triệt tiêu họp rác.</div>
+      </div>
+      <div class="hpdi-card data">
+        <div class="hpdi-tag" style="color: #16a34a;">D — DATA (DỮ LIỆU)</div>
+        <div class="hpdi-title">Chủ quyền On-Premise tuyệt đối</div>
+        <div class="hpdi-desc">Vận hành 100% trong hạ tầng mạng nội bộ / Private VPC của doanh nghiệp. Không dữ liệu âm thanh nào rò rỉ ra ngoài.</div>
+      </div>
+      <div class="hpdi-card intel">
+        <div class="hpdi-tag" style="color: #7c3aed;">I — INTELLIGENCE (TRÍ TUỆ)</div>
+        <div class="hpdi-title">AI Cục bộ & Tự động hóa MoM</div>
+        <div class="hpdi-desc">Tự động bóc tách quyết định, việc cần làm (Action Items) và chuyển đổi 1-click sang bảng Kanban / Jira nội bộ.</div>
+      </div>
+    </div>
+
+    <h3>Các chức năng chính của sản phẩm:</h3>
+    <ul>
+      <li><strong>Cổng kiểm duyệt kỷ luật nghị trình (Agenda Gate):</strong> Ngăn chặn việc họp tùy tiện. Hệ thống kiểm tra song song ở cả frontend và backend, chỉ cấp token phòng họp khi người tạo đã xác lập nghị trình và mục tiêu chi tiết (≥ 20 ký tự).</li>
+      <li><strong>Phòng họp trực tuyến bảo mật (Axiom LiveKit Virtual Room):</strong> Truyền phát video, âm thanh chất lượng cao, chia sẻ màn hình, giơ tay phát biểu với độ trễ siêu thấp dưới 200ms bằng hạ tầng LiveKit SFU tự lưu trữ.</li>
+      <li><strong>Phụ đề & Phiên dịch song ngữ thời gian thực (Real-time Live Subtitles & Translation):</strong> Tự động nhận dạng tiếng nói tiếng Việt / tiếng Anh và hiển thị phụ đề song ngữ trực tiếp, bảo lưu chuẩn xác thuật ngữ kỹ thuật.</li>
+      <li><strong>Tự động hóa biên bản cuộc họp bằng AI (AI MoM Engine):</strong> Tự động tổng hợp <em>Tóm tắt điều hành (Executive Summary)</em>, <em>Quyết định then chốt (Key Decisions)</em> và <em>Nhiệm vụ cần làm (Action Items)</em> có đầy đủ người phụ trách và hạn chót trong vòng 60 giây sau khi kết thúc cuộc họp.</li>
+      <li><strong>Tích hợp Mini Jira Kanban Board & 1-Click Sync:</strong> Biến các đầu việc trong biên bản cuộc họp thành thẻ công việc trên bảng Kanban nội bộ của phòng ban chỉ bằng một cú click chuột.</li>
+      <li><strong>Trung tâm tri thức số doanh nghiệp (Enterprise Knowledge Hub & RAG):</strong> Lưu trữ, đánh chỉ mục toàn bộ bản ghi và transcript cuộc họp; cho phép tìm kiếm ngữ nghĩa thông minh về các quyết định trong quá khứ.</li>
+      <li><strong>Quy trình tuyển dụng và phỏng vấn có kiểm soát 2 tầng (Smart Recruitment):</strong> Quản lý hồ sơ ứng viên, phòng phỏng vấn trực tuyến tích hợp AI nhận định sơ bộ (AI Evaluation), cơ chế thẩm định chuyên môn (HR Review) và phê duyệt tiếp nhận (Owner Approval).</li>
+      <li><strong>Bảng điều khiển Quản trị & Nhật ký Kiểm toán (Admin Console & Audit Trail):</strong> Quản lý tổ chức đa phòng ban, phân quyền RBAC đa cấp và ghi nhận nhật ký kiểm toán bảo mật phục vụ công tác thanh tra tuân thủ.</li>
+    </ul>
+
+    <!-- PHẦN 3: CÔNG NGHỆ SỬ DỤNG -->
+    <h2>3. CÔNG NGHỆ SỬ DỤNG TRONG HỆ THỐNG</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 28%;">Tầng kiến trúc</th>
+          <th style="width: 32%;">Công nghệ chính</th>
+          <th>Mục đích sử dụng & Ưu điểm vượt trội</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Frontend Layer</strong></td>
+          <td><strong>Next.js 16</strong> (App Router)<br>React 19, TypeScript</td>
+          <td>Server-side rendering hiệu năng cao, tối ưu SEO, bảo đảm an toàn kiểu dữ liệu tuyệt đối (Type Safety).</td>
+        </tr>
+        <tr>
+          <td><strong>Giao diện & Chuyển động</strong></td>
+          <td><strong>Tailwind CSS v4</strong><br>Shadcn UI, GSAP</td>
+          <td>Thiết kế B2B Enterprise hiện đại, tuân thủ nghiêm ngặt quy tắc chống biến dạng giao diện (Anti-CLS Rule).</td>
+        </tr>
+        <tr>
+          <td><strong>Backend API</strong></td>
+          <td><strong>FastAPI</strong> (Python 3.12+)<br>Pydantic V2, Uvicorn</td>
+          <td>Xử lý bất đồng bộ (Asynchronous) hiệu năng cao, tự động sinh tài liệu OpenAPI, tương thích tự nhiên với AI/ML.</td>
+        </tr>
+        <tr>
+          <td><strong>Truyền thông Thời gian thực</strong></td>
+          <td><strong>LiveKit WebRTC</strong><br>Web Audio API, WebSockets</td>
+          <td>Hạ tầng WebRTC SFU On-Premise tối tân, độ trễ &lt; 200ms, streaming luồng âm thanh PCM 16kHz song công.</td>
+        </tr>
+        <tr>
+          <td><strong>Cơ sở dữ liệu & Lưu trữ</strong></td>
+          <td><strong>PostgreSQL 16</strong><br>SQLAlchemy 2.0, Alembic</td>
+          <td>Cơ sở dữ liệu quan hệ mạnh mẽ, đảm bảo tính toàn vẹn giao dịch (ACID) và quản trị lược đồ dữ liệu an toàn.</td>
+        </tr>
+        <tr>
+          <td><strong>Bộ nhớ đệm & Hàng đợi</strong></td>
+          <td><strong>Redis Enterprise Cache</strong></td>
+          <td>Lưu trữ phiên làm việc, quản lý hàng đợi cho các tác vụ AI hậu kỳ và phát sóng thông báo thời gian thực.</td>
+        </tr>
+        <tr>
+          <td><strong>AI & Mô hình Ngôn ngữ</strong></td>
+          <td><strong>Silero VAD v5</strong><br>Faster-Whisper Large-v3<br>CTranslate2, Ollama (Qwen 2.5)</td>
+          <td>Toàn bộ các mô hình AI đều được đóng gói và vận hành cục bộ (On-Premise), không gửi dữ liệu ra bên ngoài.</td>
+        </tr>
+        <tr>
+          <td><strong>Đóng gói & Vận hành</strong></td>
+          <td><strong>Docker, Docker Compose</strong><br>Kubernetes (K8s HPA)</td>
+          <td>Đóng gói hoàn chỉnh, hỗ trợ triển khai 1-lệnh (`docker compose up -d`) và tự động co giãn theo tải trên K8s.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- PHẦN 4: ỨNG DỤNG AI & TỰ ĐỘNG HÓA -->
+    <h2>4. CÁCH ỨNG DỤNG AI VÀ TỰ ĐỘNG HÓA TRONG SẢN PHẨM</h2>
+    <p>
+      Điểm vượt trội của Axiom là việc kiến tạo một <strong>Edge / On-Premise AI Pipeline</strong> hoàn chỉnh, xử lý âm thanh và văn bản theo thời gian thực ngay trên máy chủ nội bộ:
+    </p>
+
+    <div class="pipeline-diagram">
+<span class="hl-accent">[Microphone Audio Stream (16kHz PCM)]</span>
+      │
+      ▼ (WebSocket /ws/realtime-stt)
+<span class="hl-green">1. Silero VAD v5:</span> Lọc khoảng lặng, chỉ xử lý khi speech_prob ≥ 0.4 (Tiết kiệm 70% tải GPU/CPU)
+      │
+      ▼
+<span class="hl-green">2. Faster-Whisper Large-v3:</span> Phiên âm trực tiếp sang văn bản tiếng Việt & tiếng Anh (&lt; 300ms)
+      │
+      ▼
+<span class="hl-yellow">3. Regex N-Gram Deduplicator:</span> Khử lặp từ, xóa hiện tượng lắp bắp, chuẩn hóa ngắt câu
+      │
+      ▼
+<span class="hl-yellow">4. CTranslate2 Translation:</span> Dịch song ngữ EN ↔ VI, bảo toàn nguyên vẹn thuật ngữ công nghệ
+      │
+      ▼
+<span class="hl-accent">[HIỂN THỊ PHỤ ĐỀ SONG NGỮ TRỰC TIẾP TRÊN PHÒNG HỌP]</span>
+      │
+      ▼ (Kích hoạt khi chủ tọa bấm "Kết thúc cuộc họp")
+<span class="hl-purple">5. Local LLM (Qwen 2.5 / Llama 3 via Ollama):</span>
+      ├── Modelfile.task-extractor: Bóc tách Action Items + Người chịu trách nhiệm + Deadline
+      └── Modelfile.decision-extractor: Tổng hợp Executive Summary + Quyết định đã thống nhất
+      │
+      ▼
+<span class="hl-purple">6. 1-Click Automation Sync:</span> Tự động tạo thẻ việc trên Mini Jira Kanban & thông báo qua Webhook
+    </div>
+
+    <ul>
+      <li><strong>Silero VAD v5 (Lọc khoảng lặng):</strong> Loại bỏ hơn 60% dữ liệu âm thanh thừa (im lặng, tạp âm, tiếng thở), giúp hệ thống phục vụ đồng thời hàng chục phòng họp trên cấu hình máy chủ thông thường.</li>
+      <li><strong>Faster-Whisper lượng tử hóa int8:</strong> Tốc độ nhận dạng tiếng nói nhanh gấp 4 lần so với mô hình gốc, tối ưu hóa cho môi trường doanh nghiệp có nhiều giọng địa phương và phát âm tiếng Việt đa dạng.</li>
+      <li><strong>Cơ chế Term Preservation:</strong> Hệ thống tự động phát hiện và bảo tồn các thuật ngữ chuyên ngành (như <em>Kubernetes, Microservices, API Gateway, EBITDA, Sprint</em>) không bị dịch máy thô thiển.</li>
+      <li><strong>Cấu trúc hóa đầu ra với LLM cục bộ (Structured Output):</strong> Toàn bộ dữ liệu MoM được sinh ra dưới dạng JSON nghiêm ngặt (Pydantic Schema), bóc tách chính xác nhiệm vụ kèm người phụ trách được đối soát theo danh sách thành viên thực tế của phòng họp.</li>
+      <li><strong>Hỗ trợ Tuyển dụng thông minh (AI Evaluation):</strong> Tự động phân tích câu trả lời của ứng viên đối chiếu với yêu cầu công việc (JD), cung cấp báo cáo nhận định sơ bộ kèm trích dẫn thời gian phát biểu cho hội đồng tuyển dụng.</li>
+    </ul>
+
+    <!-- PHẦN 5: GIÁ TRỊ VÀ KHẢ NĂNG ỨNG DỤNG -->
+    <h2>5. GIÁ TRỊ VÀ KHẢ NĂNG ỨNG DỤNG ĐỐI VỚI DOANH NGHIỆP</h2>
+
+    <h3>5.1. Giá trị kinh tế và Hiệu suất vận hành (ROI & Productivity)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Mục tiêu cải tiến</th>
+          <th>Phương thức truyền thống / Cloud SaaS</th>
+          <th>Giải pháp với Axiom DX-OS</th>
+          <th>Lợi ích định lượng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Kỷ luật thời gian</strong></td>
+          <td>Họp tự phát, không nghị trình, lan man, lãng phí thời gian.</td>
+          <td>Cổng <strong>Agenda Gate (≥ 20 ký tự)</strong> bắt buộc có mục tiêu rõ ràng.</td>
+          <td><strong>Giảm 40% cuộc họp vô bổ</strong>, tiết kiệm hàng nghìn giờ công/năm.</td>
+        </tr>
+        <tr>
+          <td><strong>Biên bản cuộc họp</strong></td>
+          <td>Thư ký ghi tay thủ công, mất 2 - 6 giờ tổng hợp và gửi đi.</td>
+          <td>AI tự động sinh biên bản MoM chuẩn chỉnh <strong>trong 60 giây</strong>.</td>
+          <td><strong>Tiết kiệm 85% thời gian</strong> hành chính, truyền đạt tức thì.</td>
+        </tr>
+        <tr>
+          <td><strong>Theo dõi công việc</strong></td>
+          <td>Ghi trên giấy/chat, dễ thất lạc, không rõ người chịu trách nhiệm.</td>
+          <td><strong>1-Click Sync</strong> tự động chuyển việc thành thẻ Kanban / Jira.</td>
+          <td><strong>Triệt tiêu 100% tình trạng quên việc</strong> hậu cuộc họp.</td>
+        </tr>
+        <tr>
+          <td><strong>An toàn thông tin</strong></td>
+          <td>Dữ liệu âm thanh, hình ảnh lưu trên đám mây công cộng bên thứ ba.</td>
+          <td><strong>100% On-Premise</strong>, dữ liệu nằm hoàn toàn trong mạng nội bộ.</td>
+          <td><strong>Bảo vệ tuyệt đối bí mật kinh doanh</strong>, đáp ứng chuẩn an ninh mạng.</td>
+        </tr>
+        <tr>
+          <td><strong>Chi phí bản quyền</strong></td>
+          <td>Trả phí thuê bao hàng tháng theo số lượng tài khoản (Per-user fee).</td>
+          <td><strong>Mã nguồn mở MIT</strong>, tự làm chủ hạ tầng và mã nguồn.</td>
+          <td><strong>Tiết kiệm hàng chục nghìn USD</strong> chi phí SaaS hàng năm.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5.2. Khả năng ứng dụng thực tế theo các ngành trọng yếu</h3>
+    <ul>
+      <li><strong>Ngân hàng, Tài chính & Bảo hiểm (BFSI):</strong> Thỏa mãn các tiêu chuẩn khắt khe nhất về an toàn dữ liệu tài chính, các cuộc họp Hội đồng quản trị và xét duyệt rủi ro bảo mật tuyệt đối.</li>
+      <li><strong>Cơ quan Quản lý Nhà nước & Đơn vị Hành chính sự nghiệp:</strong> Chuẩn hóa nghi thức các phiên họp giao ban và chỉ đạo; tự động hóa biên bản họp hành chính theo quy chuẩn văn thư.</li>
+      <li><strong>Tập đoàn Công nghệ & Viễn thông:</strong> Họp phối hợp kỹ thuật với độ tập trung cao, đồng bộ tức thì các việc cần làm vào Jira và hỗ trợ phiên dịch thuật ngữ công nghệ song ngữ.</li>
+      <li><strong>Hệ thống Y tế & Bệnh viện:</strong> Hội chẩn trực tuyến an toàn, bảo vệ hồ sơ bệnh án nhạy cảm của người bệnh.</li>
+      <li><strong>Khối Doanh nghiệp Sản xuất & Chuỗi cung ứng:</strong> Quản lý điều hành nhiều phòng ban và tuyển dụng nhân sự quy mô lớn có sự giám sát minh bạch 2 tầng.</li>
+    </ul>
+
+    <h3>5.3. Tính khả thi trong triển khai</h3>
+    <ul>
+      <li><strong>Triển khai siêu tốc:</strong> Đóng gói hoàn chỉnh bằng Docker Compose, sẵn sàng vận hành trên máy chủ doanh nghiệp chỉ sau <strong>15 phút</strong>.</li>
+      <li><strong>Khả năng mở rộng cao:</strong> Sẵn sàng nâng cấp lên cụm Kubernetes tích hợp bộ tự động co giãn HPA khi mở rộng quy mô toàn doanh nghiệp.</li>
+      <li><strong>Chi phí phần cứng tối ưu:</strong> Tối ưu hóa lượng tử hóa int8 cho phép hệ thống chạy mượt mà ngay trên các máy chủ có GPU phổ thông (NVIDIA RTX 3060/4060) hoặc CPU đa nhân.</li>
+    </ul>
+
+    <!-- PHẦN 6: LIÊN KẾT MÃ NGUỒN GITHUB -->
+    <h2>6. THÔNG TIN MÃ NGUỒN & LIÊN KẾT DỰ ÁN</h2>
+    <div class="github-box">
+      <strong>🔗 Kho lưu trữ mã nguồn chính thức của dự án:</strong>
+      <a class="github-link" href="https://github.com/khoazandev/Axiom-meeting-protocol.git" target="_blank">
+        https://github.com/khoazandev/Axiom-meeting-protocol.git
+      </a>
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">
+        Dự án phát hành theo giấy phép mã nguồn mở <strong>MIT License</strong>. Toàn bộ mã nguồn, tài liệu kiến trúc, hướng dẫn triển khai Docker và kiểm thử tự động đều được công khai tại repository trên.
+      </p>
+    </div>
+
+  </div>
+
+</body>
+</html>

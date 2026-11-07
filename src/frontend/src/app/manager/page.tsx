@@ -1,0 +1,337 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ManagerCurlyBracketSidebar,
+  ManagerNavKey,
+  MANAGER_NAV_SECTIONS,
+  ManagerNavSectionItem,
+} from '@/components/manager/ManagerCurlyBracketSidebar';
+import { ManagerMeetingsTab } from '@/components/manager/ManagerMeetingsTab';
+import { ManagerKanbanTaskTab } from '@/components/manager/ManagerKanbanTaskTab';
+import { ManagerTeamTab } from '@/components/manager/ManagerTeamTab';
+import { ManagerCalendarTab } from '@/components/manager/ManagerCalendarTab';
+import { ManagerRecruitmentTab } from '@/components/manager/ManagerRecruitmentTab';
+import { MeetingArchiveRepository } from '@/components/archive/MeetingArchiveRepository';
+import { UserProfileModal, generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { authApi } from '@/lib/api';
+import { recruitmentApi } from '@/lib/recruitment-api';
+import Logo from '@/components/Logo';
+import { Video, Bell, CheckCircle2, Search, Briefcase, Building2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
+
+export default function ManagerWorkspacePage() {
+  const router = useRouter();
+  const { user, activeOrganization, organizations, logout, updateUser } = useAuthStore();
+  const orgId = activeOrganization?.id || organizations[0]?.id || '';
+  const [activeTab, setActiveTab] = useState<ManagerNavKey>('meetings');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [timeStr, setTimeStr] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [canReviewRecruitment, setCanReviewRecruitment] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  // Clock ticker matching Sovereign style
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setTimeStr(
+        now.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        })
+      );
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Ensure current manager session has up-to-date department_id and department_name
+  useEffect(() => {
+    authApi
+      .me()
+      .then((freshUser) => {
+        if (freshUser) {
+          updateUser(freshUser);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!orgId) return;
+    recruitmentApi
+      .getContext(orgId)
+      .then((ctx) => {
+        if (
+          ctx.permissions.includes('recruitment.review') ||
+          ctx.permissions.includes('recruitment.manage')
+        ) {
+          setCanReviewRecruitment(true);
+        }
+      })
+      .catch(() => {});
+  }, [orgId]);
+
+  const navSections: ManagerNavSectionItem[] = React.useMemo(() => {
+    return [
+      ...MANAGER_NAV_SECTIONS,
+      {
+        id: 'recruitment',
+        label: 'Đánh Giá',
+        sublabel: 'Tuyển dụng & Pipeline',
+        icon: Briefcase,
+        shortcut: '⌘6',
+      },
+    ];
+  }, []);
+
+  const currentSection =
+    navSections.find((s) => s.id === activeTab) || navSections[0];
+  const CurrentIcon = currentSection.icon;
+
+  const currentAvatar =
+    user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Trần Minh Khoa');
+
+  return (
+    <div className="min-h-screen bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-blue-500 selection:text-white antialiased">
+      {/* ── 1. Synchronized Floating Curly Bracket Sidebar (Mirrors Owner & Member) ── */}
+      <ManagerCurlyBracketSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        sections={navSections}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onLogout={handleLogout}
+      />
+
+      {/* ── 2. Top Executive Sovereign Header (Synchronized with Owner & Member) ── */}
+      <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand Identity & Company */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Link href="/manager" className="flex items-center gap-2 group">
+              <Logo size={32} showText={true} subtitle="DX-OS" />
+            </Link>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[200px]"
+              title={`Doanh nghiệp: ${activeOrganization?.name || 'Axiom Enterprise'}`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold tracking-tight shrink-0">
+              MANAGER
+            </div>
+          </div>
+
+          {/* Center: Search & Live Chronometer */}
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-md mx-4">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm nhân sự, sprint, task, tài liệu... (⌘K)"
+                className="w-full pl-9 pr-12 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
+              />
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 rounded shadow-2xs">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Live Clock */}
+            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">
+                {timeStr || '14:55:00'} ICT
+              </span>
+              <span className="text-slate-300 dark:text-slate-600">|</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
+                1 Phòng Live
+              </span>
+            </div>
+
+            {/* Quick Meeting Action */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('meetings')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <Video size={14} />
+              <span>+ Họp Phòng Ban</span>
+            </button>
+
+            {/* Notification Button */}
+            <button
+              type="button"
+              onClick={() => showToast('Tất cả hệ thống bình thường • 0 cảnh báo khẩn cấp')}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative"
+              title="Thông báo nội bộ"
+            >
+              <Bell size={16} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
+            </button>
+
+            {/* Theme Toggle Button */}
+            <ThemeToggle />
+
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+
+            {/* Manager Profile Trigger (Click to open UserProfileModal) */}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-2.5 group cursor-pointer p-1 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
+              title={`Hồ sơ: ${user?.full_name || 'Trần Minh Khoa'} • Thuộc ${activeOrganization?.name || 'Axiom Enterprise'}`}
+            >
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all shrink-0">
+                <img
+                  src={currentAvatar}
+                  alt={user?.full_name || 'Trần Minh Khoa'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              </div>
+              <div className="hidden sm:block text-left max-w-[170px]">
+                <div
+                  className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate"
+                  title={user?.full_name || 'Quản lý phòng ban'}
+                >
+                  {user?.full_name || 'Quản lý phòng ban'}
+                </div>
+                <div
+                  className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate"
+                  title={`${activeOrganization?.name || 'Axiom Enterprise'} • ${user?.department_name || 'Bộ Phận'}`}
+                >
+                  <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+                  <span>•</span>
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400 shrink-0">
+                    MANAGER
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── 3. Content Stage: Section Banner + Horizontal Pill Switcher + Full Width Tabs ── */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Active Page Header Banner & Tab Switcher Bar */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+              <CurrentIcon size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {currentSection.label}
+                </h1>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {currentSection.sublabel} • Phím tắt chuyển nhanh:{' '}
+                <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                  {currentSection.shortcut}
+                </kbd>
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Horizontal Pill Switcher Bar */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto max-w-full">
+            {navSections.map((sec) => {
+              const isSelected = activeTab === sec.id;
+              const Icon = sec.icon;
+              return (
+                <button
+                  key={sec.id}
+                  type="button"
+                  onClick={() => setActiveTab(sec.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    isSelected
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Icon size={14} />
+                  <span>{sec.id === 'recruitment' ? 'Đánh Giá' : sec.label.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab View Container - 100% Full Width, EXACTLY 1 SIDEBAR */}
+        <div className="w-full transition-opacity duration-200">
+          {activeTab === 'meetings' && <ManagerMeetingsTab onNotify={showToast} />}
+
+          {activeTab === 'kanban' && <ManagerKanbanTaskTab onNotify={showToast} />}
+
+          {activeTab === 'calendar' && <ManagerCalendarTab onNotify={showToast} />}
+
+          {activeTab === 'team' && <ManagerTeamTab onNotify={showToast} />}
+
+          {activeTab === 'archives' && (
+            <MeetingArchiveRepository
+              userRole="MANAGER"
+              departmentId={user?.department_id}
+              departmentName={user?.department_name || undefined}
+              onNotify={showToast}
+            />
+          )}
+
+          {activeTab === 'recruitment' && (
+            <ManagerRecruitmentTab
+              organizationId={orgId}
+              onNotify={showToast}
+            />
+          )}
+        </div>
+      </main>
+
+      {/* User Profile & Avatar Customization Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onNotify={showToast}
+      />
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700/50 text-xs font-semibold">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -88,6 +88,18 @@ class ForbiddenException(AppException):
         )
 
 
+class ConflictException(AppException):
+    """Resource state conflict (409)."""
+
+    def __init__(self, message: str = "Conflict", detail: str | None = None):
+        super().__init__(
+            status_code=409,
+            code="CONFLICT",
+            message=message,
+            detail=detail,
+        )
+
+
 def _error_response(status_code: int, code: str, message: str, detail: str | None = None) -> JSONResponse:
     """Build a consistent error JSON response."""
     return JSONResponse(
@@ -132,6 +144,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        import logging
+        logging.getLogger("axiom.error").error("Unhandled exception at %s: %s", request.url, exc, exc_info=True)
         # Log the real error in production (future: error tracking service)
         return _error_response(
             500,

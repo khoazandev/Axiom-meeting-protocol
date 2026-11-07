@@ -13,12 +13,13 @@ Validates:
 
 import json
 import sys
+import pytest
 import requests
 from datetime import datetime, timezone, timedelta
 
 
 OLLAMA_URL = "http://localhost:11434"
-MODEL = "task-extractor01"
+MODEL = "lamphat03102004/task-extractor01"
 
 VN_TZ = timezone(timedelta(hours=7))
 NOW = datetime.now(VN_TZ)
@@ -65,10 +66,10 @@ def call_model(pending_tasks: list[dict], transcript: str) -> list[dict]:
         resp.raise_for_status()
     except requests.exceptions.ConnectionError:
         print("❌ Không kết nối được Ollama! Chạy: ollama serve")
-        sys.exit(1)
+        pytest.skip("Ollama server is not running on localhost:11434")
     except requests.exceptions.Timeout:
         print("❌ Timeout sau 10 phút!")
-        sys.exit(1)
+        pytest.skip("Ollama request timed out")
 
     msg = resp.json().get("message", {})
     content = msg.get("content", "").strip()

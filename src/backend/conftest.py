@@ -7,6 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from src.backend import database, models
 from src.backend.main import app
 
+pytest_plugins = ("src.backend.tests.recruitment_fixtures",)
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_shared.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -24,13 +26,16 @@ app.dependency_overrides[database.get_db] = override_get_db
 
 
 @pytest.fixture(autouse=True)
+def cleanup_overrides():
+    yield
+    app.dependency_overrides.clear()
+    app.dependency_overrides[database.get_db] = override_get_db
+
+
+@pytest.fixture(autouse=True)
 def setup_db():
     database.Base.metadata.create_all(bind=engine)
     yield
-    try:
-        database.Base.metadata.drop_all(bind=engine, checkfirst=True)
-    except Exception:
-        pass
 
 
 @pytest.fixture

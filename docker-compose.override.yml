@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend.dev
+    volumes:
+      # Map mã nguồn trực tiếp vào container
+      - ./src/frontend:/app
+      # Bỏ qua map thư mục node_modules từ máy thật (tránh lỗi xung đột hệ điều hành)
+      - /app/node_modules
+      # Bỏ qua map thư mục build tĩnh
+      - /app/.next
+    environment:
+      # Bắt buộc cho Hot Reload khi chạy Docker trên Windows (WSL2 / Hyper-V)
+      - WATCHPACK_POLLING=true
+      - NODE_ENV=development
