@@ -97,7 +97,7 @@ services:
   agent:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: docker/Dockerfile.backend
     restart: unless-stopped
     extra_hosts:
       - 'host.docker.internal:host-gateway'

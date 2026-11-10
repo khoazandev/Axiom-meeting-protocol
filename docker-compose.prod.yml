@@ -35,7 +35,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: docker/Dockerfile.backend
     container_name: axiom-backend-prod
     environment:
       DATABASE_URL: postgresql://axiom:secure_axiom_pass_2026@postgres:5432/axiom_db
@@ -54,8 +54,8 @@ services:
 
   frontend:
     build:
-      context: ./src/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/Dockerfile.frontend
     container_name: axiom-frontend-prod
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
