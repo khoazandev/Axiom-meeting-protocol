@@ -46,6 +46,10 @@ graphify-out/
 .superpowers/
 .agents/
 storage/
+temp_*
+summary.txt
+*.pcm
+superpowers_tdd.md
 
 # Environment variables & secrets
 .env
