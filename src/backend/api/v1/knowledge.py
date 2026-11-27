@@ -200,18 +200,23 @@ def search_knowledge(
         )
 
     # 2. Search real transcript segments joined with Meeting
+    terms = [w.strip() for w in query_str.split() if len(w.strip()) > 1]
+    transcript_filters = [
+        TranscriptSegment.content.ilike(query_pattern),
+        Meeting.title.ilike(query_pattern),
+    ]
+    for term in terms[:5]:
+        transcript_filters.append(TranscriptSegment.content.ilike(f"%{term}%"))
+
     segments = (
         db.query(TranscriptSegment)
         .join(Meeting, TranscriptSegment.meeting_id == Meeting.id)
         .filter(
             Meeting.organization_id == member.organization_id,
-            or_(
-                TranscriptSegment.content.ilike(query_pattern),
-                Meeting.title.ilike(query_pattern),
-            ),
+            or_(*transcript_filters),
         )
         .order_by(TranscriptSegment.created_at.desc())
-        .limit(30)
+        .limit(40)
         .all()
     )
     for seg in segments:
@@ -231,6 +236,19 @@ def search_knowledge(
                 created_at=seg.created_at,
             )
         )
+
+    # Hybrid relevance re-ranking
+    def compute_relevance(m: KnowledgeMatch) -> float:
+        combined_text = f"{m.title} {m.snippet}".lower()
+        score = 0.0
+        if query_str.lower() in combined_text:
+            score += 100.0
+        for term in terms:
+            if term.lower() in combined_text:
+                score += 20.0
+        return score
+
+    matches.sort(key=compute_relevance, reverse=True)
 
     return KnowledgeSearchResponse(
         query=req.query,
