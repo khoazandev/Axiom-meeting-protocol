@@ -902,6 +902,22 @@ async def upload_issue_attachment(
     if not issue:
         raise NotFoundException("Issue not found")
 
+    raw_filename = file.filename or "attachment"
+    ext = os.path.splitext(raw_filename)[1].lower()
+
+    ALLOWED_ATTACHMENT_EXTENSIONS = {
+        ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv",
+        ".txt", ".png", ".jpg", ".jpeg", ".webp", ".gif",
+        ".zip", ".tar", ".gz", ".json", ".md",
+    }
+    DANGEROUS_EXTENSIONS = {
+        ".exe", ".bat", ".cmd", ".sh", ".bash", ".ps1", ".vbs",
+        ".js", ".msi", ".dll", ".com", ".scr", ".pif", ".jar",
+    }
+
+    if ext in DANGEROUS_EXTENSIONS or (ext and ext not in ALLOWED_ATTACHMENT_EXTENSIONS):
+        raise ValidationException(f"Định dạng tệp '{ext}' không được phép tải lên vì lý do an toàn")
+
     contents = await file.read()
     if len(contents) > 25 * 1024 * 1024:
         raise ValidationException("Kích thước tệp đính kèm không được vượt quá 25MB")
@@ -909,9 +925,13 @@ async def upload_issue_attachment(
     issue_dir = os.path.join(ATTACHMENTS_STORAGE_DIR, issue.id)
     os.makedirs(issue_dir, exist_ok=True)
 
-    safe_name = os.path.basename(file.filename or "attachment")
+    safe_name = os.path.basename(raw_filename)
     unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
     disk_path = os.path.join(issue_dir, unique_name)
+
+    # Path traversal safety check
+    if not os.path.abspath(disk_path).startswith(os.path.abspath(ATTACHMENTS_STORAGE_DIR)):
+        raise ValidationException("Phát hiện đường dẫn tệp không hợp lệ")
 
     with open(disk_path, "wb") as f:
         f.write(contents)
