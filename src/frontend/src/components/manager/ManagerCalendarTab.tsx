@@ -365,7 +365,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             onMouseEnter={() => startAutoScroll('left')}
             onMouseLeave={stopAutoScroll}
             onClick={() => stepScroll('left')}
-            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -left-4 top-1/2 -translate-y-1/2 z-20"
+            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex lg:hidden items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -left-4 top-1/2 -translate-y-1/2 z-20"
             title="Rê chuột hoặc nhấp để lướt lùi sang trái"
           >
             <ChevronLeft size={20} strokeWidth={2.5} />
@@ -377,7 +377,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             onMouseEnter={() => startAutoScroll('right')}
             onMouseLeave={stopAutoScroll}
             onClick={() => stepScroll('right')}
-            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -right-4 top-1/2 -translate-y-1/2 z-20"
+            className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 hidden md:flex lg:hidden items-center justify-center w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-xl text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:scale-110 cursor-pointer backdrop-blur-xs absolute -right-4 top-1/2 -translate-y-1/2 z-20"
             title="Rê chuột hoặc nhấp để lướt tới sang phải"
           >
             <ChevronRight size={20} strokeWidth={2.5} />
@@ -388,39 +388,39 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
             ref={gridScrollRef}
             className="overflow-x-auto custom-scrollbar pb-3 scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800"
           >
-            <div className="grid grid-cols-7 gap-3 min-w-[1260px]">
+            <div className="grid grid-cols-7 gap-2.5 w-full min-w-[760px] lg:min-w-0">
               {weekDays.map((day) => {
                 const dayMeetings = meetingsByDay[day.dateStr] || [];
 
                 return (
                   <div
                     key={day.dateStr}
-                    className={`rounded-2xl border p-3 min-h-[380px] flex flex-col transition-all ${
+                    className={`rounded-2xl border p-2.5 min-h-[360px] flex flex-col min-w-0 transition-all ${
                       day.isToday
                         ? 'bg-blue-50/30 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 ring-1 ring-blue-200 dark:ring-blue-900/40'
                         : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
                     }`}
                   >
                     {/* Column Day Header */}
-                    <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 dark:border-slate-800">
-                      <div>
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                    <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
+                      <div className="min-w-0">
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-100 block truncate">
                           {day.dayName}
                         </span>
-                        <span className="text-[11px] text-slate-400 block font-mono">
+                        <span className="text-[10.5px] text-slate-400 block font-mono truncate">
                           {day.dateStr}
                         </span>
                       </div>
 
                       {day.isToday && (
-                        <span className="text-[9.5px] font-extrabold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase">
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase shrink-0">
                           Hôm nay
                         </span>
                       )}
                     </div>
 
                     {/* Day Meetings List */}
-                    <div className="space-y-2.5 flex-1">
+                    <div className="space-y-2 flex-1">
                       {dayMeetings.length === 0 ? (
                         <div className="h-28 flex items-center justify-center text-slate-400 dark:text-slate-600 text-[11px] italic text-center">
                           Không có cuộc họp
@@ -443,7 +443,7 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                                 setSelectedMeeting(mtg);
                                 setIsAgendaExpanded(false);
                               }}
-                              className={`p-3 rounded-xl border text-left cursor-pointer transition-all space-y-1.5 ${
+                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all space-y-1.5 ${
                                 isLive
                                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 hover:shadow-md'
                                   : 'bg-slate-50/80 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xs'
@@ -462,10 +462,10 @@ export function ManagerCalendarTab({ onNotify }: ManagerCalendarTabProps) {
                               </h4>
 
                               <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-700/50">
-                                <span className="truncate max-w-[90px]">
+                                <span className="truncate max-w-[75px]">
                                   {mtg.host_name || 'Trưởng Phòng'}
                                 </span>
-                                <span className="flex items-center gap-0.5 font-bold">
+                                <span className="flex items-center gap-0.5 font-bold shrink-0">
                                   <Users size={10} />
                                   <span>{mtg.participant_count || 1}</span>
                                 </span>
