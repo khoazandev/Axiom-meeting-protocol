@@ -265,7 +265,7 @@ export default function ManagerWorkspacePage() {
           </div>
 
           {/* Quick Horizontal Pill Switcher Bar */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto max-w-full scrollbar-none">
             {navSections.map((sec) => {
               const isSelected = activeTab === sec.id;
               const Icon = sec.icon;
@@ -274,14 +274,15 @@ export default function ManagerWorkspacePage() {
                   key={sec.id}
                   type="button"
                   onClick={() => setActiveTab(sec.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  title={sec.label}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                     isSelected
                       ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
                   }`}
                 >
-                  <Icon size={14} />
-                  <span>{sec.id === 'recruitment' ? 'Đánh Giá' : sec.label.split(' ')[0]}</span>
+                  <Icon size={14} className="shrink-0" />
+                  <span>{sec.label}</span>
                 </button>
               );
             })}
