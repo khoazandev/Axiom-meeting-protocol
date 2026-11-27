@@ -1,7 +1,7 @@
 # Axiom Meeting Protocol — Progress Report
 
-> Last updated: 2026-11-27T21:35 (UTC+7)
-> Current Active Branch: `feature/replace-mock-with-real-apis`
+> Last updated: 2026-11-27T22:30 (UTC+7)
+> Current Active Branch: `develop` (Synced with `origin/develop`)
 
 ---
 
@@ -117,6 +117,18 @@
 
 ---
 
+### Step 7: Completed Roadmap Milestones (Phases 1-5 Released)
+| Phase | Milestone | Status | Key Artifacts & Endpoints |
+|---|---|---|---|
+| Phase 1 | Git Release & Branch Integration | ✅ Completed | Merged PR #24 `feature/replace-mock-with-real-apis` into `develop` |
+| Phase 2 | Analytics API Multi-Tenant Refactor | ✅ Completed | `/api/v1/analytics/summary` & `/api/v1/analytics/export` (NDJSON), test passed |
+| Phase 3 | Real-Time SSE Notification Integration | ✅ Completed | Task assignment triggers SSE to user, `app-header.tsx` live badge |
+| Phase 4 | Attachment Storage Hardening | ✅ Completed | MIME & extension whitelist, anti-path traversal check, 25MB quota |
+| Phase 5 | Semantic Hybrid Search in Knowledge Base | ✅ Completed | Multi-token hybrid scoring & relevance re-ranking in `/api/v1/knowledge/search` |
+| UI Wiring | Admin Overview Analytics Export | ✅ Completed | Export NDJSON button wired to real endpoint in `OverviewPulseTab.tsx` |
+
+---
+
 ## 3. Database Schema Overview (21+ Core Tables)
 
 ```
@@ -151,24 +163,12 @@ Knowledge Base:
 
 ---
 
-## 5. Next Steps (Priority Order — Upcoming Milestones)
+## 5. Next Steps & Future Enhancements
 
-1. **Git Merge & Release (Immediate)**:
-   - Create and merge Pull Request for `feature/replace-mock-with-real-apis` into `develop`.
-   - Verify continuous integration & regression tests.
+1. **Production Deployment & Staging Verification**:
+   - Run complete end-to-end user acceptance tests on staging with real audio streams and LiveKit rooms.
+   - Set up automated cron job / Celery worker for periodic attachment storage orphan cleanup.
 
-2. **Re-enable & Refactor Analytics API**:
-   - Update `src/backend/api/v1/analytics.py` from legacy workspace schema to `organization_id` multi-tenant schema.
-   - Re-enable `analytics_router` in `src/backend/api/v1/router.py`.
-   - Connect executive analytics charts (productivity, meeting density, task resolution rate) to real database records.
-
-3. **Realtime WebSocket Notification System**:
-   - Implement live notification broadcasts when tasks are assigned, @mentions occur in meeting chats, or invitations are received.
-   - Provide toast notifications and in-app bell counter syncing in real-time.
-
-4. **Attachment Storage Hardening & Backup Policy**:
-   - Implement storage quota monitoring and automated file retention policies for `/app/storage/attachments`.
-   - Perform load and virus/MIME sanitization checks for user-uploaded documents.
-
-5. **Semantic Hybrid Search in Knowledge Base**:
-   - Integrate vector embeddings (`embedding_service.py`) with PostgreSQL text search for intelligent retrieval of meeting transcripts and corporate SOPs.
+2. **Advanced AI Multi-Speaker Diarization**:
+   - Fine-tune speaker clustering for multi-speaker recognition in cross-functional board meetings.
+   - Connect live meeting summary checkpoints with Slack/Email webhooks.

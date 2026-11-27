@@ -751,6 +751,7 @@ export default function StandaloneAdminCenterPage() {
             {/* TAB 1: OVERVIEW PULSE (Zero Mock Data, Real Metrics, Join, Approvals, Executive Meeting) */}
             {activeSection === 'overview' && (
               <OverviewPulseTab
+                orgId={activeOrgId || activeOrganization?.id}
                 metrics={analytics || EMPTY_ORG_ANALYTICS}
                 liveMeetings={liveMeetings}
                 upcomingMeetings={upcomingMeetings}

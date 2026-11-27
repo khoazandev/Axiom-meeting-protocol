@@ -3,11 +3,12 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { MatIcon } from '@/components/ui/MatIcon';
-import { OrgAnalytics, Meeting, OrgMemberDetail, meetingsApi } from '@/lib/api';
+import { OrgAnalytics, Meeting, OrgMemberDetail, meetingsApi, analyticsApi } from '@/lib/api';
 import { resolveMeetingState, getMeetingStateBadge, MeetingState } from '@/lib/meetingState';
 import { MeetingDetailsModal } from '@/components/knowledge/MeetingDetailsModal';
 
 interface OverviewPulseTabProps {
+  orgId?: string;
   metrics: OrgAnalytics;
   liveMeetings: Meeting[];
   upcomingMeetings?: Meeting[];
@@ -29,6 +30,7 @@ interface OverviewPulseTabProps {
 }
 
 export function OverviewPulseTab({
+  orgId,
   metrics,
   liveMeetings,
   upcomingMeetings = [],
@@ -43,6 +45,33 @@ export function OverviewPulseTab({
   onRefresh,
 }: OverviewPulseTabProps) {
   const router = useRouter();
+
+  // Export Analytics State
+  const [isExportingAnalytics, setIsExportingAnalytics] = useState(false);
+
+  const handleExportAnalytics = async () => {
+    if (!orgId) {
+      alert('Không tìm thấy mã tổ chức để xuất dữ liệu.');
+      return;
+    }
+    setIsExportingAnalytics(true);
+    try {
+      const ndjson = await analyticsApi.exportNdjson(orgId);
+      const blob = new Blob([ndjson], { type: 'application/x-ndjson;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `analytics_${orgId}_${new Date().toISOString().slice(0, 10)}.ndjson`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Không thể xuất dữ liệu phân tích');
+    } finally {
+      setIsExportingAnalytics(false);
+    }
+  };
 
   // 3-State Meeting Filter State
   const [meetingFilter, setMeetingFilter] = useState<'ALL' | 'LIVE' | 'UPCOMING' | 'ENDED'>('ALL');
@@ -195,6 +224,20 @@ export function OverviewPulseTab({
               <MatIcon name="refresh" className="text-[18px]" />
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={handleExportAnalytics}
+            disabled={isExportingAnalytics || !orgId}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            title="Xuất bản ghi phân tích vận hành dạng NDJSON"
+          >
+            <MatIcon
+              name={isExportingAnalytics ? 'sync' : 'download'}
+              className={`text-[18px] ${isExportingAnalytics ? 'animate-spin' : ''}`}
+            />
+            <span>{isExportingAnalytics ? 'Đang xuất...' : 'Xuất Analytics'}</span>
+          </button>
 
           <button
             onClick={() => setIsExecModalOpen(true)}

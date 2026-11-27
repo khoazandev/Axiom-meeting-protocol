@@ -1488,3 +1488,17 @@ export const notificationApi = {
   },
 };
 
+export const analyticsApi = {
+  getSummary(orgId: string): Promise<{ organization_id: string; total_meetings: number; total_tasks: number; total_audit_events: number; total_members: number }> {
+    return apiFetch(`/api/v1/analytics/summary?org_id=${orgId}`);
+  },
+  async exportNdjson(orgId: string): Promise<string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const res = await fetch(`/api/v1/analytics/export?org_id=${orgId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Không thể xuất dữ liệu phân tích');
+    return res.text();
+  },
+};
+
