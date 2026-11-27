@@ -22,6 +22,7 @@ import { recruitmentApi } from '@/lib/recruitment-api';
 import Logo from '@/components/Logo';
 import { Video, Bell, CheckCircle2, Search, Briefcase, Building2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ManagerWorkspacePage() {
   const router = useRouter();
@@ -264,29 +265,36 @@ export default function ManagerWorkspacePage() {
             </div>
           </div>
 
-          {/* Quick Horizontal Pill Switcher Bar */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-x-auto max-w-full scrollbar-none">
-            {navSections.map((sec) => {
-              const isSelected = activeTab === sec.id;
-              const Icon = sec.icon;
-              return (
-                <button
-                  key={sec.id}
-                  type="button"
-                  onClick={() => setActiveTab(sec.id)}
-                  title={sec.label}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                    isSelected
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Icon size={14} className="shrink-0" />
-                  <span>{sec.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Quick Horizontal Pill Switcher Bar - Icon Only with Hover Tooltip */}
+          <TooltipProvider delayDuration={100}>
+            <div className="flex items-center gap-1 p-1 bg-slate-200/60 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+              {navSections.map((sec) => {
+                const isSelected = activeTab === sec.id;
+                const Icon = sec.icon;
+                return (
+                  <Tooltip key={sec.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab(sec.id)}
+                        aria-label={sec.label}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/80 dark:border-slate-700'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <Icon size={16} className="shrink-0" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs font-semibold py-1 px-2.5 shadow-md">
+                      <span>{sec.label}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Tab View Container - 100% Full Width, EXACTLY 1 SIDEBAR */}
