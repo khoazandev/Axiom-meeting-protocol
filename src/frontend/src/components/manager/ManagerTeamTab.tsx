@@ -328,7 +328,7 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       await loadTeamData();
     } catch (err: unknown) {
       console.error('Failed to assign task:', err);
-      onNotify(getErrorMessage(err) || 'Không thể giao việc. Vui lòng kiểm tra lại.');
+      onNotify(getErrorMessage(err, 'Không thể giao việc. Vui lòng kiểm tra lại.'));
     } finally {
       setIsSubmittingAssign(false);
     }

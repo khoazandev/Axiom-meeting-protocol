@@ -724,40 +724,41 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
           <p className="text-xs text-slate-500">Đang đồng bộ bảng nhiệm vụ Mini Jira...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
-          {KANBAN_COLUMNS.map((col) => {
-            const colTasks = filteredTasks.filter((t) => t.status === col.key);
-            const isColTargeted = draggedOverCol === col.key;
+        <div className="w-full overflow-x-auto pb-4 pt-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
+          <div className="flex gap-4 items-stretch h-[calc(100vh-235px)] min-h-[580px] min-w-max pb-1">
+            {KANBAN_COLUMNS.map((col) => {
+              const colTasks = filteredTasks.filter((t) => t.status === col.key);
+              const isColTargeted = draggedOverCol === col.key;
 
-            return (
-              <div
-                key={col.key}
-                onDragOver={(e) => handleDragOver(e, col.key)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, col.key)}
-                className={`rounded-2xl border p-3 flex flex-col min-h-[520px] transition-all duration-200 ${
-                  isColTargeted
-                    ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
-                    : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
-              >
-                {/* Column Header */}
+              return (
                 <div
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl mb-3 ${col.headerBg}`}
+                  key={col.key}
+                  onDragOver={(e) => handleDragOver(e, col.key)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, col.key)}
+                  className={`flex flex-col shrink-0 w-[305px] xl:w-[325px] 2xl:w-[340px] h-full rounded-2xl border p-3 transition-all duration-200 ${
+                    isColTargeted
+                      ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
+                      : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
-                    <span className="text-xs font-extrabold tracking-wide uppercase">
-                      {col.label}
+                  {/* Column Header */}
+                  <div
+                    className={`shrink-0 flex items-center justify-between px-3 py-2 rounded-xl mb-3 ${col.headerBg}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
+                      <span className="text-xs font-extrabold tracking-wide uppercase">
+                        {col.label}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs">
+                      {colTasks.length}
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs">
-                    {colTasks.length}
-                  </span>
-                </div>
 
-                {/* Column Cards List */}
-                <div className="space-y-3 flex-1">
+                  {/* Column Cards List */}
+                  <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
                   {colTasks.length === 0 ? (
                     <div
                       className={`h-32 border-2 border-dashed rounded-xl flex items-center justify-center text-xs italic transition-all ${
@@ -917,6 +918,7 @@ export function MemberJiraWorkspaceTab({ onNotify }: MemberJiraWorkspaceTabProps
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
