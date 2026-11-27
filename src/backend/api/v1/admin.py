@@ -217,10 +217,12 @@ def get_security_summary(
             elif sev == "WARN":
                 warn_count += 1
 
-    # Ensure nonzero for visual chart if empty
-    if sum(sev_dist.values()) == 0:
-        sev_dist = {"CRITICAL": 2, "WARN": 8, "INFO": 45}
-        events_24h = 15
+    # Calculate real Trust Score based on severity distribution
+    total_events_count = len(all_logs)
+    if total_events_count == 0:
+        trust_score = 100
+    else:
+        trust_score = max(100 - (crit_count * 15 + warn_count * 5), 10)
 
     # 7-day timeline trend
     timeline_7d = []
@@ -237,11 +239,6 @@ def get_security_summary(
                     day_logs.append(l)
         cnt = len(day_logs)
         crit = sum(1 for l in day_logs if _infer_severity_and_category(l.action)[0] == "CRITICAL")
-        
-        # fallback visual count
-        if cnt == 0:
-            cnt = 5 + (i * 2) % 7
-            crit = 1 if i in (1, 4) else 0
 
         timeline_7d.append({
             "date": day_date.strftime("%d/%m"),
@@ -250,10 +247,10 @@ def get_security_summary(
         })
 
     return SecuritySummaryResponse(
-        total_events_24h=max(events_24h, 12),
+        total_events_24h=events_24h,
         critical_alerts=crit_count,
-        warning_alerts=max(warn_count, 3),
-        trust_score=98,
+        warning_alerts=warn_count,
+        trust_score=trust_score,
         severity_distribution=sev_dist,
         timeline_7d=timeline_7d,
     )

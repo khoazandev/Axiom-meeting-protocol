@@ -37,6 +37,7 @@ import {
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { getErrorMessage } from '@/lib/errors';
 
 export type TaskStatusKey = 'TODO' | 'IN_PROGRESS' | 'IN_PREVIEW' | 'DONE';
 export type TaskPriorityKey = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -49,6 +50,7 @@ export interface TaskAttachmentItem {
   uploadedAt: string;
   uploaderName: string;
   dataUrl?: string;
+  downloadUrl?: string;
 }
 
 export interface SubtaskItem {
@@ -145,20 +147,39 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const attachmentFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selectedTask) {
-      try {
-        const stored = localStorage.getItem(`axiom_task_att_${selectedTask.id}`);
-        if (stored) {
-          setTaskAttachments(JSON.parse(stored));
-        } else {
+    let ignore = false;
+    if (selectedTask?.id) {
+      jiraApi
+        .getAttachments(selectedTask.id)
+        .then((atts) => {
+          if (ignore) return;
+          setTaskAttachments(
+            atts.map((a) => ({
+              id: a.id,
+              name: a.filename,
+              size: a.file_size,
+              type: a.content_type || 'application/octet-stream',
+              uploadedAt: new Date(a.created_at).toLocaleString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+              }),
+              uploaderName: a.uploader_name || 'Thành viên',
+              downloadUrl: jiraApi.getAttachmentDownloadUrl(a.id),
+            }))
+          );
+        })
+        .catch((err) => {
+          console.error('Failed to load attachments via API:', err);
           setTaskAttachments([]);
-        }
-      } catch {
-        setTaskAttachments([]);
-      }
+        });
     } else {
       setTaskAttachments([]);
     }
+    return () => {
+      ignore = true;
+    };
   }, [selectedTask?.id]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,59 +187,49 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
     if (!file || !selectedTask) return;
     setIsUploadingAttachment(true);
     try {
-      let dataUrl: string | undefined = undefined;
-      if (file.size < 4 * 1024 * 1024) {
-        dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => resolve(undefined);
-          reader.readAsDataURL(file);
-        });
-      }
+      const att = await jiraApi.uploadAttachment(selectedTask.id, file);
       const newAtt: TaskAttachmentItem = {
-        id: `att-${Date.now()}`,
-        name: file.name,
-        size: file.size,
-        type: file.type || 'application/octet-stream',
-        uploadedAt: new Date().toLocaleString('vi-VN', {
+        id: att.id,
+        name: att.filename,
+        size: att.file_size,
+        type: att.content_type || 'application/octet-stream',
+        uploadedAt: new Date(att.created_at).toLocaleString('vi-VN', {
           hour: '2-digit',
           minute: '2-digit',
           day: '2-digit',
           month: '2-digit',
         }),
-        uploaderName: user?.full_name || 'Thành viên',
-        dataUrl,
+        uploaderName: att.uploader_name || user?.full_name || 'Thành viên',
+        downloadUrl: jiraApi.getAttachmentDownloadUrl(att.id),
       };
-      const updated = [newAtt, ...taskAttachments];
-      setTaskAttachments(updated);
-      try {
-        localStorage.setItem(`axiom_task_att_${selectedTask.id}`, JSON.stringify(updated));
-      } catch (err) {
-        console.warn('LocalStorage limit for attachment:', err);
-      }
+      setTaskAttachments((prev) => [newAtt, ...prev]);
       onNotify(`Đã tải lên tệp "${file.name}" cho nhiệm vụ.`);
     } catch (err) {
       console.error('File upload error:', err);
-      onNotify('Không thể tải tệp lên.');
+      onNotify('Không thể tải tệp lên máy chủ.');
     } finally {
       setIsUploadingAttachment(false);
       if (attachmentFileInputRef.current) attachmentFileInputRef.current.value = '';
     }
   };
 
-  const handleDeleteAttachment = (attId: string) => {
+  const handleDeleteAttachment = async (attId: string) => {
     if (!selectedTask) return;
-    const updated = taskAttachments.filter((a) => a.id !== attId);
-    setTaskAttachments(updated);
     try {
-      localStorage.setItem(`axiom_task_att_${selectedTask.id}`, JSON.stringify(updated));
-    } catch {
-      // ignore
+      await jiraApi.deleteAttachment(attId);
+      setTaskAttachments((prev) => prev.filter((a) => a.id !== attId));
+      onNotify('Đã gỡ tệp đính kèm.');
+    } catch (err) {
+      console.error('Failed to delete attachment:', err);
+      onNotify('Không thể gỡ tệp đính kèm.');
     }
-    onNotify('Đã gỡ tệp đính kèm.');
   };
 
   const handleDownloadAttachment = (att: TaskAttachmentItem) => {
+    if (att.downloadUrl) {
+      window.open(att.downloadUrl, '_blank');
+      return;
+    }
     if (att.dataUrl) {
       const a = document.createElement('a');
       a.href = att.dataUrl;
@@ -226,18 +237,6 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } else {
-      const blob = new Blob([`Tệp đính kèm: ${att.name}\nNgười tải: ${att.uploaderName}`], {
-        type: 'text/plain;charset=utf-8',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = att.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     }
   };
 
@@ -249,13 +248,18 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState('');
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Subtasks local storage sync helper
-  const loadSubtasksForTask = (taskId: string, description?: string): SubtaskItem[] => {
-    try {
-      const stored = localStorage.getItem(`axiom_subtasks_${taskId}`);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
+  // Subtasks helper
+  const loadSubtasksForTask = (
+    taskId: string,
+    description?: string,
+    serverSubtasks?: any[]
+  ): SubtaskItem[] => {
+    if (Array.isArray(serverSubtasks) && serverSubtasks.length > 0) {
+      return serverSubtasks.map((st) => ({
+        id: st.id,
+        title: st.summary || st.title || 'Việc con',
+        isCompleted: (st.status || '').toUpperCase() === 'DONE',
+      }));
     }
 
     // If description has subtask lines e.g. "- [ ] item" or "- [x] item"
@@ -275,27 +279,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       if (items.length > 0) return items;
     }
 
-    // Default 2 default decomposed subtasks if empty
-    return [
-      {
-        id: `sub-${taskId}-1`,
-        title: 'Nghiên cứu yêu cầu & chuẩn bị tài liệu kỹ thuật',
-        isCompleted: true,
-      },
-      {
-        id: `sub-${taskId}-2`,
-        title: 'Thực hiện giải pháp & tự kiểm thử (Self-test)',
-        isCompleted: false,
-      },
-    ];
-  };
-
-  const saveSubtasksForTask = (taskId: string, subtasks: SubtaskItem[]) => {
-    try {
-      localStorage.setItem(`axiom_subtasks_${taskId}`, JSON.stringify(subtasks));
-    } catch {
-      // ignore
-    }
+    return [];
   };
 
   // 1. Initial Load: Projects, Issues & Members
@@ -430,7 +414,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
           assigneeAvatar,
           assigneeRole,
           meetingId: issue.meeting_id,
-          subtasks: loadSubtasksForTask(issue.id, issue.description),
+          subtasks: loadSubtasksForTask(issue.id, issue.description, issue.subtasks),
           dueDate: issue.due_date,
         };
       });
@@ -527,9 +511,9 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       setNewTaskDescription('');
       setNewTaskAssigneeId('');
       onNotify(`Đã thêm nhiệm vụ mới: "${enrichedItem.title}"`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create issue:', err);
-      alert(err?.message || 'Không thể tạo nhiệm vụ. Vui lòng thử lại.');
+      onNotify(getErrorMessage(err, 'Không thể tạo nhiệm vụ. Vui lòng thử lại.'));
     } finally {
       setIsCreatingTask(false);
     }
@@ -605,47 +589,84 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
   };
 
   // Subtask Handlers
-  const handleToggleSubtask = (subtaskId: string) => {
+  const handleToggleSubtask = async (subtaskId: string) => {
     if (!selectedTask) return;
 
+    const targetSub = selectedTask.subtasks.find((st) => st.id === subtaskId);
+    const nextCompleted = targetSub ? !targetSub.isCompleted : true;
+
     const updatedSubtasks = selectedTask.subtasks.map((st) =>
-      st.id === subtaskId ? { ...st, isCompleted: !st.isCompleted } : st
+      st.id === subtaskId ? { ...st, isCompleted: nextCompleted } : st
     );
 
     const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
     setSelectedTask(updatedTask);
-    saveSubtasksForTask(selectedTask.id, updatedSubtasks);
-
     setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? updatedTask : t)));
+
+    if (!subtaskId.startsWith('sub-')) {
+      try {
+        await jiraApi.updateIssue(subtaskId, {
+          status: nextCompleted ? 'DONE' : 'TODO',
+        });
+      } catch (err) {
+        console.error('Failed to update subtask status on server:', err);
+      }
+    }
   };
 
-  const handleAddSubtask = () => {
+  const handleAddSubtask = async () => {
     if (!selectedTask || !newSubtaskInput.trim()) return;
-
-    const newSub: SubtaskItem = {
-      id: `sub-${selectedTask.id}-${Date.now()}`,
-      title: newSubtaskInput.trim(),
-      isCompleted: false,
-    };
-
-    const updatedSubtasks = [...selectedTask.subtasks, newSub];
-    const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
-    setSelectedTask(updatedTask);
-    saveSubtasksForTask(selectedTask.id, updatedSubtasks);
-
-    setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? updatedTask : t)));
+    const summary = newSubtaskInput.trim();
     setNewSubtaskInput('');
+
+    try {
+      if (activeProject?.id) {
+        const created = await jiraApi.createIssue({
+          project_id: activeProject.id,
+          summary,
+          type: 'SUBTASK',
+          parent_id: selectedTask.id,
+        });
+        const newSub: SubtaskItem = {
+          id: created.id,
+          title: created.summary,
+          isCompleted: false,
+        };
+        const updatedSubtasks = [...selectedTask.subtasks, newSub];
+        const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
+        setSelectedTask(updatedTask);
+        setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? updatedTask : t)));
+      } else {
+        const newSub: SubtaskItem = {
+          id: `sub-${selectedTask.id}-${Date.now()}`,
+          title: summary,
+          isCompleted: false,
+        };
+        const updatedSubtasks = [...selectedTask.subtasks, newSub];
+        const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
+        setSelectedTask(updatedTask);
+        setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? updatedTask : t)));
+      }
+    } catch (err) {
+      console.error('Failed to create subtask via API:', err);
+    }
   };
 
-  const handleDeleteSubtask = (subtaskId: string) => {
+  const handleDeleteSubtask = async (subtaskId: string) => {
     if (!selectedTask) return;
 
     const updatedSubtasks = selectedTask.subtasks.filter((st) => st.id !== subtaskId);
     const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
     setSelectedTask(updatedTask);
-    saveSubtasksForTask(selectedTask.id, updatedSubtasks);
-
     setTasks((prev) => prev.map((t) => (t.id === selectedTask.id ? updatedTask : t)));
+
+    if (!subtaskId.startsWith('sub-')) {
+      try {
+        await jiraApi.deleteIssue(subtaskId);
+      } catch (err) {
+        console.error('Failed to delete subtask via API:', err);
+      }
+    }
   };
 
   // Priority Styles
@@ -747,40 +768,41 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
           <p className="text-xs text-slate-500">Đang tải bảng nhiệm vụ Kanban...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
-          {KANBAN_COLUMNS.map((col) => {
-            const colTasks = filteredTasks.filter((t) => t.status === col.key);
-            const isColTargeted = draggedOverCol === col.key;
+        <div className="w-full overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-4 gap-3 items-stretch h-[calc(100vh-235px)] min-h-[580px] w-full min-w-[760px] pb-1">
+            {KANBAN_COLUMNS.map((col) => {
+              const colTasks = filteredTasks.filter((t) => t.status === col.key);
+              const isColTargeted = draggedOverCol === col.key;
 
-            return (
-              <div
-                key={col.key}
-                onDragOver={(e) => handleDragOver(e, col.key)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, col.key)}
-                className={`rounded-2xl border p-3 flex flex-col min-h-[520px] transition-all duration-200 ${
-                  isColTargeted
-                    ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
-                    : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
-              >
-                {/* Column Header */}
+              return (
                 <div
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl mb-3 ${col.headerBg}`}
+                  key={col.key}
+                  onDragOver={(e) => handleDragOver(e, col.key)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, col.key)}
+                  className={`flex flex-col min-w-0 h-full rounded-2xl border p-2.5 transition-all duration-200 ${
+                    isColTargeted
+                      ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
+                      : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
-                    <span className="text-xs font-extrabold tracking-wide uppercase">
-                      {col.label}
+                  {/* Column Header */}
+                  <div
+                    className={`shrink-0 flex items-center justify-between px-2.5 py-2 rounded-xl mb-2.5 ${col.headerBg}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${col.dotColor}`} />
+                      <span className="text-[11px] font-extrabold tracking-wide uppercase truncate">
+                        {col.label}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-black px-1.5 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs shrink-0">
+                      {colTasks.length}
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs">
-                    {colTasks.length}
-                  </span>
-                </div>
 
-                {/* Column Cards List */}
-                <div className="space-y-3 flex-1">
+                  {/* Column Cards List */}
+                  <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 scrollbar-thin">
                   {colTasks.length === 0 ? (
                     <div
                       className={`h-32 border-2 border-dashed rounded-xl flex items-center justify-center text-xs italic transition-all ${
@@ -935,6 +957,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 

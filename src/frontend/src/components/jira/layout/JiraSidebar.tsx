@@ -46,8 +46,8 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
   const [starredOpen, setStarredOpen] = useState(true);
   const [spacesOpen, setSpacesOpen] = useState(true);
 
-  // Starred spaces in localStorage
-  const [starredKeys, setStarredKeys] = useState<string[]>([]);
+  // Starred spaces tracked by IDs or Keys
+  const [starredIds, setStarredIds] = useState<string[]>([]);
 
   // Modals for sidebar actions
   const [showAppsModal, setShowAppsModal] = useState(false);
@@ -55,42 +55,60 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
   const [showFiltersModal, setShowFiltersModal] = useState(false);
 
   useEffect(() => {
-    async function loadProjects() {
+    let ignore = false;
+    async function loadData() {
       try {
         setLoading(true);
-        const data = await jiraApi.getProjects();
-        setProjects(data);
+        const [projectsData, starredData] = await Promise.all([
+          jiraApi.getProjects(),
+          jiraApi.getStarredProjects().catch(() => ({ starred_project_ids: [] })),
+        ]);
+        if (ignore) return;
+        setProjects(projectsData || []);
+        setStarredIds(starredData?.starred_project_ids || []);
       } catch (err) {
-        console.error('Failed to load Jira projects:', err);
+        console.error('Failed to load Jira sidebar data:', err);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     }
-    loadProjects();
-
-    // Load starred
-    try {
-      const saved = localStorage.getItem('axiom_starred_spaces');
-      if (saved) setStarredKeys(JSON.parse(saved));
-    } catch (_) {}
+    loadData();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const toggleStar = (key: string, e: React.MouseEvent) => {
+  const toggleStar = async (idOrKey: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    let updated: string[];
-    if (starredKeys.includes(key)) {
-      updated = starredKeys.filter((k) => k !== key);
+
+    const proj = projects.find((p) => p.key === idOrKey || p.id === idOrKey);
+    const targetId = proj?.id || idOrKey;
+    const isCurrentlyStarred =
+      starredIds.includes(targetId) || (proj && starredIds.includes(proj.key));
+
+    if (isCurrentlyStarred) {
+      setStarredIds((prev) => prev.filter((k) => k !== targetId && k !== idOrKey));
+      try {
+        const res = await jiraApi.unstarProject(targetId);
+        setStarredIds(res.starred_project_ids);
+      } catch (err) {
+        console.error('Failed to unstar project:', err);
+      }
     } else {
-      updated = [...starredKeys, key];
+      setStarredIds((prev) => [...prev, targetId]);
+      try {
+        const res = await jiraApi.starProject(targetId);
+        setStarredIds(res.starred_project_ids);
+      } catch (err) {
+        console.error('Failed to star project:', err);
+      }
     }
-    setStarredKeys(updated);
-    try {
-      localStorage.setItem('axiom_starred_spaces', JSON.stringify(updated));
-    } catch (_) {}
   };
 
-  const starredSpaces = projects.filter((p) => starredKeys.includes(p.key));
+  const starredSpaces = projects.filter(
+    (p) => starredIds.includes(p.id) || starredIds.includes(p.key)
+  );
 
   if (collapsed) {
     return (
@@ -292,7 +310,7 @@ export function JiraSidebar({ currentProjectKey, onOpenCreateProject }: JiraSide
             <div className="space-y-0.5 pt-1">
               {projects.map((proj) => {
                 const isActive = currentProjectKey === proj.key;
-                const isStarred = starredKeys.includes(proj.key);
+                const isStarred = starredIds.includes(proj.id) || starredIds.includes(proj.key);
                 return (
                   <Link
                     key={proj.id}

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { MatIcon } from '@/components/ui/MatIcon';
+import { organizationPoliciesApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 interface ProtocolPoliciesTabProps {
   onNotify?: (msg: string) => void;
@@ -82,19 +84,49 @@ const DEFAULT_POLICIES: GovernancePolicy[] = [
 ];
 
 export function ProtocolPoliciesTab({ onNotify }: ProtocolPoliciesTabProps) {
-  const [policies, setPolicies] = useState<GovernancePolicy[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('axiom_governance_policies');
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // fallback
-      }
-    }
-    return DEFAULT_POLICIES;
-  });
-
+  const activeOrganization = useAuthStore((state) => state.activeOrganization);
+  const [policies, setPolicies] = useState<GovernancePolicy[]>(DEFAULT_POLICIES);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!activeOrganization?.id) return;
+
+    setIsLoading(true);
+    organizationPoliciesApi
+      .list(activeOrganization.id)
+      .then((serverPolicies) => {
+        if (ignore) return;
+        if (serverPolicies && serverPolicies.length > 0) {
+          const serverMap = new Map(serverPolicies.map((p) => [p.policy_key, p]));
+          setPolicies((prev) =>
+            prev.map((def) => {
+              const fromServer = serverMap.get(def.id);
+              if (fromServer) {
+                return {
+                  ...def,
+                  name: fromServer.name || def.name,
+                  description: fromServer.description || def.description,
+                  enabled: fromServer.enabled,
+                };
+              }
+              return def;
+            })
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load governance policies from server:', err);
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeOrganization?.id]);
 
   const handleToggle = (policyId: string) => {
     setPolicies((prev) =>
@@ -111,19 +143,29 @@ export function ProtocolPoliciesTab({ onNotify }: ProtocolPoliciesTabProps) {
     );
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
+    if (!activeOrganization?.id) {
+      onNotify?.('Không tìm thấy thông tin tổ chức hiện tại.');
+      return;
+    }
     setIsSaving(true);
     try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('axiom_governance_policies', JSON.stringify(policies));
-      }
-      setTimeout(() => {
-        setIsSaving(false);
-        onNotify?.('✅ Đã lưu cấu hình Cổng Kiểm Soát DX-OS vào hệ thống thành công!');
-      }, 350);
-    } catch {
+      await organizationPoliciesApi.updateBatch(
+        activeOrganization.id,
+        policies.map((p) => ({
+          policy_key: p.id,
+          enabled: p.enabled,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+        }))
+      );
+      onNotify?.('✅ Đã lưu cấu hình Cổng Kiểm Soát DX-OS vào hệ thống thành công!');
+    } catch (err) {
+      console.error('Failed to save policies:', err);
+      onNotify?.('Lỗi khi lưu cấu hình cổng kiểm soát vào máy chủ.');
+    } finally {
       setIsSaving(false);
-      onNotify?.('Lỗi khi lưu cấu hình cổng kiểm soát.');
     }
   };
 

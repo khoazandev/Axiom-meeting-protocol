@@ -276,6 +276,7 @@ def run_clean_reset():
             created_by_id=manager_user.id,
             organization_id=org.id,
             department_id=hr_dept.id,
+            issue_counter=len(issues_data),
         )
         db.add(jira_project)
         db.flush()
@@ -310,6 +311,7 @@ def run_clean_reset():
             organization_id=org.id,
             department_id=ai_dept.id,
             description="Dự án phát triển lõi trí tuệ nhân tạo, LLM context router và audio transcription protocol",
+            issue_counter=len(ai_issues_data),
         )
         db.add(jira_ai_project)
         db.flush()

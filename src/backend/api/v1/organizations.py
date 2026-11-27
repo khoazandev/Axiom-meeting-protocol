@@ -22,6 +22,7 @@ from src.backend.models import (
     MeetingMember,
     MeetingStatusEnum,
     AuditLog,
+    OrganizationPolicy,
 )
 from src.backend.schemas.organization import (
     MemberDetailResponse,
@@ -31,6 +32,9 @@ from src.backend.schemas.organization import (
     OrgAnalyticsResponse,
     UpdateMemberDepartmentRequest,
     UpdateMemberRoleRequest,
+    OrganizationPolicyResponse,
+    OrganizationPolicyUpdate,
+    BatchPolicyUpdateRequest,
 )
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -557,4 +561,191 @@ def get_organization_analytics(
         "active_meetings_count": active_meetings,
         "pending_approvals_count": pending_approvals,
     }
+
+
+# ---------------------------------------------------------------------------
+# Organization Governance Policies
+# ---------------------------------------------------------------------------
+DEFAULT_GOVERNANCE_POLICIES = [
+    {
+        "policy_key": "agenda_gate",
+        "name": "Agenda Gatekeeper (Cổng Kiểm Duyệt Chương Trình)",
+        "category": "GATE",
+        "description": "Bắt buộc cuộc họp phải có chương trình nghị sự tối thiểu 10 ký tự rõ ràng trước khi cho phép bắt đầu.",
+        "enabled": True,
+        "config_json": '{"min_length": 10, "block_start": true}',
+    },
+    {
+        "policy_key": "auto_mom",
+        "name": "Auto AI MoM & Task Extraction (Trích Xuất Biên Bản Tự Động)",
+        "category": "AI",
+        "description": "Sau khi phòng họp kết thúc, AI Ollama/Qwen tự động tổng hợp biên bản và trích xuất Action Items.",
+        "enabled": True,
+        "config_json": '{"auto_assign": true, "notify_assignee": true}',
+    },
+    {
+        "policy_key": "punctuality_guard",
+        "name": "Punctuality Enforcement (Kiểm Soát Giờ Giấc Đại Biểu)",
+        "category": "COMPLIANCE",
+        "description": "Ghi nhận và đánh dấu các đại biểu tham gia trễ quá 15 phút sau khi cuộc họp đã bắt đầu.",
+        "enabled": True,
+        "config_json": '{"grace_period_minutes": 15}',
+    },
+    {
+        "policy_key": "preflight_check",
+        "name": "Pre-Flight Hardware Check (Kiểm Tra Thiết Bị Đầu Vào)",
+        "category": "GATE",
+        "description": "Bắt buộc thành viên kiểm tra micro, camera và chất lượng kết nối WebRTC trước khi bước vào phòng họp.",
+        "enabled": True,
+        "config_json": '{"check_mic": true, "check_cam": true}',
+    },
+    {
+        "policy_key": "tamper_proof_audit",
+        "name": "Tamper-Proof Audit Trail (Kiểm Toán Bất Biến SHA-256)",
+        "category": "SECURITY",
+        "description": "Băm mã hóa SHA-256 toàn bộ biên bản cuộc họp và nhật ký hành động để ngăn chặn sửa đổi trái phép.",
+        "enabled": True,
+        "config_json": '{"algorithm": "SHA-256", "immutable": true}',
+    },
+    {
+        "policy_key": "incident_auto_report",
+        "name": "Automated Incident Alert (Báo Cáo Vi Phạm Kỷ Luật Tự Động)",
+        "category": "COMPLIANCE",
+        "description": "Tự động phát hành báo cáo gửi tới Chủ tịch và Trưởng bộ phận khi có cuộc họp kéo dài quá 120 phút không nghỉ.",
+        "enabled": False,
+        "config_json": '{"max_duration_minutes": 120}',
+    },
+]
+
+
+def _seed_default_policies_if_needed(org_id: str, db: Session) -> list[OrganizationPolicy]:
+    existing = db.query(OrganizationPolicy).filter(OrganizationPolicy.organization_id == org_id).all()
+    if existing:
+        return existing
+
+    new_policies = []
+    for item in DEFAULT_GOVERNANCE_POLICIES:
+        pol = OrganizationPolicy(
+            organization_id=org_id,
+            policy_key=item["policy_key"],
+            name=item["name"],
+            category=item["category"],
+            description=item["description"],
+            enabled=item["enabled"],
+            config_json=item["config_json"],
+        )
+        db.add(pol)
+        new_policies.append(pol)
+    db.commit()
+    for p in new_policies:
+        db.refresh(p)
+    return new_policies
+
+
+@router.get("/{org_id}/policies", response_model=list[OrganizationPolicyResponse])
+def get_organization_policies(
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Retrieve all governance policies for the organization, auto-seeding defaults if empty."""
+    from src.backend.core.exceptions import ForbiddenException
+    membership = (
+        db.query(OrganizationMember)
+        .filter(OrganizationMember.organization_id == org_id, OrganizationMember.user_id == current_user.id)
+        .first()
+    )
+    if not membership:
+        raise ForbiddenException("Bạn không phải thành viên của tổ chức này")
+
+    return _seed_default_policies_if_needed(org_id, db)
+
+
+@router.patch("/{org_id}/policies/{policy_key}", response_model=OrganizationPolicyResponse)
+def update_organization_policy(
+    org_id: str,
+    policy_key: str,
+    payload: OrganizationPolicyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Update a single governance policy toggle or config (Requires OWNER or ADMIN)."""
+    from src.backend.core.exceptions import ForbiddenException, NotFoundException
+    membership = (
+        db.query(OrganizationMember)
+        .filter(OrganizationMember.organization_id == org_id, OrganizationMember.user_id == current_user.id)
+        .first()
+    )
+    if not membership or membership.role.name not in ("OWNER", "ADMIN"):
+        raise ForbiddenException("Chỉ Quản trị viên hoặc Chủ sở hữu mới có quyền thay đổi chính sách")
+
+    _seed_default_policies_if_needed(org_id, db)
+    policy = (
+        db.query(OrganizationPolicy)
+        .filter(OrganizationPolicy.organization_id == org_id, OrganizationPolicy.policy_key == policy_key)
+        .first()
+    )
+    if not policy:
+        raise NotFoundException(f"Chính sách '{policy_key}' không tồn tại")
+
+    if payload.enabled is not None:
+        policy.enabled = payload.enabled
+    if payload.config_json is not None:
+        policy.config_json = payload.config_json
+
+    db.commit()
+    db.refresh(policy)
+    return policy
+
+
+@router.put("/{org_id}/policies/batch", response_model=list[OrganizationPolicyResponse])
+def batch_update_organization_policies(
+    org_id: str,
+    payload: BatchPolicyUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Batch update multiple policies at once (Requires OWNER or ADMIN)."""
+    from src.backend.core.exceptions import ForbiddenException
+    membership = (
+        db.query(OrganizationMember)
+        .filter(OrganizationMember.organization_id == org_id, OrganizationMember.user_id == current_user.id)
+        .first()
+    )
+    if not membership or membership.role.name not in ("OWNER", "ADMIN"):
+        raise ForbiddenException("Chỉ Quản trị viên hoặc Chủ sở hữu mới có quyền cập nhật chính sách")
+
+    _seed_default_policies_if_needed(org_id, db)
+    existing_map = {
+        p.policy_key: p
+        for p in db.query(OrganizationPolicy).filter(OrganizationPolicy.organization_id == org_id).all()
+    }
+
+    for item in payload.policies:
+        if item.policy_key in existing_map:
+            p = existing_map[item.policy_key]
+            p.enabled = item.enabled
+            if item.config_json is not None:
+                p.config_json = item.config_json
+            if item.name is not None:
+                p.name = item.name
+            if item.description is not None:
+                p.description = item.description
+            if item.category is not None:
+                p.category = item.category
+        else:
+            new_p = OrganizationPolicy(
+                organization_id=org_id,
+                policy_key=item.policy_key,
+                name=item.name or item.policy_key,
+                category=item.category or "MEETING",
+                description=item.description,
+                enabled=item.enabled,
+                config_json=item.config_json,
+            )
+            db.add(new_p)
+            existing_map[item.policy_key] = new_p
+
+    db.commit()
+    return list(existing_map.values())
 

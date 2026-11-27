@@ -31,6 +31,7 @@ class UserResponse(BaseModel):
     avatar_url: str | None = None
     role: str | None = None
     phone: str | None = None
+    bio: str | None = None
     job_title: str | None = None
     provider: str
     is_active: bool
@@ -45,4 +46,5 @@ class UserUpdate(BaseModel):
     avatar_url: str | None = None
     email: str | None = None
     phone: str | None = None
+    bio: str | None = None
 
