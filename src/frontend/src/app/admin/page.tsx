@@ -58,7 +58,7 @@ const EMPTY_ORG_ANALYTICS: OrgAnalytics = {
 
 export default function StandaloneAdminCenterPage() {
   const router = useRouter();
-  const { user, activeOrganization, logout } = useAuthStore();
+  const { user, token, activeOrganization, logout } = useAuthStore();
   const isOwner = user?.role === 'OWNER' || Boolean(activeOrganization?.created_by_id && activeOrganization.created_by_id === user?.id);
   const userRole = isOwner ? 'OWNER' : (user?.role || 'ADMIN');
 
@@ -125,6 +125,13 @@ export default function StandaloneAdminCenterPage() {
 
   // Fetch all real organizational data
   const fetchAllData = useCallback(async () => {
+    if (!token || !user) {
+      setActiveOrgId(null);
+      setAnalytics(null);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setLoadError(null);
     let resolvedOrgId =
@@ -596,39 +603,50 @@ export default function StandaloneAdminCenterPage() {
 
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
 
-              {/* User Profile Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2.5 group cursor-pointer p-1 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
-                title={`Hồ sơ: ${user?.full_name || 'System Admin'} • Thuộc ${activeOrganization?.name || 'Axiom Enterprise'}`}
-              >
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all shrink-0">
-                  <img
-                    src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Chủ Tịch')}
-                    alt={user?.full_name || 'Chủ Tịch'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                </div>
-                <div className="hidden sm:block text-left max-w-[170px]">
-                  <div
-                    className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate"
-                    title={user?.full_name || 'System Admin'}
-                  >
-                    {user?.full_name || 'System Admin'}
+              {/* User Profile Trigger OR Login Button */}
+              {user && token ? (
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="flex items-center gap-2.5 group cursor-pointer p-1 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors"
+                  title={`Hồ sơ: ${user?.full_name || 'Quản trị viên'} • Thuộc ${activeOrganization?.name || 'Axiom Enterprise'}`}
+                >
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-blue-400 ring-2 ring-blue-100 dark:ring-blue-950 group-hover:ring-blue-500 transition-all shrink-0">
+                    <img
+                      src={user?.avatar_url || generateInitialsAvatar(user?.full_name || 'Admin')}
+                      alt={user?.full_name || 'Admin'}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
                   </div>
-                  <div
-                    className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate"
-                    title={`${activeOrganization?.name || 'Axiom Enterprise'} • ${user?.department_name || (isOwner ? 'Ban Lãnh Đạo' : 'Ban Điều Hành')}`}
-                  >
-                    <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
-                    <span>•</span>
-                    <span className={`font-extrabold shrink-0 ${isOwner ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                      {userRole}
-                    </span>
+                  <div className="hidden sm:block text-left max-w-[170px]">
+                    <div
+                      className="text-xs font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors truncate"
+                      title={user?.full_name || 'Admin'}
+                    >
+                      {user?.full_name || 'Admin'}
+                    </div>
+                    <div
+                      className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate"
+                      title={`${activeOrganization?.name || 'Axiom Enterprise'} • ${user?.department_name || (isOwner ? 'Ban Lãnh Đạo' : 'Ban Điều Hành')}`}
+                    >
+                      <span className="truncate">{activeOrganization?.name || 'Axiom Enterprise'}</span>
+                      <span>•</span>
+                      <span className={`font-extrabold shrink-0 ${isOwner ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                        {userRole}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              ) : (
+                <Link
+                  href="/login?redirect=/admin"
+                  className="shrink-0 w-36 h-9 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                  title="Đăng nhập tài khoản Quản trị viên"
+                >
+                  <MatIcon name="login" size={16} />
+                  <span className="truncate">Đăng Nhập</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -679,7 +697,30 @@ export default function StandaloneAdminCenterPage() {
           </div>
         )}
 
-        {!activeOrgId && !isLoading ? (
+        {!token || !user ? (
+          <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 space-y-4 max-w-lg mx-auto my-12">
+            <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto shadow-sm">
+              <MatIcon name="lock" className="text-[32px]" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Yêu cầu đăng nhập quản trị
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                Vui lòng đăng nhập với tài khoản Quản trị viên (ADMIN hoặc OWNER) để truy cập Trung tâm Quản trị Axiom Enterprise.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                href="/login?redirect=/admin"
+                className="inline-flex items-center justify-center gap-2 shrink-0 w-44 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <MatIcon name="login" size={16} />
+                <span className="truncate">Đăng Nhập Ngay</span>
+              </Link>
+            </div>
+          </div>
+        ) : !activeOrgId && !isLoading ? (
           <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto shadow-sm">
               <MatIcon name="domain" className="text-[32px]" />

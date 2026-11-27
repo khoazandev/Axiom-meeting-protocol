@@ -22,6 +22,7 @@ import { MatIcon } from '@/components/ui/MatIcon';
 import { organizationAdminApi, invitationApi, jiraApi, OrgMemberDetail, Issue } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { getErrorMessage } from '@/lib/errors';
 
 interface ManagerTeamTabProps {
   onNotify: (msg: string) => void;
@@ -275,12 +276,28 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       });
       let targetProj =
         projects?.find(
-          (p) => p.department_id === user?.department_id || p.key === 'ENG' || p.key === 'SMA'
+          (p) =>
+            p.department_id === user?.department_id ||
+            p.key === 'AXM' ||
+            p.key === 'AIE' ||
+            p.key === 'ENG' ||
+            p.key === 'SMA'
         ) || (projects && projects[0] ? projects[0] : null);
 
       if (!targetProj) {
+        // Fallback: create dynamic project key from department name
+        const prefix =
+          (user?.department_name || 'DEPT')
+            .split(' ')
+            .map((w) => w[0])
+            .join('')
+            .replace(/[^A-Za-z0-9]/g, '')
+            .slice(0, 3)
+            .toUpperCase() || 'AXM';
+        const uniqueKey = `${prefix}${Math.floor(10 + Math.random() * 89)}`;
+
         targetProj = await jiraApi.createProject({
-          key: 'ENG',
+          key: uniqueKey,
           name: user?.department_name || 'Bộ Phận Kỹ Thuật & Công Nghệ',
           description: 'Dự án quản lý công việc và phân bổ nhiệm vụ của phòng ban',
           department_id: user?.department_id || undefined,
@@ -288,11 +305,13 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
         });
       }
 
+      const assigneeId = selectedMemberForAssign.user_id || selectedMemberForAssign.id;
+
       await jiraApi.createIssue({
         project_id: targetProj.id,
         summary: taskToAssignTitle.trim(),
         description: taskToAssignDesc.trim() || undefined,
-        assignee_id: selectedMemberForAssign.user_id,
+        assignee_id: assigneeId,
         priority: taskToAssignPriority,
         due_date: taskToAssignDueDate ? new Date(taskToAssignDueDate).toISOString() : undefined,
         status: 'TODO',
@@ -307,9 +326,9 @@ export function ManagerTeamTab({ onNotify }: ManagerTeamTabProps) {
       setTaskToAssignPriority('HIGH');
       setTaskToAssignDueDate('');
       await loadTeamData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to assign task:', err);
-      alert(err?.message || 'Không thể giao việc.');
+      onNotify(getErrorMessage(err) || 'Không thể giao việc. Vui lòng kiểm tra lại.');
     } finally {
       setIsSubmittingAssign(false);
     }

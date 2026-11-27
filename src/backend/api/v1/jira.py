@@ -352,7 +352,18 @@ def create_issue(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    project.issue_counter += 1
+    # Safely calculate next issue counter to prevent unique constraint collisions
+    all_keys = db.query(Issue.key).filter(Issue.project_id == project.id).all()
+    max_num = project.issue_counter or 0
+    for (k,) in all_keys:
+        if k and k.startswith(f"{project.key}-"):
+            try:
+                num = int(k.split(f"{project.key}-")[1])
+                if num > max_num:
+                    max_num = num
+            except (ValueError, IndexError):
+                pass
+    project.issue_counter = max_num + 1
     issue_key = f"{project.key}-{project.issue_counter}"
 
     issue_type = IssueTypeEnum(payload.type) if payload.type in IssueTypeEnum.__members__ else IssueTypeEnum.TASK
@@ -714,7 +725,18 @@ def sync_meeting_tasks_to_jira(
             created_issues.append(existing_issue)
             continue
 
-        project.issue_counter += 1
+        # Safely calculate next issue counter to prevent unique constraint collisions
+        all_keys = db.query(Issue.key).filter(Issue.project_id == project.id).all()
+        max_num = project.issue_counter or 0
+        for (k,) in all_keys:
+            if k and k.startswith(f"{project.key}-"):
+                try:
+                    num = int(k.split(f"{project.key}-")[1])
+                    if num > max_num:
+                        max_num = num
+                except (ValueError, IndexError):
+                    pass
+        project.issue_counter = max_num + 1
         issue_key = f"{project.key}-{project.issue_counter}"
 
         issue = Issue(

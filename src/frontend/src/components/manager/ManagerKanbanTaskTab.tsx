@@ -37,6 +37,7 @@ import {
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { generateInitialsAvatar } from '@/components/profile/UserProfileModal';
+import { getErrorMessage } from '@/lib/errors';
 
 export type TaskStatusKey = 'TODO' | 'IN_PROGRESS' | 'IN_PREVIEW' | 'DONE';
 export type TaskPriorityKey = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -510,9 +511,9 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
       setNewTaskDescription('');
       setNewTaskAssigneeId('');
       onNotify(`Đã thêm nhiệm vụ mới: "${enrichedItem.title}"`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create issue:', err);
-      alert(err?.message || 'Không thể tạo nhiệm vụ. Vui lòng thử lại.');
+      onNotify(getErrorMessage(err) || 'Không thể tạo nhiệm vụ. Vui lòng thử lại.');
     } finally {
       setIsCreatingTask(false);
     }
