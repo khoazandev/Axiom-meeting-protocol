@@ -768,8 +768,8 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
           <p className="text-xs text-slate-500">Đang tải bảng nhiệm vụ Kanban...</p>
         </div>
       ) : (
-        <div className="w-full overflow-x-auto pb-4 pt-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-          <div className="flex gap-4 items-stretch h-[calc(100vh-235px)] min-h-[580px] min-w-max pb-1">
+        <div className="w-full overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
+          <div className="grid grid-cols-4 gap-3 items-stretch h-[calc(100vh-235px)] min-h-[580px] w-full min-w-[760px] pb-1">
             {KANBAN_COLUMNS.map((col) => {
               const colTasks = filteredTasks.filter((t) => t.status === col.key);
               const isColTargeted = draggedOverCol === col.key;
@@ -780,7 +780,7 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                   onDragOver={(e) => handleDragOver(e, col.key)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, col.key)}
-                  className={`flex flex-col shrink-0 w-[305px] xl:w-[325px] 2xl:w-[340px] h-full rounded-2xl border p-3 transition-all duration-200 ${
+                  className={`flex flex-col min-w-0 h-full rounded-2xl border p-2.5 transition-all duration-200 ${
                     isColTargeted
                       ? 'bg-blue-500/10 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.01]'
                       : 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
@@ -788,21 +788,21 @@ export function ManagerKanbanTaskTab({ onNotify }: ManagerKanbanTaskTabProps) {
                 >
                   {/* Column Header */}
                   <div
-                    className={`shrink-0 flex items-center justify-between px-3 py-2 rounded-xl mb-3 ${col.headerBg}`}
+                    className={`shrink-0 flex items-center justify-between px-2.5 py-2 rounded-xl mb-2.5 ${col.headerBg}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
-                      <span className="text-xs font-extrabold tracking-wide uppercase">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${col.dotColor}`} />
+                      <span className="text-[11px] font-extrabold tracking-wide uppercase truncate">
                         {col.label}
                       </span>
                     </div>
-                    <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs">
+                    <span className="text-xs font-mono font-black px-1.5 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-2xs shrink-0">
                       {colTasks.length}
                     </span>
                   </div>
 
                   {/* Column Cards List */}
-                  <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
+                  <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 scrollbar-thin">
                   {colTasks.length === 0 ? (
                     <div
                       className={`h-32 border-2 border-dashed rounded-xl flex items-center justify-center text-xs italic transition-all ${
