@@ -28,6 +28,7 @@ from src.backend.api.v1.tasks import router as tasks_router
 from src.backend.api.v1.users import router as users_router
 from src.backend.api.v1.webhooks import router as webhooks_router
 from src.backend.api.v1.jira import router as jira_router
+from src.backend.api.v1.analytics import router as analytics_router
 
 v1_router = APIRouter()
 
@@ -54,4 +55,4 @@ api_v1_router.include_router(jira_router)
 api_v1_router.include_router(tasks_router)
 api_v1_router.include_router(knowledge_router)
 api_v1_router.include_router(admin_router)
-# api_v1_router.include_router(analytics_router)
+api_v1_router.include_router(analytics_router)
