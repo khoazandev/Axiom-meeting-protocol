@@ -56,6 +56,7 @@ from src.backend.schemas.jira import (
     IssueAttachmentResponse,
     StarredProjectsListResponse,
 )
+from src.backend.api.v1.notifications import send_user_notification
 
 router = APIRouter(prefix="/jira", tags=["jira"])
 
@@ -415,6 +416,21 @@ def create_issue(
     db.add(issue)
     db.commit()
     db.refresh(issue)
+
+    if issue.assignee_id and issue.assignee_id != current_user.id:
+        try:
+            reporter_name = current_user.full_name or current_user.email
+            send_user_notification(
+                db=db,
+                user_id=issue.assignee_id,
+                title=f"Bạn vừa được giao nhiệm vụ: [{issue.key}] {issue.summary}",
+                content=f"Được phân công bởi {reporter_name}",
+                type="TASK_ASSIGNED",
+                link=f"/member?tab=jira&issue={issue.id}",
+            )
+        except Exception:
+            pass
+
     return issue
 
 
@@ -487,6 +503,7 @@ def update_issue(
     if not issue:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issue not found")
 
+    old_assignee = issue.assignee_id
     if payload.summary is not None:
         issue.summary = payload.summary
     if payload.description is not None:
@@ -508,7 +525,21 @@ def update_issue(
     if payload.sprint_id is not None:
         issue.sprint_id = payload.sprint_id if payload.sprint_id != "" else None
     if payload.assignee_id is not None:
-        issue.assignee_id = payload.assignee_id if payload.assignee_id != "" else None
+        new_assignee = payload.assignee_id if payload.assignee_id != "" else None
+        if new_assignee and new_assignee != old_assignee and new_assignee != current_user.id:
+            try:
+                reporter_name = current_user.full_name or current_user.email
+                send_user_notification(
+                    db=db,
+                    user_id=new_assignee,
+                    title=f"Bạn vừa được chuyển giao nhiệm vụ: [{issue.key}] {issue.summary}",
+                    content=f"Được phân công bởi {reporter_name}",
+                    type="TASK_ASSIGNED",
+                    link=f"/member?tab=jira&issue={issue.id}",
+                )
+            except Exception:
+                pass
+        issue.assignee_id = new_assignee
     if payload.due_date is not None:
         issue.due_date = payload.due_date
     if payload.sprint_position is not None:

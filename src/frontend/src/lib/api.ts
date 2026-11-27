@@ -1455,3 +1455,36 @@ export const knowledgeApi = {
   recentTranscripts: (limit = 20, signal?: AbortSignal) =>
     apiFetch<KnowledgeMatch[]>(`/api/v1/knowledge/transcripts/recent?limit=${limit}`, { signal }),
 };
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  type: string;
+  link?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}
+
+export const notificationApi = {
+  list(limit = 20): Promise<NotificationListResponse> {
+    return apiFetch<NotificationListResponse>(`/api/v1/notifications?limit=${limit}`);
+  },
+  markAsRead(id: string): Promise<{ success: boolean; id: string }> {
+    return apiFetch<{ success: boolean; id: string }>(`/api/v1/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+  },
+  markAllAsRead(): Promise<{ success: boolean }> {
+    return apiFetch<{ success: boolean }>('/api/v1/notifications/mark-all-read', {
+      method: 'POST',
+    });
+  },
+};
+
