@@ -10,7 +10,10 @@ from src.backend.main import app
 pytest_plugins = ("src.backend.tests.recruitment_fixtures",)
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_shared.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False, "timeout": 30},
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

@@ -55,6 +55,7 @@ export interface User {
   avatar_url?: string | null;
   role?: string | null;
   phone?: string | null;
+  bio?: string | null;
   job_title?: string | null;
   provider: string;
   is_active: boolean;
@@ -245,9 +246,11 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   const url = `${BASE_URL}${path}`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
 
   // Inject token and active organization header from localStorage / Zustand store
   if (typeof window !== 'undefined') {
@@ -381,6 +384,7 @@ export const authApi = {
     avatar_url?: string;
     email?: string;
     phone?: string;
+    bio?: string;
   }): Promise<User> {
     return apiFetch<User>('/api/v1/auth/me', {
       method: 'PATCH',
@@ -793,6 +797,22 @@ export interface Sprint {
   updated_at: string;
 }
 
+export interface IssueAttachment {
+  id: string;
+  issue_id: string;
+  uploaded_by_id: string;
+  filename: string;
+  file_size: number;
+  content_type?: string | null;
+  created_at: string;
+  uploader_name?: string | null;
+  uploader_avatar?: string | null;
+}
+
+export interface StarredProjectsListResponse {
+  starred_project_ids: string[];
+}
+
 export interface IssueComment {
   id: string;
   issue_id: string;
@@ -829,6 +849,7 @@ export interface Issue {
   updated_at: string;
   comments?: IssueComment[];
   subtasks?: Issue[];
+  attachments?: IssueAttachment[];
 }
 
 export interface Department {
@@ -1024,6 +1045,94 @@ export const jiraApi = {
     return apiFetch<Issue[]>(`/api/v1/jira/meetings/${meetingId}/sync-to-jira`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  uploadAttachment(issueIdOrKey: string, file: File): Promise<IssueAttachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch<IssueAttachment>(`/api/v1/jira/issues/${issueIdOrKey}/attachments`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  getAttachments(issueIdOrKey: string): Promise<IssueAttachment[]> {
+    return apiFetch<IssueAttachment[]>(`/api/v1/jira/issues/${issueIdOrKey}/attachments`);
+  },
+
+  deleteAttachment(attachmentId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/jira/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getAttachmentDownloadUrl(attachmentId: string): string {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+    return `${baseUrl}/api/v1/jira/attachments/${attachmentId}/download`;
+  },
+
+  getStarredProjects(): Promise<StarredProjectsListResponse> {
+    return apiFetch<StarredProjectsListResponse>('/api/v1/jira/user/starred');
+  },
+
+  starProject(projectId: string): Promise<StarredProjectsListResponse> {
+    return apiFetch<StarredProjectsListResponse>(`/api/v1/jira/projects/${projectId}/star`, {
+      method: 'POST',
+    });
+  },
+
+  unstarProject(projectId: string): Promise<StarredProjectsListResponse> {
+    return apiFetch<StarredProjectsListResponse>(`/api/v1/jira/projects/${projectId}/star`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ── Governance Policies API ──────────────────────────────
+
+export interface OrganizationPolicy {
+  id: string;
+  organization_id: string;
+  policy_key: string;
+  name: string;
+  description?: string | null;
+  category: string;
+  enabled: boolean;
+  config_json?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BatchPolicyUpdateItem {
+  policy_key: string;
+  enabled: boolean;
+  name?: string;
+  description?: string;
+  category?: string;
+  config_json?: string;
+}
+
+export const organizationPoliciesApi = {
+  list(orgId: string): Promise<OrganizationPolicy[]> {
+    return apiFetch<OrganizationPolicy[]>(`/api/v1/organizations/${orgId}/policies`);
+  },
+
+  update(
+    orgId: string,
+    policyKey: string,
+    data: { enabled?: boolean; config_json?: string }
+  ): Promise<OrganizationPolicy> {
+    return apiFetch<OrganizationPolicy>(`/api/v1/organizations/${orgId}/policies/${policyKey}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateBatch(orgId: string, policies: BatchPolicyUpdateItem[]): Promise<OrganizationPolicy[]> {
+    return apiFetch<OrganizationPolicy[]>(`/api/v1/organizations/${orgId}/policies/batch`, {
+      method: 'PUT',
+      body: JSON.stringify({ policies }),
     });
   },
 };

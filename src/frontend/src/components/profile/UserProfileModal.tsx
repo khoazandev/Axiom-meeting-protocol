@@ -81,8 +81,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
   // Form States - Name, Phone, Bio, and Avatar can be updated by the user
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState('0912 345 678 (Ext: 104)');
-  const [bio, setBio] = useState('Chuyên trách nhiệm vụ chuyên môn & phối hợp cuộc họp.');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [bio, setBio] = useState(user?.bio || '');
 
   // Official Enterprise Role & Department - Managed exclusively by OWNER
   const resolvedRole = (user?.role || 'MEMBER').toUpperCase();
@@ -126,21 +126,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
       const currentName = user.full_name || '';
       setFullName(currentName);
       setEmail(user.email || '');
-
-      // Check existing custom local storage
-      const stored = localStorage.getItem(`axiom_profile_${user.id || user.email}`);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed.phone) setPhone(parsed.phone);
-          if (parsed.bio) setBio(parsed.bio);
-        } catch {
-          // ignore error
-        }
-      } else {
-        setBio('');
-        setPhone('');
-      }
+      setPhone(user.phone || '');
+      setBio(user.bio || '');
 
       // If user already has a custom uploaded avatar (data URL image or external non-svg image)
       if (user.avatar_url && !user.avatar_url.includes('image/svg+xml')) {
@@ -240,6 +227,7 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
         avatar_url: finalAvatar,
         email: email.trim(),
         phone: phone.trim(),
+        bio: bio.trim(),
       });
 
       // 2. Persist in Frontend Global Auth Store
@@ -248,18 +236,8 @@ export function UserProfileModal({ isOpen, onClose, onNotify }: UserProfileModal
         avatar_url: finalAvatar,
         email: updated?.email || email.trim(),
         phone: phone.trim(),
+        bio: bio.trim(),
       });
-
-      // 3. Save extended profile details locally
-      if (user?.id || user?.email) {
-        localStorage.setItem(
-          `axiom_profile_${user.id || user.email}`,
-          JSON.stringify({
-            phone: phone.trim(),
-            bio: bio.trim(),
-          })
-        );
-      }
 
       onNotify?.('Đã cập nhật toàn bộ thông tin cá nhân và avatar thành công!');
       onClose();

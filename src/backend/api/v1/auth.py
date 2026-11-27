@@ -198,6 +198,7 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
         avatar_url=user.avatar_url,
         role=role_name,
         phone=user.phone,
+        bio=user.bio,
         job_title=user.job_title,
         provider=user.provider,
         is_active=user.is_active,
@@ -263,22 +264,24 @@ def get_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    role_name = _resolve_user_role(current_user, db)
-    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    user = db.query(User).filter(User.id == current_user.id).first() or current_user
+    role_name = _resolve_user_role(user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == user.id).first()
     dept_id = dept_mem.department_id if dept_mem else None
     dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
     dept_name = dept.name if dept else None
 
     return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        avatar_url=current_user.avatar_url,
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
         role=role_name,
-        phone=current_user.phone,
-        job_title=current_user.job_title,
-        provider=current_user.provider,
-        is_active=current_user.is_active,
+        phone=user.phone,
+        bio=user.bio,
+        job_title=user.job_title,
+        provider=user.provider,
+        is_active=user.is_active,
         department_id=dept_id,
         department_name=dept_name,
     )
@@ -291,40 +294,48 @@ def update_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        from src.backend.core.exceptions import NotFoundException
+        raise NotFoundException("User not found")
+
     if payload.full_name is not None:
         trimmed = payload.full_name.strip()
         if trimmed:
-            current_user.full_name = trimmed
+            user.full_name = trimmed
     if payload.avatar_url is not None:
-        current_user.avatar_url = payload.avatar_url
+        user.avatar_url = payload.avatar_url
     if payload.email is not None:
         trimmed_email = payload.email.strip().lower()
-        if trimmed_email and trimmed_email != current_user.email:
-            existing = db.query(User).filter(User.email == trimmed_email, User.id != current_user.id).first()
+        if trimmed_email and trimmed_email != user.email:
+            existing = db.query(User).filter(User.email == trimmed_email, User.id != user.id).first()
             if existing:
                 from src.backend.core.exceptions import ValidationException
                 raise ValidationException("Email này đã được sử dụng bởi tài khoản khác trong hệ thống")
-            current_user.email = trimmed_email
+            user.email = trimmed_email
     if payload.phone is not None:
-        current_user.phone = payload.phone.strip()
+        user.phone = payload.phone.strip()
+    if payload.bio is not None:
+        user.bio = payload.bio.strip()
     db.commit()
-    db.refresh(current_user)
-    role_name = _resolve_user_role(current_user, db)
-    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == current_user.id).first()
+    db.refresh(user)
+    role_name = _resolve_user_role(user, db)
+    dept_mem = db.query(DepartmentMember).filter(DepartmentMember.user_id == user.id).first()
     dept_id = dept_mem.department_id if dept_mem else None
     dept = db.query(Department).filter(Department.id == dept_id).first() if dept_id else None
     dept_name = dept.name if dept else None
 
     return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        avatar_url=current_user.avatar_url,
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
         role=role_name,
-        phone=current_user.phone,
-        job_title=current_user.job_title,
-        provider=current_user.provider,
-        is_active=current_user.is_active,
+        phone=user.phone,
+        bio=user.bio,
+        job_title=user.job_title,
+        provider=user.provider,
+        is_active=user.is_active,
         department_id=dept_id,
         department_name=dept_name,
     )

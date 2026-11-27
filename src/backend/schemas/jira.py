@@ -176,6 +176,37 @@ class IssueResponse(BaseModel):
 class IssueDetailResponse(IssueResponse):
     comments: List[IssueCommentResponse] = []
     subtasks: List[IssueResponse] = []
+    attachments: List["IssueAttachmentResponse"] = []
+
+
+# ---------------------------------------------------------------------------
+# Issue Attachments
+# ---------------------------------------------------------------------------
+class IssueAttachmentResponse(BaseModel):
+    id: str
+    issue_id: str
+    uploaded_by_id: Optional[str] = None
+    filename: str
+    file_size: int
+    content_type: Optional[str] = None
+    created_at: datetime
+    uploader_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Starred Spaces
+# ---------------------------------------------------------------------------
+class StarredProjectResponse(BaseModel):
+    project_id: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StarredProjectsListResponse(BaseModel):
+    starred_project_ids: List[str]
 
 
 # ---------------------------------------------------------------------------

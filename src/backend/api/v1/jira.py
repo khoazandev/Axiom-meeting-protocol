@@ -3,9 +3,12 @@ Mini Jira API — Full Project, Sprint, Backlog, Kanban Board & Meeting Integrat
 """
 
 from datetime import datetime, timezone
+import os
 import re
+import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -30,6 +33,8 @@ from src.backend.models import (
     SprintStatusEnum,
     TranscriptSegment,
     User,
+    IssueAttachment,
+    UserProjectStar,
 )
 from src.backend.schemas.jira import (
     IssueCommentCreate,
@@ -48,6 +53,8 @@ from src.backend.schemas.jira import (
     SprintResponse,
     SprintStart,
     SprintUpdate,
+    IssueAttachmentResponse,
+    StarredProjectsListResponse,
 )
 
 router = APIRouter(prefix="/jira", tags=["jira"])
@@ -427,10 +434,29 @@ def get_issue_detail(
         .order_by(Issue.created_at.asc())
         .all()
     )
+    attachments = (
+        db.query(IssueAttachment)
+        .filter(IssueAttachment.issue_id == issue.id)
+        .order_by(IssueAttachment.created_at.desc())
+        .all()
+    )
 
     issue_dict = IssueResponse.model_validate(issue).model_dump()
     issue_dict["comments"] = [IssueCommentResponse.model_validate(c) for c in comments]
     issue_dict["subtasks"] = [IssueResponse.model_validate(s) for s in subtasks]
+    issue_dict["attachments"] = [
+        IssueAttachmentResponse(
+            id=a.id,
+            issue_id=a.issue_id,
+            uploaded_by_id=a.uploaded_by_id,
+            filename=a.filename,
+            file_size=a.file_size,
+            content_type=a.content_type,
+            created_at=a.created_at,
+            uploader_name=a.uploader.full_name if a.uploader else None,
+        )
+        for a in attachments
+    ]
     return issue_dict
 
 
@@ -717,3 +743,224 @@ def sync_meeting_tasks_to_jira(
         db.refresh(issue)
 
     return created_issues
+
+
+ATTACHMENTS_STORAGE_DIR = "storage/attachments"
+
+
+# ---------------------------------------------------------------------------
+# Starred Projects Endpoints
+# ---------------------------------------------------------------------------
+@router.get("/user/starred", response_model=StarredProjectsListResponse)
+def get_user_starred_projects(
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get list of project IDs that current user has starred/pinned."""
+    stars = (
+        db.query(UserProjectStar)
+        .filter(UserProjectStar.user_id == current_user.id)
+        .all()
+    )
+    return StarredProjectsListResponse(starred_project_ids=[s.project_id for s in stars])
+
+
+@router.post("/projects/{project_id_or_key}/star", response_model=StarredProjectsListResponse)
+def star_project(
+    project_id_or_key: str,
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Star/pin a project to sidebar."""
+    project = (
+        db.query(JiraProject)
+        .filter((JiraProject.id == project_id_or_key) | (JiraProject.key == project_id_or_key.upper()))
+        .first()
+    )
+    if not project:
+        raise NotFoundException("Project not found")
+
+    existing = (
+        db.query(UserProjectStar)
+        .filter(UserProjectStar.user_id == current_user.id, UserProjectStar.project_id == project.id)
+        .first()
+    )
+    if not existing:
+        star = UserProjectStar(user_id=current_user.id, project_id=project.id)
+        db.add(star)
+        db.commit()
+
+    all_stars = (
+        db.query(UserProjectStar)
+        .filter(UserProjectStar.user_id == current_user.id)
+        .all()
+    )
+    return StarredProjectsListResponse(starred_project_ids=[s.project_id for s in all_stars])
+
+
+@router.delete("/projects/{project_id_or_key}/star", response_model=StarredProjectsListResponse)
+def unstar_project(
+    project_id_or_key: str,
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Unstar/unpin a project from sidebar."""
+    project = (
+        db.query(JiraProject)
+        .filter((JiraProject.id == project_id_or_key) | (JiraProject.key == project_id_or_key.upper()))
+        .first()
+    )
+    if not project:
+        raise NotFoundException("Project not found")
+
+    existing = (
+        db.query(UserProjectStar)
+        .filter(UserProjectStar.user_id == current_user.id, UserProjectStar.project_id == project.id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+
+    all_stars = (
+        db.query(UserProjectStar)
+        .filter(UserProjectStar.user_id == current_user.id)
+        .all()
+    )
+    return StarredProjectsListResponse(starred_project_ids=[s.project_id for s in all_stars])
+
+
+# ---------------------------------------------------------------------------
+# Issue Attachments Endpoints
+# ---------------------------------------------------------------------------
+@router.post("/issues/{issue_id_or_key}/attachments", response_model=IssueAttachmentResponse, status_code=status.HTTP_201_CREATED)
+async def upload_issue_attachment(
+    issue_id_or_key: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload an attachment for a Jira issue (max 25MB)."""
+    issue = (
+        db.query(Issue)
+        .filter((Issue.id == issue_id_or_key) | (Issue.key == issue_id_or_key.upper()))
+        .first()
+    )
+    if not issue:
+        raise NotFoundException("Issue not found")
+
+    contents = await file.read()
+    if len(contents) > 25 * 1024 * 1024:
+        raise ValidationException("Kích thước tệp đính kèm không được vượt quá 25MB")
+
+    issue_dir = os.path.join(ATTACHMENTS_STORAGE_DIR, issue.id)
+    os.makedirs(issue_dir, exist_ok=True)
+
+    safe_name = os.path.basename(file.filename or "attachment")
+    unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+    disk_path = os.path.join(issue_dir, unique_name)
+
+    with open(disk_path, "wb") as f:
+        f.write(contents)
+
+    attachment = IssueAttachment(
+        issue_id=issue.id,
+        uploaded_by_id=current_user.id,
+        filename=safe_name,
+        file_path=disk_path,
+        file_size=len(contents),
+        content_type=file.content_type or "application/octet-stream",
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+
+    return IssueAttachmentResponse(
+        id=attachment.id,
+        issue_id=attachment.issue_id,
+        uploaded_by_id=attachment.uploaded_by_id,
+        filename=attachment.filename,
+        file_size=attachment.file_size,
+        content_type=attachment.content_type,
+        created_at=attachment.created_at,
+        uploader_name=current_user.full_name,
+    )
+
+
+@router.get("/issues/{issue_id_or_key}/attachments", response_model=List[IssueAttachmentResponse])
+def list_issue_attachments(
+    issue_id_or_key: str,
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all attachments for an issue."""
+    issue = (
+        db.query(Issue)
+        .filter((Issue.id == issue_id_or_key) | (Issue.key == issue_id_or_key.upper()))
+        .first()
+    )
+    if not issue:
+        raise NotFoundException("Issue not found")
+
+    attachments = (
+        db.query(IssueAttachment)
+        .filter(IssueAttachment.issue_id == issue.id)
+        .order_by(IssueAttachment.created_at.desc())
+        .all()
+    )
+    return [
+        IssueAttachmentResponse(
+            id=a.id,
+            issue_id=a.issue_id,
+            uploaded_by_id=a.uploaded_by_id,
+            filename=a.filename,
+            file_size=a.file_size,
+            content_type=a.content_type,
+            created_at=a.created_at,
+            uploader_name=a.uploader.full_name if a.uploader else None,
+        )
+        for a in attachments
+    ]
+
+
+@router.get("/attachments/{attachment_id}/download")
+def download_issue_attachment(
+    attachment_id: str,
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download an attachment file safely."""
+    attachment = db.query(IssueAttachment).filter(IssueAttachment.id == attachment_id).first()
+    if not attachment:
+        raise NotFoundException("Attachment not found")
+
+    if not os.path.exists(attachment.file_path):
+        raise NotFoundException("Physical file not found on server")
+
+    return FileResponse(
+        path=attachment.file_path,
+        filename=attachment.filename,
+        media_type=attachment.content_type or "application/octet-stream",
+    )
+
+
+@router.delete("/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_issue_attachment(
+    attachment_id: str,
+    current_user: User = Depends(deps.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete an attachment."""
+    attachment = db.query(IssueAttachment).filter(IssueAttachment.id == attachment_id).first()
+    if not attachment:
+        raise NotFoundException("Attachment not found")
+
+    if os.path.exists(attachment.file_path):
+        try:
+            os.remove(attachment.file_path)
+        except Exception:
+            pass
+
+    db.delete(attachment)
+    db.commit()
+    return None

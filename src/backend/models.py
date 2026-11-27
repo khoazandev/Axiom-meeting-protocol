@@ -116,6 +116,7 @@ class User(database.Base):
     full_name = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
     job_title = Column(String, nullable=True)
     provider = Column(String, default="local")
     is_active = Column(Boolean, default=True)
@@ -902,6 +903,7 @@ class Issue(database.Base):
     meeting = relationship("Meeting")
     transcript_segment = relationship("TranscriptSegment")
     comments = relationship("IssueComment", back_populates="issue", cascade="all, delete-orphan")
+    attachments = relationship("IssueAttachment", back_populates="issue", cascade="all, delete-orphan")
     parent = relationship("Issue", remote_side=[id], foreign_keys=[parent_id], backref="subtasks")
 
     @property
@@ -1314,4 +1316,56 @@ class Notification(database.Base):
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc), index=True)
 
     user = relationship("User")
+
+
+class OrganizationPolicy(database.Base):
+    __tablename__ = "organization_policies"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    organization_id = Column(String, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    policy_key = Column(String(100), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), default="MEETING", nullable=False)
+    enabled = Column(Boolean, default=True, nullable=False)
+    config_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone.utc),
+        onupdate=lambda: datetime.datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "policy_key", name="uq_org_policy_key"),
+    )
+
+    organization = relationship("Organization")
+
+
+class IssueAttachment(database.Base):
+    __tablename__ = "issue_attachments"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    issue_id = Column(String, ForeignKey("issues.id", ondelete="CASCADE"), nullable=False, index=True)
+    uploaded_by_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    file_size = Column(Integer, nullable=False)
+    content_type = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    issue = relationship("Issue", back_populates="attachments")
+    uploader = relationship("User")
+
+
+class UserProjectStar(database.Base):
+    __tablename__ = "user_project_stars"
+
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    project_id = Column(String, ForeignKey("jira_projects.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+
+    user = relationship("User")
+    project = relationship("JiraProject")
 

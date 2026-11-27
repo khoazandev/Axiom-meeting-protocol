@@ -75,6 +75,44 @@ class MemberDetailResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ---------------------------------------------------------------------------
+# Organization Governance Policies
+# ---------------------------------------------------------------------------
+class OrganizationPolicyResponse(BaseModel):
+    id: str
+    organization_id: str
+    policy_key: str
+    name: str
+    description: str | None = None
+    category: str
+    enabled: bool
+    config_json: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class OrganizationPolicyUpdate(BaseModel):
+    enabled: bool | None = None
+    config_json: str | None = None
+
+
+class BatchPolicyUpdateItem(BaseModel):
+    policy_key: str
+    enabled: bool
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    config_json: str | None = None
+
+
+class BatchPolicyUpdateRequest(BaseModel):
+    policies: list[BatchPolicyUpdateItem]
+
+    model_config = {"from_attributes": True}
+
+
 class UpdateMemberRoleRequest(BaseModel):
     role: str = Field(..., pattern="^(OWNER|ADMIN|MANAGER|MEMBER)$")
 
